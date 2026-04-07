@@ -45,7 +45,7 @@ function decodeScore(redisScore) {
 }
 
 function getCorsHeaders(req) {
-  const allowed = ['https://dadarcade.com', 'https://dadarcade.itch.io', 'https://html-classic.itch.zone'];
+  const allowed = ['https://dadarcade.com', 'https://dadarcade.itch.io', 'https://html-classic.itch.zone', 'https://v6p9d9t4.ssl.hwcdn.net'];
   const reqOrigin = req.headers.origin || '';
   let origin;
   if (process.env.VERCEL_ENV !== 'production') {
