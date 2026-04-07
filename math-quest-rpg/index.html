@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Quest RPG — Dad Arcade</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+.back-link{position:fixed;top:12px;left:12px;z-index:9999;color:rgba(255,255,255,0.4);text-decoration:none;font-family:'Courier New',monospace;font-size:14px;transition:color 0.3s}.back-link:hover{color:#fff}
+.mobile-msg{display:none;position:fixed;inset:0;background:#111;color:#fff;font-family:'Courier New',monospace;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:10000;gap:1rem}
+.mobile-msg .emoji{font-size:3rem}
+.mobile-msg a{color:#0ff;text-decoration:none}
+</style>
+</head>
+<body>
+<a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
+<div class="mobile-msg" id="mobileMsg"><span class="emoji">🕹️</span><p>This game requires a keyboard.<br>Please visit on a computer!</p><a href="/">Back to Dad Arcade</a></div>
+<canvas id="game" tabindex="0"></canvas>
+<script>
+'use strict';
+(() => {
+
+// ============================================================
+// CANVAS SETUP
+// ============================================================
+const W = 900, H = 600;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+}
+resizeCanvas();
+canvas.focus();
+
+function checkMobile() {
+  const m = document.getElementById('mobileMsg');
+  if (window.innerWidth < 768) {
+    m.style.display = 'flex';
+    canvas.style.display = 'none';
+  } else {
+    m.style.display = 'none';
+    canvas.style.display = 'block';
+  }
+}
+checkMobile();
+window.addEventListener('resize', () => { resizeCanvas(); checkMobile(); });
+
+// ============================================================
+// UTILITY
+// ============================================================
+function random(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function roll(min, max) { return random(min, max); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const STATES = {
+  TITLE: 'TITLE', CONTROLS: 'CONTROLS', CHARACTER_SELECT: 'CHARACTER_SELECT',
+  FLOOR_INTRO: 'FLOOR_INTRO', DUNGEON_MAP: 'DUNGEON_MAP', BATTLE: 'BATTLE',
+  SHOP: 'SHOP', TREASURE: 'TREASURE', VICTORY: 'VICTORY', GAME_OVER: 'GAME_OVER'
+};
+
+const BATTLE_PHASES = {
+  BATTLE_START: 'BATTLE_START', PROBLEM_DISPLAY: 'PROBLEM_DISPLAY',
+  AWAITING_ANSWER: 'AWAITING_ANSWER', ANSWER_RESULT: 'ANSWER_RESULT',
+  CHECK_LEVEL_UP: 'CHECK_LEVEL_UP', ENEMY_TURN: 'ENEMY_TURN',
+  BATTLE_VICTORY: 'BATTLE_VICTORY', PLAYER_DEAD: 'PLAYER_DEAD'
+};
+
+const CLASSES = [
+  { name: 'Warrior', color: '#e44', hp: 120, atkMin: 8, atkMax: 12, magMin: 5, magMax: 8, specialName: 'Power Strike', specialDesc: '2x damage to one enemy!' },
+  { name: 'Mage', color: '#48f', hp: 70, atkMin: 4, atkMax: 6, magMin: 12, magMax: 18, specialName: 'Fireball', specialDesc: 'Hit ALL enemies at once!' },
+  { name: 'Ranger', color: '#4c6', hp: 90, atkMin: 7, atkMax: 10, magMin: 7, magMax: 10, specialName: 'Double Shot', specialDesc: 'Attack twice in a row!' }
+];
+
+const ENEMY_DEFS = [
+  { name: 'Slime', color: '#4c6', hpMin: 20, hpMax: 30, dmgMin: 3, dmgMax: 5, bossName: 'Slime King' },
+  { name: 'Skeleton', color: '#ddd', hpMin: 35, hpMax: 45, dmgMin: 5, dmgMax: 8, bossName: 'Skeleton Lord' },
+  { name: 'Goblin', color: '#f80', hpMin: 40, hpMax: 55, dmgMin: 7, dmgMax: 10, bossName: 'Goblin Chief' },
+  { name: 'Wolf', color: '#999', hpMin: 50, hpMax: 65, dmgMin: 9, dmgMax: 12, bossName: 'Dire Wolf Alpha' },
+  { name: 'Ghost', color: '#c6f', hpMin: 55, hpMax: 70, dmgMin: 10, dmgMax: 14, bossName: 'Phantom Overlord' }
+];
+
+const SHOP_ITEMS = [
+  { name: 'Health Potion', desc: 'Restore 50% HP', cost: 20, type: 'heal' },
+  { name: 'Attack Gem', desc: '+2 Attack', cost: 40, type: 'atk' },
+  { name: 'Magic Gem', desc: '+2 Magic', cost: 40, type: 'mag' },
+  { name: 'Shield Charm', desc: '+10 Max HP', cost: 35, type: 'shield' },
+  { name: 'Full Restore', desc: 'Full HP', cost: 30, type: 'fullheal' }
+];
+
+const WRONG_MESSAGES = [
+  'Almost! The answer was ', 'Keep going! It was ', 'No worries! The answer is ', 'Good try! It\'s '
+];
+
+// ============================================================
+// GLOBAL STATE
+// ============================================================
+let state = STATES.TITLE;
+let battlePhase = null;
+let gameTime = 0;
+let paused = false;
+let muted = false;
+let lastTimestamp = 0;
+let dt = 0;
+
+// Player
+let player = {};
+let selectedClass = 0;
+
+// Floor / Map
+let floor = 1;
+let mapNodes = [];
+let currentNodeId = 0;
+let selectedNodeId = 0;
+let monstersDefeated = 0;
+
+// Battle
+let enemies = [];
+let targetIndex = 0;
+let consecutiveCorrect = 0;
+let specialActivated = false;
+let battleXPTotal = 0;
+let battleGoldTotal = 0;
+let problem = null;
+let answerStartTime = 0;
+let timerDuration = 0;
+let inputLockTimer = 0;
+let battleStartTimer = 0;
+let resultTimer = 0;
+let resultCorrect = false;
+let resultMessage = '';
+let selectedAnswer = -1;
+let enemyTurnIndex = 0;
+let enemyTurnTimer = 0;
+let enemyTurnPhase = 0; // 0=flash, 1=damage
+let victoryTimer = 0;
+let deathTimer = 0;
+let levelUpPending = false;
+let levelUpTimer = 0;
+let battleFadeTimer = 0;
+
+// Stats
+let totalAnswered = 0;
+let totalCorrect = 0;
+let totalKills = 0;
+
+// Particles
+let particles = [];
+const PARTICLE_CAP = 100;
+
+// Floats
+let floats = [];
+
+// Screen flash
+let screenFlashTimer = 0;
+let screenFlashColor = '';
+
+// Transition
+let transitionAlpha = 0;
+let transitionDir = 0; // 1=fade in (to black), -1=fade out, 0=none
+let transitionCallback = null;
+
+// Floor intro
+let floorIntroTimer = 0;
+
+// Treasure
+let treasureReward = null;
+let treasureOpened = false;
+let treasureTimer = 0;
+
+// Shop
+let shopItems = [];
+let shopSelected = 0;
+let shopMessage = '';
+let shopMessageTimer = 0;
+
+// Escape hold
+let escapeHeld = false;
+let escapeHoldTimer = 0;
+
+// Guided hints
+let firstBattleEver = true;
+let firstCorrectEver = true;
+let firstChargeEver = true;
+let hintText = '';
+
+// Controls screen timer
+let controlsTimer = 0;
+
+// Audio
+let audioCtx = null;
+let audioInitialized = false;
+
+// localStorage
+function lsGet(k) { try { return localStorage.getItem('mqr_' + k); } catch(e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem('mqr_' + k, v); } catch(e) {} }
+let bestFloor = parseInt(lsGet('bestFloor')) || 0;
+let mostKills = parseInt(lsGet('mostKills')) || 0;
+let mostSolved = parseInt(lsGet('mostSolved')) || 0;
+let bestAccuracy = parseInt(lsGet('bestAccuracy')) || 0;
+let highScore = parseInt(lsGet('highScore')) || 0;
+
+// ============================================================
+// RENDER TITLE IMMEDIATELY (before listeners)
+// ============================================================
+function drawTitle() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Title
+  ctx.font = 'bold 60px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.shadowColor = '#ff6ec7';
+  ctx.shadowBlur = 30;
+  ctx.fillText('MATH QUEST RPG', W/2, 160);
+  ctx.shadowBlur = 0;
+  // Subtitle
+  ctx.font = '20px "Courier New", monospace';
+  ctx.fillStyle = '#0ff';
+  const pulse = Math.sin(Date.now() / 500) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press Enter to Start', W/2, 300);
+  ctx.globalAlpha = 1;
+  // Stats
+  ctx.font = '16px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  let y = 400;
+  if (bestFloor > 0) { ctx.fillText('Best Floor: ' + bestFloor, W/2, y); y += 25; }
+  if (bestAccuracy > 0) { ctx.fillText('Best Accuracy: ' + bestAccuracy + '%', W/2, y); y += 25; }
+  if (highScore > 0) { ctx.fillText('High Score: ' + highScore, W/2, y); y += 25; }
+}
+drawTitle();
+
+// ============================================================
+// AUDIO SYSTEM
+// ============================================================
+function initAudio() {
+  if (audioInitialized) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  audioInitialized = true;
+}
+
+function playTone(freq, dur, type, vol) {
+  if (muted || !audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    g.gain.value = vol || 0.1;
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+function sfxCorrect() { playTone(523, 0.15, 'sine', 0.12); setTimeout(() => playTone(659, 0.15, 'sine', 0.12), 80); }
+function sfxWrong() { playTone(200, 0.3, 'sawtooth', 0.08); }
+function sfxHit() { playTone(100, 0.15, 'square', 0.1); }
+function sfxPlayerHit() { playTone(180, 0.2, 'sawtooth', 0.1); }
+function sfxDeath() { playTone(400, 0.1, 'square', 0.1); setTimeout(() => playTone(300, 0.1, 'square', 0.1), 100); setTimeout(() => playTone(200, 0.2, 'square', 0.1), 200); }
+function sfxLevelUp() { [523,659,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.15, 'sine', 0.12), i*100)); }
+function sfxBoss() { playTone(80, 0.5, 'square', 0.15); }
+function sfxShop() { playTone(800, 0.1, 'sine', 0.08); }
+function sfxTreasure() { [400,500,600,800].forEach((f,i) => setTimeout(() => playTone(f, 0.15, 'sine', 0.1), i*80)); }
+function sfxMapBlip() { playTone(1200, 0.05, 'sine', 0.06); }
+function sfxMapEnter() { playTone(150, 0.1, 'square', 0.1); }
+function sfxVictory() { [523,659,784,1047,784,1047].forEach((f,i) => setTimeout(() => playTone(f, 0.2, 'sine', 0.12), i*120)); }
+
+let musicOsc = null;
+let musicGain = null;
+let musicPlaying = false;
+let musicNoteIndex = 0;
+let musicNoteTimer = 0;
+const MUSIC_NOTES = [262,294,330,349,392,349,330,294,262,330,392,440,392,330,294,262];
+const MUSIC_NOTE_DUR = 0.25;
+
+function startMusic() {
+  if (musicPlaying || muted || !audioCtx) return;
+  musicPlaying = true;
+  musicNoteIndex = 0;
+  musicNoteTimer = 0;
+}
+function stopMusic() { musicPlaying = false; }
+function updateMusic(dt) {
+  if (!musicPlaying || muted || !audioCtx) return;
+  musicNoteTimer -= dt;
+  if (musicNoteTimer <= 0) {
+    musicNoteTimer = MUSIC_NOTE_DUR;
+    playTone(MUSIC_NOTES[musicNoteIndex % MUSIC_NOTES.length], MUSIC_NOTE_DUR * 0.8, 'square', 0.04);
+    musicNoteIndex++;
+  }
+}
+
+// ============================================================
+// SPRITE DRAWING
+// ============================================================
+function drawPixelChar(x, y, w, h, color, isWarrior, isMage, isRanger) {
+  // Simple pixel character
+  const hw = w/2, hh = h/2;
+  ctx.fillStyle = color;
+  // Body
+  ctx.fillRect(x - hw*0.4, y - hh*0.3, hw*0.8, hh*0.6);
+  // Head
+  ctx.fillRect(x - hw*0.25, y - hh*0.7, hw*0.5, hh*0.35);
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - hw*0.15, y - hh*0.55, hw*0.1, hh*0.1);
+  ctx.fillRect(x + hw*0.05, y - hh*0.55, hw*0.1, hh*0.1);
+  // Legs
+  ctx.fillStyle = color;
+  ctx.fillRect(x - hw*0.3, y + hh*0.3, hw*0.2, hh*0.35);
+  ctx.fillRect(x + hw*0.1, y + hh*0.3, hw*0.2, hh*0.35);
+  // Class detail
+  if (isWarrior) {
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(x + hw*0.4, y - hh*0.4, hw*0.15, hh*0.7); // sword
+  } else if (isMage) {
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(x + hw*0.35, y - hh*0.7, hw*0.08, hh*0.9); // staff
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(x + hw*0.3, y - hh*0.75, hw*0.2, hh*0.12); // orb
+  } else if (isRanger) {
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(x + hw*0.35, y - hh*0.5, hw*0.08, hh*0.8); // bow
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(x + hw*0.43, y - hh*0.1, hw*0.15, hh*0.05); // arrow
+  }
+}
+
+function drawPlayerSprite(x, y, s) {
+  const cls = CLASSES[player.classIndex || 0];
+  drawPixelChar(x, y, s, s, cls.color, player.classIndex===0, player.classIndex===1, player.classIndex===2);
+}
+
+function drawEnemy(e, x, y, s) {
+  const hw = s/2;
+  ctx.fillStyle = e.flashTimer > 0 ? '#fff' : e.color;
+  if (e.isBoss) {
+    // Bigger with crown
+    ctx.fillRect(x-hw*0.5, y-hw*0.3, s, hw*0.8);
+    ctx.fillRect(x-hw*0.3, y-hw*0.7, hw*0.6, hw*0.4);
+    // Crown
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(x-hw*0.35, y-hw*0.85, hw*0.7, hw*0.15);
+    ctx.fillRect(x-hw*0.35, y-hw*1.0, hw*0.15, hw*0.15);
+    ctx.fillRect(x, y-hw*1.0, hw*0.15, hw*0.15);
+    ctx.fillRect(x+hw*0.2, y-hw*1.0, hw*0.15, hw*0.15);
+    // Eyes
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(x-hw*0.15, y-hw*0.55, hw*0.12, hw*0.12);
+    ctx.fillRect(x+hw*0.05, y-hw*0.55, hw*0.12, hw*0.12);
+  } else {
+    // Regular enemy
+    ctx.fillRect(x-hw*0.35, y-hw*0.3, hw*0.7, hw*0.7);
+    ctx.fillRect(x-hw*0.25, y-hw*0.6, hw*0.5, hw*0.3);
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x-hw*0.15, y-hw*0.5, hw*0.1, hw*0.1);
+    ctx.fillRect(x+hw*0.05, y-hw*0.5, hw*0.1, hw*0.1);
+  }
+}
+
+function drawShopkeeper(x, y) {
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(x-15, y-20, 30, 40);
+  ctx.fillStyle = '#DEB887';
+  ctx.fillRect(x-10, y-35, 20, 18);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x-6, y-30, 4, 4);
+  ctx.fillRect(x+2, y-30, 4, 4);
+  ctx.fillStyle = '#f00';
+  ctx.fillRect(x-12, y-38, 24, 6);
+}
+
+// ============================================================
+// PARTICLE SYSTEM
+// ============================================================
+function addParticle(x, y, color, vx, vy, life) {
+  if (particles.length >= PARTICLE_CAP) particles.shift();
+  particles.push({ x, y, color, vx: vx || random(-50,50), vy: vy || random(-80,-20), life: life || 1, maxLife: life || 1 });
+}
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Floats (damage numbers, +XP, etc.)
+function addFloat(x, y, text, color) {
+  floats.push({ x, y, text, color, life: 1, maxLife: 1 });
+}
+function updateFloats(dt) {
+  for (let i = floats.length - 1; i >= 0; i--) {
+    floats[i].y -= 40 * dt;
+    floats[i].life -= dt;
+    if (floats[i].life <= 0) floats.splice(i, 1);
+  }
+}
+function drawFloats() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (const f of floats) {
+    ctx.globalAlpha = clamp(f.life / f.maxLife, 0, 1);
+    ctx.font = 'bold 18px "Courier New", monospace';
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// TRANSITION SYSTEM
+// ============================================================
+function fadeToBlack(cb) {
+  transitionAlpha = 0;
+  transitionDir = 1;
+  transitionCallback = cb;
+}
+function updateTransition(dt) {
+  if (transitionDir === 0) return;
+  if (transitionDir === 1) {
+    transitionAlpha += dt / 0.3;
+    if (transitionAlpha >= 1) {
+      transitionAlpha = 1;
+      transitionDir = -1;
+      if (transitionCallback) { transitionCallback(); transitionCallback = null; }
+    }
+  } else if (transitionDir === -1) {
+    transitionAlpha -= dt / 0.3;
+    if (transitionAlpha <= 0) { transitionAlpha = 0; transitionDir = 0; }
+  }
+}
+function drawTransition() {
+  if (transitionAlpha > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,' + transitionAlpha + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+// ============================================================
+// PLAYER INIT
+// ============================================================
+function initPlayer(classIndex) {
+  const c = CLASSES[classIndex];
+  player = {
+    classIndex,
+    hp: c.hp, maxHP: c.hp,
+    atkMin: c.atkMin, atkMax: c.atkMax,
+    magMin: c.magMin, magMax: c.magMax,
+    gold: 0, xp: 0, level: 1,
+    xpNext: 50
+  };
+}
+
+// ============================================================
+// XP / LEVEL
+// ============================================================
+function xpForLevel(level) {
+  if (level <= 1) return 50;
+  let v = 50;
+  for (let i = 2; i <= level; i++) v = Math.round(v * 1.2);
+  return v;
+}
+
+function checkLevelUp() {
+  if (player.xp >= player.xpNext) {
+    player.xp -= player.xpNext;
+    player.level++;
+    player.xpNext = xpForLevel(player.level);
+    player.atkMin += 1; player.atkMax += 1;
+    player.magMin += 1; player.magMax += 1;
+    player.maxHP += 5; player.hp = player.maxHP;
+    return true;
+  }
+  return false;
+}
+
+// ============================================================
+// ENEMY CREATION
+// ============================================================
+function createEnemy(flr, isBoss) {
+  const idx = Math.min(flr - 1, 4);
+  const def = ENEMY_DEFS[idx];
+  let hp, dmgMin, dmgMax, name, color;
+  color = def.color;
+
+  if (flr >= 6) {
+    // Floor 6+ scaling from floor 5 base
+    const scale = 1 + 0.15 * (flr - 5);
+    const baseHPMid = 62.5;
+    const baseDmgMid = 12;
+    if (isBoss) {
+      hp = Math.round(baseHPMid * scale * 2.5);
+      const d = Math.round(baseDmgMid * scale * 1.5);
+      dmgMin = Math.max(1, d - 2);
+      dmgMax = d + 2;
+      const bossNames = ['Slime King', 'Skeleton Lord', 'Goblin Chief', 'Dire Wolf Alpha', 'Phantom Overlord'];
+      name = 'Ancient ' + bossNames[(flr - 1) % 5];
+    } else {
+      hp = Math.round(baseHPMid * scale);
+      const d = Math.round(baseDmgMid * scale);
+      dmgMin = Math.max(1, d - 2);
+      dmgMax = d + 2;
+      name = def.name;
+    }
+    // Purple tint for floor 6+
+    color = '#b070d0';
+  } else if (isBoss) {
+    const hpMid = (def.hpMin + def.hpMax) / 2;
+    hp = Math.round(hpMid * 2.5);
+    const dmgMid = (def.dmgMin + def.dmgMax) / 2;
+    const d = Math.round(dmgMid * 1.5);
+    dmgMin = Math.max(1, d - 2);
+    dmgMax = d + 2;
+    name = def.bossName;
+  } else {
+    hp = random(def.hpMin, def.hpMax);
+    dmgMin = def.dmgMin;
+    dmgMax = def.dmgMax;
+    name = def.name;
+  }
+
+  return { name, color, hp, maxHP: hp, dmgMin, dmgMax, isBoss, alive: true, flashTimer: 0, x: 0, y: 0 };
+}
+
+function getEnemyCount(flr) {
+  if (flr === 1) return 1;
+  if (flr === 2) return random(1, 2);
+  return random(1, 3);
+}
+
+// ============================================================
+// MATH PROBLEM GENERATION
+// ============================================================
+function generateProblem(flr, isBoss) {
+  const effectiveFloor = isBoss ? Math.min(flr + 1, 10) : flr;
+  let a, b, op, correct;
+
+  if (effectiveFloor <= 2) {
+    // add/subtract, 1-15 (floor 1) or 10-99 (floor 2)
+    if (effectiveFloor === 1) {
+      if (Math.random() < 0.5) {
+        a = random(1, 15); b = random(1, 15); op = '+'; correct = a + b;
+      } else {
+        a = random(1, 15); b = random(1, a); op = '-'; correct = a - b;
+      }
+    } else {
+      if (Math.random() < 0.5) {
+        a = random(10, 99); b = random(10, 99); op = '+'; correct = a + b;
+      } else {
+        a = random(10, 99); b = random(10, a); op = '-'; correct = a - b;
+      }
+    }
+  } else if (effectiveFloor <= 4) {
+    // multiply
+    if (effectiveFloor === 3) {
+      a = random(2, 12); b = random(2, 12);
+    } else {
+      a = random(10, 25); b = random(2, 9);
+    }
+    op = '\u00d7'; correct = a * b;
+  } else if (effectiveFloor === 5) {
+    // divide
+    const divisor = random(2, 12);
+    const quotient = random(2, 12);
+    a = divisor * quotient; b = divisor;
+    op = '\u00f7'; correct = quotient;
+  } else {
+    // mixed, scaled
+    const extra = Math.min(effectiveFloor - 5, 5);
+    const scale = 1 + extra * 0.1;
+    const r = Math.random();
+    if (r < 0.25) {
+      a = random(Math.round(10*scale), Math.round(99*scale));
+      b = random(Math.round(10*scale), a);
+      op = '-'; correct = a - b;
+    } else if (r < 0.5) {
+      a = random(Math.round(10*scale), Math.round(99*scale));
+      b = random(Math.round(10*scale), Math.round(99*scale));
+      op = '+'; correct = a + b;
+    } else if (r < 0.75) {
+      a = random(2, Math.round(12*scale));
+      b = random(2, Math.round(12*scale));
+      op = '\u00d7'; correct = a * b;
+    } else {
+      const divisor = random(2, Math.round(12*scale));
+      const quotient = random(2, Math.round(12*scale));
+      a = divisor * quotient; b = divisor;
+      op = '\u00f7'; correct = quotient;
+    }
+  }
+
+  // Generate wrong answers
+  const answers = new Set();
+  answers.add(correct);
+  let range = 5;
+  let tries = 0;
+  while (answers.size < 4) {
+    const offset = random(1, range) * (Math.random() < 0.5 ? 1 : -1);
+    const wrong = correct + offset;
+    if (!answers.has(wrong) && wrong >= 0) {
+      answers.add(wrong);
+    }
+    tries++;
+    if (tries > 5 && answers.size < 4) { range = 10; tries = 0; }
+  }
+
+  // Shuffle
+  const arr = Array.from(answers);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  const correctIndex = arr.indexOf(correct);
+
+  return {
+    text: a + ' ' + op + ' ' + b + ' = ?',
+    answers: arr,
+    correctIndex,
+    correct
+  };
+}
+
+function getTimerDuration(flr, isBoss) {
+  let dur;
+  if (flr <= 2) dur = 12;
+  else dur = 15;
+  if (isBoss) dur += 3;
+  return dur;
+}
+
+// ============================================================
+// MAP GENERATION
+// ============================================================
+function generateMap(flr) {
+  mapNodes = [];
+  monstersDefeated = 0;
+
+  let monsterCount, randomCount;
+  if (flr <= 2) { monsterCount = 2; randomCount = 2; }
+  else if (flr <= 4) { monsterCount = 2; randomCount = 3; }
+  else { monsterCount = 3; randomCount = 3; }
+
+  // Entrance
+  mapNodes.push({ id: 0, type: 'entrance', x: 80, y: H/2, connections: [], visited: true, cleared: true, enemies: null, shopItems: null, treasureGiven: false });
+
+  // Column 1: monster rooms
+  const col1 = [];
+  for (let i = 0; i < monsterCount; i++) {
+    const id = mapNodes.length;
+    const yPos = 100 + i * ((H - 200) / (monsterCount - 1 || 1));
+    col1.push(id);
+    mapNodes.push({ id, type: 'monster', x: 250, y: yPos, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
+    mapNodes[0].connections.push(id);
+    mapNodes[id] = mapNodes[mapNodes.length - 1];
+    mapNodes[id].connections.push(0);
+  }
+
+  // Column 2: random rooms
+  const col2 = [];
+  for (let i = 0; i < randomCount; i++) {
+    const id = mapNodes.length;
+    const yPos = 100 + i * ((H - 200) / (randomCount - 1 || 1));
+    let type;
+    if (flr >= 4) {
+      const r = Math.random();
+      if (r < 0.5) type = 'monster';
+      else if (r < 0.75) type = 'treasure';
+      else type = 'shop';
+    } else {
+      const r = Math.random();
+      if (r < 0.333) type = 'monster';
+      else if (r < 0.666) type = 'treasure';
+      else type = 'shop';
+    }
+    col2.push(id);
+    mapNodes.push({ id, type, x: 450, y: yPos, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
+  }
+
+  // Connect col1 → col2
+  for (const c1 of col1) {
+    const numConn = random(1, Math.min(2, col2.length));
+    const shuffled = [...col2].sort(() => Math.random() - 0.5);
+    for (let i = 0; i < numConn; i++) {
+      if (!mapNodes[c1].connections.includes(shuffled[i])) {
+        mapNodes[c1].connections.push(shuffled[i]);
+        mapNodes[shuffled[i]].connections.push(c1);
+      }
+    }
+  }
+  // Ensure all col2 reachable
+  for (const c2 of col2) {
+    if (mapNodes[c2].connections.length === 0) {
+      const c1 = col1[random(0, col1.length - 1)];
+      mapNodes[c2].connections.push(c1);
+      mapNodes[c1].connections.push(c2);
+    }
+  }
+
+  // Boss
+  const bossId = mapNodes.length;
+  mapNodes.push({ id: bossId, type: 'boss', x: 700, y: H/2, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
+  for (const c2 of col2) {
+    mapNodes[c2].connections.push(bossId);
+    mapNodes[bossId].connections.push(c2);
+  }
+
+  currentNodeId = 0;
+  selectedNodeId = mapNodes[0].connections[0];
+}
+
+function getMapRoomPreview(node) {
+  if (node.type === 'monster') {
+    const count = getEnemyCount(floor);
+    const idx = Math.min(floor - 1, 4);
+    return count + ' ' + ENEMY_DEFS[idx].name + (count > 1 ? 's' : '');
+  }
+  if (node.type === 'boss') {
+    const idx = Math.min(floor - 1, 4);
+    if (floor >= 6) {
+      const bossNames = ['Slime King','Skeleton Lord','Goblin Chief','Dire Wolf Alpha','Phantom Overlord'];
+      return 'Ancient ' + bossNames[(floor-1)%5];
+    }
+    return ENEMY_DEFS[idx].bossName;
+  }
+  if (node.type === 'treasure') return 'Treasure';
+  if (node.type === 'shop') return 'Shop';
+  return '';
+}
+
+// ============================================================
+// SHOP INIT
+// ============================================================
+function initShop(node) {
+  if (node.shopItems) { shopItems = node.shopItems; }
+  else {
+    const shuffled = [...SHOP_ITEMS].sort(() => Math.random() - 0.5);
+    shopItems = shuffled.slice(0, 3).map(it => ({ ...it, sold: false }));
+    node.shopItems = shopItems;
+  }
+  shopSelected = 0;
+  shopMessage = '';
+  shopMessageTimer = 0;
+}
+
+function buyShopItem() {
+  const item = shopItems[shopSelected];
+  if (!item || item.sold) return;
+  if (shopSelected === shopItems.length) return; // leave
+  if (player.gold < item.cost) {
+    shopMessage = 'Not enough gold!';
+    shopMessageTimer = 1;
+    return;
+  }
+  player.gold -= item.cost;
+  sfxShop();
+  switch (item.type) {
+    case 'heal':
+      const heal = Math.floor(player.maxHP * 0.5);
+      player.hp = Math.min(player.hp + heal, player.maxHP);
+      shopMessage = '+' + Math.min(heal, player.maxHP - player.hp + heal) + ' HP';
+      break;
+    case 'atk':
+      player.atkMin += 2; player.atkMax += 2;
+      shopMessage = '+2 Attack!';
+      break;
+    case 'mag':
+      player.magMin += 2; player.magMax += 2;
+      shopMessage = '+2 Magic!';
+      break;
+    case 'shield':
+      player.maxHP += 10; player.hp += 10;
+      shopMessage = '+10 Max HP!';
+      break;
+    case 'fullheal':
+      player.hp = player.maxHP;
+      shopMessage = 'Fully Restored!';
+      break;
+  }
+  item.sold = true;
+  shopMessageTimer = 1;
+}
+
+// ============================================================
+// TREASURE
+// ============================================================
+function generateTreasure() {
+  const r = Math.random();
+  if (r < 0.3) {
+    const heal = Math.floor(player.maxHP * 0.3);
+    const actual = Math.min(heal, player.maxHP - player.hp);
+    player.hp = Math.min(player.hp + heal, player.maxHP);
+    return { text: '+' + actual + ' HP', color: '#0f0' };
+  } else if (r < 0.65) {
+    const sub = Math.random();
+    if (sub < 0.333) {
+      player.atkMin += 1; player.atkMax += 1;
+      return { text: '+1 Attack', color: '#f80' };
+    } else if (sub < 0.666) {
+      player.magMin += 1; player.magMax += 1;
+      return { text: '+1 Magic', color: '#48f' };
+    } else {
+      player.maxHP += 3; player.hp += 3;
+      return { text: '+3 Max HP', color: '#0f0' };
+    }
+  } else {
+    const g = floor * 5 + random(0, 10);
+    player.gold += g;
+    return { text: '+' + g + ' Gold', color: '#ff0' };
+  }
+}
+
+// ============================================================
+// BATTLE INITIALIZATION
+// ============================================================
+function startBattle(isBoss) {
+  state = STATES.BATTLE;
+  battlePhase = BATTLE_PHASES.BATTLE_START;
+  consecutiveCorrect = 0;
+  specialActivated = false;
+  battleXPTotal = 0;
+  battleGoldTotal = 0;
+  battleStartTimer = 0.5;
+  battleFadeTimer = 0.3;
+  particles = [];
+  floats = [];
+
+  if (isBoss) {
+    enemies = [createEnemy(floor, true)];
+    sfxBoss();
+  } else {
+    const count = getEnemyCount(floor);
+    enemies = [];
+    for (let i = 0; i < count; i++) enemies.push(createEnemy(floor, false));
+  }
+
+  // Position enemies
+  const spacing = Math.min(140, 400 / enemies.length);
+  const startX = W - 200 - (enemies.length - 1) * spacing / 2;
+  for (let i = 0; i < enemies.length; i++) {
+    enemies[i].x = startX + i * spacing;
+    enemies[i].y = 210;
+  }
+
+  targetIndex = 0;
+  startMusic();
+}
+
+function getAliveEnemies() { return enemies.filter(e => e.alive); }
+
+function findLeftmostAlive() {
+  let best = -1, bestX = Infinity;
+  for (let i = 0; i < enemies.length; i++) {
+    if (enemies[i].alive && enemies[i].x < bestX) { bestX = enemies[i].x; best = i; }
+  }
+  return best;
+}
+
+function findNearestAliveRight(idx) {
+  let best = -1, bestDist = Infinity;
+  for (let i = 0; i < enemies.length; i++) {
+    if (i !== idx && enemies[i].alive) {
+      const dist = enemies[i].x - enemies[idx].x;
+      if (dist > 0 && dist < bestDist) { bestDist = dist; best = i; }
+    }
+  }
+  return best >= 0 ? best : findLeftmostAlive();
+}
+
+function validateTarget() {
+  if (targetIndex < 0 || targetIndex >= enemies.length || !enemies[targetIndex].alive) {
+    targetIndex = findLeftmostAlive();
+  }
+}
+
+// ============================================================
+// DAMAGE APPLICATION
+// ============================================================
+function applyDamage(enemyIdx, dmg) {
+  const e = enemies[enemyIdx];
+  e.hp -= dmg;
+  e.flashTimer = 0.3;
+  addFloat(e.x, e.y - 40, '-' + dmg, '#ff0');
+  sfxHit();
+  for (let i = 0; i < 5; i++) addParticle(e.x, e.y, e.color);
+
+  if (e.hp <= 0) {
+    e.alive = false;
+    e.hp = 0;
+    sfxDeath();
+    // Accumulate XP and gold
+    let xp, gold;
+    if (e.isBoss) {
+      xp = floor * 25;
+      gold = floor * 10;
+    } else {
+      xp = floor * 8 + random(0, 5);
+      gold = floor * 3 + random(0, 3);
+    }
+    battleXPTotal += xp;
+    battleGoldTotal += gold;
+    totalKills++;
+    addFloat(e.x, e.y - 60, '+' + xp + ' XP', '#0ff');
+    addFloat(e.x + 30, e.y - 60, '+' + gold + 'g', '#ff0');
+    for (let i = 0; i < 10; i++) addParticle(e.x, e.y, '#ff0');
+    return true; // killed
+  }
+  return false;
+}
+
+// ============================================================
+// MAIN GAME LOOP
+// ============================================================
+function gameLoop(timestamp) {
+  if (!lastTimestamp) lastTimestamp = timestamp;
+  let rawDt = (timestamp - lastTimestamp) / 1000;
+  lastTimestamp = timestamp;
+  rawDt = Math.min(rawDt, 0.1);
+
+  if (!paused && document.hasFocus()) {
+    dt = rawDt;
+    gameTime += dt;
+  } else {
+    dt = 0;
+  }
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+// UPDATE
+// ============================================================
+function update(dt) {
+  if (dt === 0 && state !== STATES.TITLE) return;
+
+  updateTransition(dt);
+  updateParticles(dt);
+  updateFloats(dt);
+  if (screenFlashTimer > 0) screenFlashTimer -= dt;
+
+  switch (state) {
+    case STATES.TITLE: updateTitle(dt); break;
+    case STATES.CONTROLS: updateControls(dt); break;
+    case STATES.CHARACTER_SELECT: break;
+    case STATES.FLOOR_INTRO: updateFloorIntro(dt); break;
+    case STATES.DUNGEON_MAP: updateMap(dt); break;
+    case STATES.BATTLE: updateBattle(dt); break;
+    case STATES.SHOP: updateShop(dt); break;
+    case STATES.TREASURE: updateTreasure(dt); break;
+    case STATES.VICTORY: break;
+    case STATES.GAME_OVER: break;
+  }
+}
+
+function updateTitle(dt) {}
+
+function updateControls(dt) {
+  controlsTimer += dt;
+  if (controlsTimer >= 10) {
+    state = STATES.CHARACTER_SELECT;
+    controlsTimer = 0;
+  }
+}
+
+function updateFloorIntro(dt) {
+  floorIntroTimer += dt;
+  if (floorIntroTimer >= 1.5) {
+    floorIntroTimer = 0;
+    state = STATES.DUNGEON_MAP;
+  }
+}
+
+function updateMap(dt) {
+  if (escapeHeld) {
+    escapeHoldTimer += dt;
+    if (escapeHoldTimer >= 2.0) {
+      escapeHoldTimer = 0;
+      escapeHeld = false;
+      gameOver();
+    }
+  }
+}
+
+function updateShop(dt) {
+  if (shopMessageTimer > 0) shopMessageTimer -= dt;
+}
+
+function updateTreasure(dt) {
+  if (!treasureOpened) {
+    treasureTimer += dt;
+    if (treasureTimer >= 0.5) {
+      treasureOpened = true;
+      treasureReward = generateTreasure();
+      sfxTreasure();
+      for (let i = 0; i < 15; i++) addParticle(W/2, 250, '#ff0');
+    }
+  }
+}
+
+// ============================================================
+// BATTLE UPDATE
+// ============================================================
+function updateBattle(dt) {
+  if (paused) return;
+  updateMusic(dt);
+
+  // Update enemy flash
+  for (const e of enemies) {
+    if (e.flashTimer > 0) e.flashTimer -= dt;
+  }
+
+  switch (battlePhase) {
+    case BATTLE_PHASES.BATTLE_START:
+      battleFadeTimer -= dt;
+      battleStartTimer -= dt;
+      if (battleStartTimer <= 0) {
+        battlePhase = BATTLE_PHASES.PROBLEM_DISPLAY;
+      }
+      break;
+
+    case BATTLE_PHASES.PROBLEM_DISPLAY: {
+      const hasBoss = enemies.some(e => e.isBoss);
+      problem = generateProblem(floor, hasBoss);
+      timerDuration = getTimerDuration(floor, hasBoss);
+      answerStartTime = gameTime;
+      inputLockTimer = 0;
+      selectedAnswer = -1;
+      validateTarget();
+
+      // Hint for first battle ever
+      if (firstBattleEver && floor === 1) {
+        hintText = '\u2b06 Pick the right answer! Press A, B, C, or D';
+      } else {
+        hintText = '';
+      }
+
+      battlePhase = BATTLE_PHASES.AWAITING_ANSWER;
+      break;
+    }
+
+    case BATTLE_PHASES.AWAITING_ANSWER: {
+      if (inputLockTimer > 0) { inputLockTimer -= dt; break; }
+      const elapsed = gameTime - answerStartTime;
+      if (elapsed >= timerDuration) {
+        // Time expired - treat as wrong
+        handleWrongAnswer(-1);
+      }
+      break;
+    }
+
+    case BATTLE_PHASES.ANSWER_RESULT:
+      resultTimer -= dt;
+      if (resultTimer <= 0) {
+        battlePhase = BATTLE_PHASES.CHECK_LEVEL_UP;
+      }
+      break;
+
+    case BATTLE_PHASES.CHECK_LEVEL_UP: {
+      // Check if accumulated XP crosses threshold
+      const tempXP = player.xp + battleXPTotal;
+      const needed = player.xpNext;
+      if (tempXP >= needed && !levelUpPending) {
+        levelUpPending = true;
+        levelUpTimer = 1;
+        // Apply level up immediately
+        player.xp += battleXPTotal;
+        battleXPTotal = 0;
+        while (checkLevelUp()) {
+          sfxLevelUp();
+          for (let i = 0; i < 20; i++) addParticle(150, 210, '#ff0');
+          addFloat(150, 150, 'LEVEL UP!', '#ff0');
+        }
+      }
+      if (levelUpPending) {
+        levelUpTimer -= dt;
+        if (levelUpTimer <= 0) {
+          levelUpPending = false;
+        } else break;
+      }
+      // Move to enemy turn
+      if (getAliveEnemies().length === 0) {
+        battlePhase = BATTLE_PHASES.BATTLE_VICTORY;
+        victoryTimer = 1.5;
+      } else {
+        battlePhase = BATTLE_PHASES.ENEMY_TURN;
+        enemyTurnIndex = 0;
+        enemyTurnTimer = 0;
+        enemyTurnPhase = 0;
+      }
+      break;
+    }
+
+    case BATTLE_PHASES.ENEMY_TURN:
+      updateEnemyTurn(dt);
+      break;
+
+    case BATTLE_PHASES.BATTLE_VICTORY:
+      victoryTimer -= dt;
+      if (victoryTimer <= 0 && victoryTimer > -90) {
+        // Apply rewards
+        const healAmt = Math.floor(player.maxHP * 0.15);
+        player.hp = Math.min(player.hp + healAmt, player.maxHP);
+        player.xp += battleXPTotal;
+        player.gold += battleGoldTotal;
+        while (checkLevelUp()) {
+          sfxLevelUp();
+          for (let i = 0; i < 15; i++) addParticle(150, 210, '#ff0');
+        }
+        battleXPTotal = 0;
+        battleGoldTotal = 0;
+        stopMusic();
+        sfxVictory();
+        victoryTimer = -100; // flag done
+        // Mark room cleared
+        mapNodes[currentNodeId].cleared = true;
+        if (mapNodes[currentNodeId].type === 'boss') {
+          // Floor victory
+          fadeToBlack(() => {
+            state = STATES.VICTORY;
+          });
+        } else {
+          fadeToBlack(() => {
+            state = STATES.DUNGEON_MAP;
+          });
+        }
+      }
+      break;
+
+    case BATTLE_PHASES.PLAYER_DEAD:
+      deathTimer -= dt;
+      if (deathTimer <= 0) {
+        stopMusic();
+        gameOver();
+      }
+      break;
+  }
+}
+
+function updateEnemyTurn(dt) {
+  // Skip dead enemies
+  while (enemyTurnIndex < enemies.length && !enemies[enemyTurnIndex].alive) {
+    enemyTurnIndex++;
+  }
+  if (enemyTurnIndex >= enemies.length) {
+    // All enemies done their turn
+    battlePhase = BATTLE_PHASES.PROBLEM_DISPLAY;
+    return;
+  }
+
+  enemyTurnTimer += dt;
+  const e = enemies[enemyTurnIndex];
+  if (enemyTurnPhase === 0) {
+    // Flash phase
+    e.flashTimer = 0.2;
+    if (enemyTurnTimer >= 0.2) {
+      enemyTurnPhase = 1;
+      // Deal damage
+      const dmg = roll(e.dmgMin, e.dmgMax);
+      player.hp -= dmg;
+      sfxPlayerHit();
+      addFloat(150, 170, '-' + dmg, '#f44');
+      screenFlashTimer = 0.15;
+      screenFlashColor = 'rgba(255,0,0,0.3)';
+      if (player.hp <= 0) {
+        player.hp = 0;
+        battlePhase = BATTLE_PHASES.PLAYER_DEAD;
+        deathTimer = 1;
+        sfxDeath();
+        return;
+      }
+    }
+  } else {
+    // Wait then next
+    if (enemyTurnTimer >= 0.5) {
+      enemyTurnIndex++;
+      enemyTurnTimer = 0;
+      enemyTurnPhase = 0;
+    }
+  }
+}
+
+// ============================================================
+// ANSWER HANDLING
+// ============================================================
+function handleAnswer(ansIdx) {
+  if (battlePhase !== BATTLE_PHASES.AWAITING_ANSWER) return;
+  if (inputLockTimer > 0) return;
+  selectedAnswer = ansIdx;
+  inputLockTimer = 0.3;
+
+  if (ansIdx === problem.correctIndex) {
+    handleCorrectAnswer();
+  } else {
+    handleWrongAnswer(ansIdx);
+  }
+}
+
+function handleCorrectAnswer() {
+  sfxCorrect();
+  resultCorrect = true;
+  resultTimer = 0.5;
+  consecutiveCorrect++;
+  totalCorrect++;
+  totalAnswered++;
+
+  if (firstBattleEver && floor === 1) {
+    firstBattleEver = false;
+    if (firstCorrectEver) {
+      hintText = 'Nice! Answer fast for bonus damage!';
+      firstCorrectEver = false;
+    }
+  }
+
+  const elapsed = gameTime - answerStartTime;
+  let speedMult, speedText, speedColor;
+  if (elapsed <= 3) { speedMult = 1.5; speedText = 'QUICK!'; speedColor = '#ff0'; }
+  else if (elapsed <= 6) { speedMult = 1.0; speedText = ''; speedColor = ''; }
+  else { speedMult = 0.75; speedText = 'SLOW...'; speedColor = '#888'; }
+
+  // Apply damage based on class and special
+  if (specialActivated) {
+    const cls = CLASSES[player.classIndex];
+    if (player.classIndex === 0) {
+      // Warrior: Power Strike
+      const dmg = Math.round(roll(player.atkMin, player.atkMax) * speedMult * 2);
+      applyDamage(targetIndex, dmg);
+      resultMessage = cls.specialName + '! ' + dmg + ' damage!';
+    } else if (player.classIndex === 1) {
+      // Mage: Fireball - roll ONCE, apply to all
+      const dmg = Math.round(roll(player.magMin, player.magMax) * speedMult);
+      const alive = getAliveEnemies();
+      for (const e of alive) {
+        const idx = enemies.indexOf(e);
+        e.hp -= dmg;
+        e.flashTimer = 0.3;
+        addFloat(e.x, e.y - 40, '-' + dmg, '#ff0');
+        sfxHit();
+        for (let i = 0; i < 5; i++) addParticle(e.x, e.y, '#f80');
+      }
+      // Check deaths after all damage
+      for (const e of alive) {
+        if (e.hp <= 0) {
+          e.alive = false;
+          e.hp = 0;
+          sfxDeath();
+          let xp, gold;
+          if (e.isBoss) { xp = floor * 25; gold = floor * 10; }
+          else { xp = floor * 8 + random(0, 5); gold = floor * 3 + random(0, 3); }
+          battleXPTotal += xp;
+          battleGoldTotal += gold;
+          totalKills++;
+          addFloat(e.x, e.y - 60, '+' + xp + 'XP', '#0ff');
+          for (let i = 0; i < 10; i++) addParticle(e.x, e.y, '#ff0');
+        }
+      }
+      // Re-target ONCE
+      validateTarget();
+      resultMessage = cls.specialName + '! ' + dmg + ' to all!';
+    } else {
+      // Ranger: Double Shot
+      const dmg1 = Math.round(roll(player.atkMin, player.atkMax) * speedMult);
+      const killed1 = applyDamage(targetIndex, dmg1);
+      if (killed1) {
+        const next = findNearestAliveRight(targetIndex);
+        if (next >= 0 && enemies[next].alive) {
+          targetIndex = next;
+          const dmg2 = Math.round(roll(player.atkMin, player.atkMax) * speedMult);
+          applyDamage(targetIndex, dmg2);
+          resultMessage = cls.specialName + '! ' + dmg1 + '+' + dmg2 + '!';
+        } else {
+          resultMessage = cls.specialName + '! ' + dmg1 + ' damage!';
+        }
+      } else {
+        const dmg2 = Math.round(roll(player.atkMin, player.atkMax) * speedMult);
+        applyDamage(targetIndex, dmg2);
+        resultMessage = cls.specialName + '! ' + dmg1 + '+' + dmg2 + '!';
+      }
+    }
+    specialActivated = false;
+    consecutiveCorrect = 0;
+  } else {
+    // Normal attack
+    const dmg = Math.round(roll(player.atkMin, player.atkMax) * speedMult);
+    const killed = applyDamage(targetIndex, dmg);
+    if (killed) {
+      const next = findNearestAliveRight(targetIndex);
+      if (next >= 0) targetIndex = next;
+    }
+    resultMessage = dmg + ' damage!';
+  }
+
+  if (speedText) resultMessage += ' ' + speedText;
+
+  // Check all dead
+  if (getAliveEnemies().length === 0) {
+    // Will go to BATTLE_VICTORY via CHECK_LEVEL_UP
+  }
+
+  battlePhase = BATTLE_PHASES.ANSWER_RESULT;
+}
+
+function handleWrongAnswer(ansIdx) {
+  sfxWrong();
+  resultCorrect = false;
+  resultTimer = 1.5;
+  selectedAnswer = ansIdx;
+  consecutiveCorrect = 0;
+  specialActivated = false;
+  totalAnswered++;
+  resultMessage = WRONG_MESSAGES[random(0, WRONG_MESSAGES.length - 1)] + problem.correct;
+  battlePhase = BATTLE_PHASES.ANSWER_RESULT;
+}
+
+// ============================================================
+// GAME OVER
+// ============================================================
+function gameOver() {
+  state = STATES.GAME_OVER;
+  stopMusic();
+  // Save records
+  const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+  const score = totalKills * 100 + totalCorrect * 50 + (floor - 1) * 500;
+  if (floor > bestFloor) { bestFloor = floor; lsSet('bestFloor', bestFloor); }
+  if (totalKills > mostKills) { mostKills = totalKills; lsSet('mostKills', mostKills); }
+  if (totalCorrect > mostSolved) { mostSolved = totalCorrect; lsSet('mostSolved', mostSolved); }
+  if (accuracy > bestAccuracy) { bestAccuracy = accuracy; lsSet('bestAccuracy', bestAccuracy); }
+  if (score > highScore) { highScore = score; lsSet('highScore', highScore); }
+}
+
+function getFloorRating(f) {
+  if (f >= 5) return 'Legendary!';
+  if (f >= 4) return 'Amazing!';
+  if (f >= 3) return 'Great job!';
+  if (f >= 2) return 'Nice run!';
+  return 'Good start!';
+}
+
+// ============================================================
+// RESTART
+// ============================================================
+function fullRestart() {
+  state = STATES.TITLE;
+  battlePhase = null;
+  paused = false;
+  floor = 1;
+  mapNodes = [];
+  enemies = [];
+  particles = [];
+  floats = [];
+  totalAnswered = 0;
+  totalCorrect = 0;
+  totalKills = 0;
+  consecutiveCorrect = 0;
+  specialActivated = false;
+  battleXPTotal = 0;
+  battleGoldTotal = 0;
+  firstBattleEver = true;
+  firstCorrectEver = true;
+  firstChargeEver = true;
+  hintText = '';
+  escapeHeld = false;
+  escapeHoldTimer = 0;
+  transitionAlpha = 0;
+  transitionDir = 0;
+  transitionCallback = null;
+  levelUpPending = false;
+  stopMusic();
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function render() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, H);
+
+  switch (state) {
+    case STATES.TITLE: renderTitle(); break;
+    case STATES.CONTROLS: renderControls(); break;
+    case STATES.CHARACTER_SELECT: renderCharSelect(); break;
+    case STATES.FLOOR_INTRO: renderFloorIntro(); break;
+    case STATES.DUNGEON_MAP: renderMap(); break;
+    case STATES.BATTLE: renderBattle(); break;
+    case STATES.SHOP: renderShop(); break;
+    case STATES.TREASURE: renderTreasure(); break;
+    case STATES.VICTORY: renderVictory(); break;
+    case STATES.GAME_OVER: renderGameOver(); break;
+  }
+
+  drawParticles();
+  drawFloats();
+
+  // Screen flash
+  if (screenFlashTimer > 0) {
+    ctx.fillStyle = screenFlashColor;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Pause overlay
+  if (paused) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 48px "Courier New", monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('PAUSED', W/2, H/2 - 20);
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Press P to Resume', W/2, H/2 + 30);
+  }
+
+  drawTransition();
+}
+
+function renderTitle() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 60px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.shadowColor = '#ff6ec7';
+  ctx.shadowBlur = 30;
+  ctx.fillText('MATH QUEST RPG', W/2, 160);
+  ctx.shadowBlur = 0;
+
+  ctx.font = '20px "Courier New", monospace';
+  ctx.fillStyle = '#0ff';
+  const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press Enter to Start', W/2, 300);
+  ctx.globalAlpha = 1;
+
+  ctx.font = '16px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  let y = 400;
+  if (bestFloor > 0) { ctx.fillText('Best Floor: ' + bestFloor, W/2, y); y += 25; }
+  if (bestAccuracy > 0) { ctx.fillText('Best Accuracy: ' + bestAccuracy + '%', W/2, y); y += 25; }
+  if (highScore > 0) { ctx.fillText('High Score: ' + highScore, W/2, y); }
+}
+
+function renderControls() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 36px "Courier New", monospace';
+  ctx.fillStyle = '#0ff';
+  ctx.fillText('HOW TO PLAY', W/2, 60);
+
+  ctx.font = '18px "Courier New", monospace';
+  ctx.textAlign = 'left';
+  const x = 200, startY = 130, gap = 38;
+  const lines = [
+    ['A / B / C / D', 'Answer math problems'],
+    ['\u2190 / \u2192', 'Switch targets or navigate map'],
+    ['S', 'Special ability (3 correct in a row)'],
+    ['P', 'Pause'],
+    ['M', 'Mute']
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillStyle = '#ff0';
+    ctx.fillText(lines[i][0], x, startY + i * gap);
+    ctx.fillStyle = '#ccc';
+    ctx.fillText('\u2192  ' + lines[i][1], x + 220, startY + i * gap);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.font = '16px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.fillText('Answer fast for bonus damage!', W/2, startY + lines.length * gap + 30);
+
+  ctx.fillStyle = '#888';
+  const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press Enter to choose your hero', W/2, 520);
+  ctx.globalAlpha = 1;
+}
+
+function renderCharSelect() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 30px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.fillText('Choose your hero!', W/2, 50);
+
+  for (let i = 0; i < 3; i++) {
+    const c = CLASSES[i];
+    const cx = 150 + i * 300;
+    const cy = 280;
+    const sel = (i === selectedClass);
+    const s = sel ? 80 : 60;
+
+    // Highlight
+    if (sel) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(cx - 110, 100, 220, 380);
+      ctx.lineWidth = 1;
+    }
+
+    // Sprite
+    drawPixelChar(cx, 200, s, s, c.color, i===0, i===1, i===2);
+
+    // Info
+    ctx.font = 'bold 22px "Courier New", monospace';
+    ctx.fillStyle = sel ? '#fff' : '#888';
+    ctx.fillText(c.name, cx, 280);
+
+    ctx.font = '15px "Courier New", monospace';
+    ctx.fillStyle = sel ? '#ccc' : '#666';
+    ctx.fillText('HP: ' + c.hp, cx, 310);
+    ctx.fillText('ATK: ' + c.atkMin + '-' + c.atkMax, cx, 332);
+    ctx.fillText('MAG: ' + c.magMin + '-' + c.magMax, cx, 354);
+
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillStyle = sel ? '#ff0' : '#555';
+    ctx.fillText(c.specialName, cx, 385);
+    ctx.font = '12px "Courier New", monospace';
+    ctx.fillStyle = sel ? '#aaa' : '#444';
+    ctx.fillText(c.specialDesc, cx, 405);
+  }
+
+  ctx.font = '16px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  ctx.fillText('\u2190 / \u2192 to select, Enter to confirm', W/2, 530);
+}
+
+function renderFloorIntro() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const alpha = floorIntroTimer < 0.5 ? floorIntroTimer / 0.5 :
+                floorIntroTimer > 1.0 ? 1 - (floorIntroTimer - 1.0) / 0.5 : 1;
+  ctx.globalAlpha = clamp(alpha, 0, 1);
+  ctx.font = 'bold 60px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.shadowColor = '#ff6ec7';
+  ctx.shadowBlur = 20;
+  ctx.fillText('Floor ' + floor, W/2, H/2);
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// HUD
+// ============================================================
+function renderHUD() {
+  // Background bar
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, W, 55);
+
+  // Player info - left
+  const cls = CLASSES[player.classIndex];
+  drawPixelChar(30, 28, 30, 30, cls.color, player.classIndex===0, player.classIndex===1, player.classIndex===2);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(cls.name + ' Lv.' + player.level, 52, 20);
+
+  // HP bar
+  const hpBarX = 52, hpBarY = 32, hpBarW = 120, hpBarH = 12;
+  ctx.fillStyle = '#333';
+  ctx.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
+  const hpRatio = player.hp / player.maxHP;
+  ctx.fillStyle = hpRatio > 0.5 ? '#0f0' : hpRatio > 0.25 ? '#ff0' : '#f00';
+  ctx.fillRect(hpBarX, hpBarY, hpBarW * hpRatio, hpBarH);
+  ctx.font = '11px "Courier New", monospace';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(player.hp + '/' + player.maxHP, hpBarX + hpBarW + 5, hpBarY + 6);
+
+  // Floor - center
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 18px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.fillText('Floor ' + floor, W/2, 28);
+
+  // Gold & Mute - right
+  ctx.textAlign = 'right';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillStyle = '#ff0';
+  ctx.fillText(player.gold + 'g', W - 60, 20);
+  ctx.fillStyle = muted ? '#f44' : '#4f4';
+  ctx.fillText(muted ? 'M:OFF' : 'M:ON', W - 10, 20);
+
+  // XP bar small
+  ctx.fillStyle = '#333';
+  ctx.fillRect(W - 160, 34, 90, 8);
+  ctx.fillStyle = '#0ff';
+  const xpRatio = player.xpNext > 0 ? player.xp / player.xpNext : 0;
+  ctx.fillRect(W - 160, 34, 90 * Math.min(xpRatio, 1), 8);
+  ctx.textAlign = 'right';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  ctx.fillText('XP', W - 162, 39);
+}
+
+// ============================================================
+// MAP RENDER
+// ============================================================
+function renderMap() {
+  renderHUD();
+
+  // Draw connections
+  ctx.strokeStyle = '#444';
+  ctx.lineWidth = 2;
+  for (const node of mapNodes) {
+    for (const cId of node.connections) {
+      if (cId > node.id) {
+        const other = mapNodes[cId];
+        ctx.beginPath();
+        ctx.moveTo(node.x, node.y);
+        ctx.lineTo(other.x, other.y);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.lineWidth = 1;
+
+  // Draw nodes
+  for (const node of mapNodes) {
+    const isCurrent = (node.id === currentNodeId);
+    const isSelected = (node.id === selectedNodeId);
+    const r = 22;
+
+    // Glow for current
+    if (isCurrent) {
+      ctx.shadowColor = '#0ff';
+      ctx.shadowBlur = 15;
+    }
+
+    // Node circle
+    ctx.fillStyle = node.cleared ? '#333' : node.visited ? '#555' : '#222';
+    if (isSelected) ctx.fillStyle = '#444';
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Border
+    ctx.strokeStyle = isSelected ? '#fff' : (isCurrent ? '#0ff' : '#666');
+    ctx.lineWidth = isSelected ? 3 : 2;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+
+    // Icon
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '18px sans-serif';
+    const dimmed = !node.visited && !isCurrent && !isSelected;
+    ctx.globalAlpha = dimmed ? 0.4 : 1;
+    if (node.type === 'entrance') ctx.fillText('\u2302', node.x, node.y);
+    else if (node.type === 'monster') { ctx.fillStyle = '#f44'; ctx.fillText('\u2694', node.x, node.y); }
+    else if (node.type === 'treasure') { ctx.fillStyle = '#ff0'; ctx.fillText('\u2666', node.x, node.y); }
+    else if (node.type === 'shop') { ctx.fillStyle = '#0f0'; ctx.fillText('$', node.x, node.y); }
+    else if (node.type === 'boss') { ctx.fillStyle = '#f44'; ctx.fillText('\u2620', node.x, node.y); }
+    ctx.globalAlpha = 1;
+
+    // Cleared checkmark
+    if (node.cleared && node.type !== 'entrance') {
+      ctx.fillStyle = '#0f0';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('\u2713', node.x + r, node.y - r);
+    }
+  }
+
+  // Pulsing highlight on selected
+  if (selectedNodeId >= 0 && selectedNodeId < mapNodes.length) {
+    const sn = mapNodes[selectedNodeId];
+    const pulse = Math.sin(gameTime * 6) * 4 + 28;
+    ctx.strokeStyle = '#ff0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(sn.x, sn.y, pulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1;
+
+    // Room preview
+    const preview = getMapRoomPreview(sn);
+    if (preview) {
+      ctx.textAlign = 'center';
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillStyle = '#ff0';
+      ctx.fillText(preview, sn.x, sn.y + 38);
+    }
+  }
+
+  // Escape hint
+  ctx.textAlign = 'center';
+  ctx.font = '12px "Courier New", monospace';
+  ctx.fillStyle = '#555';
+  ctx.fillText('Hold ESC to abandon run', W/2, H - 20);
+
+  // Escape bar
+  if (escapeHeld && escapeHoldTimer > 0) {
+    const barW = 200, barH = 12;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(W/2 - barW/2, H - 50, barW, barH);
+    ctx.fillStyle = '#f44';
+    ctx.fillRect(W/2 - barW/2, H - 50, barW * (escapeHoldTimer / 2.0), barH);
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillStyle = '#f44';
+    ctx.fillText('Hold to abandon...', W/2, H - 65);
+  }
+
+  // Instructions
+  ctx.textAlign = 'center';
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  ctx.fillText('\u2190/\u2192 navigate, Enter to enter room', W/2, H - 40);
+}
+
+// ============================================================
+// BATTLE RENDER
+// ============================================================
+function renderBattle() {
+  renderHUD();
+
+  // Player sprite
+  drawPlayerSprite(120, 210, 70);
+
+  // Enemies
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    if (!e.alive) continue;
+    const s = e.isBoss ? 90 : 60;
+    drawEnemy(e, e.x, e.y, s);
+    // HP bar
+    const barW = s * 0.8, barH = 6;
+    const bx = e.x - barW/2, by = e.y - s/2 - 12;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(bx, by, barW, barH);
+    const ratio = e.hp / e.maxHP;
+    ctx.fillStyle = ratio > 0.5 ? '#0f0' : ratio > 0.25 ? '#ff0' : '#f00';
+    ctx.fillRect(bx, by, barW * ratio, barH);
+    // Name
+    ctx.textAlign = 'center';
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText(e.name, e.x, by - 8);
+  }
+
+  // Target arrow
+  if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER || battlePhase === BATTLE_PHASES.PROBLEM_DISPLAY) {
+    if (targetIndex >= 0 && targetIndex < enemies.length && enemies[targetIndex].alive) {
+      const e = enemies[targetIndex];
+      const bounce = Math.sin(gameTime * 8) * 5;
+      ctx.fillStyle = '#ff0';
+      ctx.beginPath();
+      ctx.moveTo(e.x, e.y - (e.isBoss ? 60 : 45) + bounce);
+      ctx.lineTo(e.x - 8, e.y - (e.isBoss ? 70 : 55) + bounce);
+      ctx.lineTo(e.x + 8, e.y - (e.isBoss ? 70 : 55) + bounce);
+      ctx.fill();
+    }
+  }
+
+  // Math zone (y 360-600)
+  if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER || battlePhase === BATTLE_PHASES.ANSWER_RESULT || battlePhase === BATTLE_PHASES.PROBLEM_DISPLAY) {
+    renderMathZone();
+  }
+
+  // Battle start fade
+  if (battlePhase === BATTLE_PHASES.BATTLE_START && battleFadeTimer > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,' + (battleFadeTimer / 0.3) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Charge pips
+  if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER) {
+    renderChargePips();
+  }
+
+  // Victory overlay
+  if (battlePhase === BATTLE_PHASES.BATTLE_VICTORY) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 36px "Courier New", monospace';
+    ctx.fillStyle = '#ff0';
+    ctx.fillText('VICTORY!', W/2, 320);
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillStyle = '#0ff';
+    if (battleXPTotal > 0) ctx.fillText('+' + battleXPTotal + ' XP', W/2, 360);
+    if (battleGoldTotal > 0) { ctx.fillStyle = '#ff0'; ctx.fillText('+' + battleGoldTotal + ' Gold', W/2, 385); }
+    ctx.fillStyle = '#0f0';
+    const healAmt = Math.floor(player.maxHP * 0.15);
+    ctx.fillText('+' + healAmt + ' HP', W/2, 410);
+  }
+
+  // Death overlay
+  if (battlePhase === BATTLE_PHASES.PLAYER_DEAD) {
+    ctx.fillStyle = 'rgba(255,0,0,' + (0.5 * (1 - deathTimer)) + ')';
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 48px "Courier New", monospace';
+    ctx.fillStyle = '#f44';
+    ctx.fillText('DEFEATED', W/2, H/2);
+  }
+
+  // Level up overlay
+  if (levelUpPending) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 36px "Courier New", monospace';
+    ctx.fillStyle = '#ff0';
+    ctx.shadowColor = '#ff0';
+    ctx.shadowBlur = 20;
+    ctx.fillText('LEVEL UP!', W/2, 320);
+    ctx.shadowBlur = 0;
+    ctx.font = '16px "Courier New", monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('Level ' + player.level + '!', W/2, 355);
+  }
+}
+
+function renderMathZone() {
+  if (!problem) return;
+
+  // Problem text - use sans-serif for math
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(problem.text, W/2, 380);
+
+  // Answer buttons 2x2 grid
+  const labels = ['A', 'B', 'C', 'D'];
+  const btnW = 180, btnH = 40, gap = 20;
+  const gridX = W/2 - btnW - gap/2;
+  const gridY = 410;
+
+  for (let i = 0; i < 4; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const bx = gridX + col * (btnW + gap);
+    const by = gridY + row * (btnH + gap);
+
+    let bgColor = '#2a2a4a';
+    let textColor = '#fff';
+
+    if (battlePhase === BATTLE_PHASES.ANSWER_RESULT) {
+      if (i === problem.correctIndex) { bgColor = '#0a4a0a'; textColor = '#0f0'; }
+      else if (i === selectedAnswer && !resultCorrect) { bgColor = '#4a0a0a'; textColor = '#f44'; }
+    } else if (i === selectedAnswer) {
+      bgColor = '#3a3a6a';
+    }
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(bx, by, btnW, btnH);
+    ctx.strokeStyle = '#666';
+    ctx.strokeRect(bx, by, btnW, btnH);
+
+    ctx.textAlign = 'center';
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillStyle = '#888';
+    ctx.fillText(labels[i], bx + 15, by + btnH/2);
+
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.fillText(problem.answers[i], bx + btnW/2 + 10, by + btnH/2);
+  }
+
+  // Timer bar
+  if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER) {
+    const elapsed = gameTime - answerStartTime;
+    const remaining = Math.max(0, 1 - elapsed / timerDuration);
+    const barY = 530, barW = 400, barH = 10;
+    const barX = W/2 - barW/2;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = remaining > 0.6 ? '#0f0' : remaining > 0.3 ? '#ff0' : '#f00';
+    ctx.fillRect(barX, barY, barW * remaining, barH);
+  }
+
+  // Result message
+  if (battlePhase === BATTLE_PHASES.ANSWER_RESULT) {
+    ctx.textAlign = 'center';
+    ctx.font = '16px "Courier New", monospace';
+    ctx.fillStyle = resultCorrect ? '#0f0' : '#ff0';
+    ctx.fillText(resultMessage, W/2, 545);
+  }
+
+  // Hints (Floor 1 only)
+  if (hintText && floor === 1) {
+    ctx.textAlign = 'center';
+    ctx.font = '13px "Courier New", monospace';
+    const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = '#0ff';
+    ctx.fillText(hintText, W/2, 575);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function renderChargePips() {
+  const px = W/2 - 30, py = 555;
+  for (let i = 0; i < 3; i++) {
+    const filled = consecutiveCorrect > i;
+    ctx.fillStyle = filled ? '#ff0' : '#333';
+    if (specialActivated) ctx.fillStyle = '#fff';
+    ctx.fillRect(px + i * 22, py, 16, 10);
+  }
+
+  // Special text
+  ctx.textAlign = 'center';
+  ctx.font = '13px "Courier New", monospace';
+  if (specialActivated) {
+    ctx.fillStyle = '#ff0';
+    const pulse = Math.sin(gameTime * 6) * 0.3 + 0.7;
+    ctx.globalAlpha = pulse;
+    ctx.fillText('SPECIAL ACTIVE!', W/2, 580);
+    ctx.globalAlpha = 1;
+  } else if (consecutiveCorrect >= 3) {
+    const cls = CLASSES[player.classIndex];
+    ctx.fillStyle = '#ff0';
+    const pulse = Math.sin(gameTime * 6) * 0.3 + 0.7;
+    ctx.globalAlpha = pulse;
+    ctx.fillText('SPECIAL READY \u2014 S: ' + cls.specialName, W/2, 580);
+    ctx.globalAlpha = 1;
+
+    // First charge hint
+    if (firstChargeEver && floor === 1) {
+      firstChargeEver = false;
+      hintText = 'Special charging! Get 3 right in a row, then press S!';
+    }
+  }
+}
+
+// ============================================================
+// SHOP RENDER
+// ============================================================
+function renderShop() {
+  renderHUD();
+
+  // Background
+  ctx.fillStyle = '#1a1008';
+  ctx.fillRect(0, 55, W, H - 55);
+
+  // Counter
+  ctx.fillStyle = '#4a2a0a';
+  ctx.fillRect(100, 340, W - 200, 20);
+
+  // Shopkeeper
+  drawShopkeeper(W/2, 300);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 24px "Courier New", monospace';
+  ctx.fillStyle = '#ff0';
+  ctx.fillText('SHOP', W/2, 85);
+
+  // Gold
+  ctx.textAlign = 'right';
+  ctx.font = '18px "Courier New", monospace';
+  ctx.fillStyle = '#ff0';
+  ctx.fillText('Gold: ' + player.gold, W - 50, 85);
+
+  // Items
+  ctx.textAlign = 'left';
+  for (let i = 0; i < shopItems.length; i++) {
+    const item = shopItems[i];
+    const y = 400 + i * 50;
+    const sel = (i === shopSelected);
+    if (sel) {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      ctx.fillRect(150, y - 15, W - 300, 40);
+      // Pulsing arrow
+      const pulse = Math.sin(gameTime * 6) * 3;
+      ctx.fillStyle = '#ff0';
+      ctx.font = '20px sans-serif';
+      ctx.fillText('\u25b6', 130 + pulse, y + 5);
+    }
+    ctx.font = '18px "Courier New", monospace';
+    ctx.fillStyle = item.sold ? '#555' : '#fff';
+    ctx.fillText(item.sold ? item.name + ' (SOLD)' : item.name, 170, y + 5);
+    ctx.fillStyle = item.sold ? '#444' : '#888';
+    ctx.font = '14px "Courier New", monospace';
+    ctx.fillText(item.desc, 400, y + 5);
+    if (!item.sold) {
+      ctx.fillStyle = '#ff0';
+      ctx.fillText(item.cost + 'g', 600, y + 5);
+    }
+  }
+
+  // Leave option
+  const leaveY = 400 + shopItems.length * 50;
+  const sel = (shopSelected === shopItems.length);
+  if (sel) {
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(150, leaveY - 15, W - 300, 40);
+    const pulse = Math.sin(gameTime * 6) * 3;
+    ctx.fillStyle = '#ff0';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('\u25b6', 130 + pulse, leaveY + 5);
+  }
+  ctx.font = '18px "Courier New", monospace';
+  ctx.fillStyle = sel ? '#fff' : '#888';
+  ctx.fillText('Leave', 170, leaveY + 5);
+
+  // Message
+  if (shopMessageTimer > 0 && shopMessage) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 20px "Courier New", monospace';
+    ctx.fillStyle = shopMessage.includes('Not') ? '#f44' : '#0f0';
+    ctx.fillText(shopMessage, W/2, 370);
+  }
+}
+
+// ============================================================
+// TREASURE RENDER
+// ============================================================
+function renderTreasure() {
+  renderHUD();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Chest
+  const chestY = treasureOpened ? 230 : 250;
+  ctx.fillStyle = '#8B4513';
+  ctx.fillRect(W/2 - 40, chestY, 80, 50);
+  ctx.fillStyle = '#A0522D';
+  ctx.fillRect(W/2 - 40, chestY - (treasureOpened ? 40 : 10), 80, 20);
+  ctx.fillStyle = '#ff0';
+  ctx.fillRect(W/2 - 5, chestY + 15, 10, 10);
+
+  if (treasureOpened && treasureReward) {
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.fillStyle = treasureReward.color;
+    ctx.fillText(treasureReward.text, W/2, 340);
+
+    ctx.font = '16px "Courier New", monospace';
+    ctx.fillStyle = '#888';
+    ctx.fillText('Press Enter to continue', W/2, 400);
+  } else {
+    ctx.font = '20px "Courier New", monospace';
+    ctx.fillStyle = '#ff0';
+    ctx.fillText('Opening chest...', W/2, 340);
+  }
+}
+
+// ============================================================
+// VICTORY RENDER
+// ============================================================
+function renderVictory() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 48px "Courier New", monospace';
+  ctx.fillStyle = '#ff0';
+  ctx.shadowColor = '#ff0';
+  ctx.shadowBlur = 20;
+  ctx.fillText('FLOOR ' + floor + ' CLEARED!', W/2, 180);
+  ctx.shadowBlur = 0;
+
+  ctx.font = '22px "Courier New", monospace';
+  ctx.fillStyle = '#0ff';
+  ctx.fillText('Monsters defeated: ' + totalKills, W/2, 280);
+  ctx.fillText('Problems solved: ' + totalCorrect, W/2, 315);
+  const acc = totalAnswered > 0 ? Math.round((totalCorrect/totalAnswered)*100) + '%' : '\u2014';
+  ctx.fillText('Accuracy: ' + acc, W/2, 350);
+
+  ctx.font = '18px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press Enter for next floor', W/2, 450);
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// GAME OVER RENDER
+// ============================================================
+function renderGameOver() {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold 48px "Courier New", monospace';
+  ctx.fillStyle = '#ff6ec7';
+  ctx.fillText('You reached Floor ' + floor + '!', W/2, 130);
+
+  ctx.font = 'bold 28px "Courier New", monospace';
+  ctx.fillStyle = '#ff0';
+  ctx.fillText(getFloorRating(floor), W/2, 190);
+
+  ctx.font = '20px "Courier New", monospace';
+  ctx.fillStyle = '#ccc';
+  ctx.fillText('Monsters defeated: ' + totalKills, W/2, 270);
+  ctx.fillText('Problems solved: ' + totalCorrect, W/2, 300);
+  const acc = totalAnswered > 0 ? Math.round((totalCorrect/totalAnswered)*100) + '%' : '\u2014';
+  ctx.fillText('Accuracy: ' + acc, W/2, 330);
+
+  ctx.fillStyle = '#888';
+  ctx.font = '16px "Courier New", monospace';
+  ctx.fillText('Your best: Floor ' + bestFloor, W/2, 390);
+
+  ctx.font = '20px "Courier New", monospace';
+  ctx.fillStyle = '#0ff';
+  const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
+  ctx.globalAlpha = pulse;
+  ctx.fillText('Press Enter to try again!', W/2, 470);
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+// INPUT HANDLING
+// ============================================================
+const keys = new Set();
+
+document.addEventListener('keydown', (e) => {
+  const key = e.key;
+
+  // M - mute toggle, always works
+  if (key === 'm' || key === 'M') {
+    e.preventDefault();
+    muted = !muted;
+    return;
+  }
+
+  // P - pause toggle
+  if ((key === 'p' || key === 'P') && (state === STATES.BATTLE || state === STATES.DUNGEON_MAP)) {
+    e.preventDefault();
+    paused = !paused;
+    return;
+  }
+
+  if (paused) return;
+
+  // Escape
+  if (key === 'Escape') {
+    e.preventDefault();
+    if (state === STATES.BATTLE) {
+      paused = !paused;
+    } else if (state === STATES.DUNGEON_MAP) {
+      escapeHeld = true;
+    } else if (state === STATES.SHOP) {
+      // Leave shop
+      state = STATES.DUNGEON_MAP;
+    }
+    return;
+  }
+
+  // Enter
+  if (key === 'Enter') {
+    e.preventDefault();
+    handleEnter();
+    return;
+  }
+
+  // Prevent default for game keys
+  if (['a','b','c','d','A','B','C','D','1','2','3','4','s','S','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(key)) {
+    e.preventDefault();
+  }
+
+  switch (state) {
+    case STATES.CHARACTER_SELECT:
+      if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
+        selectedClass = (selectedClass + 2) % 3;
+      } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
+        selectedClass = (selectedClass + 1) % 3;
+      }
+      break;
+
+    case STATES.DUNGEON_MAP:
+      if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
+        cycleMapNode(-1);
+      } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
+        cycleMapNode(1);
+      }
+      break;
+
+    case STATES.BATTLE:
+      if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER && inputLockTimer <= 0) {
+        const ansMap = { 'a': 0, 'A': 0, '1': 0, 'b': 1, 'B': 1, '2': 1, 'c': 2, 'C': 2, '3': 2, 'd': 3, 'D': 3, '4': 3 };
+        if (key in ansMap) {
+          handleAnswer(ansMap[key]);
+        } else if (key === 'ArrowLeft') {
+          cycleTarget(-1);
+        } else if (key === 'ArrowRight') {
+          cycleTarget(1);
+        } else if (key === 's' || key === 'S') {
+          if (consecutiveCorrect >= 3 && !specialActivated) {
+            specialActivated = true;
+          }
+        }
+      }
+      break;
+
+    case STATES.SHOP:
+      if (key === 'ArrowUp') {
+        shopSelected = Math.max(0, shopSelected - 1);
+      } else if (key === 'ArrowDown') {
+        shopSelected = Math.min(shopItems.length, shopSelected + 1);
+      }
+      break;
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'Escape') {
+    escapeHeld = false;
+    escapeHoldTimer = 0;
+  }
+});
+
+function handleEnter() {
+  switch (state) {
+    case STATES.TITLE:
+      initAudio();
+      state = STATES.CONTROLS;
+      controlsTimer = 0;
+      break;
+
+    case STATES.CONTROLS:
+      state = STATES.CHARACTER_SELECT;
+      controlsTimer = 0;
+      break;
+
+    case STATES.CHARACTER_SELECT:
+      initPlayer(selectedClass);
+      floor = 1;
+      generateMap(floor);
+      floorIntroTimer = 0;
+      state = STATES.FLOOR_INTRO;
+      break;
+
+    case STATES.DUNGEON_MAP:
+      enterRoom(selectedNodeId);
+      break;
+
+    case STATES.SHOP:
+      if (shopSelected === shopItems.length) {
+        // Leave
+        state = STATES.DUNGEON_MAP;
+      } else {
+        buyShopItem();
+      }
+      break;
+
+    case STATES.TREASURE:
+      if (treasureOpened) {
+        mapNodes[currentNodeId].cleared = true;
+        state = STATES.DUNGEON_MAP;
+      }
+      break;
+
+    case STATES.VICTORY:
+      floor++;
+      generateMap(floor);
+      floorIntroTimer = 0;
+      consecutiveCorrect = 0;
+      specialActivated = false;
+      state = STATES.FLOOR_INTRO;
+      break;
+
+    case STATES.GAME_OVER:
+      fullRestart();
+      break;
+  }
+}
+
+function cycleMapNode(dir) {
+  const conns = mapNodes[currentNodeId].connections;
+  if (conns.length === 0) return;
+  const idx = conns.indexOf(selectedNodeId);
+  let next;
+  if (idx < 0) next = 0;
+  else next = (idx + dir + conns.length) % conns.length;
+  selectedNodeId = conns[next];
+  sfxMapBlip();
+}
+
+function cycleTarget(dir) {
+  const alive = [];
+  for (let i = 0; i < enemies.length; i++) {
+    if (enemies[i].alive) alive.push(i);
+  }
+  if (alive.length <= 1) return;
+  const cur = alive.indexOf(targetIndex);
+  const next = (cur + dir + alive.length) % alive.length;
+  targetIndex = alive[next];
+}
+
+function enterRoom(nodeId) {
+  if (!mapNodes[currentNodeId].connections.includes(nodeId)) return;
+  const node = mapNodes[nodeId];
+
+  // Boss lock
+  if (node.type === 'boss') {
+    let monsterCleared = 0;
+    for (const n of mapNodes) { if ((n.type === 'monster') && n.cleared) monsterCleared++; }
+    if (monsterCleared < 2) {
+      shopMessage = 'Defeat more monsters first!';
+      shopMessageTimer = 1.5;
+      // Show on map briefly - reuse floats
+      addFloat(node.x, node.y + 40, 'Defeat more monsters first!', '#f44');
+      return;
+    }
+  }
+
+  sfxMapEnter();
+  currentNodeId = nodeId;
+  node.visited = true;
+  selectedNodeId = node.connections.length > 0 ? node.connections[0] : nodeId;
+
+  if ((node.type === 'monster' || node.type === 'boss') && node.cleared) {
+    addFloat(node.x, node.y + 40, 'Room Cleared', '#888');
+    return;
+  }
+  if (node.type === 'treasure' && node.cleared) {
+    addFloat(node.x, node.y + 40, 'Room Cleared', '#888');
+    return;
+  }
+
+  fadeToBlack(() => {
+    if (node.type === 'monster') {
+      startBattle(false);
+    } else if (node.type === 'boss') {
+      startBattle(true);
+    } else if (node.type === 'shop') {
+      initShop(node);
+      state = STATES.SHOP;
+    } else if (node.type === 'treasure') {
+      treasureOpened = false;
+      treasureTimer = 0;
+      state = STATES.TREASURE;
+    }
+  });
+}
+
+// ============================================================
+// FOCUS / BLUR
+// ============================================================
+window.addEventListener('blur', () => {
+  if (state === STATES.BATTLE || state === STATES.DUNGEON_MAP) {
+    paused = true;
+  }
+  escapeHeld = false;
+  escapeHoldTimer = 0;
+});
+
+window.addEventListener('focus', () => {
+  lastTimestamp = 0;
+});
+
+// ============================================================
+// START GAME LOOP
+// ============================================================
+requestAnimationFrame(gameLoop);
+
+})();
+</script>
+</body>
+</html>
