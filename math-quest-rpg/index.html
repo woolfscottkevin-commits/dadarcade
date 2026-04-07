@@ -9,7 +9,7 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
 canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
-.back-link{position:fixed;top:12px;left:12px;z-index:9999;color:rgba(255,255,255,0.4);text-decoration:none;font-family:'Courier New',monospace;font-size:14px;transition:color 0.3s}.back-link:hover{color:#fff}
+.back-link{position:fixed;top:10px;left:10px;z-index:9999;color:rgba(255,255,255,0.45);text-decoration:none;font-family:'Courier New',monospace;font-size:18px;padding:8px 14px;border-radius:6px;background:rgba(255,255,255,0.08);transition:all 0.3s}.back-link:hover{color:#fff;background:rgba(255,255,255,0.18)}
 .mobile-msg{display:none;position:fixed;inset:0;background:#111;color:#fff;font-family:'Courier New',monospace;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:10000;gap:1rem}
 .mobile-msg .emoji{font-size:3rem}
 .mobile-msg a{color:#0ff;text-decoration:none}
@@ -123,9 +123,12 @@ let selectedClass = 0;
 
 // Floor / Map
 let floor = 1;
-let mapNodes = [];
-let currentNodeId = 0;
-let selectedNodeId = 0;
+let mapNodes = [];       // linear path: [{id, type, x, y, visited, cleared, skipped, forkGroup, forkOption, shopItems, treasureGiven}]
+let mapForks = [];       // [{atIndex, options:[[nodeIdx,nodeIdx],[nodeIdx,nodeIdx]], chosen:-1}]
+let currentNodeId = 0;   // index into mapNodes
+let selectedNodeId = 0;  // index into mapNodes (cursor)
+let forkSelecting = false; // true when player is at a fork choosing Up/Down
+let forkChoice = 0;       // 0=top, 1=bottom
 let monstersDefeated = 0;
 
 // Battle
@@ -661,83 +664,201 @@ function getTimerDuration(flr, isBoss) {
 }
 
 // ============================================================
-// MAP GENERATION
+// MAP GENERATION — LINEAR PATH WITH FORKS
 // ============================================================
+function makeNode(id, type) {
+  return { id, type, x: 0, y: 0, visited: false, cleared: false, skipped: false, forkGroup: -1, forkOption: -1, shopItems: null, treasureGiven: false };
+}
+
+function pickRandomType(flr) {
+  if (flr >= 4) {
+    const r = Math.random();
+    return r < 0.5 ? 'monster' : r < 0.75 ? 'treasure' : 'shop';
+  }
+  const r = Math.random();
+  return r < 0.333 ? 'monster' : r < 0.666 ? 'treasure' : 'shop';
+}
+
 function generateMap(flr) {
   mapNodes = [];
+  mapForks = [];
   monstersDefeated = 0;
+  forkSelecting = false;
+  forkChoice = 0;
 
-  let monsterCount, randomCount;
-  if (flr <= 2) { monsterCount = 2; randomCount = 2; }
-  else if (flr <= 4) { monsterCount = 2; randomCount = 3; }
-  else { monsterCount = 3; randomCount = 3; }
+  // Determine room count (excluding entrance and boss)
+  let totalMiddle;
+  if (flr <= 2) totalMiddle = 4;      // 2 monster + 2 random
+  else if (flr <= 4) totalMiddle = 5;  // 2 monster + 3 random
+  else totalMiddle = 6;                // 3 monster + 3 random
 
-  // Entrance
-  mapNodes.push({ id: 0, type: 'entrance', x: 80, y: H/2, connections: [], visited: true, cleared: true, enemies: null, shopItems: null, treasureGiven: false });
-
-  // Column 1: monster rooms
-  const col1 = [];
-  for (let i = 0; i < monsterCount; i++) {
-    const id = mapNodes.length;
-    const yPos = 100 + i * ((H - 200) / (monsterCount - 1 || 1));
-    col1.push(id);
-    mapNodes.push({ id, type: 'monster', x: 250, y: yPos, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
-    mapNodes[0].connections.push(id);
-    mapNodes[id] = mapNodes[mapNodes.length - 1];
-    mapNodes[id].connections.push(0);
+  // Build a linear sequence of rooms with 1-2 forks
+  // First, create all rooms as a flat list of types
+  let monsterCount = (flr <= 4) ? 2 : 3;
+  let randomCount = totalMiddle - monsterCount;
+  const types = [];
+  for (let i = 0; i < monsterCount; i++) types.push('monster');
+  for (let i = 0; i < randomCount; i++) types.push(pickRandomType(flr));
+  // Shuffle but keep first room as monster (ensures boss unlock possible)
+  const first = types.splice(0, 1); // keep one monster first
+  for (let i = types.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [types[i], types[j]] = [types[j], types[i]];
   }
+  types.unshift(first[0]);
 
-  // Column 2: random rooms
-  const col2 = [];
-  for (let i = 0; i < randomCount; i++) {
-    const id = mapNodes.length;
-    const yPos = 100 + i * ((H - 200) / (randomCount - 1 || 1));
-    let type;
-    if (flr >= 4) {
-      const r = Math.random();
-      if (r < 0.5) type = 'monster';
-      else if (r < 0.75) type = 'treasure';
-      else type = 'shop';
+  // Entrance (id 0)
+  const entrance = makeNode(0, 'entrance');
+  entrance.visited = true;
+  entrance.cleared = true;
+  mapNodes.push(entrance);
+
+  // Place rooms along the path
+  // Decide fork positions: 1 fork for small maps, 2 for larger
+  const numForks = totalMiddle >= 5 ? random(1, 2) : (Math.random() < 0.5 ? 1 : 0);
+  const forkPositions = new Set();
+  let attempts = 0;
+  while (forkPositions.size < numForks && attempts < 20) {
+    // Fork can be at position 1..totalMiddle-2 (not first or last middle room)
+    const pos = random(1, Math.max(1, totalMiddle - 2));
+    forkPositions.add(pos);
+    attempts++;
+  }
+  const forkPosArr = Array.from(forkPositions).sort((a, b) => a - b);
+
+  // Build nodes: entrance, then middle rooms (with forks), then boss
+  let nodeId = 1;
+  let typeIdx = 0;
+  const pathOrder = [0]; // indices into mapNodes for the "main path"
+
+  for (let i = 0; i < totalMiddle; i++) {
+    if (forkPosArr.includes(i) && typeIdx < types.length - 1) {
+      // Fork: create two rooms (top and bottom), player picks one
+      const forkIdx = mapForks.length;
+      const topType = types[typeIdx++];
+      const botType = (typeIdx < types.length) ? types[typeIdx++] : pickRandomType(flr);
+      // But if we consumed an extra, reduce total iterations
+      const topNode = makeNode(nodeId++, topType);
+      topNode.forkGroup = forkIdx;
+      topNode.forkOption = 0;
+      mapNodes.push(topNode);
+      const topIdx = mapNodes.length - 1;
+
+      const botNode = makeNode(nodeId++, botType);
+      botNode.forkGroup = forkIdx;
+      botNode.forkOption = 1;
+      mapNodes.push(botNode);
+      const botIdx = mapNodes.length - 1;
+
+      mapForks.push({ options: [[topIdx], [botIdx]], chosen: -1 });
+      pathOrder.push(topIdx); // top is "default" in path for layout
+      pathOrder.push(botIdx); // bottom stored right after
+      i++; // consumed two rooms for the fork
     } else {
-      const r = Math.random();
-      if (r < 0.333) type = 'monster';
-      else if (r < 0.666) type = 'treasure';
-      else type = 'shop';
-    }
-    col2.push(id);
-    mapNodes.push({ id, type, x: 450, y: yPos, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
-  }
-
-  // Connect col1 → col2
-  for (const c1 of col1) {
-    const numConn = random(1, Math.min(2, col2.length));
-    const shuffled = [...col2].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < numConn; i++) {
-      if (!mapNodes[c1].connections.includes(shuffled[i])) {
-        mapNodes[c1].connections.push(shuffled[i]);
-        mapNodes[shuffled[i]].connections.push(c1);
-      }
-    }
-  }
-  // Ensure all col2 reachable
-  for (const c2 of col2) {
-    if (mapNodes[c2].connections.length === 0) {
-      const c1 = col1[random(0, col1.length - 1)];
-      mapNodes[c2].connections.push(c1);
-      mapNodes[c1].connections.push(c2);
+      const t = typeIdx < types.length ? types[typeIdx++] : pickRandomType(flr);
+      const node = makeNode(nodeId++, t);
+      mapNodes.push(node);
+      pathOrder.push(mapNodes.length - 1);
     }
   }
 
-  // Boss
-  const bossId = mapNodes.length;
-  mapNodes.push({ id: bossId, type: 'boss', x: 700, y: H/2, connections: [], visited: false, cleared: false, enemies: null, shopItems: null, treasureGiven: false });
-  for (const c2 of col2) {
-    mapNodes[c2].connections.push(bossId);
-    mapNodes[bossId].connections.push(c2);
+  // Boss (last node)
+  const boss = makeNode(nodeId++, 'boss');
+  mapNodes.push(boss);
+  pathOrder.push(mapNodes.length - 1);
+
+  // Layout: position nodes left to right
+  const mapY = 300; // center Y for main path
+  const mapLeft = 80;
+  const mapRight = W - 80;
+  // Count "columns" — each step in pathOrder is a column, but fork pairs share a column
+  const columns = [];
+  for (let i = 0; i < pathOrder.length; i++) {
+    const ni = pathOrder[i];
+    const node = mapNodes[ni];
+    if (node.forkGroup >= 0 && node.forkOption === 1) {
+      // Bottom fork — same column as previous (top fork)
+      columns[columns.length - 1].push(ni);
+    } else {
+      columns.push([ni]);
+    }
   }
+  const colSpacing = (mapRight - mapLeft) / Math.max(columns.length - 1, 1);
+  for (let c = 0; c < columns.length; c++) {
+    const col = columns[c];
+    const cx = mapLeft + c * colSpacing;
+    if (col.length === 1) {
+      mapNodes[col[0]].x = cx;
+      mapNodes[col[0]].y = mapY;
+    } else {
+      // Fork: top and bottom
+      mapNodes[col[0]].x = cx;
+      mapNodes[col[0]].y = mapY - 60;
+      mapNodes[col[1]].x = cx;
+      mapNodes[col[1]].y = mapY + 60;
+    }
+  }
+
+  // Store column order for navigation (flat, left to right, forks adjacent)
+  // Build navigable list: ordered list of node indices the cursor can visit
+  // For forks, only include the chosen branch (or both if not yet chosen)
+  // We'll compute this dynamically in getAccessibleNodes()
 
   currentNodeId = 0;
-  selectedNodeId = mapNodes[0].connections[0];
+  selectedNodeId = 1; // first room after entrance
+  advanceSelection();
+}
+
+// Get ordered list of accessible node indices for navigation
+function getAccessibleNodes() {
+  const result = [];
+  for (let i = 1; i < mapNodes.length; i++) { // skip entrance
+    const node = mapNodes[i];
+    if (node.skipped) continue;
+    if (node.forkGroup >= 0) {
+      const fork = mapForks[node.forkGroup];
+      if (fork.chosen >= 0 && node.forkOption !== fork.chosen) continue; // other branch, skip
+    }
+    result.push(i);
+  }
+  return result;
+}
+
+// Find the next uncleared room for the cursor to land on
+function advanceSelection() {
+  const accessible = getAccessibleNodes();
+  // Find first uncleared accessible room
+  for (const idx of accessible) {
+    if (!mapNodes[idx].cleared && !mapNodes[idx].skipped) {
+      selectedNodeId = idx;
+      return;
+    }
+  }
+  // All cleared — select boss or last
+  selectedNodeId = accessible[accessible.length - 1] || 1;
+}
+
+// Check if a room is reachable (all prior rooms in path cleared or skipped)
+function isRoomReachable(nodeIdx) {
+  const accessible = getAccessibleNodes();
+  const pos = accessible.indexOf(nodeIdx);
+  if (pos < 0) return false;
+  // All rooms before this one must be cleared or skipped
+  for (let i = 0; i < pos; i++) {
+    const n = mapNodes[accessible[i]];
+    if (!n.cleared && !n.skipped) return false;
+  }
+  return true;
+}
+
+// Check if boss is unlockable (all non-skipped rooms cleared)
+function isBossUnlocked() {
+  for (const node of mapNodes) {
+    if (node.type === 'entrance' || node.type === 'boss') continue;
+    if (node.skipped) continue;
+    if (!node.cleared) return false;
+  }
+  return true;
 }
 
 function getMapRoomPreview(node) {
@@ -1154,6 +1275,7 @@ function updateBattle(dt) {
         } else {
           fadeToBlack(() => {
             state = STATES.DUNGEON_MAP;
+            advanceSelection();
           });
         }
       }
@@ -1377,6 +1499,9 @@ function fullRestart() {
   paused = false;
   floor = 1;
   mapNodes = [];
+  mapForks = [];
+  forkSelecting = false;
+  forkChoice = 0;
   enemies = [];
   particles = [];
   floats = [];
@@ -1630,46 +1755,121 @@ function renderHUD() {
 // ============================================================
 function renderMap() {
   renderHUD();
+  const accessible = getAccessibleNodes();
+  const mapY = 300;
 
-  // Draw connections
-  ctx.strokeStyle = '#444';
+  // Draw dotted path lines connecting nodes left to right
+  ctx.setLineDash([6, 4]);
   ctx.lineWidth = 2;
-  for (const node of mapNodes) {
-    for (const cId of node.connections) {
-      if (cId > node.id) {
-        const other = mapNodes[cId];
-        ctx.beginPath();
-        ctx.moveTo(node.x, node.y);
-        ctx.lineTo(other.x, other.y);
-        ctx.stroke();
+  let prevNode = mapNodes[0]; // entrance
+  for (let i = 0; i < accessible.length; i++) {
+    const node = mapNodes[accessible[i]];
+    // For forks, draw lines from prev to both options, or just the chosen one
+    if (node.forkGroup >= 0) {
+      const fork = mapForks[node.forkGroup];
+      if (fork.chosen < 0) {
+        // Not yet chosen: draw both branches from previous node
+        for (const optNodes of fork.options) {
+          const fn = mapNodes[optNodes[0]];
+          ctx.strokeStyle = '#555';
+          ctx.beginPath();
+          ctx.moveTo(prevNode.x, prevNode.y);
+          ctx.lineTo(fn.x, fn.y);
+          ctx.stroke();
+        }
+        // Draw from both to the next non-fork node
+        const nextNonFork = accessible.find((ai, idx) => idx > i && mapNodes[ai].forkGroup !== node.forkGroup);
+        if (nextNonFork !== undefined) {
+          for (const optNodes of fork.options) {
+            const fn = mapNodes[optNodes[0]];
+            ctx.beginPath();
+            ctx.moveTo(fn.x, fn.y);
+            ctx.lineTo(mapNodes[nextNonFork].x, mapNodes[nextNonFork].y);
+            ctx.stroke();
+          }
+        }
+        // Skip the other fork node in iteration
+        const otherForkIdx = accessible.findIndex((ai, idx) => idx > i && mapNodes[ai].forkGroup === node.forkGroup);
+        if (otherForkIdx > i) i = otherForkIdx;
+        // prevNode stays — next connection starts from after fork
+        if (nextNonFork !== undefined) prevNode = node; // approximate
+        continue;
       }
     }
+    // Normal path line
+    ctx.strokeStyle = node.cleared ? '#484' : node.skipped ? '#333' : '#555';
+    ctx.beginPath();
+    ctx.moveTo(prevNode.x, prevNode.y);
+    ctx.lineTo(node.x, node.y);
+    ctx.stroke();
+    prevNode = node;
   }
+  ctx.setLineDash([]);
   ctx.lineWidth = 1;
 
-  // Draw nodes
-  for (const node of mapNodes) {
-    const isCurrent = (node.id === currentNodeId);
-    const isSelected = (node.id === selectedNodeId);
-    const r = 22;
+  // Draw arrows between nodes (small right-pointing triangles along path)
+  for (let c = 0; c < accessible.length - 1; c++) {
+    const a = mapNodes[accessible[c]];
+    const b = mapNodes[accessible[c + 1]];
+    if (a.forkGroup >= 0 && b.forkGroup >= 0 && a.forkGroup === b.forkGroup) continue;
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    ctx.save();
+    ctx.translate(mx, my);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#444';
+    ctx.beginPath();
+    ctx.moveTo(6, 0);
+    ctx.lineTo(-4, -4);
+    ctx.lineTo(-4, 4);
+    ctx.fill();
+    ctx.restore();
+  }
 
-    // Glow for current
-    if (isCurrent) {
-      ctx.shadowColor = '#0ff';
-      ctx.shadowBlur = 15;
+  // Draw entrance
+  const ent = mapNodes[0];
+  ctx.fillStyle = '#0ff';
+  ctx.beginPath();
+  ctx.arc(ent.x, ent.y, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold 14px "Courier New", monospace';
+  ctx.fillStyle = '#111';
+  ctx.fillText('GO', ent.x, ent.y);
+
+  // Draw room nodes
+  for (let i = 1; i < mapNodes.length; i++) {
+    const node = mapNodes[i];
+    if (node.skipped) {
+      // Dimmed out skipped fork branch
+      ctx.globalAlpha = 0.2;
     }
+    const isSel = (i === selectedNodeId);
+    const reachable = isRoomReachable(i);
+    const r = node.type === 'boss' ? 26 : 22;
 
-    // Node circle
-    ctx.fillStyle = node.cleared ? '#333' : node.visited ? '#555' : '#222';
-    if (isSelected) ctx.fillStyle = '#444';
+    // Node background
+    if (node.cleared) ctx.fillStyle = '#2a3a2a';
+    else if (isSel && reachable) ctx.fillStyle = '#3a3a5a';
+    else if (!reachable) ctx.fillStyle = '#1a1a1a';
+    else ctx.fillStyle = '#222';
     ctx.beginPath();
     ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
 
     // Border
-    ctx.strokeStyle = isSelected ? '#fff' : (isCurrent ? '#0ff' : '#666');
-    ctx.lineWidth = isSelected ? 3 : 2;
+    if (isSel && reachable) {
+      ctx.strokeStyle = '#ff0';
+      ctx.lineWidth = 3;
+    } else if (node.cleared) {
+      ctx.strokeStyle = '#4a4';
+      ctx.lineWidth = 2;
+    } else {
+      ctx.strokeStyle = reachable ? '#888' : '#444';
+      ctx.lineWidth = 2;
+    }
     ctx.beginPath();
     ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
     ctx.stroke();
@@ -1678,43 +1878,94 @@ function renderMap() {
     // Icon
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '18px sans-serif';
-    const dimmed = !node.visited && !isCurrent && !isSelected;
-    ctx.globalAlpha = dimmed ? 0.4 : 1;
-    if (node.type === 'entrance') ctx.fillText('\u2302', node.x, node.y);
-    else if (node.type === 'monster') { ctx.fillStyle = '#f44'; ctx.fillText('\u2694', node.x, node.y); }
+    ctx.font = node.type === 'boss' ? '22px sans-serif' : '18px sans-serif';
+    if (node.type === 'monster') { ctx.fillStyle = '#f44'; ctx.fillText('\u2694', node.x, node.y); }
     else if (node.type === 'treasure') { ctx.fillStyle = '#ff0'; ctx.fillText('\u2666', node.x, node.y); }
     else if (node.type === 'shop') { ctx.fillStyle = '#0f0'; ctx.fillText('$', node.x, node.y); }
     else if (node.type === 'boss') { ctx.fillStyle = '#f44'; ctx.fillText('\u2620', node.x, node.y); }
-    ctx.globalAlpha = 1;
 
     // Cleared checkmark
-    if (node.cleared && node.type !== 'entrance') {
+    if (node.cleared) {
       ctx.fillStyle = '#0f0';
       ctx.font = '14px sans-serif';
-      ctx.fillText('\u2713', node.x + r, node.y - r);
+      ctx.fillText('\u2713', node.x + r + 2, node.y - r);
+    }
+
+    ctx.globalAlpha = 1;
+  }
+
+  // Pulsing selection ring
+  if (selectedNodeId > 0 && selectedNodeId < mapNodes.length) {
+    const sn = mapNodes[selectedNodeId];
+    if (!sn.skipped) {
+      const pulse = Math.sin(gameTime * 6) * 4 + (sn.type === 'boss' ? 32 : 28);
+      ctx.strokeStyle = '#ff0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sn.x, sn.y, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+
+      // Room preview below
+      const preview = getMapRoomPreview(sn);
+      if (preview) {
+        ctx.textAlign = 'center';
+        ctx.font = '14px "Courier New", monospace';
+        ctx.fillStyle = '#ff0';
+        ctx.fillText(preview, sn.x, sn.y + (sn.type === 'boss' ? 42 : 38));
+      }
+
+      // Status text
+      if (sn.cleared) {
+        ctx.font = '12px "Courier New", monospace';
+        ctx.fillStyle = '#4a4';
+        ctx.fillText('Cleared', sn.x, sn.y + (sn.type === 'boss' ? 56 : 52));
+      } else if (sn.type === 'boss' && !isBossUnlocked()) {
+        ctx.font = '12px "Courier New", monospace';
+        ctx.fillStyle = '#f44';
+        ctx.fillText('Clear all rooms first!', sn.x, sn.y + 56);
+      }
     }
   }
 
-  // Pulsing highlight on selected
-  if (selectedNodeId >= 0 && selectedNodeId < mapNodes.length) {
-    const sn = mapNodes[selectedNodeId];
-    const pulse = Math.sin(gameTime * 6) * 4 + 28;
-    ctx.strokeStyle = '#ff0';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sn.x, sn.y, pulse, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.lineWidth = 1;
+  // Fork selection UI
+  if (forkSelecting) {
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillStyle = '#ff0';
+    ctx.fillText('Choose a path! \u2191/\u2193 then Enter', W/2, 85);
 
-    // Room preview
-    const preview = getMapRoomPreview(sn);
-    if (preview) {
-      ctx.textAlign = 'center';
-      ctx.font = '14px "Courier New", monospace';
-      ctx.fillStyle = '#ff0';
-      ctx.fillText(preview, sn.x, sn.y + 38);
+    // Highlight the currently selected fork option
+    const selNode = mapNodes[selectedNodeId];
+    if (selNode.forkGroup >= 0) {
+      const fork = mapForks[selNode.forkGroup];
+      for (let opt = 0; opt < fork.options.length; opt++) {
+        const fn = mapNodes[fork.options[opt][0]];
+        if (opt === forkChoice) {
+          ctx.strokeStyle = '#ff0';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(fn.x, fn.y, 28, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.font = '12px "Courier New", monospace';
+          ctx.fillStyle = '#ff0';
+          ctx.fillText(opt === 0 ? '\u25b2' : '\u25bc', fn.x - 32, fn.y);
+        }
+      }
     }
+  }
+
+  // Player position marker on current room
+  if (currentNodeId >= 0 && currentNodeId < mapNodes.length) {
+    const cn = mapNodes[currentNodeId];
+    ctx.fillStyle = '#0ff';
+    ctx.shadowColor = '#0ff';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(cn.x, cn.y - (cn.type === 'boss' ? 34 : 30), 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
 
   // Escape hint
@@ -1739,7 +1990,11 @@ function renderMap() {
   ctx.textAlign = 'center';
   ctx.font = '14px "Courier New", monospace';
   ctx.fillStyle = '#888';
-  ctx.fillText('\u2190/\u2192 navigate, Enter to enter room', W/2, H - 40);
+  if (forkSelecting) {
+    ctx.fillText('\u2191/\u2193 pick path, Enter to confirm', W/2, H - 40);
+  } else {
+    ctx.fillText('\u2190/\u2192 navigate, Enter to enter room', W/2, H - 40);
+  }
 }
 
 // ============================================================
@@ -2163,6 +2418,7 @@ document.addEventListener('keydown', (e) => {
     } else if (state === STATES.SHOP) {
       // Leave shop
       state = STATES.DUNGEON_MAP;
+      advanceSelection();
     }
     return;
   }
@@ -2193,6 +2449,10 @@ document.addEventListener('keydown', (e) => {
         cycleMapNode(-1);
       } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
         cycleMapNode(1);
+      } else if (key === 'ArrowUp') {
+        cycleForkChoice(-1);
+      } else if (key === 'ArrowDown') {
+        cycleForkChoice(1);
       }
       break;
 
@@ -2259,6 +2519,7 @@ function handleEnter() {
       if (shopSelected === shopItems.length) {
         // Leave
         state = STATES.DUNGEON_MAP;
+        advanceSelection();
       } else {
         buyShopItem();
       }
@@ -2268,6 +2529,7 @@ function handleEnter() {
       if (treasureOpened) {
         mapNodes[currentNodeId].cleared = true;
         state = STATES.DUNGEON_MAP;
+        advanceSelection();
       }
       break;
 
@@ -2287,14 +2549,38 @@ function handleEnter() {
 }
 
 function cycleMapNode(dir) {
-  const conns = mapNodes[currentNodeId].connections;
-  if (conns.length === 0) return;
-  const idx = conns.indexOf(selectedNodeId);
+  if (forkSelecting) return; // use up/down at forks
+  const accessible = getAccessibleNodes();
+  if (accessible.length === 0) return;
+  const curIdx = accessible.indexOf(selectedNodeId);
   let next;
-  if (idx < 0) next = 0;
-  else next = (idx + dir + conns.length) % conns.length;
-  selectedNodeId = conns[next];
-  sfxMapBlip();
+  if (curIdx < 0) next = 0;
+  else next = clamp(curIdx + dir, 0, accessible.length - 1);
+  if (next !== curIdx) {
+    selectedNodeId = accessible[next];
+    sfxMapBlip();
+    // Check if we landed on an unchosen fork
+    const node = mapNodes[selectedNodeId];
+    if (node.forkGroup >= 0 && mapForks[node.forkGroup].chosen < 0) {
+      forkSelecting = true;
+      forkChoice = node.forkOption;
+    } else {
+      forkSelecting = false;
+    }
+  }
+}
+
+function cycleForkChoice(dir) {
+  if (!forkSelecting) return;
+  const node = mapNodes[selectedNodeId];
+  if (node.forkGroup < 0) return;
+  const fork = mapForks[node.forkGroup];
+  const newChoice = clamp(forkChoice + dir, 0, fork.options.length - 1);
+  if (newChoice !== forkChoice) {
+    forkChoice = newChoice;
+    selectedNodeId = fork.options[forkChoice][0];
+    sfxMapBlip();
+  }
 }
 
 function cycleTarget(dir) {
@@ -2309,35 +2595,45 @@ function cycleTarget(dir) {
 }
 
 function enterRoom(nodeId) {
-  if (!mapNodes[currentNodeId].connections.includes(nodeId)) return;
   const node = mapNodes[nodeId];
 
-  // Boss lock
-  if (node.type === 'boss') {
-    let monsterCleared = 0;
-    for (const n of mapNodes) { if ((n.type === 'monster') && n.cleared) monsterCleared++; }
-    if (monsterCleared < 2) {
-      shopMessage = 'Defeat more monsters first!';
-      shopMessageTimer = 1.5;
-      // Show on map briefly - reuse floats
-      addFloat(node.x, node.y + 40, 'Defeat more monsters first!', '#f44');
-      return;
+  // If at a fork and not yet chosen, confirm the fork choice
+  if (forkSelecting && node.forkGroup >= 0) {
+    const fork = mapForks[node.forkGroup];
+    fork.chosen = forkChoice;
+    // Skip the other branch
+    for (let opt = 0; opt < fork.options.length; opt++) {
+      if (opt !== forkChoice) {
+        for (const ni of fork.options[opt]) {
+          mapNodes[ni].skipped = true;
+        }
+      }
     }
+    forkSelecting = false;
+    // Now fall through to enter the chosen room
+  }
+
+  // Check reachability
+  if (!isRoomReachable(nodeId)) {
+    addFloat(node.x, node.y + 40, 'Clear previous rooms first!', '#f44');
+    return;
+  }
+
+  // Boss lock
+  if (node.type === 'boss' && !isBossUnlocked()) {
+    addFloat(node.x, node.y + 40, 'Clear all rooms first!', '#f44');
+    return;
+  }
+
+  // Already cleared
+  if (node.cleared && node.type !== 'shop') {
+    addFloat(node.x, node.y + 40, 'Room Cleared', '#888');
+    return;
   }
 
   sfxMapEnter();
   currentNodeId = nodeId;
   node.visited = true;
-  selectedNodeId = node.connections.length > 0 ? node.connections[0] : nodeId;
-
-  if ((node.type === 'monster' || node.type === 'boss') && node.cleared) {
-    addFloat(node.x, node.y + 40, 'Room Cleared', '#888');
-    return;
-  }
-  if (node.type === 'treasure' && node.cleared) {
-    addFloat(node.x, node.y + 40, 'Room Cleared', '#888');
-    return;
-  }
 
   fadeToBlack(() => {
     if (node.type === 'monster') {
