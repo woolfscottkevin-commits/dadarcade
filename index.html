@@ -32,12 +32,43 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-mq h2{color:#ff6ec7}
 .card-mq:hover{border-color:#ff6ec7;box-shadow:0 0 30px rgba(255,110,199,0.2),0 8px 32px rgba(0,0,0,0.4)}
 
+.feedback-section{display:flex;flex-direction:column;gap:1rem;max-width:700px;width:100%;margin-top:3rem}
+.feedback-btn{display:flex;align-items:center;justify-content:center;gap:1rem;padding:1.5rem 2rem;border-radius:12px;border:2px solid;font-family:'Courier New',monospace;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:bold;background:none;color:#fff;transition:all 0.3s ease;cursor:pointer;text-align:center;width:100%}
+.feedback-btn:hover{transform:translateY(-3px) scale(1.02)}
+.btn-ideas{border-color:#f0c420;background:linear-gradient(135deg,rgba(240,196,32,0.15),rgba(240,196,32,0.05));color:#f0c420}
+.btn-ideas:hover{box-shadow:0 0 30px rgba(240,196,32,0.3),0 8px 32px rgba(0,0,0,0.4);border-color:#f0c420}
+.btn-bugs{border-color:#ff4444;background:linear-gradient(135deg,rgba(255,68,68,0.15),rgba(255,68,68,0.05));color:#ff4444}
+.btn-bugs:hover{box-shadow:0 0 30px rgba(255,68,68,0.3),0 8px 32px rgba(0,0,0,0.4);border-color:#ff4444}
+.btn-emoji{font-size:2rem}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.active{display:flex}
+.modal{background:#1a1a2e;border:2px solid #333;border-radius:16px;padding:2rem;max-width:500px;width:100%;position:relative;animation:modalIn 0.2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:#666;font-size:1.5rem;cursor:pointer;font-family:'Courier New',monospace;line-height:1}
+.modal-close:hover{color:#fff}
+.modal h2{font-size:1.5rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem}
+.modal p{color:#888;font-size:0.9rem;margin-bottom:1.5rem}
+.modal label{display:block;color:#aaa;font-size:0.85rem;margin-bottom:0.3rem}
+.modal input,.modal textarea{width:100%;background:#111;border:2px solid #333;border-radius:8px;padding:0.75rem;color:#fff;font-family:'Courier New',monospace;font-size:1rem;margin-bottom:1rem;resize:vertical}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:#0ff}
+.modal textarea{min-height:120px}
+.modal-submit{width:100%;padding:1rem;border:none;border-radius:8px;font-family:'Courier New',monospace;font-size:1.1rem;font-weight:bold;cursor:pointer;transition:all 0.2s ease}
+.modal-submit:hover{transform:translateY(-2px)}
+.modal-submit:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.modal-submit.idea-submit{background:#f0c420;color:#111}
+.modal-submit.bug-submit{background:#ff4444;color:#fff}
+.modal-status{text-align:center;margin-top:1rem;font-size:0.9rem;min-height:1.2em}
+.modal-status.success{color:#0f0}
+.modal-status.error{color:#ff4444}
+
 .footer{margin-top:auto;padding-top:3rem;color:#444;font-size:0.8rem;text-align:center}
 </style>
 </head>
 <body>
 <h1 class="title">DAD ARCADE</h1>
-<p class="subtitle">Games built by Dad &amp; Claude</p>
+<p class="subtitle">Games built by Dad</p>
 
 <div class="grid">
   <a href="/space-invaders" class="card card-si">
@@ -79,6 +110,105 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
   </a>
 </div>
 
+<div class="feedback-section">
+  <button class="feedback-btn btn-ideas" onclick="openModal('idea')">
+    <span class="btn-emoji">💡</span> Got a Game Idea? Tell Us!
+  </button>
+  <button class="feedback-btn btn-bugs" onclick="openModal('bug')">
+    <span class="btn-emoji">🐛</span> Found a Glitch? Report It!
+  </button>
+</div>
+
+<!-- Idea Modal -->
+<div class="modal-overlay" id="modal-idea">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('idea')">&times;</button>
+    <h2 style="color:#f0c420">💡 Game Idea</h2>
+    <p>What game should Dad build next?</p>
+    <form onsubmit="submitFeedback(event,'idea')">
+      <label for="idea-name">Your Name (optional)</label>
+      <input type="text" id="idea-name" placeholder="Player 1" maxlength="50">
+      <label for="idea-msg">Your Idea</label>
+      <textarea id="idea-msg" placeholder="I think you should build a..." required maxlength="2000"></textarea>
+      <button type="submit" class="modal-submit idea-submit" id="idea-submit">Send Idea</button>
+      <div class="modal-status" id="idea-status"></div>
+    </form>
+  </div>
+</div>
+
+<!-- Bug Modal -->
+<div class="modal-overlay" id="modal-bug">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('bug')">&times;</button>
+    <h2 style="color:#ff4444">🐛 Report a Glitch</h2>
+    <p>Found something broken? Let us know!</p>
+    <form onsubmit="submitFeedback(event,'bug')">
+      <label for="bug-name">Your Name (optional)</label>
+      <input type="text" id="bug-name" placeholder="Player 1" maxlength="50">
+      <label for="bug-msg">What happened?</label>
+      <textarea id="bug-msg" placeholder="I was playing and then..." required maxlength="2000"></textarea>
+      <button type="submit" class="modal-submit bug-submit" id="bug-submit">Send Report</button>
+      <div class="modal-status" id="bug-status"></div>
+    </form>
+  </div>
+</div>
+
 <div class="footer">dadarcade.com</div>
+
+<script>
+function openModal(type) {
+  document.getElementById('modal-' + type).classList.add('active');
+  document.getElementById(type + '-status').textContent = '';
+}
+function closeModal(type) {
+  document.getElementById('modal-' + type).classList.remove('active');
+}
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el) el.classList.remove('active');
+  });
+});
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(el => el.classList.remove('active'));
+});
+
+async function submitFeedback(e, type) {
+  e.preventDefault();
+  const name = document.getElementById(type + '-name').value;
+  const message = document.getElementById(type + '-msg').value;
+  const btn = document.getElementById(type + '-submit');
+  const status = document.getElementById(type + '-status');
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  status.textContent = '';
+  status.className = 'modal-status';
+
+  try {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, name, message }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      status.textContent = type === 'idea' ? 'Thanks! We love hearing your ideas!' : 'Thanks! We\'ll look into it!';
+      status.className = 'modal-status success';
+      document.getElementById(type + '-msg').value = '';
+      setTimeout(() => closeModal(type), 2000);
+    } else {
+      status.textContent = data.error || 'Something went wrong';
+      status.className = 'modal-status error';
+    }
+  } catch (err) {
+    status.textContent = 'Network error — try again';
+    status.className = 'modal-status error';
+  }
+  btn.disabled = false;
+  btn.textContent = type === 'idea' ? 'Send Idea' : 'Send Report';
+}
+</script>
 </body>
 </html>
