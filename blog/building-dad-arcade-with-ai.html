@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How I Built an Arcade for My Kids Using AI — Dad Arcade</title>
+<meta name="description" content="A dad with no game development experience built a full arcade website for his kids using Claude AI. Here's how Dad Arcade was made.">
+<meta name="keywords" content="build games with AI, Claude AI game development, dad coding project, AI game builder, making games for kids">
+<link rel="canonical" href="https://dadarcade.com/blog/building-dad-arcade-with-ai.html">
+<meta property="og:title" content="How I Built an Arcade for My Kids Using AI">
+<meta property="og:description" content="A dad with no game development experience built a full arcade website for his kids using Claude AI. Here's how Dad Arcade was made.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://dadarcade.com/blog/building-dad-arcade-with-ai.html">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<meta name="theme-color" content="#111111">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "How I Built an Arcade for My Kids Using AI",
+  "description": "A dad with no game development experience built a full arcade website for his kids using Claude AI. Here's how Dad Arcade was made.",
+  "datePublished": "2026-04-07",
+  "author": { "@type": "Person", "name": "Dad Arcade" },
+  "publisher": { "@type": "Organization", "name": "Dad Arcade", "url": "https://dadarcade.com" },
+  "mainEntityOfPage": "https://dadarcade.com/blog/building-dad-arcade-with-ai.html"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Dad Arcade", "item": "https://dadarcade.com" },
+    { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://dadarcade.com/blog" },
+    { "@type": "ListItem", "position": 3, "name": "How I Built an Arcade for My Kids Using AI", "item": "https://dadarcade.com/blog/building-dad-arcade-with-ai.html" }
+  ]
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#ccc;font-family:'Courier New',monospace;min-height:100vh;padding:1.5rem}
+a{color:#0ff;text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3{color:#fff}
+.breadcrumb{font-size:0.85rem;color:#888;margin-bottom:2rem;max-width:750px;margin-left:auto;margin-right:auto}
+.breadcrumb a{color:#0ff;font-size:0.85rem}
+.breadcrumb span{margin:0 0.4rem}
+article{max-width:750px;margin:0 auto;line-height:1.7}
+article h1{font-size:clamp(1.5rem,4vw,2.2rem);margin-bottom:0.5rem}
+article time{display:block;font-size:0.85rem;color:#666;margin-bottom:2rem}
+article h2{font-size:1.3rem;margin:2rem 0 1rem;color:#0ff}
+article p{margin-bottom:1.25rem;font-size:0.95rem}
+article ul{margin:0 0 1.5rem 1.5rem;font-size:0.95rem}
+article ul li{margin-bottom:0.5rem}
+.play-cta{display:inline-block;background:#0ff;color:#111;font-family:'Courier New',monospace;font-weight:bold;font-size:0.95rem;padding:0.6rem 1.5rem;border-radius:8px;text-decoration:none;margin:1rem 0;transition:all 0.2s}
+.play-cta:hover{background:#fff;text-decoration:none;box-shadow:0 0 20px rgba(0,255,255,0.4)}
+footer{max-width:750px;margin:3rem auto 0;padding-top:2rem;border-top:1px solid #333;font-size:0.85rem;color:#666}
+footer a{color:#0ff;font-size:0.85rem}
+footer p{margin-bottom:0.5rem}
+</style>
+</head>
+<body>
+
+<nav class="breadcrumb">
+  <a href="/">Dad Arcade</a><span>></span> <a href="/blog">Blog</a><span>></span> How I Built an Arcade for My Kids Using AI
+</nav>
+
+<article>
+<h1>How I Built an Arcade for My Kids Using AI</h1>
+<time datetime="2026-04-07">April 7, 2026</time>
+
+<p>It started the way most dad projects start: my kids asked for something, and I said yes before thinking it through.</p>
+
+<p>They wanted games. Not the kind plastered with ads that trick you into clicking download buttons, or the ones that let you play for five minutes before demanding a credit card. They wanted games like the ones I grew up with &mdash; simple, fun, and actually playable. So I told them I would build some. The problem was that I had never built a game in my life.</p>
+
+<h2>The Problem with Kids' Games Online</h2>
+
+<p>If you have ever searched for free games for kids, you know the landscape is grim. Most sites are ad farms disguised as game portals. Pop-ups cover half the screen. Auto-playing videos eat your bandwidth. Some sites bundle downloadable installers that no parent should trust. And the games themselves are often low-effort clones that get boring in under a minute.</p>
+
+<p>I wanted something different. Games that were genuinely fun, ran in a browser with zero friction, had no ads, cost nothing, and were safe enough that I would not need to supervise every session. That is a tall order when you cannot actually code games.</p>
+
+<h2>Starting with Space Invaders</h2>
+
+<p>I picked Space Invaders as the first game because the mechanics are straightforward. You move left and right, you shoot up, aliens come down. I figured if AI could help me build anything, it could handle a game with those rules.</p>
+
+<p>I used Claude AI as my development partner. I described what I wanted &mdash; a Space Invaders clone with modern touches &mdash; and Claude generated the code. But it was not a single prompt and done. Building a real, polished game took dozens of back-and-forth conversations. The first version had aliens that moved in a straight line and bullets that sometimes passed through enemies. Each session with Claude fixed bugs, added features, and refined the feel of the game.</p>
+
+<p>The power-up system came from one of those conversations. I mentioned that the original Space Invaders felt a bit repetitive, and Claude suggested adding item drops: Triple Shot for wider coverage, Rapid Fire for burst damage, and Barrier for defensive play. We iterated on the drop rates and durations until they felt balanced. Then came boss fights every five waves, which added a layer of challenge that keeps older kids engaged.</p>
+
+<h2>Math Quest RPG: Making Homework Invisible</h2>
+
+<p>After Space Invaders was live and the kids were playing it constantly, I wanted to build something educational. The idea was simple: what if math practice felt like a dungeon crawler? <a href="/math-quest-rpg">Math Quest RPG</a> was born from that question.</p>
+
+<p>Claude helped me design the class system &mdash; Warrior, Mage, and Ranger &mdash; each with different stats and special abilities. Every enemy encounter presents a math problem. Answer correctly and you attack. Answer fast and you deal bonus damage. The difficulty scales as you go deeper into the dungeon, starting with addition on the first floor and mixing in multiplication and division by floor six.</p>
+
+<p>The hardest part was getting the difficulty curve right. Too easy and older kids get bored. Too hard and younger kids get frustrated. We ended up with a tier system that ramps up gradually, and wrong answers always show the correct solution without any punishment. Kids learn from mistakes instead of being scared of them.</p>
+
+<h2>The Kid Testing Phase</h2>
+
+<p>No amount of AI-assisted development replaces actual kid testing. My son found a softlock within ten minutes of playing Math Quest RPG for the first time. He had discovered a sequence of actions in the shop that the game did not account for, leaving him stuck on a screen with no way to proceed. Back to Claude we went.</p>
+
+<p>Kid testers also revealed that the boss fights in Space Invaders were too hard at first. Adults could handle them fine, but kids under eight were getting wiped out before understanding the attack patterns. We slowed down the early bosses and made their patterns more readable, so younger players could learn by watching before they needed to react.</p>
+
+<p>The leaderboard was an immediate hit. My kids started competing with each other for the top spot, and when we opened it to the public, they were thrilled to see other players posting scores. The three-letter initials entry is a direct nod to the original arcade experience, and kids love picking their tags.</p>
+
+<h2>The Tech Stack (That Costs Nothing)</h2>
+
+<p>Dad Arcade runs on a stack that costs zero dollars per month. The games are pure HTML, CSS, and JavaScript &mdash; no frameworks, no build tools, no server-side rendering. The site is hosted on Vercel's free tier. The leaderboard uses a lightweight serverless function. The whole thing is a static site with a service worker for offline support.</p>
+
+<p>This was a deliberate choice. I did not want to maintain servers or worry about hosting bills. If the site gets a thousand visitors or ten, the cost is the same: nothing. That means Dad Arcade can stay online indefinitely without ever needing to run ads or charge money.</p>
+
+<h2>What the Kids Think</h2>
+
+<p>My kids play Dad Arcade regularly, which is the only metric that matters. They have friends over and pull up Space Invaders on the family computer. They practice math with Math Quest RPG without being told to. They ask me when the next game is coming out, which is both flattering and stressful.</p>
+
+<p>The best feedback came from my daughter, who told a friend that her dad made video games. That is technically true now, I suppose, even if Claude did most of the heavy lifting.</p>
+
+<h2>If You Are a Parent Who Codes (or Wants To)</h2>
+
+<p>You do not need to be a game developer to build games for your kids. You do not even need to be a particularly experienced programmer. AI tools like Claude have lowered the barrier to the point where a motivated parent with an idea can produce something real. It will not be perfect on the first try. You will hit bugs, your kids will find edge cases you never imagined, and the process will take longer than you expect. But the result is something your kids will actually use &mdash; and something you built for them.</p>
+
+<p>If you want to see what came out of this project, all the games are free to play right now:</p>
+
+<ul>
+<li><a href="/space-invaders">Space Invaders</a> &mdash; Classic arcade shooter with power-ups and boss fights</li>
+<li><a href="/math-quest-rpg">Math Quest RPG</a> &mdash; Math practice disguised as a dungeon crawler</li>
+</ul>
+
+<p>Browse the full collection at the <a href="/games">games page</a>, or head to the <a href="/">Dad Arcade homepage</a>.</p>
+
+</article>
+
+<footer>
+  <p>Related: <a href="/blog/retro-arcade-games-for-kids.html">Why Retro Arcade Games Are Perfect for Kids</a> &middot; <a href="/blog/best-math-games-for-kids.html">7 Best Math Games for Kids</a> &middot; <a href="/blog/how-to-play-space-invaders.html">Space Invaders Guide</a></p>
+  <p><a href="/">Dad Arcade Home</a> &middot; <a href="/games">All Games</a> &middot; <a href="/blog">Blog</a></p>
+</footer>
+
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>

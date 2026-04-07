@@ -13,6 +13,9 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://dadarcade.com">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="canonical" href="https://dadarcade.com">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
@@ -72,6 +75,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <body>
 <h1 class="title">DAD ARCADE</h1>
 <p class="subtitle">Games built by Dad</p>
+<nav style="margin-top:1rem;display:flex;gap:1.5rem;font-size:0.95rem"><a href="/games" style="color:#0ff;text-decoration:none">Games</a><a href="/blog" style="color:#0ff;text-decoration:none">Blog</a></nav>
 
 <div class="grid">
   <a href="/space-invaders" class="card card-si">
@@ -112,6 +116,16 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
     <p>Dungeon crawler powered by math</p>
   </a>
 </div>
+
+<section style="max-width:700px;width:100%;margin-top:2.5rem;text-align:center">
+  <h2 style="color:#fff;font-size:1.2rem;margin-bottom:1rem">Latest from the Blog</h2>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center">
+    <a href="/blog/building-dad-arcade-with-ai" style="background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:1rem;text-decoration:none;color:#ccc;flex:1;min-width:200px;max-width:220px;font-size:0.85rem;transition:border-color 0.3s" onmouseover="this.style.borderColor='#0ff'" onmouseout="this.style.borderColor='#333'"><strong style="color:#fff;display:block;margin-bottom:0.3rem">How I Built an Arcade Using AI</strong>The origin story of Dad Arcade</a>
+    <a href="/blog/best-math-games-for-kids" style="background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:1rem;text-decoration:none;color:#ccc;flex:1;min-width:200px;max-width:220px;font-size:0.85rem;transition:border-color 0.3s" onmouseover="this.style.borderColor='#0ff'" onmouseout="this.style.borderColor='#333'"><strong style="color:#fff;display:block;margin-bottom:0.3rem">7 Best Math Games for Kids</strong>Free educational games ranked</a>
+    <a href="/blog/free-browser-games-no-download" style="background:#1a1a2e;border:1px solid #333;border-radius:8px;padding:1rem;text-decoration:none;color:#ccc;flex:1;min-width:200px;max-width:220px;font-size:0.85rem;transition:border-color 0.3s" onmouseover="this.style.borderColor='#0ff'" onmouseout="this.style.borderColor='#333'"><strong style="color:#fff;display:block;margin-bottom:0.3rem">10 Best Free Browser Games</strong>No downloads needed</a>
+  </div>
+  <p style="margin-top:1rem"><a href="/blog" style="color:#0ff;text-decoration:none">Read all posts &rarr;</a></p>
+</section>
 
 <div class="feedback-section">
   <button class="feedback-btn btn-ideas" onclick="openModal('idea')">
@@ -213,5 +227,6 @@ async function submitFeedback(e, type) {
   btn.textContent = type === 'idea' ? 'Send Idea' : 'Send Report';
 }
 </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>

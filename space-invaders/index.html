@@ -8,6 +8,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Space Invaders — Dad Arcade</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="canonical" href="https://dadarcade.com/space-invaders">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
@@ -22,6 +25,21 @@ canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edge
 <a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
 <div class="mobile-msg" id="mobileMsg"><span class="emoji">🕹️</span><p>This game requires a keyboard.<br>Please visit on a computer!</p><a href="/">Back to Dad Arcade</a></div>
 <canvas id="game" tabindex="0"></canvas>
+<div id="game-info" style="max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem">
+<h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Space Invaders — Free Online Arcade Game</h1>
+<p>Play Space Invaders free in your browser at <a href="/" style="color:#888">Dad Arcade</a>. This modern remake features the classic alien-shooting gameplay plus power-ups, boss fights, and a global leaderboard.</p>
+<details style="margin:0.8rem 0;color:#666"><summary style="cursor:pointer;color:#999">About This Game</summary><div style="padding:0.5rem 0">
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">How to Play</h2>
+<p>Move your ship with the arrow keys (or A/D) and press spacebar to fire. Destroy all aliens to advance to the next wave. The aliens march side to side and drop down — if they reach your level, it's game over.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Power-Ups</h2>
+<p>Defeated aliens may drop power-ups: Triple Shot fires three bullets in a spread, Rapid Fire lets you hold spacebar for automatic shooting, and Barrier places a shield in front of your ship that blocks one hit.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Boss Fights</h2>
+<p>Every 5th wave features a boss battle. Bosses have unique attack patterns including spread shots, aimed bullets, and bombs that explode into fragments. Destroy the boss and its escort fleet to advance.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Leaderboard</h2>
+<p>When your game ends, enter your 3-letter initials to submit your score to the global leaderboard. Compete with players worldwide for the top 10.</p>
+</div></details>
+<p style="font-size:0.8rem;color:#555"><a href="/games" style="color:#666">Browse all games</a> · <a href="/blog/how-to-play-space-invaders" style="color:#666">Strategy guide</a> · <a href="/" style="color:#666">Dad Arcade home</a></p>
+</div>
 <script>
 'use strict';
 (() => {
@@ -2433,5 +2451,6 @@ function checkMobile(){
 checkMobile();
 window.addEventListener('resize',checkMobile);
 </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>

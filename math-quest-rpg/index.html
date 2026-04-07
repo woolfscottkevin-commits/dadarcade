@@ -8,6 +8,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Math Quest RPG — Dad Arcade</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="canonical" href="https://dadarcade.com/math-quest-rpg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
@@ -22,6 +25,21 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
 <a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
 <div class="mobile-msg" id="mobileMsg"><span class="emoji">🕹️</span><p>This game requires a keyboard.<br>Please visit on a computer!</p><a href="/">Back to Dad Arcade</a></div>
 <canvas id="game" tabindex="0"></canvas>
+<div id="game-info" style="max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem">
+<h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Math Quest RPG — Free Math Game for Kids</h1>
+<p>A free educational math game at <a href="/" style="color:#888">Dad Arcade</a>. Solve math problems to defeat monsters, level up, and explore dungeons. Great for kids ages 6-14.</p>
+<details style="margin:0.8rem 0;color:#666"><summary style="cursor:pointer;color:#999">About This Game</summary><div style="padding:0.5rem 0">
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">How to Play</h2>
+<p>Choose a character class — Warrior (high HP, Power Strike special), Mage (powerful Fireball that hits all enemies), or Ranger (Double Shot for two attacks). Navigate the dungeon map, enter monster rooms, and solve math problems to attack. Answer fast for bonus damage.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Math Topics</h2>
+<p>Problems scale with dungeon depth. Floor 1-2 covers addition and subtraction. Floor 3-4 introduces multiplication. Floor 5 adds division. Floor 6 and beyond mixes all operations with increasing difficulty. Boss fights use problems one level harder than the current floor.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Dungeon Features</h2>
+<p>Each floor has monster rooms, treasure rooms with stat boosts and healing, and a shop where you can spend gold on potions and permanent upgrades. Defeat the floor boss to descend deeper. Your HP carries between floors, so managing health is key to long runs.</p>
+<h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Learning Design</h2>
+<p>Wrong answers are not punished — the game shows the correct answer with encouraging messages. Speed bonuses reward fast answers but slow answers still count. The goal is to make math practice feel like play, not homework.</p>
+</div></details>
+<p style="font-size:0.8rem;color:#555"><a href="/games" style="color:#666">Browse all games</a> · <a href="/blog/best-math-games-for-kids" style="color:#666">Best math games for kids</a> · <a href="/" style="color:#666">Dad Arcade home</a></p>
+</div>
 <script>
 'use strict';
 (() => {
@@ -2678,5 +2696,6 @@ requestAnimationFrame(gameLoop);
 
 })();
 </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
 </html>
