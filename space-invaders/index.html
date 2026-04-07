@@ -266,7 +266,7 @@ function fetchLeaderboard() {
   leaderboardLoading = true;
   leaderboardError = false;
   const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
-  Promise.race([fetch('/api/scores'), timeout])
+  Promise.race([fetch('https://dadarcade.com/api/scores'), timeout])
     .then(r => r.json())
     .then(data => {
       leaderboardData = data;
@@ -282,7 +282,7 @@ function submitScore(initials, scoreVal) {
   initialsSubmitting = true;
   const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
   Promise.race([
-    fetch('/api/scores', {
+    fetch('https://dadarcade.com/api/scores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ initials, score: scoreVal })

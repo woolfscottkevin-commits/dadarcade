@@ -45,9 +45,16 @@ function decodeScore(redisScore) {
 }
 
 function getCorsHeaders(req) {
-  const origin = process.env.VERCEL_ENV === 'production'
-    ? 'https://dadarcade.com'
-    : '*';
+  const allowed = ['https://dadarcade.com', 'https://dadarcade.itch.io', 'https://html-classic.itch.zone'];
+  const reqOrigin = req.headers.origin || '';
+  let origin;
+  if (process.env.VERCEL_ENV !== 'production') {
+    origin = '*';
+  } else if (allowed.some(a => reqOrigin.startsWith(a) || reqOrigin === a)) {
+    origin = reqOrigin;
+  } else {
+    origin = 'https://dadarcade.com';
+  }
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
