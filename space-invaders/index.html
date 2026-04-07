@@ -1704,8 +1704,8 @@ function update() {
 function render() {
   ctx.save();
 
-  // Screen shake
-  if (shakeTimer > 0) {
+  // Screen shake (gameplay only — not during UI screens)
+  if (shakeTimer > 0 && state !== INITIALS_ENTRY && state !== RANK_DISPLAY && state !== GAME_OVER && state !== TITLE) {
     const sx = (Math.random() - 0.5) * shakeAmount * 2;
     const sy = (Math.random() - 0.5) * shakeAmount * 2;
     ctx.translate(sx, sy);
