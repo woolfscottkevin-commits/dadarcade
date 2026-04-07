@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#111"/>
+  <!-- Grid lines (subtle) -->
+  <g stroke="#1a1a1a" stroke-width="0.5" opacity="0.5">
+    <line x1="0" y1="100" x2="1200" y2="100"/>
+    <line x1="0" y1="200" x2="1200" y2="200"/>
+    <line x1="0" y1="300" x2="1200" y2="300"/>
+    <line x1="0" y1="400" x2="1200" y2="400"/>
+    <line x1="0" y1="500" x2="1200" y2="500"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+  <!-- Snake body (S-curve) -->
+  <g>
+    <rect x="200" y="260" width="50" height="50" rx="8" fill="#0f0" opacity="0.4"/>
+    <rect x="250" y="260" width="50" height="50" rx="8" fill="#0f0" opacity="0.45"/>
+    <rect x="300" y="260" width="50" height="50" rx="8" fill="#0f0" opacity="0.5"/>
+    <rect x="350" y="260" width="50" height="50" rx="8" fill="#0f0" opacity="0.55"/>
+    <rect x="350" y="310" width="50" height="50" rx="8" fill="#0f0" opacity="0.6"/>
+    <rect x="350" y="360" width="50" height="50" rx="8" fill="#0f0" opacity="0.65"/>
+    <rect x="300" y="360" width="50" height="50" rx="8" fill="#0f0" opacity="0.7"/>
+    <rect x="250" y="360" width="50" height="50" rx="8" fill="#0f0" opacity="0.75"/>
+    <rect x="200" y="360" width="50" height="50" rx="8" fill="#0f0" opacity="0.8"/>
+    <rect x="150" y="360" width="50" height="50" rx="8" fill="#0f0" opacity="0.85"/>
+    <rect x="150" y="310" width="50" height="50" rx="8" fill="#0f0" opacity="0.9"/>
+    <!-- Head -->
+    <rect x="150" y="260" width="54" height="54" rx="10" fill="#0f0"/>
+    <!-- Eyes -->
+    <circle cx="164" cy="280" r="9" fill="#fff"/>
+    <circle cx="190" cy="280" r="9" fill="#fff"/>
+    <circle cx="164" cy="278" r="5" fill="#111"/>
+    <circle cx="190" cy="278" r="5" fill="#111"/>
+  </g>
+  <!-- Apple -->
+  <circle cx="450" cy="185" r="18" fill="#e33"/>
+  <ellipse cx="458" cy="168" rx="10" ry="5" fill="#0a0" transform="rotate(15 458 168)"/>
+  <!-- Title -->
+  <text x="600" y="220" text-anchor="middle" font-family="Courier New, monospace" font-weight="bold" font-size="120" fill="#0f0" filter="url(#glow)">SNAKE</text>
+  <!-- Subtitle -->
+  <text x="600" y="480" text-anchor="middle" font-family="Courier New, monospace" font-size="32" fill="#888">Free at Dad Arcade</text>
+  <!-- URL -->
+  <text x="600" y="580" text-anchor="middle" font-family="Courier New, monospace" font-size="24" fill="#555">dadarcade.com/snake</text>
+  <!-- Glow filter -->
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

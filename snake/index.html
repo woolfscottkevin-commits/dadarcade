@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snake — Free Online Arcade Game | Dad Arcade</title>
+<meta name="description" content="Play Snake free in your browser. Classic snake game with googly eyes, power-ups, rainbow mode, speed progression, and three difficulty levels. No download needed.">
+<meta name="keywords" content="snake game online, free snake game, browser snake, kids snake game, classic snake, retro snake game">
+<link rel="canonical" href="https://dadarcade.com/snake">
+<meta property="og:title" content="Snake — Free Online Arcade Game">
+<meta property="og:description" content="Classic snake with googly eyes, power-ups, and rainbow mode. Play free in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/snake">
+<meta property="og:image" content="https://dadarcade.com/og-image-snake.svg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Dad Arcade">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Snake — Free Online Arcade Game">
+<meta name="twitter:description" content="Classic snake with googly eyes, power-ups, and rainbow mode. Free in your browser.">
+<meta name="twitter:image" content="https://dadarcade.com/og-image-snake.svg">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Snake",
+  "url": "https://dadarcade.com/snake",
+  "description": "Classic snake game with googly eyes, power-ups, rainbow mode, and three difficulty levels. Free browser game for kids.",
+  "genre": ["Arcade", "Puzzle"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dad Arcade" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Dad Arcade", "item": "https://dadarcade.com" },
+    { "@type": "ListItem", "position": 2, "name": "Snake", "item": "https://dadarcade.com/snake" }
+  ]
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#fff;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden}
+#back-link{position:fixed;top:1rem;left:1rem;color:#0ff;text-decoration:none;font-size:0.9rem;z-index:9999;font-family:'Courier New',monospace}
+#back-link:hover{color:#fff}
+#game-wrapper{display:flex;justify-content:center;align-items:center;flex:1;padding:2.5rem 1rem 1rem}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+#mobile-msg{display:none;text-align:center;padding:3rem 2rem;color:#ccc;font-family:'Courier New',monospace}
+#mobile-msg h2{color:#0f0;font-size:1.5rem;margin-bottom:1rem}
+#mobile-msg a{color:#0ff}
+@media(max-width:767px){
+  #game-wrapper{display:none}
+  #mobile-msg{display:block}
+}
+#game-info{max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem;font-family:'Courier New',monospace}
+#game-info h1{font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0}
+#game-info a{color:#888}
+#game-info details{margin:0.8rem 0;color:#666}
+#game-info summary{cursor:pointer;color:#999}
+#game-info .links{font-size:0.8rem;color:#555}
+#game-info .links a{color:#666}
+</style>
+</head>
+<body>
+<a id="back-link" href="/" onclick="if(typeof G!=='undefined'&&G.state==='PLAYING'){if(!confirm('Leave game? Progress will be lost.'))event.preventDefault()}">&#8592; Dad Arcade</a>
+
+<div id="game-wrapper">
+<canvas id="c" tabindex="0"></canvas>
+</div>
+
+<div id="mobile-msg">
+<h2>🕹️ This game requires a keyboard</h2>
+<p>Snake needs arrow keys or WASD to play. Visit on a computer for the full experience!</p>
+<p style="margin-top:1rem"><a href="/">← Back to Dad Arcade</a></p>
+</div>
+
+<noscript>
+<div style="max-width:700px;margin:2rem auto;padding:1.5rem;color:#ccc;font-family:sans-serif">
+<h1>Snake — Free Online Arcade Game</h1>
+<p>Play the classic Snake game free in your browser at Dad Arcade. Guide your snake to eat food, grow longer, and avoid crashing. Features googly-eyed snake, power-ups, rainbow mode, and three difficulty levels.</p>
+<h2>Features</h2>
+<ul>
+<li>Three difficulties: Easy (wall wrap + 1 continue), Normal, Hard (with obstacles)</li>
+<li>Power-ups: Slow-Mo, Magnet, Ghost, and Double Points</li>
+<li>Rainbow mode after eating 10 items</li>
+<li>Milestone celebrations and background evolution</li>
+<li>Smooth interpolated movement</li>
+<li>Googly-eyed snake with personality</li>
+</ul>
+<h2>Controls</h2>
+<ul>
+<li>Arrow Keys or WASD — Change direction</li>
+<li>P — Pause</li>
+<li>M — Mute</li>
+</ul>
+<p>Requires JavaScript and a keyboard.</p>
+<p><a href="/">← Back to Dad Arcade</a></p>
+</div>
+</noscript>
+
+<div id="game-info">
+<h1>Snake — Free Online Arcade Game</h1>
+<p>A free browser arcade game at <a href="/">Dad Arcade</a>. Arrow keys or WASD to steer. Eat food, grow longer, collect power-ups, chase the high score.</p>
+<details>
+<summary>About This Game ▾</summary>
+<div style="padding:0.5rem 0">
+<p>Features three difficulty levels (Easy with wall wrap and a continue, Normal, and Hard with obstacles), four power-up types, rainbow mode, milestone celebrations, and smooth interpolated movement. Compete against your own high score on each difficulty.</p>
+</div>
+</details>
+<p class="links">
+<a href="/games">Browse all games</a> · <a href="/">Dad Arcade home</a>
+</p>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ─── Constants ───
+var COLS=22,ROWS=22,LOG_W=800,LOG_H=800;
+var CELL=Math.floor(LOG_W/COLS); // 36
+var GRID_PX_W=CELL*COLS, GRID_PX_H=CELL*ROWS;
+var OFFSET_X=Math.floor((LOG_W-GRID_PX_W)/2), OFFSET_Y=Math.floor((LOG_H-GRID_PX_H)/2);
+
+var DIFF={
+  easy:{speed:8,cap:14,wallKill:false,continues:1,obstacles:false,
+    milestones:[10,25,50,100]},
+  normal:{speed:12,cap:20,wallKill:true,continues:0,obstacles:false,
+    milestones:[8,20,40,80]},
+  hard:{speed:16,cap:24,wallKill:true,continues:0,obstacles:true,
+    milestones:[5,15,30,60]}
+};
+var DIFF_NAMES=['easy','normal','hard'];
+var DIFF_COLORS={easy:'#0f0',normal:'#0ff',hard:'#f44'};
+
+var FOOD_TYPES=[
+  {name:'apple',weight:80,points:10,grow:1,color:'#e33'},
+  {name:'golden',weight:10,points:30,grow:1,color:'#f0c420'},
+  {name:'cherry',weight:10,points:20,grow:2,color:'#e33'}
+];
+var FOOD_TOTAL_WEIGHT=100;
+
+var POWERUP_TYPES=[
+  {name:'slowmo',weight:30,color:'#4af',icon:'clock',dur:6},
+  {name:'magnet',weight:25,color:'#a5f',icon:'magnet',dur:8},
+  {name:'ghost',weight:20,color:'rgba(255,255,255,0.7)',icon:'ghost',dur:5},
+  {name:'double',weight:25,color:'#f0c420',icon:'star',dur:8}
+];
+var PU_TOTAL_WEIGHT=100;
+
+var MILESTONE_TEXTS=['NICE!','AWESOME!','INCREDIBLE!','LEGENDARY!'];
+
+// ─── Canvas ───
+var canvas=document.getElementById('c');
+var ctx=canvas.getContext('2d');
+var dpr=window.devicePixelRatio||1;
+
+function resizeCanvas(){
+  var ww=window.innerWidth, wh=window.innerHeight;
+  var maxW=ww-32, maxH=wh-80;
+  var scale=Math.min(maxW/LOG_W,maxH/LOG_H,1);
+  var cw=Math.floor(LOG_W*scale), ch=Math.floor(LOG_H*scale);
+  canvas.style.width=cw+'px';
+  canvas.style.height=ch+'px';
+  canvas.width=Math.floor(cw*dpr);
+  canvas.height=Math.floor(ch*dpr);
+  ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
+  ctx.imageSmoothingEnabled=false;
+}
+resizeCanvas();
+var resizeRaf=0;
+window.addEventListener('resize',function(){
+  cancelAnimationFrame(resizeRaf);
+  resizeRaf=requestAnimationFrame(resizeCanvas);
+});
+
+// ─── State ───
+var MENU='MENU',COUNTDOWN='COUNTDOWN',PLAYING='PLAYING',PAUSED='PAUSED',
+    DEATH_ANIM='DEATH_ANIM',CONTINUE_PROMPT='CONTINUE_PROMPT',GAME_OVER='GAME_OVER';
+
+var G={state:MENU};
+var audioCtx=null, muted=localStorage.getItem('snake_muted')==='1';
+var gamesPlayed=parseInt(localStorage.getItem('snake_gamesPlayed'))||0;
+
+// ─── Menu State ───
+var menuInitials=['A','A','A'];
+var menuCursor=0;
+var menuDiffIdx=0;
+var lastInitials=localStorage.getItem('snake_lastInitials');
+if(lastInitials&&lastInitials.length===3){
+  for(var mi=0;mi<3;mi++) menuInitials[mi]=lastInitials[mi];
+}
+if(gamesPlayed<3) menuDiffIdx=0; // default easy for first 3 games
+
+// menu decorative snake
+var menuSnake=[];
+for(var ms=0;ms<15;ms++) menuSnake.push({x:5+ms*0.8,y:12,angle:0});
+var menuSnakeT=0;
+
+// ─── Audio ───
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+}
+function playTone(freq,dur,type,vol,ramp){
+  if(!audioCtx||muted) return;
+  var o=audioCtx.createOscillator();
+  var g=audioCtx.createGain();
+  o.type=type||'sine';
+  o.frequency.value=freq;
+  g.gain.value=vol||0.15;
+  if(ramp) g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+(dur||0.1));
+  else g.gain.setValueAtTime(vol||0.15,audioCtx.currentTime);
+  o.connect(g);g.connect(audioCtx.destination);
+  o.start();o.stop(audioCtx.currentTime+(dur||0.1));
+}
+function sfxEat(consecutive){
+  var base=440+consecutive*15;
+  playTone(base,0.08,'sine',0.12,true);
+  playTone(base*1.5,0.06,'sine',0.08,true);
+}
+function sfxGoldenEat(){
+  [523,659,784].forEach(function(f,i){
+    setTimeout(function(){playTone(f,0.1,'sine',0.1,true)},i*60);
+  });
+}
+function sfxCherryEat(){
+  playTone(500,0.06,'sine',0.1,true);
+  setTimeout(function(){playTone(600,0.06,'sine',0.1,true)},70);
+}
+function sfxPowerup(){
+  [440,554,659].forEach(function(f,i){
+    setTimeout(function(){playTone(f,0.12,'sine',0.1,true)},i*80);
+  });
+}
+function sfxPowerupExpire(){playTone(300,0.15,'sine',0.1,true);}
+function sfxSpeedUp(){
+  if(!audioCtx||muted) return;
+  var buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.1,audioCtx.sampleRate);
+  var d=buf.getChannelData(0);
+  for(var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.max(0,1-i/d.length);
+  var s=audioCtx.createBufferSource();s.buffer=buf;
+  var f=audioCtx.createBiquadFilter();f.type='highpass';f.frequency.value=2000;
+  var g=audioCtx.createGain();g.gain.value=0.06;
+  s.connect(f);f.connect(g);g.connect(audioCtx.destination);
+  s.start();
+}
+function sfxDeath(){
+  playTone(200,0.5,'sawtooth',0.12,true);
+  playTone(80,0.5,'sine',0.1,true);
+}
+function sfxMilestone(){
+  [523,659,784,1047].forEach(function(f,i){
+    setTimeout(function(){playTone(f,0.12,'sine',0.1,true)},i*80);
+  });
+}
+function sfxHighScore(){
+  [523,659,784,1047,784,1047,1319].forEach(function(f,i){
+    setTimeout(function(){playTone(f,0.12,'sine',0.1,true)},i*100);
+  });
+}
+function sfxClick(){playTone(800,0.03,'square',0.05,true);}
+function sfxCountdown(go){playTone(go?880:440,0.12,'sine',0.1,true);}
+function sfxContinue(){playTone(120,0.3,'sine',0.08,true);}
+
+// ─── Helpers ───
+function rr(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function lerp(a,b,t){return a+(b-a)*t;}
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+function weightedRandom(items,totalWeight){
+  var r=Math.random()*totalWeight,cum=0;
+  for(var i=0;i<items.length;i++){
+    cum+=items[i].weight;
+    if(r<cum) return items[i];
+  }
+  return items[items.length-1];
+}
+function getHighScore(diff){return parseInt(localStorage.getItem('snake_highScore_'+diff))||0;}
+function setHighScore(diff,s){localStorage.setItem('snake_highScore_'+diff,s.toString());}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+// ─── Particles ───
+var particles=[];
+var MAX_PARTICLES=100;
+function addParticle(x,y,color,vx,vy,life,size,rot){
+  if(particles.length>=MAX_PARTICLES){
+    // find dead one
+    for(var i=0;i<particles.length;i++){
+      if(particles[i].life<=0){
+        particles[i]={x:x,y:y,vx:vx||rr(-80,80),vy:vy||rr(-80,80),
+          color:color,life:life||0.8,maxLife:life||0.8,size:size||3,rot:rot||0,
+          rotV:(Math.random()-0.5)*8};
+        return;
+      }
+    }
+    return;
+  }
+  particles.push({x:x,y:y,vx:vx||rr(-80,80),vy:vy||rr(-80,80),
+    color:color,life:life||0.8,maxLife:life||0.8,size:size||3,rot:rot||0,
+    rotV:(Math.random()-0.5)*8});
+}
+function burstParticles(x,y,color,count){
+  for(var i=0;i<count;i++) addParticle(x,y,color);
+}
+
+// ─── Stars (background) ───
+var stars=[];
+var MAX_STARS=50;
+function ensureStars(count){
+  while(stars.length<count&&stars.length<MAX_STARS){
+    stars.push({x:Math.random()*LOG_W,y:Math.random()*LOG_H,
+      size:Math.random()*1.5+0.5,speed:Math.random()*8+2,alpha:Math.random()*0.5+0.3});
+  }
+}
+
+// ─── Floating Texts ───
+var floatTexts=[];
+function addFloatText(x,y,text,color,size){
+  floatTexts.push({x:x,y:y,text:text,color:color,size:size||16,life:1,maxLife:1});
+}
+
+// ─── Screen Shake ───
+var shakeAmount=0,shakeTime=0;
+
+// ─── Screen Pulse ───
+var pulseAmount=0,pulseTime=0;
+
+// ─── Milestone effects ───
+var milestoneText='',milestoneTimer=0;
+var fireworkTimer=0;
+var borderFlashTimer=0;
+
+// ─── BFS for obstacle placement ───
+function bfsReachable(grid,startX,startY,targetX,targetY){
+  var visited=new Array(COLS*ROWS);
+  var queue=[[startX,startY]];
+  visited[startY*COLS+startX]=true;
+  while(queue.length>0){
+    var cur=queue.shift();
+    if(cur[0]===targetX&&cur[1]===targetY) return true;
+    var dirs=[[0,-1],[0,1],[-1,0],[1,0]];
+    for(var d=0;d<dirs.length;d++){
+      var nx=cur[0]+dirs[d][0], ny=cur[1]+dirs[d][1];
+      if(nx<0||nx>=COLS||ny<0||ny>=ROWS) continue;
+      if(visited[ny*COLS+nx]) continue;
+      if(grid[ny*COLS+nx]) continue;
+      visited[ny*COLS+nx]=true;
+      queue.push([nx,ny]);
+    }
+  }
+  return false;
+}
+
+// ─── Game Init ───
+var snake,dir,nextDir,inputQueue,inputCooldown;
+var food,foodType,foodAnim;
+var powerupOnGrid,powerupActive,powerupTimer,powerupGridTimer;
+var obstacles;
+var score,foodEaten,consecutiveEats,gameTime,speed,continues;
+var deathReason,deathSegments,deathTimer;
+var continueTimer;
+var countdownNum,countdownTimer;
+var speedUpText,speedUpTimer,maxSpeedShown;
+var pauseHintTimer;
+var escapeConfirmFlag,escapeConfirmTimer;
+var invincTimer;
+var nextPowerupAt,boardCleared;
+var milestonesHit;
+var bgPhase;
+
+function initGame(){
+  var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
+  var cx=Math.floor(COLS/2), cy=Math.floor(ROWS/2);
+  snake=[{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
+  dir={x:1,y:0}; nextDir={x:1,y:0};
+  inputQueue=[]; inputCooldown=0;
+  food=null; foodType=null; foodAnim=0;
+  powerupOnGrid=null; powerupActive=null; powerupTimer=0; powerupGridTimer=0;
+  obstacles=[];
+  score=0; foodEaten=0; consecutiveEats=0; gameTime=0;
+  speed=diff.speed; continues=diff.continues;
+  deathReason=''; deathSegments=[]; deathTimer=0;
+  continueTimer=0;
+  countdownNum=3; countdownTimer=0;
+  speedUpText=''; speedUpTimer=0; maxSpeedShown=false;
+  pauseHintTimer=0;
+  escapeConfirmFlag=false; escapeConfirmTimer=0;
+  invincTimer=0;
+  nextPowerupAt=5;
+  boardCleared=false;
+  milestonesHit=0;
+  bgPhase=0;
+  particles=[]; floatTexts=[]; stars=[];
+  shakeAmount=0; shakeTime=0;
+  pulseAmount=0; pulseTime=0;
+  milestoneText=''; milestoneTimer=0;
+  fireworkTimer=0; borderFlashTimer=0;
+  tickAccum=0;
+  interpFrac=0;
+  visualHead=null;
+  spawnFood();
+
+  // Save initials
+  var ini=menuInitials.join('');
+  localStorage.setItem('snake_lastInitials',ini);
+}
+
+// ─── Tick / Interp state ───
+var tickAccum=0, interpFrac=0;
+var visualHead=null; // {x,y} visual position for smooth interp
+
+// ─── Food Spawning ───
+function isOccupied(x,y){
+  for(var i=0;i<snake.length;i++) if(snake[i].x===x&&snake[i].y===y) return true;
+  for(var i=0;i<obstacles.length;i++) if(obstacles[i].x===x&&obstacles[i].y===y) return true;
+  if(food&&food.x===x&&food.y===y) return true;
+  if(powerupOnGrid&&powerupOnGrid.x===x&&powerupOnGrid.y===y) return true;
+  return false;
+}
+function spawnFood(){
+  for(var i=0;i<100;i++){
+    var x=rr(0,COLS-1),y=rr(0,ROWS-1);
+    if(!isOccupied(x,y)){
+      food={x:x,y:y};
+      foodType=weightedRandom(FOOD_TYPES,FOOD_TOTAL_WEIGHT);
+      foodAnim=0;
+      return true;
+    }
+  }
+  // linear scan
+  for(var y=0;y<ROWS;y++) for(var x=0;x<COLS;x++){
+    if(!isOccupied(x,y)){
+      food={x:x,y:y};
+      foodType=weightedRandom(FOOD_TYPES,FOOD_TOTAL_WEIGHT);
+      foodAnim=0;
+      return true;
+    }
+  }
+  // board full!
+  boardCleared=true;
+  score+=1000;
+  addFloatText(LOG_W/2,LOG_H/2,'YOU FILLED THE BOARD! +1000','#f0c420',28);
+  sfxHighScore();
+  localStorage.setItem('snake_boardCleared_'+DIFF_NAMES[menuDiffIdx],'1');
+  G.state=GAME_OVER;
+  onGameOver();
+  return false;
+}
+
+// ─── Power-up spawning ───
+function spawnPowerup(){
+  for(var i=0;i<100;i++){
+    var x=rr(0,COLS-1),y=rr(0,ROWS-1);
+    if(!isOccupied(x,y)){
+      var type=weightedRandom(POWERUP_TYPES,PU_TOTAL_WEIGHT);
+      powerupOnGrid={x:x,y:y,type:type,timer:8};
+      return;
+    }
+  }
+}
+
+// ─── Obstacle spawning (hard) ───
+function spawnObstacle(){
+  if(obstacles.length>=12) return;
+  var head=snake[0];
+  var grid=new Uint8Array(COLS*ROWS);
+  for(var i=0;i<snake.length;i++) grid[snake[i].y*COLS+snake[i].x]=1;
+  for(var i=0;i<obstacles.length;i++) grid[obstacles[i].y*COLS+obstacles[i].x]=1;
+
+  for(var attempt=0;attempt<10;attempt++){
+    var x=rr(0,COLS-1),y=rr(0,ROWS-1);
+    if(isOccupied(x,y)) continue;
+    var dx=Math.abs(x-head.x), dy=Math.abs(y-head.y);
+    if(dx+dy<3) continue;
+    // check BFS
+    grid[y*COLS+x]=1;
+    if(food&&bfsReachable(grid,head.x,head.y,food.x,food.y)){
+      obstacles.push({x:x,y:y});
+      return;
+    }
+    grid[y*COLS+x]=0;
+  }
+}
+
+// ─── Game Tick ───
+function gameTick(){
+  var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
+  var head=snake[0];
+
+  // Process input queue
+  if(inputQueue.length>0&&inputCooldown<=0){
+    var nd=inputQueue.shift();
+    // validate not reverse
+    if(nd.x!==-dir.x||nd.y!==-dir.y){
+      // store visual head position for smooth interp
+      if(visualHead){
+        // keep visual start pos
+      }
+      dir=nd;
+      inputCooldown=2;
+    }
+  }
+  if(inputCooldown>0) inputCooldown--;
+
+  // Calculate new head position
+  var nx=head.x+dir.x, ny=head.y+dir.y;
+
+  // Wall handling
+  var ghostActive=powerupActive&&powerupActive.type.name==='ghost';
+  if(!diff.wallKill||ghostActive){
+    // wrap
+    if(nx<0)nx=COLS-1; else if(nx>=COLS)nx=0;
+    if(ny<0)ny=ROWS-1; else if(ny>=ROWS)ny=0;
+  } else {
+    if(nx<0||nx>=COLS||ny<0||ny>=ROWS){
+      deathReason='HIT THE WALL!';
+      startDeath();
+      return;
+    }
+  }
+
+  // Self collision
+  if(!ghostActive&&invincTimer<=0){
+    for(var i=0;i<snake.length-1;i++){
+      if(snake[i].x===nx&&snake[i].y===ny){
+        deathReason='ATE YOURSELF!';
+        startDeath();
+        return;
+      }
+    }
+  }
+
+  // Obstacle collision
+  if(!ghostActive&&invincTimer<=0){
+    for(var i=0;i<obstacles.length;i++){
+      if(obstacles[i].x===nx&&obstacles[i].y===ny){
+        deathReason='HIT AN OBSTACLE!';
+        startDeath();
+        return;
+      }
+    }
+  }
+
+  // Move snake
+  var newHead={x:nx,y:ny};
+  snake.unshift(newHead);
+
+  // Store visual head start for interpolation
+  visualHead={fromX:head.x,fromY:head.y,toX:nx,toY:ny};
+
+  var ate=false;
+  if(food&&nx===food.x&&ny===food.y){
+    ate=true;
+    var pts=foodType.points;
+    if(powerupActive&&powerupActive.type.name==='double') pts*=2;
+    score+=pts;
+    consecutiveEats++;
+
+    // Eat effects
+    var fx=OFFSET_X+food.x*CELL+CELL/2, fy=OFFSET_Y+food.y*CELL+CELL/2;
+    var ptText='+'+pts;
+    if(powerupActive&&powerupActive.type.name==='double') ptText='x2! +'+pts;
+    addFloatText(fx,fy-10,ptText,foodType.color,16);
+    burstParticles(fx,fy,foodType.color,6);
+    pulseAmount=0.01; pulseTime=0.1;
+
+    if(foodType.name==='apple') sfxEat(consecutiveEats);
+    else if(foodType.name==='golden') sfxGoldenEat();
+    else sfxCherryEat();
+
+    // Grow
+    var growAmount=foodType.grow;
+    for(var g=0;g<growAmount-1;g++){
+      snake.push({x:snake[snake.length-1].x,y:snake[snake.length-1].y});
+    }
+    foodEaten++;
+
+    // Speed progression
+    if(foodEaten%5===0){
+      var newSpeed=diff.speed+Math.floor(foodEaten/5)*0.5;
+      if(newSpeed<=diff.cap&&speed<newSpeed){
+        speed=newSpeed;
+        speedUpText='SPEED UP!';
+        speedUpTimer=1.5;
+        sfxSpeedUp();
+      } else if(newSpeed>diff.cap&&!maxSpeedShown){
+        speedUpText='MAX SPEED!';
+        speedUpTimer=1.5;
+        maxSpeedShown=true;
+        sfxSpeedUp();
+      }
+    }
+
+    // Milestones
+    for(var m=milestonesHit;m<diff.milestones.length;m++){
+      if(foodEaten>=diff.milestones[m]){
+        milestonesHit=m+1;
+        milestoneText=MILESTONE_TEXTS[m];
+        milestoneTimer=2;
+        sfxMilestone();
+        if(m>=1) fireworkTimer=2;
+        if(m>=2) borderFlashTimer=2;
+        // Update bg phase
+        bgPhase=milestonesHit;
+      }
+    }
+
+    // Power-up spawn check
+    if(foodEaten>=nextPowerupAt){
+      spawnPowerup();
+      nextPowerupAt=foodEaten+rr(10,15);
+    }
+
+    // Obstacle spawn (hard)
+    if(diff.obstacles&&snake.length>=10&&foodEaten%8===0){
+      spawnObstacle();
+    }
+
+    spawnFood();
+  } else {
+    snake.pop();
+    consecutiveEats=0;
+  }
+
+  // Magnet effect
+  if(powerupActive&&powerupActive.type.name==='magnet'&&food){
+    var mHead=snake[0];
+    var dx=food.x-mHead.x, dy=food.y-mHead.y;
+    var dist=Math.abs(dx)+Math.abs(dy);
+    if(dist<=3&&dist>0){
+      // move food 1 cell closer along shorter axis
+      if(Math.abs(dx)<=Math.abs(dy)){
+        if(dy!==0) food.y+=dy>0?-1:1;
+        else if(dx!==0) food.x+=dx>0?-1:1;
+      } else {
+        if(dx!==0) food.x+=dx>0?-1:1;
+        else if(dy!==0) food.y+=dy>0?-1:1;
+      }
+    }
+  }
+}
+
+function startDeath(){
+  G.state=DEATH_ANIM;
+  deathTimer=1;
+  deathSegments=[];
+  for(var i=0;i<snake.length;i++){
+    var s=snake[i];
+    deathSegments.push({
+      x:OFFSET_X+s.x*CELL+CELL/2, y:OFFSET_Y+s.y*CELL+CELL/2,
+      vx:(Math.random()-0.5)*300, vy:(Math.random()-0.5)*300,
+      rot:0, rotV:(Math.random()-0.5)*15, alpha:1
+    });
+  }
+  shakeAmount=5; shakeTime=0.5;
+  sfxDeath();
+}
+
+function onGameOver(){
+  var diffName=DIFF_NAMES[menuDiffIdx];
+  var hs=getHighScore(diffName);
+  G.newHighScore=false;
+  if(score>hs){
+    setHighScore(diffName,score);
+    G.newHighScore=true;
+    if(!boardCleared) sfxHighScore();
+  }
+  G.finalScore=score;
+  G.finalFood=foodEaten;
+  G.finalTime=gameTime;
+  gamesPlayed++;
+  localStorage.setItem('snake_gamesPlayed',gamesPlayed.toString());
+}
+
+// ─── Drawing ───
+function cellToPixel(cx,cy){
+  return {x:OFFSET_X+cx*CELL, y:OFFSET_Y+cy*CELL};
+}
+
+function drawGrid(){
+  ctx.strokeStyle='#1a1a1a';
+  ctx.lineWidth=0.5;
+  for(var x=0;x<=COLS;x++){
+    ctx.beginPath();
+    ctx.moveTo(OFFSET_X+x*CELL,OFFSET_Y);
+    ctx.lineTo(OFFSET_X+x*CELL,OFFSET_Y+GRID_PX_H);
+    ctx.stroke();
+  }
+  for(var y=0;y<=ROWS;y++){
+    ctx.beginPath();
+    ctx.moveTo(OFFSET_X,OFFSET_Y+y*CELL);
+    ctx.lineTo(OFFSET_X+GRID_PX_W,OFFSET_Y+y*CELL);
+    ctx.stroke();
+  }
+}
+
+function drawSnake(t){
+  var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
+  var baseColor=DIFF_COLORS[DIFF_NAMES[menuDiffIdx]];
+  var ghostActive=powerupActive&&powerupActive.type.name==='ghost';
+  var rainbowMode=milestonesHit>=1;
+
+  // Draw body (tail to head)
+  for(var i=snake.length-1;i>=0;i--){
+    var s=snake[i];
+    var px=OFFSET_X+s.x*CELL, py=OFFSET_Y+s.y*CELL;
+    var sz=CELL-4;
+    var r=6;
+
+    // Interpolate head
+    if(i===0&&visualHead&&G.state===PLAYING){
+      var frac=clamp(interpFrac,0,1);
+      var fx=lerp(visualHead.fromX,visualHead.toX,frac);
+      var fy=lerp(visualHead.fromY,visualHead.toY,frac);
+      // handle wrapping interpolation
+      if(Math.abs(visualHead.toX-visualHead.fromX)>1){
+        fx=visualHead.toX; // snap for wraps
+      }
+      if(Math.abs(visualHead.toY-visualHead.fromY)>1){
+        fy=visualHead.toY;
+      }
+      px=OFFSET_X+fx*CELL;
+      py=OFFSET_Y+fy*CELL;
+    }
+
+    // Color
+    var color=baseColor;
+    if(rainbowMode){
+      var hue=((i*30)+gameTime*100)%360;
+      color='hsl('+hue+',100%,55%)';
+    }
+    var alpha=1-i/(snake.length*2); // fade toward tail
+    alpha=Math.max(alpha,0.4);
+
+    if(ghostActive) alpha*=0.4;
+    if(invincTimer>0&&Math.floor(invincTimer*10)%2===0) alpha*=0.5;
+
+    ctx.globalAlpha=alpha;
+
+    // Tail (smaller)
+    var drawSz=sz;
+    if(i===snake.length-1) drawSz=sz*0.8;
+
+    // Head (slightly larger)
+    if(i===0) drawSz=sz+2;
+
+    var offset=(CELL-drawSz)/2;
+    ctx.fillStyle=color;
+    roundRect(px+offset,py+offset,drawSz,drawSz,r);
+    ctx.fill();
+
+    // Draw eyes on head
+    if(i===0){
+      ctx.globalAlpha=ghostActive?0.6:1;
+      var cx=px+CELL/2, cy=py+CELL/2;
+      var eyeR=CELL*0.18;
+      var pupilR=eyeR*0.5;
+      var eyeOffX=CELL*0.18, eyeOffY=-CELL*0.05;
+
+      // Eye whites
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.arc(cx-eyeOffX,cy+eyeOffY,eyeR,0,Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx+eyeOffX,cy+eyeOffY,eyeR,0,Math.PI*2);
+      ctx.fill();
+
+      // Pupils (look in direction of travel)
+      var pdx=dir.x*pupilR*0.6, pdy=dir.y*pupilR*0.6;
+      ctx.fillStyle='#111';
+      ctx.beginPath();
+      ctx.arc(cx-eyeOffX+pdx,cy+eyeOffY+pdy,pupilR,0,Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx+eyeOffX+pdx,cy+eyeOffY+pdy,pupilR,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawFood(t){
+  if(!food) return;
+  var px=OFFSET_X+food.x*CELL, py=OFFSET_Y+food.y*CELL;
+  var bob=Math.sin(foodAnim*3)*2;
+  var cx=px+CELL/2, cy=py+CELL/2+bob;
+  var r=CELL*0.35;
+
+  if(foodType.name==='apple'){
+    // Red circle
+    ctx.fillStyle='#e33';
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    // Leaf
+    ctx.fillStyle='#0a0';
+    ctx.beginPath();
+    ctx.ellipse(cx+r*0.3,cy-r*0.9,r*0.4,r*0.2,0.3,0,Math.PI*2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle='#111';
+    ctx.beginPath();ctx.arc(cx-r*0.3,cy-r*0.15,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+r*0.3,cy-r*0.15,2,0,Math.PI*2);ctx.fill();
+    // Smile
+    ctx.strokeStyle='#111';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(cx,cy+r*0.1,r*0.3,0.1,Math.PI-0.1);ctx.stroke();
+  } else if(foodType.name==='golden'){
+    // Golden apple with sparkle
+    ctx.fillStyle='#f0c420';
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#0a0';
+    ctx.beginPath();
+    ctx.ellipse(cx+r*0.3,cy-r*0.9,r*0.4,r*0.2,0.3,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle='#111';
+    ctx.beginPath();ctx.arc(cx-r*0.3,cy-r*0.15,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+r*0.3,cy-r*0.15,2,0,Math.PI*2);ctx.fill();
+    // Star sparkles
+    ctx.fillStyle='rgba(255,255,200,'+(.5+Math.sin(foodAnim*8)*.5)+')';
+    for(var sp=0;sp<3;sp++){
+      var sa=foodAnim*4+sp*2.1;
+      var sx=cx+Math.cos(sa)*(r+6), sy=cy+Math.sin(sa)*(r+6);
+      ctx.beginPath();ctx.arc(sx,sy,1.5,0,Math.PI*2);ctx.fill();
+    }
+  } else if(foodType.name==='cherry'){
+    // Two red circles with stems
+    ctx.fillStyle='#e33';
+    ctx.beginPath();ctx.arc(cx-r*0.4,cy+r*0.2,r*0.7,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+r*0.4,cy+r*0.2,r*0.7,0,Math.PI*2);ctx.fill();
+    // Stems
+    ctx.strokeStyle='#0a0';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx-r*0.4,cy-r*0.3);ctx.quadraticCurveTo(cx,cy-r*1.2,cx+r*0.1,cy-r*0.8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+r*0.4,cy-r*0.3);ctx.quadraticCurveTo(cx,cy-r*1.2,cx+r*0.1,cy-r*0.8);ctx.stroke();
+  }
+}
+
+function drawPowerupOnGrid(t){
+  if(!powerupOnGrid) return;
+  var px=OFFSET_X+powerupOnGrid.x*CELL, py=OFFSET_Y+powerupOnGrid.y*CELL;
+  var cx=px+CELL/2, cy=py+CELL/2;
+  var r=CELL*0.35;
+  var pulse=1+Math.sin(t*6)*0.1;
+  // Urgency pulse last 3 seconds
+  if(powerupOnGrid.timer<=3) pulse=1+Math.sin(t*12)*0.2;
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(pulse,pulse);
+
+  var type=powerupOnGrid.type;
+  ctx.fillStyle=type.color;
+  ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+
+  // Icon
+  ctx.fillStyle='#111';
+  ctx.font='bold '+Math.floor(r)+'px Courier New';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  if(type.name==='slowmo') ctx.fillText('S',0,1);
+  else if(type.name==='magnet') ctx.fillText('M',0,1);
+  else if(type.name==='ghost') ctx.fillText('G',0,1);
+  else if(type.name==='double') ctx.fillText('2x',0,1);
+
+  ctx.restore();
+}
+
+function drawObstacles(){
+  ctx.fillStyle='#555';
+  ctx.strokeStyle='#888';
+  ctx.lineWidth=2;
+  for(var i=0;i<obstacles.length;i++){
+    var o=obstacles[i];
+    var px=OFFSET_X+o.x*CELL+2, py=OFFSET_Y+o.y*CELL+2;
+    var sz=CELL-4;
+    roundRect(px,py,sz,sz,4);
+    ctx.fill();
+    // X pattern
+    ctx.beginPath();
+    ctx.moveTo(px+4,py+4);ctx.lineTo(px+sz-4,py+sz-4);
+    ctx.moveTo(px+sz-4,py+4);ctx.lineTo(px+4,py+sz-4);
+    ctx.stroke();
+  }
+}
+
+function drawBackground(t,dt){
+  // Base
+  var bgColor='#111';
+  if(bgPhase>=2) bgColor='#0a0a1a';
+  if(bgPhase>=3){
+    var hue=(t*10)%360;
+    bgColor='hsl('+hue+',10%,7%)';
+  }
+  ctx.fillStyle=bgColor;
+  ctx.fillRect(0,0,LOG_W,LOG_H);
+
+  // Stars
+  if(bgPhase>=1){
+    var targetStars=Math.min(10+bgPhase*10,MAX_STARS);
+    ensureStars(targetStars);
+    ctx.fillStyle='#fff';
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];
+      s.y+=s.speed*dt;
+      if(s.y>LOG_H){s.y=0;s.x=Math.random()*LOG_W;}
+      ctx.globalAlpha=s.alpha*(0.5+Math.sin(t*2+i)*0.3);
+      ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // Aurora (phase 4+)
+  if(bgPhase>=4){
+    ctx.globalAlpha=0.06;
+    for(var a=0;a<3;a++){
+      var ay=LOG_H*0.3+Math.sin(t*0.5+a*2)*50;
+      var grad=ctx.createLinearGradient(0,ay-40,0,ay+40);
+      var hue=(t*20+a*120)%360;
+      grad.addColorStop(0,'transparent');
+      grad.addColorStop(0.5,'hsl('+hue+',80%,50%)');
+      grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad;
+      ctx.fillRect(0,ay-40,LOG_W,80);
+    }
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawHUD(){
+  var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
+  ctx.font='bold 24px Courier New';
+  ctx.textAlign='left';ctx.textBaseline='top';
+
+  // Score
+  ctx.fillStyle='#fff';
+  ctx.fillText(score.toString(),12,8);
+  if(powerupActive&&powerupActive.type.name==='double'){
+    ctx.fillStyle='#f0c420';
+    ctx.font='bold 16px Courier New';
+    ctx.fillText('x2',12+ctx.measureText(score.toString()).width+6,12);
+  }
+
+  // Food count
+  ctx.font='14px Courier New';
+  ctx.textAlign='center';
+  ctx.fillStyle='#888';
+  ctx.fillText('Food: '+foodEaten,LOG_W/2,8);
+
+  // High score
+  ctx.textAlign='right';
+  ctx.fillStyle='#555';
+  var hs=getHighScore(DIFF_NAMES[menuDiffIdx]);
+  ctx.fillText('HI: '+hs,LOG_W-40,8);
+
+  // Mute icon
+  ctx.font='16px Courier New';
+  ctx.fillStyle=muted?'#f44':'#888';
+  ctx.fillText(muted?'M':'M',LOG_W-12,8);
+
+  // Power-up HUD
+  if(powerupActive){
+    var pu=powerupActive;
+    var barW=150, barH=8;
+    var barX=12, barY=LOG_H-30;
+    ctx.fillStyle='#888';
+    ctx.font='12px Courier New';
+    ctx.textAlign='left';
+    var label=pu.type.name.toUpperCase();
+    if(pu.type.name==='ghost') label='GHOST — Can\'t crash!';
+    ctx.fillText(label,barX,barY-14);
+
+    // Timer bar
+    ctx.fillStyle='#333';
+    roundRect(barX,barY,barW,barH,3);ctx.fill();
+    var frac=powerupTimer/pu.type.dur;
+    ctx.fillStyle=pu.type.color;
+    roundRect(barX,barY,barW*frac,barH,3);ctx.fill();
+  }
+
+  // Speed
+  ctx.font='12px Courier New';
+  ctx.textAlign='right';
+  ctx.fillStyle='#555';
+  ctx.fillText('Speed: '+speed.toFixed(1),LOG_W-12,LOG_H-16);
+
+  // Continues (easy)
+  if(DIFF_NAMES[menuDiffIdx]==='easy'){
+    ctx.textAlign='center';
+    ctx.fillStyle='#888';
+    ctx.fillText(continues+' CONTINUE'+(continues===1?'':'S'),LOG_W/2,LOG_H-16);
+  }
+
+  // Pause hint
+  if(gamesPlayed<3&&pauseHintTimer<30){
+    var hintAlpha=pauseHintTimer>29?1-(pauseHintTimer-29):1;
+    ctx.globalAlpha=clamp(hintAlpha,0,1)*0.4;
+    ctx.font='12px Courier New';
+    ctx.textAlign='right';
+    ctx.fillStyle='#888';
+    ctx.fillText('P = Pause',LOG_W-12,LOG_H-32);
+    ctx.globalAlpha=1;
+  }
+
+  // Speed up text
+  if(speedUpTimer>0){
+    ctx.globalAlpha=clamp(speedUpTimer/0.5,0,1);
+    ctx.font='bold 28px Courier New';
+    ctx.textAlign='center';
+    ctx.fillStyle='#0ff';
+    ctx.fillText(speedUpText,LOG_W/2,LOG_H/2-80);
+    ctx.globalAlpha=1;
+  }
+
+  // Milestone text
+  if(milestoneTimer>0){
+    ctx.globalAlpha=clamp(milestoneTimer/0.5,0,1);
+    ctx.font='bold 40px Courier New';
+    ctx.textAlign='center';
+    ctx.fillStyle='#f0c420';
+    ctx.fillText(milestoneText,LOG_W/2,LOG_H/2-40);
+    ctx.globalAlpha=1;
+  }
+
+  // Border flash
+  if(borderFlashTimer>0){
+    ctx.globalAlpha=clamp(borderFlashTimer/0.5,0,1)*0.3;
+    ctx.strokeStyle='#f0c420';
+    ctx.lineWidth=6;
+    ctx.strokeRect(0,0,LOG_W,LOG_H);
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawParticles(dt){
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];
+    p.life-=dt;
+    if(p.life<=0) continue;
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.rot+=p.rotV*dt;
+    ctx.globalAlpha=clamp(p.life/p.maxLife,0,1);
+    ctx.save();
+    ctx.translate(p.x,p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle=p.color;
+    ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+  // Firework particles during milestone
+  if(fireworkTimer>0){
+    if(Math.random()<0.3){
+      var colors=['#f0c420','#e33','#0f0','#0ff','#ff6ec7'];
+      burstParticles(rr(100,LOG_W-100),rr(100,LOG_H-100),
+        colors[rr(0,colors.length-1)],4);
+    }
+  }
+}
+
+function drawFloatTexts(dt){
+  for(var i=floatTexts.length-1;i>=0;i--){
+    var ft=floatTexts[i];
+    ft.life-=dt;
+    if(ft.life<=0){floatTexts.splice(i,1);continue;}
+    ft.y-=40*dt;
+    ctx.globalAlpha=clamp(ft.life/ft.maxLife,0,1);
+    ctx.font='bold '+ft.size+'px Courier New';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle=ft.color;
+    ctx.fillText(ft.text,ft.x,ft.y);
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawDeathAnimation(dt){
+  for(var i=0;i<deathSegments.length;i++){
+    var s=deathSegments[i];
+    s.x+=s.vx*dt;
+    s.y+=s.vy*dt;
+    s.rot+=s.rotV*dt;
+    s.alpha=clamp(deathTimer,0,1);
+    ctx.globalAlpha=s.alpha;
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    ctx.rotate(s.rot);
+    var sz=CELL-4;
+    ctx.fillStyle=DIFF_COLORS[DIFF_NAMES[menuDiffIdx]];
+    ctx.fillRect(-sz/2,-sz/2,sz,sz);
+
+    // Eyes on first segment (head)
+    if(i===0){
+      var eyeR=CELL*0.18;
+      var spinAngle=deathTimer*15;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();ctx.arc(-CELL*0.15,0,eyeR,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(CELL*0.15,0,eyeR,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#111';
+      ctx.beginPath();ctx.arc(-CELL*0.15+Math.cos(spinAngle)*eyeR*0.4,
+        Math.sin(spinAngle)*eyeR*0.4,eyeR*0.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(CELL*0.15+Math.cos(spinAngle+1)*eyeR*0.4,
+        Math.sin(spinAngle+1)*eyeR*0.4,eyeR*0.5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+
+  // Death reason text
+  if(deathTimer>0.3){
+    ctx.globalAlpha=clamp((deathTimer-0.3)/0.3,0,1);
+    ctx.font='bold 32px Courier New';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f44';
+    ctx.fillText(deathReason,LOG_W/2,LOG_H/2);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ─── Menu Drawing ───
+function drawMenu(t){
+  ctx.fillStyle='#111';
+  ctx.fillRect(0,0,LOG_W,LOG_H);
+
+  // Decorative snake
+  menuSnakeT+=0.016;
+  ctx.globalAlpha=0.15;
+  for(var i=0;i<menuSnake.length;i++){
+    var ms=menuSnake[i];
+    var yoff=Math.sin(menuSnakeT*2+i*0.4)*3;
+    var px=OFFSET_X+ms.x*CELL, py=OFFSET_Y+(ms.y+yoff)*CELL;
+    ctx.fillStyle='hsl('+(i*25+t*50)%360+',80%,50%)';
+    roundRect(px,py,CELL-4,CELL-4,6);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  // Title - "SNAKE!" wobbly
+  var title='SNAKE!';
+  ctx.font='bold 72px Courier New';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  var totalW=ctx.measureText(title).width;
+  var startX=LOG_W/2-totalW/2;
+  for(var i=0;i<title.length;i++){
+    var charW=ctx.measureText(title[i]).width;
+    var yoff=Math.sin(t*4+i*0.8)*8;
+    var hue=(i*50+t*80)%360;
+    ctx.fillStyle='hsl('+hue+',100%,60%)';
+    ctx.fillText(title[i],startX+charW/2,180+yoff);
+    startX+=charW;
+  }
+
+  // Subtitle
+  ctx.font='16px Courier New';
+  ctx.fillStyle='#888';
+  ctx.fillText('Classic snake with a twist',LOG_W/2,230);
+
+  // Player name
+  ctx.font='18px Courier New';
+  ctx.fillStyle='#aaa';
+  ctx.fillText('PLAYER NAME',LOG_W/2,300);
+
+  ctx.font='bold 36px Courier New';
+  for(var i=0;i<3;i++){
+    var lx=LOG_W/2-50+i*50;
+    var selected=i===menuCursor;
+    ctx.fillStyle=selected?'#0ff':'#fff';
+    ctx.fillText(menuInitials[i],lx,340);
+    if(selected){
+      // arrows
+      ctx.font='16px Courier New';
+      ctx.fillStyle='#0ff';
+      ctx.fillText('\u25B2',lx,310);
+      ctx.fillText('\u25BC',lx,370);
+      ctx.font='bold 36px Courier New';
+    }
+  }
+
+  // Difficulty
+  ctx.font='18px Courier New';
+  ctx.fillStyle='#aaa';
+  ctx.fillText('DIFFICULTY',LOG_W/2,420);
+
+  var diffNames=['Easy','Normal','Hard'];
+  ctx.font='bold 24px Courier New';
+  for(var i=0;i<3;i++){
+    var dx=LOG_W/2+(i-1)*120;
+    var sel=i===menuDiffIdx;
+    ctx.fillStyle=sel?DIFF_COLORS[DIFF_NAMES[i]]:'#555';
+    ctx.fillText(diffNames[i],dx,455);
+    if(sel){
+      ctx.fillStyle=DIFF_COLORS[DIFF_NAMES[i]];
+      ctx.fillText('\u25C4',dx-70,455);
+      ctx.fillText('\u25BA',dx+70,455);
+    }
+  }
+
+  // Difficulty description
+  ctx.font='14px Courier New';
+  ctx.fillStyle='#666';
+  var desc=['Walls wrap, 1 continue','Walls kill, faster speed','Walls kill, obstacles spawn'];
+  ctx.fillText(desc[menuDiffIdx],LOG_W/2,485);
+
+  // High score
+  var hs=getHighScore(DIFF_NAMES[menuDiffIdx]);
+  if(hs>0){
+    ctx.font='16px Courier New';
+    ctx.fillStyle='#f0c420';
+    ctx.fillText('High Score: '+hs,LOG_W/2,520);
+  }
+
+  // Start prompt
+  var blink=Math.sin(t*4)>0;
+  if(blink){
+    ctx.font='bold 20px Courier New';
+    ctx.fillStyle='#0f0';
+    ctx.fillText('Press Enter to Play!',LOG_W/2,580);
+  }
+
+  // Controls
+  ctx.font='12px Courier New';
+  ctx.fillStyle='#444';
+  ctx.fillText('Arrow Keys / WASD to play  |  M = Mute',LOG_W/2,640);
+
+  // Mute state
+  if(muted){
+    ctx.fillStyle='#f44';
+    ctx.fillText('MUTED',LOG_W/2,660);
+  }
+}
+
+function drawCountdown(){
+  ctx.font='bold 80px Courier New';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  var text=countdownNum>0?countdownNum.toString():'GO!';
+  var color=countdownNum>0?'#fff':'#0f0';
+  var scale=1+(1-clamp(countdownTimer,0,1))*0.3;
+  ctx.save();
+  ctx.translate(LOG_W/2,LOG_H/2);
+  ctx.scale(scale,scale);
+  ctx.fillStyle=color;
+  ctx.globalAlpha=clamp(countdownTimer,0,1);
+  ctx.fillText(text,0,0);
+  ctx.restore();
+  ctx.globalAlpha=1;
+}
+
+function drawPaused(){
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.fillRect(0,0,LOG_W,LOG_H);
+  ctx.font='bold 48px Courier New';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#fff';
+  ctx.fillText('PAUSED',LOG_W/2,LOG_H/2-20);
+  ctx.font='18px Courier New';
+  ctx.fillStyle='#888';
+  ctx.fillText('Press P to Resume',LOG_W/2,LOG_H/2+30);
+  if(escapeConfirmFlag){
+    ctx.fillStyle='#f44';
+    ctx.font='14px Courier New';
+    ctx.fillText('Press Escape again to quit to menu',LOG_W/2,LOG_H/2+65);
+  }
+}
+
+function drawContinuePrompt(t){
+  ctx.fillStyle='rgba(0,0,0,0.6)';
+  ctx.fillRect(0,0,LOG_W,LOG_H);
+  ctx.font='bold 36px Courier New';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#f0c420';
+  ctx.fillText('CONTINUE?',LOG_W/2,LOG_H/2-40);
+  ctx.font='20px Courier New';
+  ctx.fillStyle='#fff';
+  ctx.fillText('Press Enter',LOG_W/2,LOG_H/2+10);
+
+  // Countdown bar
+  var barW=200,barH=12;
+  var frac=clamp(continueTimer/5,0,1);
+  ctx.fillStyle='#333';
+  roundRect(LOG_W/2-barW/2,LOG_H/2+40,barW,barH,4);ctx.fill();
+  ctx.fillStyle=frac>0.3?'#f0c420':'#f44';
+  roundRect(LOG_W/2-barW/2,LOG_H/2+40,barW*frac,barH,4);ctx.fill();
+
+  ctx.font='14px Courier New';
+  ctx.fillStyle='#888';
+  ctx.fillText('Escape to give up',LOG_W/2,LOG_H/2+70);
+}
+
+function drawGameOver(t){
+  ctx.fillStyle='rgba(0,0,0,0.85)';
+  ctx.fillRect(0,0,LOG_W,LOG_H);
+
+  if(boardCleared){
+    ctx.font='bold 36px Courier New';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f0c420';
+    ctx.fillText('YOU FILLED THE BOARD!',LOG_W/2,180);
+  } else {
+    ctx.font='bold 42px Courier New';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f44';
+    ctx.fillText('GAME OVER',LOG_W/2,180);
+  }
+
+  // Stats
+  ctx.font='20px Courier New';
+  ctx.fillStyle='#fff';
+  ctx.fillText('Score: '+G.finalScore,LOG_W/2,260);
+  ctx.fillStyle='#aaa';
+  ctx.font='16px Courier New';
+  ctx.fillText('Food Eaten: '+G.finalFood,LOG_W/2,300);
+  var mins=Math.floor(G.finalTime/60), secs=Math.floor(G.finalTime%60);
+  ctx.fillText('Time: '+mins+':'+(secs<10?'0':'')+secs,LOG_W/2,330);
+
+  // High score
+  if(G.newHighScore){
+    var blink=Math.sin(t*6)>0;
+    if(blink){
+      ctx.font='bold 24px Courier New';
+      ctx.fillStyle='#f0c420';
+      ctx.fillText('NEW HIGH SCORE!',LOG_W/2,380);
+    }
+  }
+
+  // Prompts
+  var blink2=Math.sin(t*4)>0;
+  if(blink2){
+    ctx.font='bold 18px Courier New';
+    ctx.fillStyle='#0f0';
+    ctx.fillText('Press Enter to Play Again',LOG_W/2,450);
+  }
+  ctx.font='14px Courier New';
+  ctx.fillStyle='#666';
+  ctx.fillText('Escape for Menu',LOG_W/2,480);
+}
+
+// ─── Input ───
+document.addEventListener('keydown',function(e){
+  var key=e.key.toLowerCase();
+
+  // Mute toggle always works
+  if(key==='m'){
+    muted=!muted;
+    localStorage.setItem('snake_muted',muted?'1':'0');
+    if(!muted&&!audioCtx) initAudio();
+    return;
+  }
+
+  // Hard gate by state
+  if(G.state===DEATH_ANIM) return;
+
+  if(G.state===CONTINUE_PROMPT){
+    if(key==='enter'){
+      e.preventDefault();
+      useContinue();
+    } else if(key==='escape'){
+      e.preventDefault();
+      G.state=GAME_OVER;
+      onGameOver();
+    }
+    return;
+  }
+
+  if(G.state===GAME_OVER){
+    if(key==='enter'){
+      e.preventDefault();
+      initGame();
+      G.state=COUNTDOWN;
+      countdownNum=3;countdownTimer=1;
+      sfxCountdown(false);
+    } else if(key==='escape'){
+      e.preventDefault();
+      G.state=MENU;
+    }
+    return;
+  }
+
+  if(G.state===PAUSED){
+    if(key==='p'||key==='escape'){
+      e.preventDefault();
+      if(key==='escape'){
+        if(escapeConfirmFlag){
+          G.state=MENU;
+          escapeConfirmFlag=false;
+          return;
+        }
+        escapeConfirmFlag=true;
+        escapeConfirmTimer=2;
+        return;
+      }
+      G.state=PLAYING;
+      escapeConfirmFlag=false;
+      lastTime=performance.now();
+    }
+    return;
+  }
+
+  if(G.state===COUNTDOWN){
+    e.preventDefault();
+    var d=keyToDir(key);
+    if(d){
+      nextDir=d;
+      dir=d;
+    }
+    return;
+  }
+
+  if(G.state===MENU){
+    e.preventDefault();
+    handleMenuKey(key,e);
+    return;
+  }
+
+  // PLAYING
+  if(G.state===PLAYING){
+    e.preventDefault();
+    if(key==='p'||key==='escape'){
+      G.state=PAUSED;
+      escapeConfirmFlag=false;
+      return;
+    }
+    var d=keyToDir(key);
+    if(d){
+      // Don't queue reverse
+      var last=inputQueue.length>0?inputQueue[inputQueue.length-1]:dir;
+      if(d.x!==-last.x||d.y!==-last.y){
+        if(inputQueue.length<2) inputQueue.push(d);
+      }
+    }
+  }
+});
+
+function keyToDir(key){
+  if(key==='arrowup'||key==='w') return {x:0,y:-1};
+  if(key==='arrowdown'||key==='s') return {x:0,y:1};
+  if(key==='arrowleft'||key==='a') return {x:-1,y:0};
+  if(key==='arrowright'||key==='d') return {x:1,y:0};
+  return null;
+}
+
+function handleMenuKey(key,e){
+  if(key==='enter'){
+    initAudio();
+    initGame();
+    G.state=COUNTDOWN;
+    countdownNum=3;countdownTimer=1;
+    sfxCountdown(false);
+    return;
+  }
+  if(key==='arrowup'||key==='w'){
+    sfxClick();
+    var c=menuInitials[menuCursor].charCodeAt(0);
+    c++;if(c>90)c=65;
+    menuInitials[menuCursor]=String.fromCharCode(c);
+  }
+  if(key==='arrowdown'||key==='s'){
+    sfxClick();
+    var c=menuInitials[menuCursor].charCodeAt(0);
+    c--;if(c<65)c=90;
+    menuInitials[menuCursor]=String.fromCharCode(c);
+  }
+  if(key==='arrowleft'||key==='a'){
+    sfxClick();
+    // If cursor is at 0, change difficulty left
+    if(menuCursor===0){
+      menuDiffIdx--;if(menuDiffIdx<0)menuDiffIdx=2;
+    } else {
+      menuCursor--;
+    }
+  }
+  if(key==='arrowright'||key==='d'){
+    sfxClick();
+    if(menuCursor===2){
+      menuDiffIdx++;if(menuDiffIdx>2)menuDiffIdx=0;
+    } else {
+      menuCursor++;
+    }
+  }
+  if(key==='tab'){
+    e.preventDefault();
+    sfxClick();
+    menuCursor=(menuCursor+1)%3;
+  }
+}
+
+function useContinue(){
+  continues--;
+  var cx=Math.floor(COLS/2), cy=Math.floor(ROWS/2);
+
+  // Clear 5x5 center of obstacles
+  for(var oi=obstacles.length-1;oi>=0;oi--){
+    var o=obstacles[oi];
+    if(Math.abs(o.x-cx)<=2&&Math.abs(o.y-cy)<=2) obstacles.splice(oi,1);
+  }
+
+  // Move food if in spawn zone
+  if(food){
+    var spawnCells=[{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
+    for(var si=0;si<spawnCells.length;si++){
+      if(food.x===spawnCells[si].x&&food.y===spawnCells[si].y){
+        // move food elsewhere
+        for(var fi=0;fi<100;fi++){
+          var fx=rr(0,COLS-1),fy=rr(0,ROWS-1);
+          var occupied=false;
+          for(var sc=0;sc<spawnCells.length;sc++){
+            if(fx===spawnCells[sc].x&&fy===spawnCells[sc].y){occupied=true;break;}
+          }
+          if(!occupied&&!isOccupied(fx,fy)){food.x=fx;food.y=fy;break;}
+        }
+        break;
+      }
+    }
+  }
+
+  snake=[{x:cx,y:cy},{x:cx-1,y:cy},{x:cx-2,y:cy}];
+  dir={x:1,y:0};nextDir={x:1,y:0};
+  inputQueue=[];inputCooldown=0;
+  invincTimer=2;
+  visualHead=null;
+  tickAccum=0;interpFrac=0;
+  powerupActive=null;powerupTimer=0;
+  deathSegments=[];
+  G.state=PLAYING;
+  sfxContinue();
+}
+
+// ─── Blur / Focus ───
+var wasPaused=false;
+var countdownWasActive=false;
+window.addEventListener('blur',function(){
+  if(G.state===PLAYING){
+    G.state=PAUSED;
+    wasPaused=true;
+  } else if(G.state===COUNTDOWN){
+    countdownWasActive=true;
+  }
+});
+window.addEventListener('focus',function(){
+  canvas.focus();
+  lastTime=performance.now();
+  if(countdownWasActive&&G.state===COUNTDOWN){
+    // Restart current countdown number's timer
+    countdownTimer=1;
+    countdownWasActive=false;
+  }
+});
+
+// ─── Game Loop ───
+var lastTime=performance.now();
+
+function update(now){
+  requestAnimationFrame(update);
+  var rawDt=(now-lastTime)/1000;
+  lastTime=now;
+  var dt=Math.min(rawDt,0.1);
+
+  // ─── MENU ───
+  if(G.state===MENU){
+    drawMenu(now/1000);
+    return;
+  }
+
+  // ─── COUNTDOWN ───
+  if(G.state===COUNTDOWN){
+    countdownTimer-=dt;
+    if(countdownTimer<=0){
+      if(countdownNum>1){
+        countdownNum--;
+        countdownTimer=1;
+        sfxCountdown(countdownNum===0);
+      } else if(countdownNum===1){
+        countdownNum=0;
+        countdownTimer=0.5;
+        sfxCountdown(true);
+      } else {
+        G.state=PLAYING;
+        tickAccum=0;
+        interpFrac=0;
+        lastTime=performance.now();
+      }
+    }
+    // Draw game field (static snake, food)
+    drawBackground(now/1000,dt);
+    drawGrid();
+    drawObstacles();
+    drawFood(now/1000);
+    drawSnake(now/1000);
+    drawCountdown();
+    return;
+  }
+
+  // ─── PAUSED ───
+  if(G.state===PAUSED){
+    if(escapeConfirmFlag){
+      escapeConfirmTimer-=dt;
+      if(escapeConfirmTimer<=0) escapeConfirmFlag=false;
+    }
+    // Draw game field frozen
+    drawBackground(now/1000,0);
+    drawGrid();
+    drawObstacles();
+    drawFood(now/1000);
+    drawSnake(now/1000);
+    drawHUD();
+    drawPaused();
+    return;
+  }
+
+  // ─── DEATH ANIMATION ───
+  if(G.state===DEATH_ANIM){
+    deathTimer-=dt;
+    shakeTime-=dt;
+
+    var sx=0,sy=0;
+    if(shakeTime>0){
+      var intensity=shakeAmount*(shakeTime/0.5);
+      sx=(Math.random()-0.5)*intensity*2;
+      sy=(Math.random()-0.5)*intensity*2;
+    }
+    ctx.save();
+    ctx.translate(sx,sy);
+
+    drawBackground(now/1000,dt);
+    drawGrid();
+    drawObstacles();
+    drawFood(now/1000);
+    drawDeathAnimation(dt);
+    drawParticles(dt);
+    drawFloatTexts(dt);
+
+    ctx.restore();
+
+    if(deathTimer<=0){
+      var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
+      if(diff.continues>0&&continues>0){
+        G.state=CONTINUE_PROMPT;
+        continueTimer=5;
+        sfxContinue();
+      } else {
+        G.state=GAME_OVER;
+        onGameOver();
+      }
+    }
+    return;
+  }
+
+  // ─── CONTINUE PROMPT ───
+  if(G.state===CONTINUE_PROMPT){
+    continueTimer-=dt;
+    drawBackground(now/1000,0);
+    drawGrid();
+    drawObstacles();
+    drawFood(now/1000);
+    drawContinuePrompt(now/1000);
+    if(continueTimer<=0){
+      G.state=GAME_OVER;
+      onGameOver();
+    }
+    return;
+  }
+
+  // ─── GAME OVER ───
+  if(G.state===GAME_OVER){
+    drawBackground(now/1000,0);
+    drawGrid();
+    drawGameOver(now/1000);
+    return;
+  }
+
+  // ─── PLAYING ───
+  gameTime+=dt;
+  pauseHintTimer+=dt;
+  foodAnim+=dt;
+
+  // Timers
+  if(speedUpTimer>0) speedUpTimer-=dt;
+  if(milestoneTimer>0) milestoneTimer-=dt;
+  if(fireworkTimer>0) fireworkTimer-=dt;
+  if(borderFlashTimer>0) borderFlashTimer-=dt;
+  if(invincTimer>0) invincTimer-=dt;
+  if(pulseTime>0) pulseTime-=dt;
+
+  // Power-up on grid timer
+  if(powerupOnGrid){
+    powerupOnGrid.timer-=dt;
+    if(powerupOnGrid.timer<=0) powerupOnGrid=null;
+  }
+
+  // Active power-up timer
+  if(powerupActive){
+    powerupTimer-=dt;
+    if(powerupTimer<=0){
+      sfxPowerupExpire();
+      // Restore speed if slow-mo
+      if(powerupActive.type.name==='slowmo'){
+        // speed is already the progression speed, slow-mo just affects tick rate
+      }
+      powerupActive=null;
+    }
+  }
+
+  // Game tick
+  var effectiveSpeed=speed;
+  if(powerupActive&&powerupActive.type.name==='slowmo') effectiveSpeed=speed/2;
+  var tickInterval=1/effectiveSpeed;
+  tickAccum+=dt;
+
+  var ticked=false;
+  if(tickAccum>=tickInterval){
+    gameTick();
+    tickAccum-=tickInterval;
+    if(tickAccum>tickInterval) tickAccum=tickInterval; // prevent spiral
+    ticked=true;
+
+    // Check if snake head is on power-up
+    if(powerupOnGrid&&G.state===PLAYING){
+      var h=snake[0];
+      if(h.x===powerupOnGrid.x&&h.y===powerupOnGrid.y){
+        powerupActive={type:powerupOnGrid.type};
+        powerupTimer=powerupOnGrid.type.dur;
+        var px=OFFSET_X+powerupOnGrid.x*CELL+CELL/2;
+        var py=OFFSET_Y+powerupOnGrid.y*CELL+CELL/2;
+        burstParticles(px,py,powerupOnGrid.type.color,8);
+        addFloatText(px,py-10,powerupOnGrid.type.name.toUpperCase(),powerupOnGrid.type.color,18);
+        sfxPowerup();
+        powerupOnGrid=null;
+      }
+    }
+  }
+
+  if(G.state!==PLAYING) return; // may have died in gameTick
+
+  interpFrac=tickAccum/tickInterval;
+
+  // ─── Draw ───
+  var sx=0,sy=0;
+  if(shakeTime>0){
+    shakeTime-=dt;
+    var intensity=shakeAmount*(shakeTime/0.5);
+    sx=(Math.random()-0.5)*intensity*2;
+    sy=(Math.random()-0.5)*intensity*2;
+  }
+
+  // Screen pulse
+  var pscale=1;
+  if(pulseTime>0) pscale=1+pulseAmount*(pulseTime/0.1);
+
+  ctx.save();
+  if(pscale!==1){
+    ctx.translate(LOG_W/2,LOG_H/2);
+    ctx.scale(pscale,pscale);
+    ctx.translate(-LOG_W/2,-LOG_H/2);
+  }
+  ctx.translate(sx,sy);
+
+  drawBackground(now/1000,dt);
+  drawGrid();
+  drawObstacles();
+  drawPowerupOnGrid(now/1000);
+  drawFood(now/1000);
+
+  // Magnet VFX
+  if(powerupActive&&powerupActive.type.name==='magnet'&&food){
+    var mHead=snake[0];
+    var dist=Math.abs(food.x-mHead.x)+Math.abs(food.y-mHead.y);
+    if(dist<=3){
+      ctx.strokeStyle='rgba(170,85,255,0.3)';
+      ctx.lineWidth=2;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.moveTo(OFFSET_X+mHead.x*CELL+CELL/2,OFFSET_Y+mHead.y*CELL+CELL/2);
+      ctx.lineTo(OFFSET_X+food.x*CELL+CELL/2,OFFSET_Y+food.y*CELL+CELL/2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  drawSnake(now/1000);
+  drawParticles(dt);
+  drawFloatTexts(dt);
+  drawHUD();
+
+  // Ghost tint
+  if(powerupActive&&powerupActive.type.name==='ghost'){
+    ctx.fillStyle='rgba(255,255,255,0.03)';
+    ctx.fillRect(0,0,LOG_W,LOG_H);
+  }
+  // Slow-mo tint
+  if(powerupActive&&powerupActive.type.name==='slowmo'){
+    ctx.fillStyle='rgba(50,100,255,0.05)';
+    ctx.fillRect(0,0,LOG_W,LOG_H);
+  }
+
+  ctx.restore();
+}
+
+canvas.focus();
+requestAnimationFrame(update);
+
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>
