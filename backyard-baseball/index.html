@@ -198,12 +198,58 @@ const PITCH_TYPES = [
   { name: 'Changeup', key: '3', travelDur: 0.95, driftX: 0, extraDrop: 0.2, color: '#44DD44' }
 ];
 
-// CPU batting parameters per difficulty
+// CPU batting parameters per difficulty (tuned for kid-friendly play)
 const CPU_BATTING = [
-  { swingProb: 0.60, timingVariance: 180, hrRate: 0.15 }, // Easy: whiffs a lot
-  { swingProb: 0.70, timingVariance: 120, hrRate: 0.25 }, // Normal
-  { swingProb: 0.80, timingVariance: 80, hrRate: 0.35 }   // Hard: decent hitter
+  { swingProb: 0.50, timingVariance: 220, hrRate: 0.08 }, // Easy: ~50% Ks, rare HRs
+  { swingProb: 0.65, timingVariance: 140, hrRate: 0.18 }, // Normal: moderate threat
+  { swingProb: 0.78, timingVariance: 90, hrRate: 0.30 }   // Hard: competitive but beatable
 ];
+
+// CPU team names and colors
+const CPU_TEAMS = [
+  { name: 'Rockets', color: '#E53935' },
+  { name: 'Tigers', color: '#FB8C00' },
+  { name: 'Stars', color: '#FDD835' },
+  { name: 'Dragons', color: '#43A047' },
+  { name: 'Comets', color: '#1E88E5' },
+  { name: 'Sharks', color: '#00ACC1' },
+  { name: 'Wolves', color: '#8E24AA' },
+  { name: 'Hawks', color: '#6D4C41' },
+  { name: 'Lightning', color: '#FFD600' },
+  { name: 'Pandas', color: '#546E7A' }
+];
+
+// Contextual commentary phrases
+const CONTEXT_COMMENTS = {
+  basesLoaded: ['Bases loaded!', 'Bases juiced!', 'The bases are full!'],
+  tieGame: ['Tie game!', "It's all knotted up!", 'Dead even!'],
+  lastAtBat: ['Last at-bat!', 'Final chance!', 'Do-or-die!'],
+  winningRun: ['Winning run on base!', 'Go-ahead run in scoring position!'],
+  bigLead: ['Running away with it!', 'Blowout!'],
+  comeback: ['Comeback time!', 'Rally caps on!'],
+  shutout: ['Shutout so far!', 'Pitching a gem!']
+};
+
+const MERCY_RULE_LEAD = 10; // end game if lead is 10+
+
+function fgGetContextCommentary() {
+  // Return a contextual comment based on game situation, or '' if none
+  if (fg.bases[0] && fg.bases[1] && fg.bases[2]) return pick(CONTEXT_COMMENTS.basesLoaded);
+  if (fg.playerScore === fg.cpuScore && fg.inning >= 2) return pick(CONTEXT_COMMENTS.tieGame);
+  if (fg.inning >= INNINGS_PER_GAME && fg.halfInning === 'bottom' && fg.outs === 2) return pick(CONTEXT_COMMENTS.lastAtBat);
+  var lead = fg.isPlayerBatting ? fg.playerScore - fg.cpuScore : fg.cpuScore - fg.playerScore;
+  if (lead < 0 && fg.bases[1] || fg.bases[2]) return pick(CONTEXT_COMMENTS.winningRun);
+  if (Math.abs(fg.playerScore - fg.cpuScore) >= 5) return pick(CONTEXT_COMMENTS.bigLead);
+  if (lead < -2 && fg.inning >= 2) return pick(CONTEXT_COMMENTS.comeback);
+  return '';
+}
+
+function getCpuTeamColor() {
+  return CPU_TEAMS[fg.cpuTeamIdx] ? CPU_TEAMS[fg.cpuTeamIdx].color : '#888';
+}
+function getCpuTeamName() {
+  return CPU_TEAMS[fg.cpuTeamIdx] ? CPU_TEAMS[fg.cpuTeamIdx].name : 'CPU';
+}
 
 // ========== CANVAS SETUP ==========
 const canvas = document.getElementById('gc');
@@ -581,6 +627,43 @@ function sndUmpireOut(ctx) {
   osc.start(t); osc.stop(t + 0.15);
 }
 
+function sndPlayBall(ctx) {
+  // "Play ball!" announcer — ascending tones
+  var t = ctx.currentTime;
+  [330, 440, 550, 660].forEach(function(freq, i) {
+    var osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    var g = ctx.createGain(); g.gain.setValueAtTime(0.25, t + i * 0.12);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.12 + 0.2);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + 0.2);
+  });
+}
+
+function sndVictoryFanfare(ctx) {
+  // Big win celebration
+  var t = ctx.currentTime;
+  [523, 659, 784, 1047, 784, 1047, 1319].forEach(function(freq, i) {
+    var dur = i === 6 ? 0.4 : 0.15;
+    var osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    var g = ctx.createGain(); g.gain.setValueAtTime(0.3, t + i * 0.12);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.12 + dur);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i * 0.12); osc.stop(t + i * 0.12 + dur);
+  });
+}
+
+function sndConsolation(ctx) {
+  // Gentle "nice try" melody
+  var t = ctx.currentTime;
+  [440, 392, 349, 330].forEach(function(freq, i) {
+    var osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    var g = ctx.createGain(); g.gain.setValueAtTime(0.15, t + i * 0.2);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.2 + 0.3);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i * 0.2); osc.stop(t + i * 0.2 + 0.3);
+  });
+}
+
 function sndSideRetired(ctx) {
   const t = ctx.currentTime;
   [523, 440, 349].forEach(function(freq, i) {
@@ -756,6 +839,8 @@ let fg = {
   cpuSpeedUp: false, // hold space to speed up CPU at-bats
   // Box score: runs per half-inning [top, bottom] for each inning
   boxScore: [[0,0],[0,0],[0,0]],
+  // CPU team
+  cpuTeamIdx: 0, // index into CPU_TEAMS
   // Baserunner state
   bases: [false, false, false], // [1st, 2nd, 3rd] — true = occupied
   lastHitType: '', // 'single', 'double', 'triple' — for runner advancement
@@ -1488,11 +1573,36 @@ function startFullGame() {
   fg.tbPlayerDist = 0;
   fg.tbCpuDist = 0;
   fg.tbPhase = 'none';
+  fg.cpuTeamIdx = Math.floor(Math.random() * CPU_TEAMS.length);
+  fg.showedTutorial = false;
 
   startCrowdMurmur();
   lsSet('lastInitials', playerName);
+  playSound(sndPlayBall);
 
-  startNextPitch();
+  // Full game tutorial for first-time players
+  var fgPlayed = lsGet('fg_gamesPlayed', 0);
+  if (fgPlayed === 0) {
+    fg.showedTutorial = true;
+    commentaryText = '';
+    resultText = 'vs ' + getCpuTeamName() + '!';
+    resultColor = getCpuTeamColor();
+    state = STATES.PITCH_RESULT;
+    resultTimer = 2.5;
+    fg.atBatResult = 'halfover'; // will start next pitch after timer
+    // Show tutorial hint
+    tutorialText = 'SPACE to swing \u2022 3 innings \u2022 3 outs per side';
+    tutorialTextTimer = 2.5;
+  } else {
+    // Quick matchup announcement
+    commentaryText = '';
+    resultText = 'vs ' + getCpuTeamName() + '!';
+    resultColor = getCpuTeamColor();
+    state = STATES.PITCH_RESULT;
+    resultTimer = 1.5;
+    fg.atBatResult = 'halfover';
+  }
+  lsSet('fg_gamesPlayed', fgPlayed + 1);
 }
 
 function fgResetAtBat() {
@@ -1842,6 +1952,17 @@ function fgRollHitOutcome(quality, dist) {
 
 function fgNextAtBat() {
   fgResetAtBat();
+  // Mercy rule: end game if lead is 10+
+  var lead = Math.abs(fg.playerScore - fg.cpuScore);
+  if (lead >= MERCY_RULE_LEAD && fg.inning >= 2) {
+    commentaryText = 'Mercy rule! Game over!';
+    resultText = lead + ' run lead!';
+    resultColor = '#FFD700';
+    state = STATES.PITCH_RESULT;
+    resultTimer = 2.0;
+    fg.atBatResult = 'mercyrule';
+    return;
+  }
   if (fg.outs >= OUTS_PER_HALF) {
     fgEndHalfInning();
     return;
@@ -1863,7 +1984,7 @@ function fgEndHalfInning() {
     // Show transition
     fg.atBatResult = 'halfover';
     fg.atBatResultTimer = 2.0;
-    commentaryText = 'CPU is up to bat!';
+    commentaryText = getCpuTeamName() + ' are up to bat!';
     resultText = '\u25BC ' + fgInningLabel(fg.inning);
     resultColor = '#FFF';
     state = STATES.PITCH_RESULT;
@@ -1976,16 +2097,22 @@ function fgEndGame() {
   gamesPlayed = g + 1;
 
   // Save full game stats
-  const fgWins = lsGet('fg_wins', 0);
-  const fgLosses = lsGet('fg_losses', 0);
+  var fgWins = lsGet('fg_wins', 0);
+  var fgLosses = lsGet('fg_losses', 0);
+  var fgTotalRuns = lsGet('fg_totalRuns', 0);
+  var fgTotalHRs = lsGet('fg_totalHRs', 0);
+  lsSet('fg_totalRuns', fgTotalRuns + fg.playerScore);
+  lsSet('fg_totalHRs', fgTotalHRs + hrCount);
   if (fg.playerScore > fg.cpuScore) {
     lsSet('fg_wins', fgWins + 1);
-    endIsNewHigh = true; // reuse for "YOU WIN!"
+    endIsNewHigh = true;
+    playSound(sndVictoryFanfare);
   } else if (fg.playerScore < fg.cpuScore) {
     lsSet('fg_losses', fgLosses + 1);
     endIsNewHigh = false;
+    playSound(sndConsolation);
   } else {
-    endIsNewHigh = false; // tie
+    endIsNewHigh = false;
   }
 }
 
@@ -2616,7 +2743,7 @@ function updatePitchResult(dt) {
         startNextPitch();
         return;
       }
-      if (fg.atBatResult === 'tiebreakerdone') {
+      if (fg.atBatResult === 'tiebreakerdone' || fg.atBatResult === 'mercyrule') {
         fgEndGame();
         return;
       }
@@ -2878,6 +3005,15 @@ function drawHUD() {
       ctx.beginPath(); ctx.arc(W/2 + 120 + oi * 14, countY - 4, 5, 0, Math.PI*2); ctx.fill();
     }
 
+    // Contextual commentary
+    var ctxComment = fgGetContextCommentary();
+    if (ctxComment && pitchPhase === 'pre') {
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(ctxComment, W/2, 62);
+    }
+
     // Mini diamond (base indicator) — between count and score
     var dX = W/2 + 165, dY = 30, dS = 8;
     // Diamond shape — 4 bases as small squares
@@ -2902,7 +3038,8 @@ function drawHUD() {
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFF';
     ctx.font = 'bold 20px sans-serif';
-    ctx.fillText('YOU ' + fg.playerScore + ' - ' + fg.cpuScore + ' CPU', W - 20, 25);
+    var cpuName = getCpuTeamName();
+    ctx.fillText('YOU ' + fg.playerScore + ' - ' + fg.cpuScore + ' ' + cpuName, W - 20, 25);
 
     // Mini box score
     ctx.font = '10px sans-serif';
@@ -3172,9 +3309,13 @@ function drawGameOver(dt) {
 
   if (gameMode === 'fullgame') {
     // Full Game over screen
+    var cpuName = getCpuTeamName();
     if (fg.playerScore > fg.cpuScore) {
       ctx.fillText('YOU WIN!', W/2, 80 - bounce);
-      if (endScreenTimer < 1.5 && particles.length < 10) { spawnFireworks(W/2, 100); }
+      if (endScreenTimer < 2.5 && particles.length < 10) { spawnFireworks(W/2, 100); }
+      if (endScreenTimer > 1 && endScreenTimer < 2 && particles.length < 10) {
+        spawnFireworks(randRange(200, 800), randRange(80, 200));
+      }
     } else if (fg.playerScore < fg.cpuScore) {
       ctx.fillStyle = '#AAA';
       ctx.fillText('GAME OVER', W/2, 80 - bounce);
@@ -3187,21 +3328,37 @@ function drawGameOver(dt) {
     ctx.font = 'bold 72px sans-serif';
     ctx.fillText(fg.playerScore + ' - ' + fg.cpuScore, W/2, 170);
 
+    // Team matchup
+    ctx.font = '16px sans-serif';
+    ctx.fillStyle = TEAM_COLORS[colorIdx].hex;
+    ctx.fillText(playerName.join(''), W/2 - 60, 195);
+    ctx.fillStyle = '#888';
+    ctx.fillText('vs', W/2, 195);
+    ctx.fillStyle = getCpuTeamColor();
+    ctx.fillText(cpuName, W/2 + 60, 195);
+
     // Win/loss message
     ctx.fillStyle = '#AAA';
     ctx.font = '20px sans-serif';
+    var encourageMessages = [
+      "Great game! You'll get 'em next time!",
+      "Nice effort, " + playerName.join('') + "!",
+      "So close! Play again?",
+      "The " + cpuName + " got lucky!"
+    ];
     if (fg.playerScore > fg.cpuScore) {
-      ctx.fillText('Great game, ' + playerName.join('') + '!', W/2, 210);
+      ctx.fillText('Great game, ' + playerName.join('') + '!', W/2, 225);
     } else if (fg.playerScore < fg.cpuScore) {
-      ctx.fillText("Great game! You'll get 'em next time!", W/2, 210);
+      ctx.fillText(pick(encourageMessages), W/2, 225);
     } else {
-      ctx.fillText('What a battle!', W/2, 210);
+      ctx.fillText('What a battle!', W/2, 225);
     }
 
     // Stats
     ctx.fillStyle = '#888';
     ctx.font = '16px sans-serif';
-    ctx.fillText(INNINGS_PER_GAME + ' innings \u2022 ' + hrCount + ' HR \u2022 ' + hitCount + ' hits', W/2, 245);
+    var fgRecord = lsGet('fg_wins', 0) + '-' + lsGet('fg_losses', 0);
+    ctx.fillText(INNINGS_PER_GAME + ' inn \u2022 ' + hrCount + ' HR \u2022 ' + hitCount + ' hits \u2022 Record: ' + fgRecord, W/2, 252);
 
     // Box score on game over
     ctx.font = '12px sans-serif';
@@ -3225,7 +3382,7 @@ function drawGameOver(dt) {
     goBoxY += 14;
     ctx.fillStyle = '#AAA';
     ctx.textAlign = 'right';
-    ctx.fillText('CPU', W/2 - 55, goBoxY);
+    ctx.fillText(cpuName.substring(0, 4).toUpperCase(), W/2 - 55, goBoxY);
     ctx.textAlign = 'center';
     for (var gi3 = 0; gi3 < INNINGS_PER_GAME; gi3++) {
       ctx.fillText(fg.boxScore[gi3] ? fg.boxScore[gi3][1] : 0, W/2 - 40 + gi3 * 30, goBoxY);
@@ -3425,8 +3582,7 @@ function drawGameObjects(dt) {
     var fieldTeamColor = teamColor;
     if (fg.isPlayerBatting) {
       // Player batting → CPU fields → CPU color
-      var cpuCI = (colorIdx + 3) % TEAM_COLORS.length;
-      fieldTeamColor = TEAM_COLORS[cpuCI].hex;
+      fieldTeamColor = getCpuTeamColor();
     }
     // else: CPU batting → player fields → player teamColor
 
@@ -3489,9 +3645,7 @@ function drawGameObjects(dt) {
   if (gameMode === 'fullgame' && !fg.tiebreaker) {
     var runnerColor = teamColor;
     if (!fg.isPlayerBatting) {
-      // CPU runners use CPU team color
-      var cpuColorIdx = (colorIdx + 3) % TEAM_COLORS.length;
-      runnerColor = TEAM_COLORS[cpuColorIdx].hex;
+      runnerColor = getCpuTeamColor();
     }
     for (var bi = 0; bi < 3; bi++) {
       if (fg.bases[bi]) {
@@ -3518,11 +3672,10 @@ function drawGameObjects(dt) {
   const idleBob = batterSwingAnim === 0 ? Math.sin(idleBobbleTime * Math.PI) * 0.035 : 0;
   const totalBobble = bobbleAngle * 0.14 + idleBob;
 
-  // CPU batter gets a different color (opposite team)
+  // CPU batter gets their team color
   var batterColor = teamColor;
   if (gameMode === 'fullgame' && !fg.isPlayerBatting) {
-    var cpuColorIdx = (colorIdx + 3) % TEAM_COLORS.length; // opposite color
-    batterColor = TEAM_COLORS[cpuColorIdx].hex;
+    batterColor = getCpuTeamColor();
   }
 
   drawBobblehead(
