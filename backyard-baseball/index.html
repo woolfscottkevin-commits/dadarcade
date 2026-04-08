@@ -1631,7 +1631,7 @@ var FIELDER_DECOR = [
   { name: 'SS', x: -0.25, z: 0.65 },
   { name: '2B', x: 0.2, z: 0.7 },
   { name: '3B', x: -0.5, z: 0.45 },
-  { name: 'C', x: 0, z: -0.08 }
+  { name: 'C', x: -0.12, z: -0.05 }
   // Pitcher drawn separately
 ];
 
@@ -1705,8 +1705,8 @@ function fieldingUpdate(dt) {
   if (fieldingAnim.phase === 'catch') {
     // Brief catch pause (0.2s)
     if (fieldingAnim.timer >= 0.2) {
-      if (fieldingAnim.isGroundBall) {
-        // Throw to 1B
+      if (fieldingAnim.isGroundBall && fieldingAnim.fielderIdx !== 3) {
+        // Throw to 1B (skip if 1B is already the fielder)
         fieldingAnim.phase = 'throw';
         fieldingAnim.timer = 0;
         fieldingAnim.throwProgress = 0;
