@@ -3245,7 +3245,11 @@ function drawGameObjects(dt) {
     }
     for (var bi = 0; bi < 3; bi++) {
       if (fg.bases[bi]) {
-        var bpos = worldToScreen(BASE_WORLD_POS[bi].x, BASE_WORLD_POS[bi].z);
+        // 2nd base runner needs offset to avoid overlapping with pitcher (same world pos)
+        var rwx = BASE_WORLD_POS[bi].x;
+        var rwz = BASE_WORLD_POS[bi].z;
+        if (bi === 1) { rwx = 0.12; rwz = 0.95; } // nudge 2nd base runner to right of pitcher
+        var bpos = worldToScreen(rwx, rwz);
         // Offset slightly so runner stands next to base, not on it
         var offsetX = bi === 0 ? 10 : bi === 2 ? -10 : 0;
         drawBobblehead(bpos.x + offsetX, bpos.y - 5, bpos.scale * 0.7, runnerColor, 1, 0, 'none', 0, true);
