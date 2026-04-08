@@ -1711,7 +1711,7 @@ function doSwing(pressGameTime) {
     swingResult.resultText = 'STRIKE!';
     swingResult.resultColor = '#FF4444';
     swingResult.commentary = pick(MISS_COMMENTS);
-    if (gameMode === 'fullgame') {
+    if (gameMode === 'fullgame' && !fg.tiebreaker) {
       // Track strike - fgAddStrike will handle strikeout transition
       if (fgAddStrike()) {
         // Strikeout already set state to PITCH_RESULT
@@ -1753,8 +1753,8 @@ function doSwing(pressGameTime) {
     }
     swingResult.commentary = 'Foul ball!';
 
-    // Full game: foul = strike (unless already at 2 strikes)
-    if (gameMode === 'fullgame' && fg.strikes < 2) {
+    // Full game: foul = strike (unless already at 2 strikes, or in tiebreaker)
+    if (gameMode === 'fullgame' && !fg.tiebreaker && fg.strikes < 2) {
       fgAddStrike(); // won't cause strikeout since strikes < 2
       swingResult.resultText += ' (Strike ' + fg.strikes + ')';
     }
@@ -1866,19 +1866,27 @@ function updatePitch(dt) {
     if (pitchTimer > pitchTravelDur + 0.3) {
       ball.active = false;
       if (gameMode === 'fullgame') {
-        // Determine ball or strike based on zone
-        fg.pitchInZone = fgIsStrikeZone();
-        if (fg.pitchInZone) {
+        if (fg.tiebreaker) {
+          // Tiebreaker: no balls/strikes, just show "Swing!" prompt
           pitchPhase = 'watched';
           pitchTimer = 0;
-          watchedTimer = 0.8;
-          if (fgAddStrike()) return; // strikeout handles transition
-          watchedText = 'Called strike ' + fg.strikes + '!';
+          watchedText = 'Swing!';
+          watchedTimer = 0.6;
         } else {
-          pitchPhase = 'watched';
-          pitchTimer = 0;
-          watchedTimer = 0.8;
-          if (fgAddBall()) return; // walk handles transition
+          // Determine ball or strike based on zone
+          fg.pitchInZone = fgIsStrikeZone();
+          if (fg.pitchInZone) {
+            pitchPhase = 'watched';
+            pitchTimer = 0;
+            watchedTimer = 0.8;
+            if (fgAddStrike()) return; // strikeout handles transition
+            watchedText = 'Called strike ' + fg.strikes + '!';
+          } else {
+            pitchPhase = 'watched';
+            pitchTimer = 0;
+            watchedTimer = 0.8;
+            if (fgAddBall()) return; // walk handles transition
+          }
         }
       } else {
         // Derby mode: just watching
@@ -2116,9 +2124,12 @@ function updatePitchResult(dt) {
         fgEndGame();
         return;
       }
-      // Tiebreaker: ball landed, process the swing
-      if (fg.tiebreaker && swingResult && !swingResult.isFoul && swingResult.quality !== 'miss') {
-        fgTiebreakerSwingDone(swingResult.distance || 0, swingResult.isHR);
+      // Tiebreaker: any swing (hit, miss, foul) counts as a used swing
+      if (fg.tiebreaker && swingResult) {
+        // Fair contact = distance counts; miss/foul = wasted swing (0 distance)
+        var tbDist = (!swingResult.isFoul && swingResult.quality !== 'miss') ? (swingResult.distance || 0) : 0;
+        var tbHR = (!swingResult.isFoul && swingResult.quality !== 'miss') ? swingResult.isHR : false;
+        fgTiebreakerSwingDone(tbDist, tbHR);
         return;
       }
       // Default: continue at-bat (e.g., foul ball, just go to next pitch)
