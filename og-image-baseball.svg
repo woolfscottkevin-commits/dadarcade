@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#E8F4FD"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3A8C3F"/>
+      <stop offset="100%" stop-color="#4CAF50"/>
+    </linearGradient>
+  </defs>
+  <!-- Sky -->
+  <rect width="1200" height="350" fill="url(#sky)"/>
+  <!-- Grass -->
+  <rect y="350" width="1200" height="280" fill="url(#grass)"/>
+
+  <!-- Fence -->
+  <line x1="200" y1="340" x2="1000" y2="340" stroke="#1B5E20" stroke-width="4"/>
+
+  <!-- Dirt diamond -->
+  <polygon points="600,550 450,440 600,340 750,440" fill="#8B6914" opacity="0.6"/>
+
+  <!-- Batter silhouette -->
+  <g transform="translate(700, 460)">
+    <!-- Body -->
+    <rect x="-12" y="-30" width="24" height="35" rx="4" fill="#E53935"/>
+    <!-- Legs -->
+    <line x1="-7" y1="5" x2="-7" y2="20" stroke="#333" stroke-width="4" stroke-linecap="round"/>
+    <line x1="7" y1="5" x2="7" y2="20" stroke="#333" stroke-width="4" stroke-linecap="round"/>
+    <!-- Shoes -->
+    <rect x="-11" y="18" width="8" height="5" rx="2" fill="#333"/>
+    <rect x="3" y="18" width="8" height="5" rx="2" fill="#333"/>
+    <!-- Head -->
+    <circle cx="0" cy="-50" r="22" fill="#F4C794"/>
+    <!-- Cap -->
+    <path d="M-23,-52 A23,23 0 0,1 23,-52 L23,-55 A23,23 0 0,0 -23,-55 Z" fill="#E53935"/>
+    <ellipse cx="18" cy="-55" rx="12" ry="5" fill="#E53935"/>
+    <!-- Eyes -->
+    <circle cx="-6" cy="-52" r="3" fill="#333"/>
+    <circle cx="6" cy="-52" r="3" fill="#333"/>
+    <!-- Smile -->
+    <path d="M-7,-45 Q0,-40 7,-45" fill="none" stroke="#333" stroke-width="2"/>
+    <!-- Bat -->
+    <line x1="12" y1="-35" x2="50" y2="-70" stroke="#C4883A" stroke-width="6" stroke-linecap="round"/>
+    <line x1="40" y1="-65" x2="55" y2="-75" stroke="#A06B2A" stroke-width="8" stroke-linecap="round"/>
+    <!-- Arms -->
+    <line x1="-10" y1="-25" x2="12" y2="-35" stroke="#F4C794" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Ball -->
+  <circle cx="480" cy="380" r="14" fill="white" stroke="#CC0000" stroke-width="2"/>
+
+  <!-- Title -->
+  <text x="600" y="120" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="72" font-weight="bold" fill="#FFD700" stroke="#B8860B" stroke-width="2">BACKYARD BASEBALL</text>
+  <text x="600" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="white">Home Run Derby</text>
+
+  <!-- Tagline -->
+  <text x="600" y="600" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#E8F4FD">Free at Dad Arcade</text>
+  <text x="600" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#87CEEB" opacity="0.8">dadarcade.com/backyard-baseball</text>
+</svg>
