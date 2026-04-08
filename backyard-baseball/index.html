@@ -238,7 +238,7 @@ function fgGetContextCommentary() {
   if (fg.playerScore === fg.cpuScore && fg.inning >= 2) return pick(CONTEXT_COMMENTS.tieGame);
   if (fg.inning >= INNINGS_PER_GAME && fg.halfInning === 'bottom' && fg.outs === 2) return pick(CONTEXT_COMMENTS.lastAtBat);
   var lead = fg.isPlayerBatting ? fg.playerScore - fg.cpuScore : fg.cpuScore - fg.playerScore;
-  if (lead < 0 && fg.bases[1] || fg.bases[2]) return pick(CONTEXT_COMMENTS.winningRun);
+  if (lead < 0 && (fg.bases[1] || fg.bases[2])) return pick(CONTEXT_COMMENTS.winningRun);
   if (Math.abs(fg.playerScore - fg.cpuScore) >= 5) return pick(CONTEXT_COMMENTS.bigLead);
   if (lead < -2 && fg.inning >= 2) return pick(CONTEXT_COMMENTS.comeback);
   return '';
@@ -2110,6 +2110,13 @@ function fgEndGame() {
   } else if (fg.playerScore < fg.cpuScore) {
     lsSet('fg_losses', fgLosses + 1);
     endIsNewHigh = false;
+    var cpuN = getCpuTeamName();
+    endLossMessage = pick([
+      "Great game! You'll get 'em next time!",
+      "Nice effort, " + playerName.join('') + "!",
+      "So close! Play again?",
+      "The " + cpuN + " got lucky!"
+    ]);
     playSound(sndConsolation);
   } else {
     endIsNewHigh = false;
@@ -3288,6 +3295,7 @@ function endDerby() {
 }
 
 let endIsNewHigh = false;
+let endLossMessage = ''; // stored at game end to avoid per-frame randomization
 
 function drawGameOver(dt) {
   // End replay
@@ -3340,16 +3348,10 @@ function drawGameOver(dt) {
     // Win/loss message
     ctx.fillStyle = '#AAA';
     ctx.font = '20px sans-serif';
-    var encourageMessages = [
-      "Great game! You'll get 'em next time!",
-      "Nice effort, " + playerName.join('') + "!",
-      "So close! Play again?",
-      "The " + cpuName + " got lucky!"
-    ];
     if (fg.playerScore > fg.cpuScore) {
       ctx.fillText('Great game, ' + playerName.join('') + '!', W/2, 225);
     } else if (fg.playerScore < fg.cpuScore) {
-      ctx.fillText(pick(encourageMessages), W/2, 225);
+      ctx.fillText(endLossMessage, W/2, 225);
     } else {
       ctx.fillText('What a battle!', W/2, 225);
     }
