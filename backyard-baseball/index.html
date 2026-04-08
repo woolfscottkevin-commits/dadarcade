@@ -191,6 +191,20 @@ const BALLS_FOR_WALK = 4;
 const OUTS_PER_HALF = 3;
 const INNINGS_PER_GAME = 3;
 
+// Pitch type definitions
+const PITCH_TYPES = [
+  { name: 'Fastball', key: '1', travelDur: 0.55, driftX: 0, extraDrop: 0, color: '#FF4444' },
+  { name: 'Curveball', key: '2', travelDur: 0.75, driftX: 0.15, extraDrop: 0.05, color: '#4488FF' },
+  { name: 'Changeup', key: '3', travelDur: 0.95, driftX: 0, extraDrop: 0.2, color: '#44DD44' }
+];
+
+// CPU batting parameters per difficulty
+const CPU_BATTING = [
+  { swingProb: 0.60, timingVariance: 180, hrRate: 0.15 }, // Easy: whiffs a lot
+  { swingProb: 0.70, timingVariance: 120, hrRate: 0.25 }, // Normal
+  { swingProb: 0.80, timingVariance: 80, hrRate: 0.35 }   // Hard: decent hitter
+];
+
 // ========== CANVAS SETUP ==========
 const canvas = document.getElementById('gc');
 const ctx = canvas.getContext('2d');
@@ -563,6 +577,7 @@ let goalFlashText = '';
 let pitchPhase = 'none'; // 'pre', 'windup', 'travel', 'swing', 'result', 'watched'
 let pitchTimer = 0;
 let pitchTravelDur = 0;
+let pitchDriftDir = 1; // 1 or -1, randomized per pitch
 let pitchStartTime = 0;
 let optimalTime = 0;
 let swung = false;
@@ -640,6 +655,11 @@ let fg = {
   atBatResult: '', // 'strikeout', 'walk', 'hit', 'out', 'hr'
   atBatResultTimer: 0,
   pitchInZone: false, // whether current pitch is in strike zone
+  // Pitch type: 0=fastball, 1=curveball, 2=changeup
+  pitchType: 0,
+  pitchSelected: false, // has player selected a pitch type this at-bat?
+  waitingForPitch: false, // waiting for player to select pitch type
+  cpuSpeedUp: false, // hold space to speed up CPU at-bats
   // Box score: runs per half-inning [top, bottom] for each inning
   boxScore: [[0,0],[0,0],[0,0]],
   // Tiebreaker state
@@ -1350,6 +1370,10 @@ function startFullGame() {
   fg.atBatResult = '';
   fg.atBatResultTimer = 0;
   fg.pitchInZone = false;
+  fg.pitchType = 0;
+  fg.pitchSelected = false;
+  fg.waitingForPitch = false;
+  fg.cpuSpeedUp = false;
   fg.boxScore = [[0,0],[0,0],[0,0]];
   fg.tiebreaker = false;
   fg.tbSwingsLeft = 0;
@@ -1461,26 +1485,23 @@ function fgEndHalfInning() {
   if (fg.halfInning === 'top') {
     fg.halfInning = 'bottom';
     fg.outs = 0;
+    fg.isPlayerBatting = false;
     fgResetAtBat();
-    // Auto-resolve CPU half (Sprint 3 will add real CPU batting)
-    var cpuRuns = diffIdx === 0 ? (Math.random() < 0.3 ? 1 : 0) :
-                  diffIdx === 1 ? (Math.random() < 0.5 ? 1 : 0) :
-                  Math.floor(Math.random() * 3);
-    fg.cpuScore += cpuRuns;
-    // Track CPU runs in box score
-    var innIdx = fg.inning - 1;
-    if (fg.boxScore[innIdx]) fg.boxScore[innIdx][1] += cpuRuns;
+    fg.waitingForPitch = true; // Player must select pitch type
+    fg.pitchSelected = false;
     // Show transition
     fg.atBatResult = 'halfover';
     fg.atBatResultTimer = 2.0;
-    commentaryText = cpuRuns > 0 ? 'CPU scored ' + cpuRuns + ' run' + (cpuRuns > 1 ? 's' : '') + '!' : 'CPU held scoreless!';
-    resultText = 'SIDE RETIRED';
+    commentaryText = 'CPU is up to bat!';
+    resultText = '\u25BC ' + fgInningLabel(fg.inning);
     resultColor = '#FFF';
     state = STATES.PITCH_RESULT;
     resultTimer = 2.0;
   } else {
     fg.halfInning = 'top';
     fg.outs = 0;
+    fg.isPlayerBatting = true;
+    fg.waitingForPitch = false;
     fgResetAtBat();
     if (fg.inning >= INNINGS_PER_GAME) {
       // Check for tie — go to tiebreaker
@@ -1603,7 +1624,14 @@ function startNextPitch() {
     endDerby();
     return;
   }
-  pitchPhase = 'pre';
+  // In Full Game defense: wait for pitch type selection
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && !fg.tiebreaker) {
+    fg.waitingForPitch = true;
+    fg.pitchSelected = false;
+    pitchPhase = 'waitpitch';
+  } else {
+    pitchPhase = 'pre';
+  }
   pitchTimer = 0;
   swung = false;
   swingResult = null;
@@ -1646,13 +1674,19 @@ function startNextPitch() {
   }
 
   // Compute pitch travel duration
-  const diff = DIFFICULTIES[diffIdx];
-  let baseTime = diff.baseTravel;
-  if (tutorialPitch) {
-    baseTime = diff.baseTravel * 1.5;
-    pitchTravelDur = baseTime; // no variation for tutorial
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting) {
+    // Player is pitching: use selected pitch type duration
+    pitchTravelDur = PITCH_TYPES[fg.pitchType].travelDur * randRange(0.9, 1.1);
   } else {
-    pitchTravelDur = baseTime * randRange(0.9, 1.1);
+    // Player batting or Derby: use difficulty-based duration
+    const diff = DIFFICULTIES[diffIdx];
+    let baseTime = diff.baseTravel;
+    if (tutorialPitch) {
+      baseTime = diff.baseTravel * 1.5;
+      pitchTravelDur = baseTime;
+    } else {
+      pitchTravelDur = baseTime * randRange(0.9, 1.1);
+    }
   }
 }
 
@@ -1809,6 +1843,17 @@ function doSwing(pressGameTime) {
 }
 
 function updatePitch(dt) {
+  // Speed up during CPU at-bats when Space is held
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && fg.cpuSpeedUp) {
+    dt *= 2;
+  }
+
+  if (pitchPhase === 'waitpitch') {
+    // Waiting for player to select pitch type (1/2/3)
+    // Nothing to update — input handler will transition to 'pre'
+    return;
+  }
+
   if (pitchPhase === 'pre') {
     pitchTimer += dt;
     if (tutorialTextTimer > 0) tutorialTextTimer -= dt;
@@ -1839,6 +1884,7 @@ function updatePitch(dt) {
       ball.landed = false;
       pitcherAnim = 0;
       pitcherPhase = 'idle';
+      pitchDriftDir = Math.random() > 0.5 ? 1 : -1;
       playSound(sndPitchWhoosh);
     }
     return;
@@ -1850,9 +1896,17 @@ function updatePitch(dt) {
     // Ball travels from Z=1.0 to Z=0, then continues past batter
     ball.worldZ = lerp(1.0, 0, Math.min(1, progress));
     if (progress > 1) ball.worldZ = -(progress - 1) * 0.3; // continue past plate
-    ball.worldX = 0;
-    // Slight gravity drop
-    ball.worldY = Math.max(0.1, 0.5 - Math.min(1, progress) * Math.min(1, progress) * 0.15);
+
+    // Pitch type movement (curveball drifts, changeup drops)
+    var pt = (gameMode === 'fullgame' && !fg.isPlayerBatting) ? PITCH_TYPES[fg.pitchType] : null;
+    if (pt) {
+      ball.worldX = pt.driftX * Math.sin(Math.min(1, progress) * Math.PI) * pitchDriftDir;
+      ball.worldY = Math.max(0.1, 0.5 - Math.min(1, progress) * Math.min(1, progress) * (0.15 + pt.extraDrop));
+    } else {
+      ball.worldX = 0;
+      // Slight gravity drop
+      ball.worldY = Math.max(0.1, 0.5 - Math.min(1, progress) * Math.min(1, progress) * 0.15);
+    }
 
     // Trail
     if (ballTrail.length === 0 || pitchTimer > (ballTrail.length * 0.03)) {
@@ -1861,6 +1915,24 @@ function updatePitch(dt) {
     }
 
     if (tutorialTextTimer > 0) tutorialTextTimer -= dt;
+
+    // CPU auto-swing during defense (CPU is batting)
+    if (gameMode === 'fullgame' && !fg.isPlayerBatting && !swung) {
+      var cpuParams = CPU_BATTING[diffIdx] || CPU_BATTING[0];
+      // CPU decides to swing when ball is near optimal time
+      var cpuTimingWindow = pitchTravelDur * 0.85; // CPU evaluates slightly before optimal
+      if (pitchTimer >= cpuTimingWindow && pitchTimer < pitchTravelDur) {
+        // Decide: swing or take?
+        var inZone = fgIsStrikeZone();
+        var swingChance = inZone ? cpuParams.swingProb : cpuParams.swingProb * 0.3;
+        if (Math.random() < swingChance) {
+          // CPU swings with timing variance
+          var cpuTimingOffset = (Math.random() - 0.5) * cpuParams.timingVariance * 2; // ms offset
+          var cpuSwingTime = optimalTime + cpuTimingOffset / 1000;
+          doSwing(cpuSwingTime);
+        }
+      }
+    }
 
     // Check if ball passed without swing
     if (pitchTimer > pitchTravelDur + 0.3) {
@@ -2106,7 +2178,8 @@ function updatePitchResult(dt) {
         return;
       }
       if (fg.atBatResult === 'hr') {
-        fg.playerScore++;
+        if (fg.isPlayerBatting) fg.playerScore++;
+        else fg.cpuScore++;
         // Box score
         var bsInn = fg.inning - 1;
         var bsHalf = fg.halfInning === 'top' ? 0 : 1;
@@ -2463,6 +2536,30 @@ function drawHUD() {
     ctx.fillStyle = '#FFF';
     ctx.font = '16px sans-serif';
     ctx.fillText('HR Distance: ' + formatNum(fg.tbPlayerDist) + ' ft', W/2, H - 30);
+  }
+
+  // Pitch selection UI (when player is pitching)
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && fg.waitingForPitch) {
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(W/2 - 200, H/2 - 30, 400, 80);
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Choose your pitch:', W/2, H/2 - 5);
+    PITCH_TYPES.forEach(function(pt, i) {
+      var px = W/2 + (i - 1) * 120;
+      ctx.fillStyle = pt.color;
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(pt.key + ': ' + pt.name, px, H/2 + 25);
+    });
+  }
+
+  // Speed-up hint during CPU at-bats
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && !fg.waitingForPitch && pitchPhase !== 'waitpitch') {
+    ctx.fillStyle = '#555';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Hold SPACE to speed up', W/2, H - 12);
   }
 
   // Difficulty label
@@ -2890,9 +2987,16 @@ function drawGameObjects(dt) {
   const idleBob = batterSwingAnim === 0 ? Math.sin(idleBobbleTime * Math.PI) * 0.035 : 0;
   const totalBobble = bobbleAngle * 0.14 + idleBob;
 
+  // CPU batter gets a different color (opposite team)
+  var batterColor = teamColor;
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting) {
+    var cpuColorIdx = (colorIdx + 3) % TEAM_COLORS.length; // opposite color
+    batterColor = TEAM_COLORS[cpuColorIdx].hex;
+  }
+
   drawBobblehead(
     batterPos.x, batterPos.y, batterPos.scale,
-    teamColor, 1,
+    batterColor, 1,
     batterSwingAnim, batterSwingType, totalBobble, batterSwingAnim === 0
   );
 }
@@ -3104,8 +3208,25 @@ canvas.addEventListener('keydown', function(e) {
   // PLAYING state
   e.preventDefault();
 
+  // Pitch type selection (1/2/3) during defense
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && fg.waitingForPitch) {
+    if (key === '1' || key === '2' || key === '3') {
+      fg.pitchType = parseInt(key) - 1;
+      fg.pitchSelected = true;
+      fg.waitingForPitch = false;
+      playSound(sndMenuClick);
+      // Transition from waitpitch to pre
+      pitchPhase = 'pre';
+      pitchTimer = 0;
+    }
+    return;
+  }
+
+  // Space: swing (player batting) or speed up (CPU batting)
   if (key === ' ') {
-    if (pitchPhase === 'travel' && !swung) {
+    if (gameMode === 'fullgame' && !fg.isPlayerBatting) {
+      fg.cpuSpeedUp = true; // handled by keyup
+    } else if (pitchPhase === 'travel' && !swung) {
       doSwing(gameTime);
     }
     return;
@@ -3115,6 +3236,13 @@ canvas.addEventListener('keydown', function(e) {
     state = STATES.PAUSED;
     if (crowdGain) crowdGain.gain.value = 0;
     return;
+  }
+});
+
+// Handle keyup for speed-up release
+canvas.addEventListener('keyup', function(e) {
+  if (e.key === ' ' && gameMode === 'fullgame' && !fg.isPlayerBatting) {
+    fg.cpuSpeedUp = false;
   }
 });
 
