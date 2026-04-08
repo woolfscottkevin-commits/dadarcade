@@ -42,7 +42,8 @@ export default async function handler(req, res) {
   const rlKey = `ratelimit:feedback:${ip}`;
   try {
     const count = await redis('INCR', rlKey);
-    if (count === 1) await redis('EXPIRE', rlKey, 3600);
+    // Always set TTL to prevent keys from persisting forever
+    await redis('EXPIRE', rlKey, 3600);
     if (count > 20) {
       return res.status(429).json({ error: 'Too many submissions. Try again later.' });
     }
@@ -50,13 +51,12 @@ export default async function handler(req, res) {
     console.error('Rate limit check failed:', e);
   }
 
-  const displayName = name && name.trim() ? name.trim().slice(0, 50) : 'Anonymous';
+  const displayName = name && name.trim() ? name.trim().replace(/[<>"'&]/g, '').slice(0, 50) : 'Anonymous';
   const item = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: displayName,
     message: message.trim(),
     timestamp: new Date().toISOString(),
-    ip,
   };
 
   try {

@@ -228,27 +228,19 @@ async function generatePrompt() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
     promptText = data.prompt;
-    // Reload to show bugs moved to archive
-    await loadDashboard();
-    // Restore prompt text (loadDashboard clears it)
+    // Refresh lists: bugs should now be empty, archive should have them
+    const [bugsRes, archRes] = await Promise.all([
+      api('/api/portal/feedback?type=bugs'),
+      api('/api/portal/feedback?type=archive'),
+    ]);
+    bugs = (await bugsRes.json()).items || [];
+    archive = (await archRes.json()).items || [];
   } catch(e) {
     promptText = 'Error: ' + e.message;
   }
   loading = false;
-  // Re-render with prompt visible (loadDashboard already rendered, but we need promptText)
-  // loadDashboard clears promptText, so we need a workaround
+  renderDashboard();
 }
-
-// Override loadDashboard to preserve prompt after generation
-const _origLoad = loadDashboard;
-loadDashboard = async function() {
-  const savedPrompt = promptText;
-  await _origLoad();
-  if (savedPrompt && !promptText) {
-    promptText = savedPrompt;
-    renderDashboard();
-  }
-};
 
 function copyPrompt() {
   const ta = document.getElementById('prompt-text');
