@@ -23,6 +23,8 @@
 <meta name="twitter:description" content="Classic snake with googly eyes, power-ups, and rainbow mode. Free in your browser.">
 <meta name="twitter:image" content="https://dadarcade.com/og-image-snake.svg">
 <meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.json">
@@ -59,14 +61,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;display:flex
 #back-link{position:fixed;top:1rem;left:1rem;color:#0ff;text-decoration:none;font-size:0.9rem;z-index:9999;font-family:'Courier New',monospace}
 #back-link:hover{color:#fff}
 #game-wrapper{display:flex;justify-content:center;align-items:center;flex:1;padding:2.5rem 1rem 1rem}
-canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
-#mobile-msg{display:none;text-align:center;padding:3rem 2rem;color:#ccc;font-family:'Courier New',monospace}
-#mobile-msg h2{color:#0f0;font-size:1.5rem;margin-bottom:1rem}
-#mobile-msg a{color:#0ff}
-@media(max-width:767px){
-  #game-wrapper{display:none}
-  #mobile-msg{display:block}
-}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
 #game-info{max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem;font-family:'Courier New',monospace}
 #game-info h1{font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0}
 #game-info a{color:#888}
@@ -81,12 +76,6 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
 
 <div id="game-wrapper">
 <canvas id="c" tabindex="0"></canvas>
-</div>
-
-<div id="mobile-msg">
-<h2>🕹️ This game requires a keyboard</h2>
-<p>Snake needs arrow keys or WASD to play. Visit on a computer for the full experience!</p>
-<p style="margin-top:1rem"><a href="/">← Back to Dad Arcade</a></p>
 </div>
 
 <noscript>
@@ -108,14 +97,14 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
 <li>P — Pause</li>
 <li>M — Mute</li>
 </ul>
-<p>Requires JavaScript and a keyboard.</p>
+<p>Requires JavaScript. Works on desktop and mobile.</p>
 <p><a href="/">← Back to Dad Arcade</a></p>
 </div>
 </noscript>
 
 <div id="game-info">
 <h1>Snake — Free Online Arcade Game</h1>
-<p>A free browser arcade game at <a href="/">Dad Arcade</a>. Arrow keys or WASD to steer. Eat food, grow longer, collect power-ups, chase the high score.</p>
+<p>A free browser arcade game at <a href="/">Dad Arcade</a>. Arrow keys, WASD, or swipe to steer. Works on desktop and mobile. Eat food, grow longer, collect power-ups, chase the high score.</p>
 <details>
 <summary>About This Game ▾</summary>
 <div style="padding:0.5rem 0">
@@ -188,6 +177,192 @@ window.addEventListener('resize',function(){
   cancelAnimationFrame(resizeRaf);
   resizeRaf=requestAnimationFrame(resizeCanvas);
 });
+
+// ─── Touch Input System ───
+var inputMode='keyboard';
+window.addEventListener('touchstart',function(){inputMode='touch';});
+window.addEventListener('keydown',function(){inputMode='keyboard';});
+
+var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+var iosHintShown=false;
+var iosHintTimer=0;
+
+function canvasTouchCoords(touch){
+  var rect=canvas.getBoundingClientRect();
+  return {
+    x:(touch.clientX-rect.left)/rect.width*LOG_W,
+    y:(touch.clientY-rect.top)/rect.height*LOG_H
+  };
+}
+
+function promptText(kb,touch){
+  return inputMode==='touch'?touch:kb;
+}
+
+var touchScale=1.0;
+function updateTouchScale(){
+  touchScale=inputMode==='touch'?1.2:1.0;
+}
+
+// Prevent scroll/zoom on canvas
+canvas.addEventListener('touchstart',function(e){e.preventDefault();},{passive:false});
+canvas.addEventListener('touchmove',function(e){e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',function(e){e.preventDefault();},{passive:false});
+canvas.addEventListener('touchcancel',function(e){e.preventDefault();},{passive:false});
+
+function toggleFullscreen(){
+  if(isIOS) return;
+  if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+    var el=document.documentElement;
+    (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  }
+}
+
+function drawTouchUI(){
+  if(inputMode!=='touch') return;
+  updateTouchScale();
+
+  // Fullscreen button (non-iOS) — top-right
+  if(!isIOS){
+    var fsX=LOG_W-40, fsY=68;
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.beginPath();ctx.roundRect(fsX-16,fsY-16,32,32,4);ctx.fill();
+    ctx.fillStyle='#FFF';
+    ctx.font='16px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('\u26F6',fsX,fsY+5);
+  }
+
+  // iOS Add to Home Screen hint (one-time)
+  if(isIOS&&!iosHintShown&&localStorage.getItem('snake_iosHintShown')!=='1'){
+    iosHintShown=true;
+    iosHintTimer=4.0;
+    localStorage.setItem('snake_iosHintShown','1');
+  }
+  if(iosHintTimer>0){
+    ctx.save();
+    ctx.globalAlpha=Math.min(1,iosHintTimer);
+    ctx.fillStyle='rgba(0,0,0,0.8)';
+    ctx.beginPath();ctx.roundRect(LOG_W/2-160,LOG_H/2-30,320,60,8);ctx.fill();
+    ctx.fillStyle='#FFF';
+    ctx.font='14px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('For fullscreen: tap Share \u2197 \u2192 Add to Home Screen',LOG_W/2,LOG_H/2+5);
+    ctx.restore();
+  }
+
+  // Info button — bottom edge
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.beginPath();ctx.roundRect(LOG_W/2-18,LOG_H-30,36,24,4);ctx.fill();
+  ctx.fillStyle='#FFF';
+  ctx.font='14px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('\u2139\uFE0F',LOG_W/2,LOG_H-12);
+
+  // Mute button — top area
+  var muteX=LOG_W-18, muteY=40;
+  ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.beginPath();ctx.roundRect(muteX-16,muteY-14,32,28,4);ctx.fill();
+  ctx.fillStyle='#FFF';
+  ctx.font='16px sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText(muted?'\uD83D\uDD07':'\uD83D\uDD0A',muteX,muteY+5);
+
+  // Pause button — during gameplay
+  if(G.state===PLAYING||G.state===COUNTDOWN){
+    var pauseX=LOG_W-55, pauseY=40;
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.beginPath();ctx.roundRect(pauseX-16,pauseY-14,32,28,4);ctx.fill();
+    ctx.fillStyle='#FFF';
+    ctx.font='bold 18px sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText('\u23F8',pauseX,pauseY+6);
+  }
+}
+
+function handleTouchUI(tx,ty){
+  // Fullscreen button
+  if(!isIOS&&tx>LOG_W-56&&tx<LOG_W-8&&ty>52&&ty<84){
+    toggleFullscreen();
+    return true;
+  }
+  // iOS hint dismiss
+  if(iosHintTimer>0){
+    iosHintTimer=0;
+    return true;
+  }
+  // Info button
+  if(tx>LOG_W/2-24&&tx<LOG_W/2+24&&ty>LOG_H-36&&ty<LOG_H){
+    var gi=document.getElementById('game-info');
+    if(gi) gi.scrollIntoView({behavior:'smooth'});
+    return true;
+  }
+  // Mute button
+  if(tx>LOG_W-34&&tx<LOG_W-2&&ty>26&&ty<54){
+    muted=!muted;
+    localStorage.setItem('snake_muted',muted?'1':'0');
+    if(!muted&&!audioCtx) initAudio();
+    return true;
+  }
+  // Pause button
+  if((G.state===PLAYING||G.state===COUNTDOWN)&&tx>LOG_W-71&&tx<LOG_W-39&&ty>26&&ty<54){
+    if(G.state===PLAYING){
+      G.state=PAUSED;
+      escapeConfirmFlag=false;
+    }
+    return true;
+  }
+  return false;
+}
+
+// ─── D-pad layout (touch mode) ───
+var DPAD_CX=100, DPAD_CY=LOG_H-140;
+var DPAD_BTN=60, DPAD_GAP=8;
+var dpadButtons=[
+  {label:'\u25B2',dir:{x:0,y:-1}, x:DPAD_CX-DPAD_BTN/2, y:DPAD_CY-DPAD_BTN-DPAD_GAP/2-DPAD_BTN/2, w:DPAD_BTN, h:DPAD_BTN},
+  {label:'\u25BC',dir:{x:0,y:1},  x:DPAD_CX-DPAD_BTN/2, y:DPAD_CY+DPAD_GAP/2+DPAD_BTN/2, w:DPAD_BTN, h:DPAD_BTN},
+  {label:'\u25C0',dir:{x:-1,y:0}, x:DPAD_CX-DPAD_BTN-DPAD_GAP/2-DPAD_BTN/2, y:DPAD_CY-DPAD_BTN/2, w:DPAD_BTN, h:DPAD_BTN},
+  {label:'\u25B6',dir:{x:1,y:0},  x:DPAD_CX+DPAD_GAP/2+DPAD_BTN/2, y:DPAD_CY-DPAD_BTN/2, w:DPAD_BTN, h:DPAD_BTN}
+];
+
+function drawDpad(){
+  if(inputMode!=='touch') return;
+  if(G.state!==PLAYING&&G.state!==COUNTDOWN) return;
+  ctx.globalAlpha=0.3;
+  for(var i=0;i<dpadButtons.length;i++){
+    var b=dpadButtons[i];
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.beginPath();ctx.roundRect(b.x,b.y,b.w,b.h,8);ctx.fill();
+    ctx.fillStyle='#fff';
+    ctx.font='bold 24px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(b.label,b.x+b.w/2,b.y+b.h/2);
+  }
+  ctx.globalAlpha=1;
+}
+
+function hitTestDpad(tx,ty){
+  for(var i=0;i<dpadButtons.length;i++){
+    var b=dpadButtons[i];
+    if(tx>=b.x&&tx<=b.x+b.w&&ty>=b.y&&ty<=b.y+b.h){
+      return b.dir;
+    }
+  }
+  return null;
+}
+
+function queueTouchDirection(d){
+  if(!d) return;
+  var last=inputQueue.length>0?inputQueue[inputQueue.length-1]:dir;
+  if(d.x!==-last.x||d.y!==-last.y){
+    if(inputQueue.length<2) inputQueue.push(d);
+  }
+}
+
+// ─── Swipe detection ───
+var touchStartX=0, touchStartY=0;
 
 // ─── State ───
 var MENU='MENU',COUNTDOWN='COUNTDOWN',PLAYING='PLAYING',PAUSED='PAUSED',
@@ -1017,7 +1192,7 @@ function drawHUD(){
     ctx.font='12px Courier New';
     ctx.textAlign='right';
     ctx.fillStyle='#888';
-    ctx.fillText('P = Pause',LOG_W-12,LOG_H-32);
+    ctx.fillText(promptText('P = Pause','\u23F8 = Pause'),LOG_W-12,LOG_H-32);
     ctx.globalAlpha=1;
   }
 
@@ -1233,13 +1408,13 @@ function drawMenu(t){
   if(blink){
     ctx.font='bold 20px Courier New';
     ctx.fillStyle='#0f0';
-    ctx.fillText('Press Enter to Play!',LOG_W/2,580);
+    ctx.fillText(promptText('Press Enter to Play!','TAP TO PLAY!'),LOG_W/2,580);
   }
 
   // Controls
   ctx.font='12px Courier New';
   ctx.fillStyle='#444';
-  ctx.fillText('Arrow Keys / WASD to play  |  M = Mute',LOG_W/2,640);
+  ctx.fillText(promptText('Arrow Keys / WASD to play  |  M = Mute','Swipe or use D-pad to steer'),LOG_W/2,640);
 
   // Mute state
   if(muted){
@@ -1271,13 +1446,29 @@ function drawPaused(){
   ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillStyle='#fff';
   ctx.fillText('PAUSED',LOG_W/2,LOG_H/2-20);
-  ctx.font='18px Courier New';
-  ctx.fillStyle='#888';
-  ctx.fillText('Press P to Resume',LOG_W/2,LOG_H/2+30);
-  if(escapeConfirmFlag){
+
+  if(inputMode==='touch'){
+    // Resume button
+    ctx.fillStyle='rgba(0,255,0,0.25)';
+    ctx.beginPath();ctx.roundRect(LOG_W/2-120,LOG_H/2+10,240,45,8);ctx.fill();
+    ctx.fillStyle='#0f0';
+    ctx.font='bold 22px Courier New';
+    ctx.fillText('TAP TO RESUME',LOG_W/2,LOG_H/2+35);
+    // Quit button
+    ctx.fillStyle='rgba(255,68,68,0.25)';
+    ctx.beginPath();ctx.roundRect(LOG_W/2-80,LOG_H/2+65,160,35,8);ctx.fill();
     ctx.fillStyle='#f44';
-    ctx.font='14px Courier New';
-    ctx.fillText('Press Escape again to quit to menu',LOG_W/2,LOG_H/2+65);
+    ctx.font='bold 18px Courier New';
+    ctx.fillText('QUIT',LOG_W/2,LOG_H/2+85);
+  } else {
+    ctx.font='18px Courier New';
+    ctx.fillStyle='#888';
+    ctx.fillText('Press P to Resume',LOG_W/2,LOG_H/2+30);
+    if(escapeConfirmFlag){
+      ctx.fillStyle='#f44';
+      ctx.font='14px Courier New';
+      ctx.fillText('Press Escape again to quit to menu',LOG_W/2,LOG_H/2+65);
+    }
   }
 }
 
@@ -1290,7 +1481,7 @@ function drawContinuePrompt(t){
   ctx.fillText('CONTINUE?',LOG_W/2,LOG_H/2-40);
   ctx.font='20px Courier New';
   ctx.fillStyle='#fff';
-  ctx.fillText('Press Enter',LOG_W/2,LOG_H/2+10);
+  ctx.fillText(promptText('Press Enter','Tap to Continue'),LOG_W/2,LOG_H/2+10);
 
   // Countdown bar
   var barW=200,barH=12;
@@ -1302,7 +1493,7 @@ function drawContinuePrompt(t){
 
   ctx.font='14px Courier New';
   ctx.fillStyle='#888';
-  ctx.fillText('Escape to give up',LOG_W/2,LOG_H/2+70);
+  ctx.fillText(promptText('Escape to give up','Tap below to give up'),LOG_W/2,LOG_H/2+70);
 }
 
 function drawGameOver(t){
@@ -1346,11 +1537,11 @@ function drawGameOver(t){
   if(blink2){
     ctx.font='bold 18px Courier New';
     ctx.fillStyle='#0f0';
-    ctx.fillText('Press Enter to Play Again',LOG_W/2,450);
+    ctx.fillText(promptText('Press Enter to Play Again','TAP TO PLAY AGAIN'),LOG_W/2,450);
   }
   ctx.font='14px Courier New';
   ctx.fillStyle='#666';
-  ctx.fillText('Escape for Menu',LOG_W/2,480);
+  ctx.fillText(promptText('Escape for Menu','Tap below for Menu'),LOG_W/2,480);
 }
 
 // ─── Input ───
@@ -1543,6 +1734,148 @@ function useContinue(){
   sfxContinue();
 }
 
+// ─── Touch Input ───
+canvas.addEventListener('touchstart',function(e){
+  if(!e.touches.length) return;
+  var t=canvasTouchCoords(e.touches[0]);
+  touchStartX=t.x; touchStartY=t.y;
+
+  // Shared UI (fullscreen, mute, pause, info)
+  if(handleTouchUI(t.x,t.y)) return;
+
+  // Init audio on first touch
+  initAudio();
+
+  // D-pad hit test during gameplay
+  if(G.state===PLAYING||G.state===COUNTDOWN){
+    var ddir=hitTestDpad(t.x,t.y);
+    if(ddir){
+      if(G.state===COUNTDOWN){
+        nextDir=ddir;
+        dir=ddir;
+      } else {
+        queueTouchDirection(ddir);
+      }
+      return;
+    }
+  }
+
+  // Paused state
+  if(G.state===PAUSED){
+    // Resume button area
+    if(t.x>LOG_W/2-120&&t.x<LOG_W/2+120&&t.y>LOG_H/2+10&&t.y<LOG_H/2+55){
+      G.state=PLAYING;
+      escapeConfirmFlag=false;
+      lastTime=performance.now();
+      return;
+    }
+    // Quit button area
+    if(t.x>LOG_W/2-80&&t.x<LOG_W/2+80&&t.y>LOG_H/2+60&&t.y<LOG_H/2+100){
+      G.state=MENU;
+      escapeConfirmFlag=false;
+      return;
+    }
+    return;
+  }
+
+  // Menu state
+  if(G.state===MENU){
+    handleMenuTouch(t.x,t.y);
+    return;
+  }
+
+  // Continue prompt
+  if(G.state===CONTINUE_PROMPT){
+    // Tap to continue
+    if(t.y>LOG_H/2-60&&t.y<LOG_H/2+50){
+      useContinue();
+    } else {
+      // Tap quit area
+      if(t.y>LOG_H/2+55){
+        G.state=GAME_OVER;
+        onGameOver();
+      }
+    }
+    return;
+  }
+
+  // Game over state
+  if(G.state===GAME_OVER){
+    if(t.y>400&&t.y<470){
+      // Play again
+      initGame();
+      G.state=COUNTDOWN;
+      countdownNum=3;countdownTimer=1;
+      sfxCountdown(false);
+    } else if(t.y>=470){
+      // Back to menu
+      G.state=MENU;
+    }
+    return;
+  }
+});
+
+canvas.addEventListener('touchend',function(e){
+  // Swipe detection — only in PLAYING and COUNTDOWN states
+  if(G.state!==PLAYING&&G.state!==COUNTDOWN) return;
+  if(!e.changedTouches.length) return;
+  var t=canvasTouchCoords(e.changedTouches[0]);
+  var dx=t.x-touchStartX, dy=t.y-touchStartY;
+  var dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<30) return; // too short for a swipe
+
+  var d=null;
+  if(Math.abs(dx)>Math.abs(dy)){
+    d=dx>0?{x:1,y:0}:{x:-1,y:0};
+  } else {
+    d=dy>0?{x:0,y:1}:{x:0,y:-1};
+  }
+
+  if(G.state===COUNTDOWN){
+    nextDir=d;
+    dir=d;
+  } else {
+    queueTouchDirection(d);
+  }
+});
+
+function handleMenuTouch(tx,ty){
+  initAudio();
+
+  // Letter tap areas (cycle letters)
+  for(var i=0;i<3;i++){
+    var lx=LOG_W/2-50+i*50;
+    if(tx>lx-25&&tx<lx+25&&ty>310&&ty<380){
+      sfxClick();
+      menuCursor=i;
+      var c=menuInitials[i].charCodeAt(0);
+      c++;if(c>90)c=65;
+      menuInitials[i]=String.fromCharCode(c);
+      return;
+    }
+  }
+
+  // Difficulty taps
+  for(var i=0;i<3;i++){
+    var dx=LOG_W/2+(i-1)*120;
+    if(tx>dx-55&&tx<dx+55&&ty>435&&ty<475){
+      sfxClick();
+      menuDiffIdx=i;
+      return;
+    }
+  }
+
+  // "TAP TO PLAY!" area
+  if(ty>550&&ty<620){
+    initAudio();
+    initGame();
+    G.state=COUNTDOWN;
+    countdownNum=3;countdownTimer=1;
+    sfxCountdown(false);
+    return;
+  }
+}
+
 // ─── Blur / Focus ───
 var wasPaused=false;
 var countdownWasActive=false;
@@ -1573,9 +1906,13 @@ function update(now){
   lastTime=now;
   var dt=Math.min(rawDt,0.1);
 
+  // Touch hint timers
+  if(iosHintTimer>0) iosHintTimer-=dt;
+
   // ─── MENU ───
   if(G.state===MENU){
     drawMenu(now/1000);
+    drawTouchUI();
     return;
   }
 
@@ -1605,6 +1942,8 @@ function update(now){
     drawFood(now/1000);
     drawSnake(now/1000);
     drawCountdown();
+    drawDpad();
+    drawTouchUI();
     return;
   }
 
@@ -1622,6 +1961,7 @@ function update(now){
     drawSnake(now/1000);
     drawHUD();
     drawPaused();
+    drawTouchUI();
     return;
   }
 
@@ -1649,6 +1989,8 @@ function update(now){
 
     ctx.restore();
 
+    drawTouchUI();
+
     if(deathTimer<=0){
       var diff=DIFF[DIFF_NAMES[menuDiffIdx]];
       if(diff.continues>0&&continues>0){
@@ -1671,6 +2013,7 @@ function update(now){
     drawObstacles();
     drawFood(now/1000);
     drawContinuePrompt(now/1000);
+    drawTouchUI();
     if(continueTimer<=0){
       G.state=GAME_OVER;
       onGameOver();
@@ -1683,6 +2026,7 @@ function update(now){
     drawBackground(now/1000,0);
     drawGrid();
     drawGameOver(now/1000);
+    drawTouchUI();
     return;
   }
 
@@ -1811,6 +2155,9 @@ function update(now){
   }
 
   ctx.restore();
+
+  drawDpad();
+  drawTouchUI();
 }
 
 canvas.focus();
