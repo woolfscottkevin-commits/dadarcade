@@ -1,5 +1,6 @@
-// api/scores.js — Leaderboard API for Space Invaders
+// api/scores.js — Leaderboard API for Dad Arcade games
 // Uses raw fetch() against Upstash REST API — no npm dependencies
+// Supports multiple games via ?game= query param (default: si)
 
 const KV_URL = process.env.KV_REST_API_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN;
@@ -62,7 +63,17 @@ function getCorsHeaders(req) {
   };
 }
 
-const ALLTIME_KEY = 'si_leaderboard:alltime';
+// Valid game prefixes → Redis key mapping
+const GAME_KEYS = {
+  si: 'si_leaderboard:alltime',
+  snake: 'snake_leaderboard:alltime',
+};
+
+function getLeaderboardKey(req) {
+  const url = new URL(req.url, `https://${req.headers.host}`);
+  const game = url.searchParams.get('game') || 'si';
+  return GAME_KEYS[game] || GAME_KEYS.si;
+}
 
 export default async function handler(req, res) {
   const cors = getCorsHeaders(req);
@@ -73,11 +84,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    const key = getLeaderboardKey(req);
     if (req.method === 'GET') {
-      return await handleGet(req, res);
+      return await handleGet(req, res, key);
     }
     if (req.method === 'POST') {
-      return await handlePost(req, res);
+      return await handlePost(req, res, key);
     }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
@@ -86,13 +98,13 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleGet(req, res) {
-  const raw = await redis('ZREVRANGE', ALLTIME_KEY, 0, 9, 'WITHSCORES');
+async function handleGet(req, res, key) {
+  const raw = await redis('ZREVRANGE', key, 0, 9, 'WITHSCORES');
   const alltime = parseLeaderboard(raw);
   return res.status(200).json({ alltime });
 }
 
-async function handlePost(req, res) {
+async function handlePost(req, res, key) {
   const { initials, score } = req.body || {};
 
   // Validate initials
@@ -123,9 +135,9 @@ async function handlePost(req, res) {
 
   // Pipeline: ZADD + ZREVRANK + fetch top 10
   const results = await redisPipeline([
-    ['ZADD', ALLTIME_KEY, encoded, member],
-    ['ZREVRANK', ALLTIME_KEY, member],
-    ['ZREVRANGE', ALLTIME_KEY, 0, 9, 'WITHSCORES'],
+    ['ZADD', key, encoded, member],
+    ['ZREVRANK', key, member],
+    ['ZREVRANGE', key, 0, 9, 'WITHSCORES'],
   ]);
 
   const rank = results[1]; // 0-indexed
