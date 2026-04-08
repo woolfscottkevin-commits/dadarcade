@@ -244,6 +244,34 @@ function fgGetContextCommentary() {
   return '';
 }
 
+// Crowd excitement level 0-1 based on game situation
+var crowdExcitementTarget = 0.3;
+var crowdExcitementCurrent = 0.3;
+
+function fgGetCrowdExcitement() {
+  return crowdExcitementCurrent;
+}
+
+function fgUpdateCrowdExcitement(dt) {
+  if (gameMode !== 'fullgame') { crowdExcitementCurrent = 0.3; return; }
+  // Calculate target based on game state
+  var target = 0.3; // baseline
+  var scoreDiff = Math.abs(fg.playerScore - fg.cpuScore);
+  if (scoreDiff <= 1 && fg.inning >= 2) target += 0.2; // close game
+  if (fg.bases[0] || fg.bases[1] || fg.bases[2]) target += 0.1; // runners on
+  if (fg.bases[0] && fg.bases[1] && fg.bases[2]) target += 0.2; // bases loaded
+  if (fg.inning >= INNINGS_PER_GAME) target += 0.15; // last inning
+  if (fg.runsThisPlayTimer > 0) target = 1.0; // just scored!
+  if (swingResult && swingResult.isHR) target = 1.0; // home run!
+  crowdExcitementTarget = Math.min(1, target);
+  // Smooth toward target
+  crowdExcitementCurrent += (crowdExcitementTarget - crowdExcitementCurrent) * dt * 3;
+  // Scale crowd murmur volume with excitement
+  if (crowdGain && !muted) {
+    crowdGain.gain.value = 0.02 + crowdExcitementCurrent * 0.06;
+  }
+}
+
 function getCpuTeamColor() {
   return CPU_TEAMS[fg.cpuTeamIdx] ? CPU_TEAMS[fg.cpuTeamIdx].color : '#888';
 }
@@ -664,6 +692,42 @@ function sndConsolation(ctx) {
   });
 }
 
+function sndGroundBall(ctx) {
+  // Thuddy ground ball contact
+  var t = ctx.currentTime;
+  var bufSize = ctx.sampleRate * 0.04;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i/bufSize);
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.5, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
+  src.connect(f).connect(g).connect(ctx.destination);
+  src.start(t); src.stop(t + 0.04);
+}
+
+function sndPopFly(ctx) {
+  // Lighter pop fly
+  var t = ctx.currentTime;
+  var osc = ctx.createOscillator(); osc.frequency.setValueAtTime(1200, t);
+  osc.frequency.exponentialRampToValueAtTime(600, t + 0.06);
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.06);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.06);
+  // soft thud
+  var bufSize = ctx.sampleRate * 0.02;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i/bufSize) * 0.3;
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var sg = ctx.createGain(); sg.gain.setValueAtTime(0.2, t);
+  sg.gain.exponentialRampToValueAtTime(0.01, t + 0.02);
+  src.connect(sg).connect(ctx.destination);
+  src.start(t); src.stop(t + 0.02);
+}
+
 function sndSideRetired(ctx) {
   const t = ctx.currentTime;
   [523, 440, 349].forEach(function(freq, i) {
@@ -903,6 +967,35 @@ function drawField() {
   ctx.fillText('400', fenceC.x, fenceC.y - 6);
   ctx.fillText('350', fr.x, fr.y - 6);
 
+  // Crowd silhouettes behind fence
+  if (gameMode === 'fullgame') {
+    var crowdY = fenceC.y;
+    var crowdExcitement = fgGetCrowdExcitement();
+    // Draw crowd as colored dots spread behind the fence
+    ctx.save();
+    for (var ci = 0; ci < 60; ci++) {
+      var cx2 = fenceL.x + (ci / 60) * (fenceR.x - fenceL.x);
+      var cy2 = crowdY - 4 - Math.random() * 8 * fenceC.scale;
+      var crowdSize = (1.5 + Math.random()) * fenceC.scale;
+      // Raise arms on excitement
+      var armRaise = (crowdExcitement > 0.7 && Math.random() < crowdExcitement) ? crowdSize * 1.5 : 0;
+      // Random crowd colors (hats/shirts)
+      var crowdColors = ['#E53935','#1E88E5','#43A047','#FB8C00','#8E24AA','#FDD835','#FFF','#333'];
+      ctx.fillStyle = crowdColors[ci % crowdColors.length];
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath(); ctx.arc(cx2, cy2, crowdSize, 0, Math.PI * 2); ctx.fill();
+      // Arms up
+      if (armRaise > 0) {
+        ctx.strokeStyle = ctx.fillStyle;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx2 - 1, cy2 - crowdSize); ctx.lineTo(cx2 - 2, cy2 - crowdSize - armRaise); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx2 + 1, cy2 - crowdSize); ctx.lineTo(cx2 + 2, cy2 - crowdSize - armRaise); ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
   // Foul lines
   ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 1;
@@ -962,6 +1055,25 @@ function drawField() {
   ctx.lineTo(hp.x - hpSize, hp.y - hpSize * 0.2);
   ctx.closePath();
   ctx.fill(); ctx.stroke();
+
+  // Dugout characters (tiny decorative bobbleheads along baselines)
+  if (gameMode === 'fullgame') {
+    var playerTeamC = TEAM_COLORS[colorIdx].hex;
+    var cpuTeamC = getCpuTeamColor();
+    var dugoutExcite = fgGetCrowdExcitement();
+    // Player dugout (left/3rd base side)
+    for (var dgi = 0; dgi < 4; dgi++) {
+      var dgPos = worldToScreen(-0.7 - dgi * 0.12, 0.1 + dgi * 0.05);
+      var dgBob = dugoutExcite > 0.7 ? Math.sin(gameTime * 8 + dgi) * 0.06 : 0;
+      drawBobblehead(dgPos.x, dgPos.y, dgPos.scale * 0.35, playerTeamC, 1, 0, 'none', dgBob, true);
+    }
+    // CPU dugout (right/1st base side)
+    for (var dgi2 = 0; dgi2 < 4; dgi2++) {
+      var dgPos2 = worldToScreen(0.7 + dgi2 * 0.12, 0.1 + dgi2 * 0.05);
+      var dgBob2 = dugoutExcite > 0.7 ? Math.sin(gameTime * 8 + dgi2 + 2) * 0.06 : 0;
+      drawBobblehead(dgPos2.x, dgPos2.y, dgPos2.scale * 0.35, cpuTeamC, -1, 0, 'none', dgBob2, true);
+    }
+  }
 }
 
 // ========== CHARACTER DRAWING ==========
@@ -2310,7 +2422,16 @@ function doSwing(pressGameTime) {
 
   // Fair contact!
   hitCount++;
-  playSound(function(c) { sndBatCrack(c, quality); });
+  // Hit variety sounds based on quality
+  if (quality === 'okay') {
+    playSound(sndGroundBall);
+  } else if (quality === 'good') {
+    playSound(function(c) { sndBatCrack(c, quality); });
+  } else {
+    // Perfect — sharp crack + pop fly element
+    playSound(function(c) { sndBatCrack(c, quality); });
+    playSound(sndPopFly);
+  }
 
   // Launch parameters
   let exitVelo, launchAngle;
@@ -3253,6 +3374,47 @@ function drawHUD() {
     ctx.restore();
   }
 
+  // ---- Scorebug (TV-style bottom-left overlay, Full Game only) ----
+  if (gameMode === 'fullgame' && !fg.tiebreaker) {
+    var sbX = 12, sbY = H - 60, sbW = 180, sbH = 48;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.beginPath(); ctx.roundRect(sbX, sbY, sbW, sbH, 6); ctx.fill();
+    // Team rows
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'left';
+    // Player row
+    ctx.fillStyle = TEAM_COLORS[colorIdx].hex;
+    ctx.fillRect(sbX + 2, sbY + 2, 3, 20);
+    ctx.fillStyle = '#DDD';
+    ctx.fillText(playerName.join(''), sbX + 10, sbY + 16);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(fg.playerScore, sbX + sbW - 8, sbY + 16);
+    // CPU row
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = getCpuTeamColor();
+    ctx.fillRect(sbX + 2, sbY + 24, 3, 20);
+    ctx.fillStyle = '#AAA';
+    ctx.fillText(getCpuTeamName(), sbX + 10, sbY + 38);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = '#DDD';
+    ctx.fillText(fg.cpuScore, sbX + sbW - 8, sbY + 38);
+    // Inning indicator
+    ctx.fillStyle = '#888';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    var innTxt = (fg.halfInning === 'top' ? '\u25B2' : '\u25BC') + fgInningLabel(fg.inning);
+    ctx.fillText(innTxt, sbX + sbW / 2, sbY + sbH + 12);
+    // Active batting arrow
+    var arrowY = fg.isPlayerBatting ? sbY + 12 : sbY + 34;
+    ctx.fillStyle = '#FFD700';
+    ctx.font = '8px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('\u25B6', sbX + sbW - 22, arrowY);
+  }
+
   drawFloatTexts();
 }
 
@@ -3626,15 +3788,19 @@ function drawGameObjects(dt) {
     // Shadow
     drawBallShadow(ground.x, ground.y, ballSize);
 
-    // Ball trail
+    // Ball trail (colored by pitch type during travel)
+    var trailColor = '#FFF';
+    if (pitchPhase === 'travel' && gameMode === 'fullgame' && !fg.isPlayerBatting) {
+      trailColor = PITCH_TYPES[fg.pitchType] ? PITCH_TYPES[fg.pitchType].color : '#FFF';
+    }
     for (let i = 0; i < ballTrail.length; i++) {
       const t = ballTrail[i];
       const tg = worldToScreen(t.x, t.z);
       const tlift = t.y * tg.scale * 200;
-      const alpha = (i + 1) / (ballTrail.length + 1) * 0.3;
+      const alpha = (i + 1) / (ballTrail.length + 1) * 0.35;
       const sz = ballSize * (0.5 + 0.5 * (i / ballTrail.length));
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#FFF';
+      ctx.fillStyle = trailColor;
       ctx.beginPath(); ctx.arc(tg.x, tg.y - tlift, sz, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }
@@ -3727,6 +3893,7 @@ function update(dt) {
   if (newBestHitFlash > 0) newBestHitFlash -= dt;
   if (goalFlashTime > 0) goalFlashTime -= dt;
   if (fg.runsThisPlayTimer > 0) fg.runsThisPlayTimer -= dt;
+  fgUpdateCrowdExcitement(dt);
 
   updateParticles(dt);
   updateFloatTexts(dt);
