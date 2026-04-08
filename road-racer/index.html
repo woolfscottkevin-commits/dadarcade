@@ -94,6 +94,7 @@ var ROAD_W=2000,SEG_LEN=200,DRAW_DIST=300,CAM_H=1000;
 var BASE_CAM_DEPTH=1/Math.tan(50*Math.PI/180);
 var activeCamDepth=BASE_CAM_DEPTH;
 var MIN_CLIP=10;
+var OBJ_DRAW_DIST=80; // shorter distance for sprites/traffic/coins/powerups
 var ROAD_DARK='#333',ROAD_LIGHT='#3a3a3a';
 var FIXED_DT=1/120;
 var TOTAL_SEGS=500;
@@ -194,6 +195,15 @@ function sfxBeep(){playTone(440,0.08,'square',0.06,true);}
 function sfxTimeUp(){playTone(300,0.5,'sawtooth',0.1,true);}
 function sfxCountdown(go){playTone(go?880:440,0.12,'sine',0.08,true);}
 function sfxClick(){playTone(800,0.03,'square',0.04,true);}
+function sfxIceSkid(){
+  if(!audioCtx||muted)return;
+  var b=audioCtx.createBuffer(1,audioCtx.sampleRate*0.15,audioCtx.sampleRate);
+  var d=b.getChannelData(0);for(var i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5)*0.3;
+  var s=audioCtx.createBufferSource();s.buffer=b;
+  var f=audioCtx.createBiquadFilter();f.type='highpass';f.frequency.value=2000;
+  var g=audioCtx.createGain();g.gain.value=0.05;
+  s.connect(f);f.connect(g);g.connect(audioCtx.destination);s.start();
+}
 function sfxShieldBreak(){
   if(!audioCtx||muted)return;
   var b=audioCtx.createBuffer(1,audioCtx.sampleRate*0.2,audioCtx.sampleRate);
@@ -487,6 +497,7 @@ function physicsStep(fdt){
   if(seg.icy){
     steerAmt*=0.4;
     if(player.speed>player.maxSpd*0.7)player.x+=(Math.random()-0.5)*0.002;
+    if(!seg._iceSounded){seg._iceSounded=true;sfxIceSkid();}
   }
   player.x+=steerAmt;
 
@@ -559,9 +570,12 @@ function update(dt){
 
   // Physics fixed step
   physicsAccum+=pdt;
-  while(physicsAccum>=FIXED_DT){
+  physicsAccum=Math.min(physicsAccum,4*FIXED_DT); // cap at 4 steps
+  var steps=0;
+  while(physicsAccum>=FIXED_DT&&steps<4){
     physicsStep(FIXED_DT);
     physicsAccum-=FIXED_DT;
+    steps++;
   }
 
   distanceM=Math.floor(player.z/10);
@@ -573,6 +587,7 @@ function update(dt){
     if(timer<=10&&timer>0&&Math.floor(timer+tdt)!==Math.floor(timer))sfxBeep();
     if(timer<=0){
       timer=0;coastToStop=true;coastSpeed=player.speed;
+      gameSpeedMul=1.0;slowMoTimer=0; // reset slow-mo on coast
       addFloat(W/2,H/2,"TIME'S UP!",'#f44',28);
       sfxTimeUp();
     }
@@ -585,6 +600,7 @@ function update(dt){
     coastFreezeTimer-=tdt;
     if(coastFreezeTimer<=0){
       gameState='GAME_OVER';
+      gameSpeedMul=1.0;slowMoTimer=0; // safety reset
       stopEngine();
       var key=carIdx+'_'+diffIdx;
       var hs=lsGet('hs_'+key,0);
@@ -819,6 +835,10 @@ function drawRoad(){
       ctx.fillStyle='#ff0';
       ctx.fillRect(cur.x-cur.w*1.1,cur.y-2,cur.w*2.2,4);
     }
+
+    // Skip expensive objects beyond OBJ_DRAW_DIST
+    var objDist=idx-Math.floor(player.z/SEG_LEN);
+    if(objDist>OBJ_DRAW_DIST){continue;} // road already drawn above
 
     // Sprites
     if(seg.sprite){
@@ -1214,6 +1234,67 @@ function drawMenu(){
   if(muted){ctx.fillStyle='#f44';ctx.fillText('MUTED',W/2,520);}
 }
 
+var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+var iosHintTimer=0;
+function toggleFullscreen(){
+  if(isIOS)return;
+  if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+    (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen||function(){}).call(document.documentElement);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);
+  }
+}
+
+function drawTouchUI(){
+  if(inputMode!=='touch')return;
+  // Fullscreen button (non-iOS)
+  if(!isIOS){
+    ctx.fillStyle='rgba(255,255,255,0.25)';
+    ctx.fillRect(W-38,4,32,28);
+    ctx.fillStyle='#fff';ctx.font='14px Courier New';ctx.textAlign='center';
+    ctx.fillText('\u26F6',W-22,22);
+  }
+  // iOS hint
+  if(isIOS&&!lsGet('iosHint',false)){
+    lsSet('iosHint',true);iosHintTimer=4;
+  }
+  if(iosHintTimer>0){
+    ctx.save();ctx.globalAlpha=Math.min(1,iosHintTimer);
+    ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(W/2-160,H/2-25,320,50);
+    ctx.fillStyle='#fff';ctx.font='12px Courier New';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('For fullscreen: Share \u2197 \u2192 Add to Home Screen',W/2,H/2);
+    ctx.restore();
+  }
+  // Mute icon
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fillRect(W-38,36,32,28);
+  ctx.fillStyle=muted?'#f44':'#fff';ctx.font='14px Courier New';ctx.textAlign='center';
+  ctx.fillText(muted?'\uD83D\uDD07':'\uD83D\uDD0A',W-22,54);
+  // Pause icon (during play)
+  if(gameState==='PLAYING'||gameState==='COUNTDOWN'){
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.fillRect(W-74,36,32,28);
+    ctx.fillStyle='#fff';ctx.font='bold 16px Courier New';
+    ctx.fillText('\u23F8',W-58,54);
+  }
+}
+
+function handleTouchUITap(x,y){
+  // Fullscreen
+  if(!isIOS&&x>W-38&&x<W-6&&y>4&&y<32){toggleFullscreen();return true;}
+  // iOS hint dismiss
+  if(iosHintTimer>0){iosHintTimer=0;return true;}
+  // Mute
+  if(x>W-38&&x<W-6&&y>36&&y<64){
+    muted=!muted;localStorage.setItem('rr_muted',muted?'1':'0');
+    if(muted)stopEngine();else if(gameState==='PLAYING')startEngine();
+    return true;
+  }
+  // Pause
+  if((gameState==='PLAYING'||gameState==='COUNTDOWN')&&x>W-74&&x<W-42&&y>36&&y<64){
+    gameState='PAUSED';stopEngine();return true;
+  }
+  return false;
+}
+
 function drawTouchControls(){
   if(inputMode!=='touch'||gameState==='MENU'||gameState==='GAME_OVER')return;
   var y=H*0.82,h=H*0.18;
@@ -1305,6 +1386,7 @@ canvas.addEventListener('touchstart',function(e){
     var rect=canvas.getBoundingClientRect();
     var x=(t.clientX-rect.left)/rect.width*W;
     var y=(t.clientY-rect.top)/rect.height*H;
+    if(handleTouchUITap(x,y))return;
     if(gameState==='MENU'){initAudio();initGame();gameState='COUNTDOWN';countdownNum=3;countdownTimer=1;sfxCountdown(false);return;}
     if(gameState==='GAME_OVER'){initGame();gameState='COUNTDOWN';countdownNum=3;countdownTimer=1;sfxCountdown(false);return;}
     if(gameState==='PAUSED'){gameState='PLAYING';lastTime=performance.now();if(!muted)startEngine();return;}
@@ -1356,7 +1438,8 @@ function loop(now){
   // Draw
   ctx.clearRect(0,0,W,H);
 
-  if(gameState==='MENU'){drawMenu();return;}
+  if(iosHintTimer>0)iosHintTimer-=rawDt;
+  if(gameState==='MENU'){drawMenu();drawTouchUI();return;}
 
   // Shake
   ctx.save();
@@ -1376,6 +1459,7 @@ function loop(now){
   if(gameState==='COUNTDOWN')drawCountdown();
   if(gameState==='PAUSED')drawPaused();
   if(gameState==='GAME_OVER')drawGameOver();
+  drawTouchUI();
 }
 
 canvas.focus();
