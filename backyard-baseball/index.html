@@ -971,20 +971,23 @@ function drawField() {
   if (gameMode === 'fullgame') {
     var crowdY = fenceC.y;
     var crowdExcitement = fgGetCrowdExcitement();
-    // Draw crowd as colored dots spread behind the fence
+    var crowdColors = ['#E53935','#1E88E5','#43A047','#FB8C00','#8E24AA','#FDD835','#FFF','#333'];
     ctx.save();
     for (var ci = 0; ci < 60; ci++) {
       var cx2 = fenceL.x + (ci / 60) * (fenceR.x - fenceL.x);
-      var cy2 = crowdY - 4 - Math.random() * 8 * fenceC.scale;
-      var crowdSize = (1.5 + Math.random()) * fenceC.scale;
-      // Raise arms on excitement
-      var armRaise = (crowdExcitement > 0.7 && Math.random() < crowdExcitement) ? crowdSize * 1.5 : 0;
-      // Random crowd colors (hats/shirts)
-      var crowdColors = ['#E53935','#1E88E5','#43A047','#FB8C00','#8E24AA','#FDD835','#FFF','#333'];
+      // Deterministic position per crowd member (stable, no flicker)
+      var cyOff = ((ci * 7 + 3) % 9) * fenceC.scale;
+      var cy2 = crowdY - 3 - cyOff;
+      var crowdSize = (1.5 + (ci * 13 % 5) * 0.2) * fenceC.scale;
+      // Raise arms on excitement (use sin-based per-member variation instead of random)
+      var armRaise = 0;
+      if (crowdExcitement > 0.6) {
+        var wave = Math.sin(gameTime * 6 + ci * 0.8);
+        if (wave > 1 - crowdExcitement) armRaise = crowdSize * 1.5;
+      }
       ctx.fillStyle = crowdColors[ci % crowdColors.length];
       ctx.globalAlpha = 0.6;
       ctx.beginPath(); ctx.arc(cx2, cy2, crowdSize, 0, Math.PI * 2); ctx.fill();
-      // Arms up
       if (armRaise > 0) {
         ctx.strokeStyle = ctx.fillStyle;
         ctx.lineWidth = 1;
