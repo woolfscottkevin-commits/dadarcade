@@ -10,20 +10,18 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="canonical" href="https://dadarcade.com/math-quest-rpg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center}
-canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
 .back-link{position:fixed;top:10px;left:10px;z-index:9999;color:rgba(255,255,255,0.45);text-decoration:none;font-family:'Courier New',monospace;font-size:18px;padding:8px 14px;border-radius:6px;background:rgba(255,255,255,0.08);transition:all 0.3s}.back-link:hover{color:#fff;background:rgba(255,255,255,0.18)}
-.mobile-msg{display:none;position:fixed;inset:0;background:#111;color:#fff;font-family:'Courier New',monospace;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:10000;gap:1rem}
-.mobile-msg .emoji{font-size:3rem}
-.mobile-msg a{color:#0ff;text-decoration:none}
 </style>
 </head>
 <body>
 <a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
-<div class="mobile-msg" id="mobileMsg"><span class="emoji">🕹️</span><p>This game requires a keyboard.<br>Please visit on a computer!</p><a href="/">Back to Dad Arcade</a></div>
 <canvas id="game" tabindex="0"></canvas>
 <div id="game-info" style="max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem">
 <h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Math Quest RPG — Free Math Game for Kids</h1>
@@ -63,19 +61,50 @@ function resizeCanvas() {
 }
 resizeCanvas();
 canvas.focus();
+window.addEventListener('resize', () => { resizeCanvas(); });
 
-function checkMobile() {
-  const m = document.getElementById('mobileMsg');
-  if (window.innerWidth < 768) {
-    m.style.display = 'flex';
-    canvas.style.display = 'none';
+// ========== TOUCH INPUT SYSTEM ==========
+let inputMode = 'keyboard';
+window.addEventListener('touchstart', function() {
+  if (inputMode !== 'touch' && isIOS && !window.navigator.standalone) { iosHintTimer = 4; }
+  inputMode = 'touch';
+});
+window.addEventListener('keydown', function() { inputMode = 'keyboard'; });
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+let iosHintTimer = 0;
+
+function canvasTouchCoords(touch) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: (touch.clientX - rect.left) / rect.width * W,
+    y: (touch.clientY - rect.top) / rect.height * H
+  };
+}
+
+function promptText(kb, touch) {
+  return inputMode === 'touch' ? touch : kb;
+}
+
+let touchScale = 1.0;
+function updateTouchScale() {
+  touchScale = inputMode === 'touch' ? 1.2 : 1.0;
+}
+
+canvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchend', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchcancel', function(e) { e.preventDefault(); }, { passive: false });
+
+function toggleFullscreen() {
+  if (isIOS) return;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    var el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el);
   } else {
-    m.style.display = 'none';
-    canvas.style.display = 'block';
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
   }
 }
-checkMobile();
-window.addEventListener('resize', () => { resizeCanvas(); checkMobile(); });
 
 // ============================================================
 // UTILITY
@@ -258,7 +287,7 @@ function drawTitle() {
   ctx.fillStyle = '#0ff';
   const pulse = Math.sin(Date.now() / 500) * 0.3 + 0.7;
   ctx.globalAlpha = pulse;
-  ctx.fillText('Press Enter to Start', W/2, 300);
+  ctx.fillText(promptText('Press Enter to Start', 'Tap to Start'), W/2, 300);
   ctx.globalAlpha = 1;
   // Stats
   ctx.font = '16px "Courier New", monospace';
@@ -1112,6 +1141,7 @@ function update(dt) {
   updateParticles(dt);
   updateFloats(dt);
   if (screenFlashTimer > 0) screenFlashTimer -= dt;
+  if (iosHintTimer > 0) iosHintTimer -= dt;
 
   switch (state) {
     case STATES.TITLE: updateTitle(dt); break;
@@ -1204,7 +1234,7 @@ function updateBattle(dt) {
 
       // Hint for first battle ever
       if (firstBattleEver && floor === 1) {
-        hintText = '\u2b06 Pick the right answer! Press A, B, C, or D';
+        hintText = promptText('\u2b06 Pick the right answer! Press A, B, C, or D', '\u2b06 Tap the right answer!');
       } else {
         hintText = '';
       }
@@ -1583,12 +1613,32 @@ function render() {
     ctx.textBaseline = 'middle';
     ctx.font = 'bold 48px "Courier New", monospace';
     ctx.fillStyle = '#fff';
-    ctx.fillText('PAUSED', W/2, H/2 - 20);
-    ctx.font = '20px "Courier New", monospace';
-    ctx.fillStyle = '#888';
-    ctx.fillText('Press P to Resume', W/2, H/2 + 30);
+    ctx.fillText('PAUSED', W/2, H/2 - 40);
+    if (inputMode === 'touch') {
+      // Touch pause buttons
+      ctx.fillStyle = '#2a4a2a';
+      ctx.fillRect(W/2 - 120, H/2 + 10, 240, 50);
+      ctx.strokeStyle = '#4a4';
+      ctx.strokeRect(W/2 - 120, H/2 + 10, 240, 50);
+      ctx.font = 'bold 22px "Courier New", monospace';
+      ctx.fillStyle = '#0f0';
+      ctx.fillText('TAP TO RESUME', W/2, H/2 + 35);
+
+      ctx.fillStyle = '#4a2a2a';
+      ctx.fillRect(W/2 - 120, H/2 + 70, 240, 50);
+      ctx.strokeStyle = '#a44';
+      ctx.strokeRect(W/2 - 120, H/2 + 70, 240, 50);
+      ctx.font = 'bold 22px "Courier New", monospace';
+      ctx.fillStyle = '#f44';
+      ctx.fillText('QUIT', W/2, H/2 + 95);
+    } else {
+      ctx.font = '20px "Courier New", monospace';
+      ctx.fillStyle = '#888';
+      ctx.fillText('Press P to Resume', W/2, H/2 + 30);
+    }
   }
 
+  drawTouchUI();
   drawTransition();
 }
 
@@ -1606,7 +1656,7 @@ function renderTitle() {
   ctx.fillStyle = '#0ff';
   const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
   ctx.globalAlpha = pulse;
-  ctx.fillText('Press Enter to Start', W/2, 300);
+  ctx.fillText(promptText('Press Enter to Start', 'Tap to Start'), W/2, 300);
   ctx.globalAlpha = 1;
 
   ctx.font = '16px "Courier New", monospace';
@@ -1627,7 +1677,13 @@ function renderControls() {
   ctx.font = '18px "Courier New", monospace';
   ctx.textAlign = 'left';
   const x = 200, startY = 130, gap = 38;
-  const lines = [
+  const lines = inputMode === 'touch' ? [
+    ['Tap answer', 'Answer math problems'],
+    ['Tap enemy', 'Switch targets'],
+    ['Tap SPECIAL', 'Special ability (3 correct in a row)'],
+    ['Tap \u23F8', 'Pause'],
+    ['Tap M', 'Mute']
+  ] : [
     ['A / B / C / D', 'Answer math problems'],
     ['\u2190 / \u2192', 'Switch targets or navigate map'],
     ['S', 'Special ability (3 correct in a row)'],
@@ -1649,7 +1705,7 @@ function renderControls() {
   ctx.fillStyle = '#888';
   const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
   ctx.globalAlpha = pulse;
-  ctx.fillText('Press Enter to choose your hero', W/2, 520);
+  ctx.fillText(promptText('Press Enter to choose your hero', 'Tap to choose your hero'), W/2, 520);
   ctx.globalAlpha = 1;
 }
 
@@ -1699,7 +1755,7 @@ function renderCharSelect() {
 
   ctx.font = '16px "Courier New", monospace';
   ctx.fillStyle = '#888';
-  ctx.fillText('\u2190 / \u2192 to select, Enter to confirm', W/2, 530);
+  ctx.fillText(promptText('\u2190 / \u2192 to select, Enter to confirm', 'Tap a hero, tap again to start'), W/2, 530);
 }
 
 function renderFloorIntro() {
@@ -1954,7 +2010,7 @@ function renderMap() {
     ctx.textAlign = 'center';
     ctx.font = 'bold 16px "Courier New", monospace';
     ctx.fillStyle = '#ff0';
-    ctx.fillText('Choose a path! \u2191/\u2193 then Enter', W/2, 85);
+    ctx.fillText(promptText('Choose a path! \u2191/\u2193 then Enter', 'Tap a path to choose!'), W/2, 85);
 
     // Highlight the currently selected fork option
     const selNode = mapNodes[selectedNodeId];
@@ -1993,7 +2049,7 @@ function renderMap() {
   ctx.textAlign = 'center';
   ctx.font = '12px "Courier New", monospace';
   ctx.fillStyle = '#555';
-  ctx.fillText('Hold ESC to abandon run', W/2, H - 20);
+  ctx.fillText(promptText('Hold ESC to abandon run', 'Pause to quit'), W/2, H - 20);
 
   // Escape bar
   if (escapeHeld && escapeHoldTimer > 0) {
@@ -2012,9 +2068,9 @@ function renderMap() {
   ctx.font = '14px "Courier New", monospace';
   ctx.fillStyle = '#888';
   if (forkSelecting) {
-    ctx.fillText('\u2191/\u2193 pick path, Enter to confirm', W/2, H - 40);
+    ctx.fillText(promptText('\u2191/\u2193 pick path, Enter to confirm', 'Tap a path to choose'), W/2, H - 40);
   } else {
-    ctx.fillText('\u2190/\u2192 navigate, Enter to enter room', W/2, H - 40);
+    ctx.fillText(promptText('\u2190/\u2192 navigate, Enter to enter room', 'Tap a room to select, tap again to enter'), W/2, H - 40);
   }
 }
 
@@ -2220,13 +2276,13 @@ function renderChargePips() {
     ctx.fillStyle = '#ff0';
     const pulse = Math.sin(gameTime * 6) * 0.3 + 0.7;
     ctx.globalAlpha = pulse;
-    ctx.fillText('SPECIAL READY \u2014 S: ' + cls.specialName, W/2, 580);
+    ctx.fillText(promptText('SPECIAL READY \u2014 S: ' + cls.specialName, 'TAP HERE: ' + cls.specialName), W/2, 580);
     ctx.globalAlpha = 1;
 
     // First charge hint
     if (firstChargeEver && floor === 1) {
       firstChargeEver = false;
-      hintText = 'Special charging! Get 3 right in a row, then press S!';
+      hintText = promptText('Special charging! Get 3 right in a row, then press S!', 'Special charging! Get 3 right, then tap SPECIAL!');
     }
   }
 }
@@ -2335,7 +2391,7 @@ function renderTreasure() {
 
     ctx.font = '16px "Courier New", monospace';
     ctx.fillStyle = '#888';
-    ctx.fillText('Press Enter to continue', W/2, 400);
+    ctx.fillText(promptText('Press Enter to continue', 'Tap to continue'), W/2, 400);
   } else {
     ctx.font = '20px "Courier New", monospace';
     ctx.fillStyle = '#ff0';
@@ -2367,7 +2423,7 @@ function renderVictory() {
   ctx.fillStyle = '#888';
   const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
   ctx.globalAlpha = pulse;
-  ctx.fillText('Press Enter for next floor', W/2, 450);
+  ctx.fillText(promptText('Press Enter for next floor', 'Tap for next floor'), W/2, 450);
   ctx.globalAlpha = 1;
 }
 
@@ -2401,9 +2457,208 @@ function renderGameOver() {
   ctx.fillStyle = '#0ff';
   const pulse = Math.sin(gameTime * 4) * 0.3 + 0.7;
   ctx.globalAlpha = pulse;
-  ctx.fillText('Press Enter to try again!', W/2, 470);
+  ctx.fillText(promptText('Press Enter to try again!', 'Tap to try again!'), W/2, 470);
   ctx.globalAlpha = 1;
 }
+
+// ============================================================
+// TOUCH INPUT HANDLER
+// ============================================================
+canvas.addEventListener('touchstart', function(e) {
+  if (!e.touches.length) return;
+  var pt = canvasTouchCoords(e.touches[0]);
+  var tx = pt.x, ty = pt.y;
+
+  initAudio();
+
+  // Mute toggle: top-right area (near M:ON/M:OFF in HUD)
+  if (ty < 55 && tx > W - 80) {
+    muted = !muted;
+    return;
+  }
+
+  // Pause icon tap (top-right, below mute area) during battle/dungeon
+  if (inputMode === 'touch' && ty < 55 && tx > W - 130 && tx <= W - 80) {
+    if (state === STATES.BATTLE || state === STATES.DUNGEON_MAP) {
+      paused = !paused;
+      return;
+    }
+  }
+
+  // Fullscreen button (top-right corner)
+  if (inputMode === 'touch' && !isIOS && tx > W - 52 && ty > 58 && ty < 106) {
+    toggleFullscreen();
+    return;
+  }
+
+  if (paused) {
+    // Touch pause overlay buttons
+    // RESUME button: centered, y ~H/2+30 area
+    if (tx > W/2 - 120 && tx < W/2 + 120 && ty > H/2 + 10 && ty < H/2 + 60) {
+      paused = false;
+      return;
+    }
+    // QUIT button: centered, y ~H/2+80 area
+    if (tx > W/2 - 120 && tx < W/2 + 120 && ty > H/2 + 70 && ty < H/2 + 120) {
+      paused = false;
+      fullRestart();
+      return;
+    }
+    return;
+  }
+
+  switch (state) {
+    case STATES.TITLE:
+      // Tap anywhere to start
+      handleEnter();
+      break;
+
+    case STATES.CONTROLS:
+      // Tap to proceed to character select
+      handleEnter();
+      break;
+
+    case STATES.CHARACTER_SELECT: {
+      // Tap on character cards: 3 columns at cx = 150, 450, 750
+      for (var ci = 0; ci < 3; ci++) {
+        var cx = 150 + ci * 300;
+        if (tx > cx - 110 && tx < cx + 110 && ty > 100 && ty < 480) {
+          selectedClass = ci;
+          // If tapping already-selected class, confirm
+          if (ci === selectedClass) {
+            // Check for "START" area at bottom
+            if (ty > 480) {
+              handleEnter();
+            }
+          }
+          break;
+        }
+      }
+      // Tap bottom area to confirm
+      if (ty > 500) {
+        handleEnter();
+      }
+      break;
+    }
+
+    case STATES.FLOOR_INTRO:
+      // Tap does nothing during intro animation
+      break;
+
+    case STATES.DUNGEON_MAP: {
+      // Tap on map nodes
+      var tapped = false;
+      for (var ni = 1; ni < mapNodes.length; ni++) {
+        var node = mapNodes[ni];
+        if (node.skipped) continue;
+        var dx = tx - node.x, dy = ty - node.y;
+        var hitR = node.type === 'boss' ? 32 : 28;
+        if (dx * dx + dy * dy < hitR * hitR) {
+          // Handle fork selection
+          if (node.forkGroup >= 0 && mapForks[node.forkGroup].chosen < 0) {
+            forkSelecting = true;
+            forkChoice = node.forkOption;
+            selectedNodeId = ni;
+            sfxMapBlip();
+          } else if (ni === selectedNodeId) {
+            // Already selected, enter room
+            enterRoom(ni);
+          } else {
+            selectedNodeId = ni;
+            forkSelecting = false;
+            sfxMapBlip();
+          }
+          tapped = true;
+          break;
+        }
+      }
+      break;
+    }
+
+    case STATES.BATTLE: {
+      if (battlePhase === BATTLE_PHASES.AWAITING_ANSWER && inputLockTimer <= 0) {
+        // Check answer button taps (2x2 grid)
+        var labels = ['A', 'B', 'C', 'D'];
+        var btnW = 180, btnH = 40, gap = 20;
+        var gridX = W/2 - btnW - gap/2;
+        var gridY = 410;
+        var answered = false;
+        for (var ai = 0; ai < 4; ai++) {
+          var col = ai % 2;
+          var row = Math.floor(ai / 2);
+          var bx = gridX + col * (btnW + gap);
+          var by = gridY + row * (btnH + gap);
+          if (tx >= bx && tx <= bx + btnW && ty >= by && ty <= by + btnH) {
+            handleAnswer(ai);
+            answered = true;
+            break;
+          }
+        }
+
+        if (!answered) {
+          // Check special button tap (charge pips area at bottom)
+          if (consecutiveCorrect >= 3 && !specialActivated && ty > 545 && ty < 595 && tx > W/2 - 100 && tx < W/2 + 100) {
+            specialActivated = true;
+          }
+          // Check enemy targeting tap
+          else if (ty < 360) {
+            for (var ei = 0; ei < enemies.length; ei++) {
+              var en = enemies[ei];
+              if (!en.alive) continue;
+              var eSize = en.isBoss ? 90 : 60;
+              if (tx > en.x - eSize/2 && tx < en.x + eSize/2 && ty > en.y - eSize/2 && ty < en.y + eSize/2) {
+                targetIndex = ei;
+                break;
+              }
+            }
+          }
+        }
+      }
+      // During BATTLE_VICTORY, a tap does nothing (auto-advances)
+      break;
+    }
+
+    case STATES.SHOP: {
+      // Tap on shop items
+      for (var si = 0; si < shopItems.length; si++) {
+        var iy = 400 + si * 50;
+        if (tx > 130 && tx < W - 130 && ty > iy - 15 && ty < iy + 25) {
+          if (si === shopSelected) {
+            buyShopItem();
+          } else {
+            shopSelected = si;
+          }
+          break;
+        }
+      }
+      // Leave button
+      var leaveY = 400 + shopItems.length * 50;
+      if (tx > 130 && tx < W - 130 && ty > leaveY - 15 && ty < leaveY + 25) {
+        if (shopSelected === shopItems.length) {
+          state = STATES.DUNGEON_MAP;
+          advanceSelection();
+        } else {
+          shopSelected = shopItems.length;
+        }
+      }
+      break;
+    }
+
+    case STATES.TREASURE:
+      if (treasureOpened) {
+        handleEnter();
+      }
+      break;
+
+    case STATES.VICTORY:
+      handleEnter();
+      break;
+
+    case STATES.GAME_OVER:
+      handleEnter();
+      break;
+  }
+}, { passive: false });
 
 // ============================================================
 // INPUT HANDLING
@@ -2672,6 +2927,44 @@ function enterRoom(nodeId) {
       state = STATES.TREASURE;
     }
   });
+}
+
+// ============================================================
+// TOUCH UI
+// ============================================================
+function drawTouchUI() {
+  if (inputMode !== 'touch') return;
+
+  // Fullscreen button (non-iOS), top-right below HUD
+  if (!isIOS) {
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.fillRect(W - 52, 60, 44, 44);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '22px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(document.fullscreenElement || document.webkitFullscreenElement ? '\u2716' : '\u26F6', W - 30, 82);
+  }
+
+  // iOS Add-to-Home hint (one-time, 4s)
+  if (isIOS && iosHintTimer > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(W/2 - 170, H - 60, 340, 46);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '13px "Courier New", monospace';
+    ctx.fillStyle = '#0ff';
+    ctx.fillText('Tap Share > Add to Home Screen', W/2, H - 37);
+  }
+
+  // Pause icon in HUD area (during battle/dungeon states)
+  if (state === STATES.BATTLE || state === STATES.DUNGEON_MAP) {
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.fillRect(W - 128, 8, 40, 40);
+    ctx.fillStyle = '#ccc';
+    ctx.fillRect(W - 120, 16, 8, 24);
+    ctx.fillRect(W - 106, 16, 8, 24);
+  }
 }
 
 // ============================================================
