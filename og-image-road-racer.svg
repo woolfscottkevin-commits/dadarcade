@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a3e"/>
+      <stop offset="100%" stop-color="#2a4a2a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <!-- Road -->
+  <polygon points="450,630 750,630 650,280 550,280" fill="#333"/>
+  <polygon points="460,630 740,630 645,280 555,280" fill="#3a3a3a" opacity="0.5"/>
+  <!-- Road lines -->
+  <line x1="598" y1="630" x2="599" y2="280" stroke="#ff0" stroke-width="2" stroke-dasharray="20,15"/>
+  <line x1="455" y1="630" x2="552" y2="280" stroke="#fff" stroke-width="1"/>
+  <line x1="745" y1="630" x2="648" y2="280" stroke="#fff" stroke-width="1"/>
+  <!-- Vanishing point glow -->
+  <circle cx="600" cy="280" r="30" fill="#fff" opacity="0.1"/>
+  <!-- Car silhouette -->
+  <rect x="560" y="480" width="80" height="40" rx="6" fill="#e33"/>
+  <rect x="570" y="470" width="60" height="15" rx="4" fill="#c22"/>
+  <rect x="575" y="472" width="50" height="8" fill="#aad" opacity="0.7"/>
+  <rect x="558" y="520" width="12" height="8" rx="2" fill="#222"/>
+  <rect x="630" y="520" width="12" height="8" rx="2" fill="#222"/>
+  <rect x="560" y="485" width="8" height="8" fill="#f33"/>
+  <rect x="632" y="485" width="8" height="8" fill="#f33"/>
+  <!-- Speed lines -->
+  <line x1="100" y1="350" x2="250" y2="350" stroke="#888" stroke-width="2" opacity="0.4"/>
+  <line x1="80" y1="400" x2="200" y2="400" stroke="#888" stroke-width="2" opacity="0.3"/>
+  <line x1="120" y1="450" x2="280" y2="450" stroke="#f80" stroke-width="2" opacity="0.4"/>
+  <line x1="950" y1="360" x2="1100" y2="360" stroke="#888" stroke-width="2" opacity="0.4"/>
+  <line x1="970" y1="420" x2="1080" y2="420" stroke="#888" stroke-width="2" opacity="0.3"/>
+  <line x1="920" y1="470" x2="1080" y2="470" stroke="#f80" stroke-width="2" opacity="0.4"/>
+  <!-- Title -->
+  <text x="600" y="180" text-anchor="middle" font-family="Courier New,monospace" font-weight="bold" font-size="100" fill="#ff6" filter="url(#glow)" transform="rotate(-3 600 180)">ROAD RACER</text>
+  <!-- Subtitle -->
+  <text x="600" y="580" text-anchor="middle" font-family="Courier New,monospace" font-size="28" fill="#888">Free at Dad Arcade</text>
+  <text x="600" y="620" text-anchor="middle" font-family="Courier New,monospace" font-size="20" fill="#555">dadarcade.com/road-racer</text>
+</svg>
