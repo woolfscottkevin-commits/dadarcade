@@ -90,7 +90,7 @@ var resizeRaf=0;
 window.addEventListener('resize',function(){cancelAnimationFrame(resizeRaf);resizeRaf=requestAnimationFrame(resize);});
 
 // ═══════ CONSTANTS ═══════
-var ROAD_W=2000,SEG_LEN=200,DRAW_DIST=300,CAM_H=1000;
+var ROAD_W=2000,SEG_LEN=200,DRAW_DIST=300,CAM_H=150;
 var BASE_CAM_DEPTH=1/Math.tan(50*Math.PI/180);
 var activeCamDepth=BASE_CAM_DEPTH;
 var MIN_CLIP=10;
@@ -244,11 +244,17 @@ function lsGet(k,d){try{var v=localStorage.getItem('rr_'+k);return v!==null?JSON
 function lsSet(k,v){try{localStorage.setItem('rr_'+k,JSON.stringify(v));}catch(e){}}
 
 // ═══════ PROJECTION ═══════
-function project(wx,wy,wz,cx,cy,cz){
+function project(wz,cz){
+  // Returns scale factor and base screen Y for a given world Z
   var tz=wz-cz;
   if(tz<MIN_CLIP)return null;
-  var s=activeCamDepth/Math.max(tz,MIN_CLIP); // safety clamp
-  return{x:Math.round(W/2+s*wx*W/2),y:Math.round(H/2-s*wy*H/2),w:Math.round(s*ROAD_W*W/2),s:s};
+  var s=activeCamDepth/Math.max(tz,MIN_CLIP);
+  return{
+    x:W/2, // base center — curves and player offset applied separately
+    y:Math.round(H/2+s*CAM_H*H/2), // camera above road pushes road below center
+    w:Math.round(s*ROAD_W*W/2),
+    s:s
+  };
 }
 
 // ═══════ SEGMENTS ═══════
@@ -671,8 +677,7 @@ function update(dt){
         seg.coin.collected=true;
         var pts=multiplierActive?20:10;
         coinScore+=pts;coinsCollected++;
-        var cp=project(seg.coin.x*ROAD_W/2,0,seg.z,player.x*ROAD_W/2,-CAM_H,player.z);
-        if(cp)addFloat(cp.x,cp.y,'+'+pts,'#fd0',14);
+        addFloat(W/2,H/2,'+'+pts,'#fd0',14);
         sfxCoin();
       }
     }
@@ -689,8 +694,7 @@ function update(dt){
         else if(pu==='magnet'){magnetActive=true;magnetTimer=8;nitroActive=false;multiplierActive=false;activeCamDepth=BASE_CAM_DEPTH;}
         else if(pu==='multiplier'){multiplierActive=true;multiplierTimer=10;nitroActive=false;magnetActive=false;activeCamDepth=BASE_CAM_DEPTH;}
         sfxPowerup();
-        var pp=project(seg.powerUp.x*ROAD_W/2,100,seg.z,player.x*ROAD_W/2,-CAM_H,player.z);
-        if(pp)burstParticles(pp.x,pp.y,pu==='nitro'?'#f80':pu==='shield'?'#4af':pu==='magnet'?'#a5f':'#fd0',8);
+        burstParticles(W/2,H/2,pu==='nitro'?'#f80':pu==='shield'?'#4af':pu==='magnet'?'#a5f':'#fd0',8);
       }
     }
   }
@@ -752,18 +756,19 @@ function getEnvColor(prop){
 
 function drawRoad(){
   var env=ENVS[envIdx];
-  // Sky
-  var grad=ctx.createLinearGradient(0,0,0,H/2);
+  // Sky — fill to horizon (roughly H*0.4 for camera looking down at road)
+  var horizon=Math.round(H*0.35);
+  var grad=ctx.createLinearGradient(0,0,0,horizon);
   grad.addColorStop(0,getEnvColor('skyTop'));
   grad.addColorStop(1,getEnvColor('skyBot'));
-  ctx.fillStyle=grad;ctx.fillRect(0,0,W,H/2+50);
+  ctx.fillStyle=grad;ctx.fillRect(0,0,W,horizon+20);
 
-  // Ground fill
+  // Ground fill — from horizon to bottom
   ctx.fillStyle=getEnvColor('ground');
-  ctx.fillRect(0,H/2-10,W,H/2+10);
+  ctx.fillRect(0,horizon,W,H-horizon);
 
   var camX=player.x*ROAD_W/2;
-  var camY=-CAM_H;
+  var camY=CAM_H; // camera ABOVE road (positive Y = up)
   var camZ=player.z;
   var playerSegIdx=Math.floor(player.z/SEG_LEN);
   var drawStart=Math.min(playerSegIdx+DRAW_DIST,segStart+TOTAL_SEGS-1);
@@ -776,15 +781,22 @@ function drawRoad(){
   var rumbleCol=getEnvColor('rumble');
 
   // Collect projected segments (back to front)
+  // Classic pseudo-3D: accumulate curve/hill as screen-space offsets
   var projected=[];
+  var cumDx=0,cumDy=0; // accumulated screen-space offsets
   for(var i=drawStart;i>=drawEnd;i--){
     var seg=getSeg(i);
     if(!seg)continue;
-    cumCurve+=seg.curve;
-    cumHill+=seg.hill;
-    var p=project(-cumCurve*SEG_LEN,cumHill*SEG_LEN,seg.z,camX,camY,camZ);
+    var p=project(seg.z,camZ);
     if(!p)continue;
-    p.segIdx=i;p.seg=seg;p.cumCurve=cumCurve;
+    // Apply curve: shift X in screen space, scaled by projection
+    cumDx+=seg.curve*p.s*2*W;
+    // Apply hill: shift Y in screen space
+    cumDy+=seg.hill*p.s*H*0.5;
+    // Apply player X offset (steering shifts the road)
+    p.x=Math.round(W/2-player.x*p.w+cumDx);
+    p.y=Math.round(p.y+cumDy);
+    p.segIdx=i;p.seg=seg;p.cumCurve=cumDx;p.cumHill=cumDy;
     projected.push(p);
   }
 
@@ -897,21 +909,23 @@ function drawRoad(){
       var t=traffic[ti];
       var tSegIdx=Math.floor(t.z/SEG_LEN);
       if(tSegIdx===idx){
-        var tp=project((t.x-player.x)*ROAD_W/2-cumCurve*SEG_LEN,cumHill*SEG_LEN,t.z,0,camY,camZ);
-        if(tp&&tp.s>0.001){
-          var tw=Math.max(4,tp.s*ROAD_W*t.type.w);
-          var th=Math.max(6,tp.s*t.type.h*40);
-          var tx=tp.x-tw/2;
-          var ty=tp.y-th;
+        // Traffic position relative to road segment
+        var trafficScreenX=cur.x+(t.x-player.x)*cur.w;
+        var ts=cur.s;
+        if(ts>0.001){
+          var tw=Math.max(4,ts*ROAD_W*t.type.w);
+          var th=Math.max(6,ts*t.type.h*40);
+          var tx=trafficScreenX-tw/2;
+          var ty=cur.y-th;
           ctx.fillStyle=t.color;
           ctx.fillRect(tx,ty,tw,th);
           // Windows
           ctx.fillStyle='#aad';
           ctx.fillRect(tx+tw*0.15,ty+th*0.1,tw*0.7,th*0.3);
           // Warning
-          if(player.z<t.z&&t.z-player.z<5*SEG_LEN&&tp.s>0.01){
+          if(player.z<t.z&&t.z-player.z<5*SEG_LEN&&ts>0.01){
             ctx.fillStyle='#f44';ctx.font='bold '+Math.max(10,tw*0.6)+'px Courier New';
-            ctx.textAlign='center';ctx.fillText('!',tp.x,ty-8);
+            ctx.textAlign='center';ctx.fillText('!',trafficScreenX,ty-8);
           }
         }
       }
