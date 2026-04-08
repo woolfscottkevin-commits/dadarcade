@@ -247,7 +247,7 @@ function lsSet(k,v){try{localStorage.setItem('rr_'+k,JSON.stringify(v));}catch(e
 function project(wx,wy,wz,cx,cy,cz){
   var tz=wz-cz;
   if(tz<MIN_CLIP)return null;
-  var s=activeCamDepth/tz;
+  var s=activeCamDepth/Math.max(tz,MIN_CLIP); // safety clamp
   return{x:Math.round(W/2+s*wx*W/2),y:Math.round(H/2-s*wy*H/2),w:Math.round(s*ROAD_W*W/2),s:s};
 }
 
@@ -349,7 +349,15 @@ function spawnTraffic(){
   maxCars=Math.round(maxCars*DIFFS[diffIdx].trafficMul);
   if(traffic.length>=maxCars)return;
   var spdPct=dist<2000?0.6:dist<4000?0.65:dist<6000?0.7:dist<8000?0.75:0.8;
-  var lanes=[-0.6,0,0.6];
+  var allLanes=[-0.6,0,0.6];
+  // Avoid lanes occupied by nearby traffic
+  var freeLanes=allLanes.filter(function(l){
+    for(var j=0;j<traffic.length;j++){
+      if(Math.abs(traffic[j].x-l)<0.2)return false;
+    }
+    return true;
+  });
+  var lanes=freeLanes.length>0?freeLanes:allLanes;
   var z=player.z+(DRAW_DIST+50)*SEG_LEN;
   var types=[{w:0.12,h:20,name:'sedan'},{w:0.15,h:24,name:'suv'},{w:0.2,h:28,name:'truck'}];
   var type=pick(types);
@@ -405,6 +413,7 @@ function updateTraffic(pdt){
         } else {
           crashSlowdown=true;crashTimer=0.5;
           player.speed*=0.3;
+          gameSpeedMul=1.0;slowMoTimer=0; // cancel slow-mo on crash
           shakeAmt=4;shakeTime=0.3;
           burstParticles(W/2,H-100,'#fa0',12);
           sfxCrash();
@@ -524,7 +533,7 @@ function physicsStep(fdt){
 
 // ═══════ GAME UPDATE ═══════
 function update(dt){
-  if(gameState==='MENU')return;
+  if(gameState==='MENU'||gameState==='PAUSED')return;
 
   // Countdown
   if(gameState==='COUNTDOWN'){
@@ -554,6 +563,7 @@ function update(dt){
     crashTimer-=pdt;
     if(crashTimer<=0){
       crashSlowdown=false;
+      gameSpeedMul=1.0;slowMoTimer=0; // reset slow-mo on crash end
       player.invincible=true;player.invTimer=1.5;
     }
   }
@@ -1419,6 +1429,9 @@ canvas.addEventListener('touchcancel',function(e){
 // ═══════ BLUR/FOCUS ═══════
 window.addEventListener('blur',function(){
   if(gameState==='PLAYING'){gameState='PAUSED';stopEngine();}
+  // Clear held states to prevent stuck inputs
+  upHeld=false;downHeld=false;leftHeld=false;rightHeld=false;
+  steerLId=null;steerRId=null;gasId=null;brakeId=null;
 });
 window.addEventListener('focus',function(){canvas.focus();lastTime=performance.now();});
 
