@@ -1412,12 +1412,12 @@ function fgEndHalfInning() {
   } else {
     fg.halfInning = 'top';
     fg.outs = 0;
-    fg.inning++;
     fgResetAtBat();
-    if (fg.inning > INNINGS_PER_GAME) {
+    if (fg.inning >= INNINGS_PER_GAME) {
       fgEndGame();
       return;
     }
+    fg.inning++;
     // Show inning transition
     fg.atBatResult = 'halfover';
     fg.atBatResultTimer = 2.0;
@@ -1737,13 +1737,12 @@ function updatePitch(dt) {
         // Determine ball or strike based on zone
         fg.pitchInZone = fgIsStrikeZone();
         if (fg.pitchInZone) {
-          watchedText = 'Called strike!';
-          watchedTimer = 0.8;
           pitchPhase = 'watched';
           pitchTimer = 0;
+          watchedTimer = 0.8;
           if (fgAddStrike()) return; // strikeout handles transition
+          watchedText = 'Called strike ' + fg.strikes + '!';
         } else {
-          watchedText = 'Ball ' + (fg.balls + 1) + '!';
           pitchPhase = 'watched';
           pitchTimer = 0;
           watchedTimer = 0.8;
@@ -1902,8 +1901,10 @@ function updatePitch(dt) {
 
     // Miss - wait for swing to finish
     if (swingResult && swingResult.quality === 'miss' && batterSwingAnim >= 1) {
-      state = STATES.PITCH_RESULT;
-      resultTimer = 0.5;
+      if (state !== STATES.PITCH_RESULT) {
+        state = STATES.PITCH_RESULT;
+        resultTimer = 0.5;
+      }
     }
     return;
   }
@@ -1942,7 +1943,7 @@ function updatePitchResult(dt) {
 
     if (gameMode === 'fullgame') {
       // Full game: handle at-bat result transitions
-      if (fg.atBatResult === 'strikeout' || fg.atBatResult === 'walk' || fg.atBatResult === 'out') {
+      if (fg.atBatResult === 'strikeout' || fg.atBatResult === 'walk' || fg.atBatResult === 'out' || fg.atBatResult === 'hit') {
         fgNextAtBat();
         return;
       }
@@ -2177,16 +2178,16 @@ function drawHUD() {
     ctx.font = '15px sans-serif';
     ctx.textAlign = 'center';
     // Balls (green dots)
-    var countY = 45;
+    let countY = 45;
     ctx.fillText('B', W/2 - 60, countY);
-    for (var bi = 0; bi < BALLS_FOR_WALK; bi++) {
+    for (let bi = 0; bi < BALLS_FOR_WALK; bi++) {
       ctx.fillStyle = bi < fg.balls ? '#4CAF50' : '#333';
       ctx.beginPath(); ctx.arc(W/2 - 35 + bi * 16, countY - 4, 5, 0, Math.PI*2); ctx.fill();
     }
     // Strikes (red dots)
     ctx.fillStyle = '#FFF';
     ctx.fillText('S', W/2 + 20, countY);
-    for (var si = 0; si < STRIKES_FOR_OUT; si++) {
+    for (let si = 0; si < STRIKES_FOR_OUT; si++) {
       ctx.fillStyle = si < fg.strikes ? '#FF4444' : '#333';
       ctx.beginPath(); ctx.arc(W/2 + 43 + si * 16, countY - 4, 5, 0, Math.PI*2); ctx.fill();
     }
@@ -2194,9 +2195,9 @@ function drawHUD() {
     ctx.fillStyle = '#FFF';
     ctx.font = '13px sans-serif';
     ctx.fillText('OUT', W/2 + 95, countY);
-    for (var oi = 0; oi < OUTS_PER_HALF; oi++) {
+    for (let oi = 0; oi < OUTS_PER_HALF; oi++) {
       ctx.fillStyle = oi < fg.outs ? '#FFD700' : '#333';
-      ctx.beginPath(); ctx.arc(W/2 + 120 + oi * 14, countY - 4, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(W/2 + 120 + oi * 14, countY - 4, 5, 0, Math.PI*2); ctx.fill();
     }
 
     // Top-right: score
@@ -2386,7 +2387,7 @@ function drawGameOver(dt) {
     // Full Game over screen
     if (fg.playerScore > fg.cpuScore) {
       ctx.fillText('YOU WIN!', W/2, 80 - bounce);
-      if (endScreenTimer < 2) { spawnFireworks(W/2, 100); }
+      if (endScreenTimer < 1.5 && particles.length < 10) { spawnFireworks(W/2, 100); }
     } else if (fg.playerScore < fg.cpuScore) {
       ctx.fillStyle = '#AAA';
       ctx.fillText('GAME OVER', W/2, 80 - bounce);
