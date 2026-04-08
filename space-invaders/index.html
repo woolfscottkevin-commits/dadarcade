@@ -10,27 +10,25 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="canonical" href="https://dadarcade.com/space-invaders">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
-canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
 .back-link{position:fixed;top:10px;left:10px;z-index:9999;color:rgba(255,255,255,0.45);text-decoration:none;font-family:'Courier New',monospace;font-size:18px;padding:8px 14px;border-radius:6px;background:rgba(255,255,255,0.08);transition:all 0.3s}.back-link:hover{color:#fff;background:rgba(255,255,255,0.18)}
-.mobile-msg{display:none;position:fixed;inset:0;background:#000;color:#fff;font-family:'Courier New',monospace;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;z-index:10000;gap:1rem}
-.mobile-msg .emoji{font-size:3rem}
-.mobile-msg a{color:#0ff;text-decoration:none}
 </style>
 </head>
 <body>
 <a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
-<div class="mobile-msg" id="mobileMsg"><span class="emoji">🕹️</span><p>This game requires a keyboard.<br>Please visit on a computer!</p><a href="/">Back to Dad Arcade</a></div>
 <canvas id="game" tabindex="0"></canvas>
 <div id="game-info" style="max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem">
 <h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Space Invaders — Free Online Arcade Game</h1>
 <p>Play Space Invaders free in your browser at <a href="/" style="color:#888">Dad Arcade</a>. This modern remake features the classic alien-shooting gameplay plus power-ups, boss fights, and a global leaderboard.</p>
 <details style="margin:0.8rem 0;color:#666"><summary style="cursor:pointer;color:#999">About This Game</summary><div style="padding:0.5rem 0">
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">How to Play</h2>
-<p>Move your ship with the arrow keys (or A/D) and press spacebar to fire. Destroy all aliens to advance to the next wave. The aliens march side to side and drop down — if they reach your level, it's game over.</p>
+<p>Works on desktop and mobile. Move your ship with the arrow keys (or A/D) and press spacebar to fire, or use the on-screen touch controls on mobile. Destroy all aliens to advance to the next wave. The aliens march side to side and drop down — if they reach your level, it's game over.</p>
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Power-Ups</h2>
 <p>Defeated aliens may drop power-ups: Triple Shot fires three bullets in a spread, Rapid Fire lets you hold spacebar for automatic shooting, and Barrier places a shield in front of your ship that blocks one hit.</p>
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Boss Fights</h2>
@@ -68,6 +66,332 @@ window.addEventListener('resize', () => {
   }
 });
 canvas.focus();
+
+// ========== TOUCH INPUT SYSTEM ==========
+let inputMode = 'keyboard';
+window.addEventListener('touchstart', function() { inputMode = 'touch'; });
+window.addEventListener('keydown', function() { inputMode = 'keyboard'; });
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+let iosHintTimer = 0;
+let landscapeHintTimer = 0;
+
+function canvasTouchCoords(touch) {
+  var rect = canvas.getBoundingClientRect();
+  return { x: (touch.clientX - rect.left) / rect.width * W, y: (touch.clientY - rect.top) / rect.height * H };
+}
+function promptText(kb, touch) { return inputMode === 'touch' ? touch : kb; }
+let touchScale = 1.0;
+
+canvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchend', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchcancel', function(e) { e.preventDefault(); }, { passive: false });
+
+function toggleFullscreen() {
+  if (isIOS) return;
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen || function(){}).call(document.documentElement);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+  }
+}
+
+// ========== MULTI-TOUCH VIRTUAL CONTROLS ==========
+let leftTouchId = null, rightTouchId = null, fireTouchId = null;
+let touchLeft = false, touchRight = false, touchFire = false, touchFireReleased = false;
+
+// Button regions (based on W=800, H=600)
+const TOUCH_BTN_Y = H * 0.82;
+const TOUCH_BTN_H = 80;
+const TOUCH_LEFT = { x: 20, y: TOUCH_BTN_Y, w: 80, h: TOUCH_BTN_H };
+const TOUCH_RIGHT = { x: 120, y: TOUCH_BTN_Y, w: 80, h: TOUCH_BTN_H };
+const TOUCH_FIRE = { x: W - 120, y: TOUCH_BTN_Y, w: 100, h: TOUCH_BTN_H };
+
+function hitTest(cx, cy, btn) {
+  return cx >= btn.x && cx <= btn.x + btn.w && cy >= btn.y && cy <= btn.y + btn.h;
+}
+
+// Touch initials entry state
+let touchInitialsLetters = null; // array of {x, y, w, h, idx} for letter boxes
+let touchInitialsSubmit = null; // {x, y, w, h}
+let touchInitialsSkip = null;
+let touchInitialsUp = null; // array of {x, y, w, h, idx}
+let touchInitialsDown = null;
+
+canvas.addEventListener('touchstart', function(e) {
+  if (inputMode !== 'touch') return;
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    var t = e.changedTouches[i];
+    var c = canvasTouchCoords(t);
+    var id = t.identifier;
+
+    // Handle touch UI buttons first
+    // Fullscreen button
+    if (!isIOS && c.x >= W - 56 && c.x <= W - 24 && c.y >= 52 && c.y <= 84) {
+      toggleFullscreen(); return;
+    }
+    // Mute button
+    if (c.x >= W - 34 && c.x <= W - 2 && c.y >= 42 && c.y <= 70) {
+      muted = !muted;
+      if (muted) stopUfoSound();
+      else if (ufo && !ufo.dead) startUfoSound();
+      return;
+    }
+    // Info button
+    if (c.x >= W/2 - 18 && c.x <= W/2 + 18 && c.y >= H - 30 && c.y <= H - 6) {
+      var info = document.getElementById('game-info');
+      if (info) { info.scrollIntoView({behavior:'smooth'}); }
+      return;
+    }
+
+    if (state === TITLE) {
+      initAudio();
+      resetGame();
+      state = PLAYING;
+      accumulator = 0;
+      return;
+    }
+
+    if (state === GAME_OVER) {
+      resetGame();
+      state = PLAYING;
+      accumulator = 0;
+      return;
+    }
+
+    if (state === RANK_DISPLAY) {
+      if (rankDisplayUnlocked) {
+        state = GAME_OVER;
+      }
+      return;
+    }
+
+    if (state === PAUSED) {
+      // Top half resumes, bottom half quits
+      if (c.y < H / 2 + 60) {
+        state = PLAYING;
+        accumulator = 0;
+      } else {
+        state = TITLE;
+        fetchLeaderboard();
+      }
+      return;
+    }
+
+    if (state === INITIALS_ENTRY) {
+      // Check up arrows
+      if (touchInitialsUp) {
+        for (var u = 0; u < touchInitialsUp.length; u++) {
+          var btn = touchInitialsUp[u];
+          if (hitTest(c.x, c.y, btn)) {
+            initialsCursor = btn.idx;
+            initialsChars[btn.idx] = (initialsChars[btn.idx] + 1) % 26;
+            return;
+          }
+        }
+      }
+      // Check down arrows
+      if (touchInitialsDown) {
+        for (var d = 0; d < touchInitialsDown.length; d++) {
+          var btn2 = touchInitialsDown[d];
+          if (hitTest(c.x, c.y, btn2)) {
+            initialsCursor = btn2.idx;
+            initialsChars[btn2.idx] = (initialsChars[btn2.idx] + 25) % 26;
+            return;
+          }
+        }
+      }
+      // Check letter boxes (select cursor)
+      if (touchInitialsLetters) {
+        for (var l = 0; l < touchInitialsLetters.length; l++) {
+          var lb = touchInitialsLetters[l];
+          if (hitTest(c.x, c.y, lb)) {
+            initialsCursor = lb.idx;
+            return;
+          }
+        }
+      }
+      // Check submit
+      if (touchInitialsSubmit && hitTest(c.x, c.y, touchInitialsSubmit)) {
+        if (!initialsSubmitting) {
+          var initials = initialsChars.map(function(ch) { return String.fromCharCode(65 + ch); }).join('');
+          submitScore(initials, score);
+        }
+        return;
+      }
+      // Check skip
+      if (touchInitialsSkip && hitTest(c.x, c.y, touchInitialsSkip)) {
+        state = GAME_OVER;
+        return;
+      }
+      return;
+    }
+
+    // Pause button during gameplay
+    if ((state === PLAYING || state === WAVE_BANNER) && c.x >= W - 90 && c.x <= W - 58 && c.y >= 42 && c.y <= 70) {
+      if (state === PLAYING) { state = PAUSED; }
+      return;
+    }
+
+    // Virtual controls during PLAYING/WAVE_BANNER
+    if (state === PLAYING || state === WAVE_BANNER) {
+      // Scale coords for touch layout (top 80%)
+      var scaledC = { x: c.x, y: c.y / 0.8 };
+      if (hitTest(c.x, c.y, TOUCH_LEFT) && leftTouchId === null) {
+        leftTouchId = id; touchLeft = true;
+      } else if (hitTest(c.x, c.y, TOUCH_RIGHT) && rightTouchId === null) {
+        rightTouchId = id; touchRight = true;
+      } else if (hitTest(c.x, c.y, TOUCH_FIRE) && fireTouchId === null) {
+        fireTouchId = id; touchFire = true; touchFireReleased = false;
+      }
+    }
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  if (inputMode !== 'touch') return;
+  // Allow sliding between left/right buttons
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    var t = e.changedTouches[i];
+    var c = canvasTouchCoords(t);
+    var id = t.identifier;
+    if (id === leftTouchId || id === rightTouchId) {
+      // Check if finger moved to the other button
+      if (hitTest(c.x, c.y, TOUCH_LEFT)) {
+        if (id === rightTouchId) { rightTouchId = null; touchRight = false; }
+        leftTouchId = id; touchLeft = true;
+      } else if (hitTest(c.x, c.y, TOUCH_RIGHT)) {
+        if (id === leftTouchId) { leftTouchId = null; touchLeft = false; }
+        rightTouchId = id; touchRight = true;
+      } else {
+        // Finger left both buttons
+        if (id === leftTouchId) { leftTouchId = null; touchLeft = false; }
+        if (id === rightTouchId) { rightTouchId = null; touchRight = false; }
+      }
+    }
+  }
+}, { passive: false });
+
+function handleTouchRelease(e) {
+  if (inputMode !== 'touch') return;
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    var id = e.changedTouches[i].identifier;
+    if (id === leftTouchId) { leftTouchId = null; touchLeft = false; }
+    if (id === rightTouchId) { rightTouchId = null; touchRight = false; }
+    if (id === fireTouchId) { fireTouchId = null; touchFire = false; touchFireReleased = true; }
+  }
+}
+canvas.addEventListener('touchend', handleTouchRelease, { passive: false });
+canvas.addEventListener('touchcancel', handleTouchRelease, { passive: false });
+
+// ========== DRAW VIRTUAL CONTROLS ==========
+function drawVirtualControls() {
+  if (inputMode !== 'touch') return;
+  if (state !== PLAYING && state !== WAVE_BANNER) return;
+
+  // Left arrow button
+  var lAlpha = touchLeft ? 0.5 : 0.25;
+  ctx.fillStyle = 'rgba(255,255,255,' + lAlpha + ')';
+  ctx.beginPath(); ctx.roundRect(TOUCH_LEFT.x, TOUCH_LEFT.y, TOUCH_LEFT.w, TOUCH_LEFT.h, 10); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 36px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u25C0', TOUCH_LEFT.x + TOUCH_LEFT.w / 2, TOUCH_LEFT.y + TOUCH_LEFT.h / 2 + 12);
+
+  // Right arrow button
+  var rAlpha = touchRight ? 0.5 : 0.25;
+  ctx.fillStyle = 'rgba(255,255,255,' + rAlpha + ')';
+  ctx.beginPath(); ctx.roundRect(TOUCH_RIGHT.x, TOUCH_RIGHT.y, TOUCH_RIGHT.w, TOUCH_RIGHT.h, 10); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 36px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u25B6', TOUCH_RIGHT.x + TOUCH_RIGHT.w / 2, TOUCH_RIGHT.y + TOUCH_RIGHT.h / 2 + 12);
+
+  // Fire button (circle)
+  var fAlpha = touchFire ? 0.5 : 0.25;
+  ctx.fillStyle = 'rgba(255,80,80,' + fAlpha + ')';
+  ctx.beginPath();
+  ctx.arc(TOUCH_FIRE.x + TOUCH_FIRE.w / 2, TOUCH_FIRE.y + TOUCH_FIRE.h / 2, 45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('FIRE', TOUCH_FIRE.x + TOUCH_FIRE.w / 2, TOUCH_FIRE.y + TOUCH_FIRE.h / 2 + 8);
+}
+
+// ========== DRAW TOUCH UI ==========
+function drawTouchUI() {
+  if (inputMode !== 'touch') return;
+
+  // Fullscreen button (non-iOS only)
+  if (!isIOS) {
+    var fsX = W - 40, fsY = 68;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.roundRect(fsX - 16, fsY - 16, 32, 32, 4); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u26F6', fsX, fsY + 5);
+  }
+
+  // iOS Add to Home Screen hint (one-time)
+  if (isIOS && iosHintTimer <= 0 && !localStorage.getItem('si_iosHint')) {
+    iosHintTimer = 4.0;
+    localStorage.setItem('si_iosHint', '1');
+  }
+  if (iosHintTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, iosHintTimer);
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.beginPath(); ctx.roundRect(W/2 - 160, H/2 - 30, 320, 60, 8); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('For fullscreen: tap Share \u2197 \u2192 Add to Home Screen', W/2, H/2 + 5);
+    ctx.restore();
+  }
+
+  // Landscape suggestion
+  if (window.innerHeight > window.innerWidth && landscapeHintTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, landscapeHintTimer);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u21BB Rotate for best experience', W/2, H/2);
+    ctx.restore();
+  }
+
+  // Info button
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.roundRect(W/2 - 18, H - 30, 36, 24, 4); ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2139\uFE0F', W/2, H - 12);
+
+  // Mute button
+  var muteX = W - 18, muteY = 56;
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.roundRect(muteX - 16, muteY - 14, 32, 28, 4); ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(muted ? '\uD83D\uDD07' : '\uD83D\uDD0A', muteX, muteY + 5);
+
+  // Pause button during gameplay
+  if (state === PLAYING || state === WAVE_BANNER) {
+    var pauseX = W - 74, pauseY = 56;
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(pauseX - 16, pauseY - 14, 32, 28, 4); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u23F8', pauseX, pauseY + 6);
+  }
+}
 
 // Game constants
 const PLAYER_SPEED = 300;
@@ -1035,8 +1359,8 @@ function update() {
   // Player movement
   if (invTimer > 0) invTimer -= DT;
   let dx = 0;
-  if (keys.has('ArrowLeft') || keys.has('a')) dx -= 1;
-  if (keys.has('ArrowRight') || keys.has('d')) dx += 1;
+  if (keys.has('ArrowLeft') || keys.has('a') || touchLeft) dx -= 1;
+  if (keys.has('ArrowRight') || keys.has('d') || touchRight) dx += 1;
   player.x += dx * PLAYER_SPEED * DT;
   player.x = Math.max(15, Math.min(W - 15, player.x));
 
@@ -1058,18 +1382,20 @@ function update() {
   // Player shooting
   if (activePowerUp && activePowerUp.type === 'rapid') {
     rapidFireCooldown -= DT;
-    if (keys.has(' ') && rapidFireCooldown <= 0 && playerBullets.length < 3) {
+    if ((keys.has(' ') || touchFire) && rapidFireCooldown <= 0 && playerBullets.length < 3) {
       rapidFireCooldown = RAPID_FIRE_INTERVAL;
       firePlayerBullets();
     }
   } else if (activePowerUp && activePowerUp.type === 'triple') {
-    if (keys.has(' ') && spaceReleased && playerBullets.length === 0) {
+    if ((keys.has(' ') && spaceReleased || touchFireReleased) && playerBullets.length === 0) {
       spaceReleased = false;
+      touchFireReleased = false;
       firePlayerBullets();
     }
   } else {
-    if (keys.has(' ') && spaceReleased && playerBullets.length === 0) {
+    if ((keys.has(' ') && spaceReleased || touchFireReleased) && playerBullets.length === 0) {
       spaceReleased = false;
+      touchFireReleased = false;
       firePlayerBullets();
     }
   }
@@ -1745,78 +2071,98 @@ function render() {
 
   if (state === TITLE) {
     renderTitleScreen();
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
   if (state === INITIALS_ENTRY) {
+    if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
     renderGameplay();
+    if (inputMode === 'touch') { ctx.restore(); }
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, W, H);
     renderInitialsEntry();
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
   if (state === RANK_DISPLAY) {
+    if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
     renderGameplay();
+    if (inputMode === 'touch') { ctx.restore(); }
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(0, 0, W, H);
     renderRankDisplay();
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
   if (state === GAME_OVER) {
+    if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
     renderGameplay();
+    if (inputMode === 'touch') { ctx.restore(); }
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(0, 0, W, H);
     renderGameOverScreen();
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
   if (state === PAUSED) {
+    if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
     renderGameplay();
+    if (inputMode === 'touch') { ctx.restore(); }
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 40px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('PAUSED', W / 2, H / 2);
+    ctx.fillText('PAUSED', W / 2, H / 2 - 20);
     ctx.font = '18px monospace';
-    ctx.fillText('Press P or Esc to Resume', W / 2, H / 2 + 40);
+    ctx.fillText(promptText('Press P or Esc to Resume', 'Tap top to Resume'), W / 2, H / 2 + 20);
+    ctx.fillText(promptText('', 'Tap bottom to Quit'), W / 2, H / 2 + 50);
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
   if (state === WAVE_BANNER) {
+    if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
     renderGameplay();
+    if (inputMode === 'touch') { ctx.restore(); drawVirtualControls(); }
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, inputMode === 'touch' ? W : W, inputMode === 'touch' ? H * 0.8 : H);
 
     // Warning banner for boss
+    var bannerCY = inputMode === 'touch' ? H * 0.4 : H / 2;
     if (warningTimer > 0) {
       ctx.fillStyle = '#f44';
       ctx.font = 'bold 36px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(warningText, W / 2, H / 2 - 20);
+      ctx.fillText(warningText, W / 2, bannerCY - 20);
       if (shieldRegenTimer > 0) {
         ctx.fillStyle = '#0ff';
         ctx.font = '18px monospace';
-        ctx.fillText('SHIELDS RESTORING...', W / 2, H / 2 + 20);
+        ctx.fillText('SHIELDS RESTORING...', W / 2, bannerCY + 20);
       }
     } else {
       ctx.fillStyle = '#0ff';
       ctx.font = 'bold 40px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText('WAVE ' + bannerWave, W / 2, H / 2);
+      ctx.fillText('WAVE ' + bannerWave, W / 2, bannerCY);
     }
+    drawTouchUI();
     ctx.restore();
     return;
   }
 
+  if (inputMode === 'touch') { ctx.save(); ctx.scale(1, 0.8); }
   renderGameplay();
+  if (inputMode === 'touch') { ctx.restore(); drawVirtualControls(); }
 
   // Warning overlay during gameplay
   if (warningTimer > 0 && state === PLAYING) {
@@ -1826,9 +2172,10 @@ function render() {
     ctx.font = 'bold 28px monospace';
     ctx.textAlign = 'center';
     const flash = Math.floor(gameTime * 4) % 2;
-    if (flash) ctx.fillText(warningText, W / 2, H / 2 - 60);
+    if (flash) ctx.fillText(warningText, W / 2, (inputMode === 'touch' ? H * 0.4 - 60 : H / 2 - 60));
   }
 
+  drawTouchUI();
   ctx.restore();
 }
 
@@ -1841,11 +2188,11 @@ function renderTitleScreen() {
   ctx.textAlign = 'center';
   ctx.fillText('SPACE INVADERS', W / 2, 100);
   ctx.font = '20px monospace';
-  ctx.fillText('Press ENTER to Start', W / 2, 160);
+  ctx.fillText(promptText('Press ENTER to Start', 'TAP TO START'), W / 2, 160);
   ctx.font = '16px monospace';
   ctx.fillStyle = '#aaa';
-  ctx.fillText('Arrow Keys / A,D - Move   |   Space - Fire', W / 2, 200);
-  ctx.fillText('P / Esc - Pause   |   M - Mute', W / 2, 225);
+  ctx.fillText(promptText('Arrow Keys / A,D - Move   |   Space - Fire', 'Touch controls on screen'), W / 2, 200);
+  ctx.fillText(promptText('P / Esc - Pause   |   M - Mute', ''), W / 2, 225);
 
   // Alien point values
   drawAlienType0(W / 2 - 80, 250, 0);
@@ -1879,7 +2226,7 @@ function renderGameOverScreen() {
   ctx.font = '24px monospace';
   ctx.fillText('Score: ' + score, W / 2, 180);
   ctx.font = '18px monospace';
-  ctx.fillText('Press ENTER to Restart', W / 2, 210);
+  ctx.fillText(promptText('Press ENTER to Restart', 'TAP TO RESTART'), W / 2, 210);
 
   // Show leaderboard
   renderLeaderboardTable(W / 2, 250);
@@ -1952,46 +2299,86 @@ function renderInitialsEntry() {
   ctx.font = '20px monospace';
   ctx.fillText('Score: ' + score, W / 2, H / 2 - 50);
 
-  // Draw initials boxes
-  const boxW = 50, boxH = 60, gap = 15;
-  const totalW = boxW * 3 + gap * 2;
-  const startX = W / 2 - totalW / 2;
-  const startY = H / 2 - 20;
+  // Draw initials boxes - larger for touch
+  var isTouch = (inputMode === 'touch');
+  var boxW = isTouch ? 80 : 50, boxH = isTouch ? 80 : 60, gap = isTouch ? 20 : 15;
+  var totalW = boxW * 3 + gap * 2;
+  var startX = W / 2 - totalW / 2;
+  var startY = H / 2 - 20;
+  var arrowH = isTouch ? 40 : 20;
 
-  for (let i = 0; i < 3; i++) {
-    const bx = startX + i * (boxW + gap);
-    const by = startY;
+  // Reset touch hit regions
+  touchInitialsLetters = [];
+  touchInitialsUp = [];
+  touchInitialsDown = [];
+
+  for (var i = 0; i < 3; i++) {
+    var bx = startX + i * (boxW + gap);
+    var by = startY;
 
     // Box
-    const isActive = (i === initialsCursor);
+    var isActive = (i === initialsCursor);
     ctx.strokeStyle = isActive ? '#0ff' : '#666';
     ctx.lineWidth = isActive ? 3 : 1;
     ctx.strokeRect(bx, by, boxW, boxH);
 
     // Letter
-    const ch = String.fromCharCode(65 + initialsChars[i]);
+    var ch = String.fromCharCode(65 + initialsChars[i]);
     ctx.fillStyle = isActive ? '#0ff' : '#fff';
-    ctx.font = 'bold 36px monospace';
-    ctx.fillText(ch, bx + boxW / 2, by + boxH / 2 + 12);
+    ctx.font = isTouch ? 'bold 48px monospace' : 'bold 36px monospace';
+    ctx.fillText(ch, bx + boxW / 2, by + boxH / 2 + (isTouch ? 16 : 12));
 
-    // Arrows
-    if (isActive) {
-      ctx.fillStyle = '#0ff';
-      ctx.font = '16px monospace';
-      ctx.fillText('^', bx + boxW / 2, by - 8);
-      ctx.fillText('v', bx + boxW / 2, by + boxH + 18);
-    }
+    // Up arrow
+    ctx.fillStyle = '#0ff';
+    ctx.font = isTouch ? 'bold 28px monospace' : '16px monospace';
+    var upY = by - (isTouch ? 30 : 8);
+    ctx.fillText('\u25B2', bx + boxW / 2, upY);
+    touchInitialsUp.push({ x: bx, y: upY - (isTouch ? 30 : 16), w: boxW, h: arrowH, idx: i });
+
+    // Down arrow
+    var downY = by + boxH + (isTouch ? 30 : 18);
+    ctx.fillText('\u25BC', bx + boxW / 2, downY);
+    touchInitialsDown.push({ x: bx, y: downY - (isTouch ? 14 : 10), w: boxW, h: arrowH, idx: i });
+
+    // Letter box touch region
+    touchInitialsLetters.push({ x: bx, y: by, w: boxW, h: boxH, idx: i });
   }
 
-  ctx.fillStyle = '#aaa';
-  ctx.font = '14px monospace';
-  ctx.fillText('UP/DOWN: Change  LEFT/RIGHT: Move  ENTER: Confirm', W / 2, H / 2 + 80);
-  ctx.fillText('ESC: Skip', W / 2, H / 2 + 100);
+  // Submit and Skip buttons
+  var btnW = 140, btnH = 44;
+  var submitX = W / 2 - btnW - 10;
+  var skipX = W / 2 + 10;
+  var btnY = startY + boxH + (isTouch ? 65 : 50);
+
+  if (isTouch) {
+    // SUBMIT button
+    ctx.fillStyle = '#0a0';
+    ctx.beginPath(); ctx.roundRect(submitX, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('SUBMIT', submitX + btnW / 2, btnY + btnH / 2 + 7);
+    touchInitialsSubmit = { x: submitX, y: btnY, w: btnW, h: btnH };
+
+    // SKIP button
+    ctx.fillStyle = '#444';
+    ctx.beginPath(); ctx.roundRect(skipX, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('SKIP', skipX + btnW / 2, btnY + btnH / 2 + 7);
+    touchInitialsSkip = { x: skipX, y: btnY, w: btnW, h: btnH };
+  } else {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px monospace';
+    ctx.fillText('UP/DOWN: Change  LEFT/RIGHT: Move  ENTER: Confirm', W / 2, H / 2 + 80);
+    ctx.fillText('ESC: Skip', W / 2, H / 2 + 100);
+    touchInitialsSubmit = null;
+    touchInitialsSkip = null;
+  }
 
   if (initialsSubmitting) {
     ctx.fillStyle = '#ff0';
     ctx.font = '16px monospace';
-    ctx.fillText('Submitting...', W / 2, H / 2 + 130);
+    ctx.fillText('Submitting...', W / 2, isTouch ? btnY + btnH + 30 : H / 2 + 130);
   }
 }
 
@@ -2020,7 +2407,7 @@ function renderRankDisplay() {
     if (flash) {
       ctx.fillStyle = '#aaa';
       ctx.font = '16px monospace';
-      ctx.fillText('Press Enter to continue', W / 2, H / 2 + 50);
+      ctx.fillText(promptText('Press Enter to continue', 'Tap to continue'), W / 2, H / 2 + 50);
     }
   }
 }
@@ -2361,6 +2748,9 @@ window.addEventListener('blur', () => {
     // Do NOT pause. Just clear keys.
   }
   keys.clear();
+  // Clear touch states
+  leftTouchId = null; rightTouchId = null; fireTouchId = null;
+  touchLeft = false; touchRight = false; touchFire = false; touchFireReleased = false;
   stopUfoSound();
 });
 
@@ -2378,6 +2768,14 @@ function loop(now) {
   lastTime = now;
 
   const delta = Math.min(rawDelta, 0.1);
+
+  // Touch UI timers
+  if (iosHintTimer > 0) iosHintTimer -= delta;
+  if (landscapeHintTimer > 0) landscapeHintTimer -= delta;
+  if (inputMode === 'touch' && window.innerHeight > window.innerWidth && landscapeHintTimer <= 0 && !localStorage.getItem('si_landscapeHint')) {
+    landscapeHintTimer = 3.0;
+    localStorage.setItem('si_landscapeHint', '1');
+  }
 
   if (state === PLAYING) {
     accumulator += delta;
@@ -2443,13 +2841,6 @@ requestAnimationFrame(loop);
 
 })();
 
-function checkMobile(){
-  const m=document.getElementById('mobileMsg'),c=document.getElementById('game');
-  if(window.innerWidth<768){m.style.display='flex';c.style.display='none';}
-  else{m.style.display='none';c.style.display='block';}
-}
-checkMobile();
-window.addEventListener('resize',checkMobile);
 </script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
 </body>
