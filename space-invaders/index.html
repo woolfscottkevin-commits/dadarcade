@@ -1575,7 +1575,7 @@ function update() {
         m.timer += DT;
         // Sine curve toward player, moving down
         const targetX = m.targetX || player.x;
-        a.x = m.startX + (targetX - m.startX) * Math.min(m.timer * 0.5 * settings.gameSpeed, 1) + Math.sin(m.timer * 3) * 40;
+        a.x = m.startX + (targetX - m.startX) * Math.min(m.timer * 0.5 * settings.gameSpeed, 1) + Math.sin(m.timer * 3 * settings.gameSpeed) * 40;
         a.y = m.startY + m.timer * 200 * settings.gameSpeed;
         // Check shield contact
         for (const sh of shields) {
@@ -1593,7 +1593,7 @@ function update() {
         }
       } else if (m.phase === 'return') {
         m.returnTimer += DT;
-        const t = Math.min(m.returnTimer / 1.0, 1);
+        const t = Math.min(m.returnTimer * settings.gameSpeed / 1.0, 1);
         a.x = m.startX + (a.homeX + a.offsetX + groupOffsetX - m.startX) * t;
         a.y = m.startY + (a.homeY + a.offsetY - m.startY) * t;
         if (t >= 1) {

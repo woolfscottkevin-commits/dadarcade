@@ -679,15 +679,19 @@ function generateProblem(flr, isBoss) {
   answers.add(correct);
   let range = 5;
   let tries = 0;
-  while (answers.size < 4) {
+  while (answers.size < 4 && tries < 50) {
     const offset = random(1, range) * (Math.random() < 0.5 ? 1 : -1);
     const wrong = correct + offset;
     if (!answers.has(wrong) && wrong >= 0) {
       answers.add(wrong);
     }
     tries++;
-    if (tries > 5 && answers.size < 4) { range = 10; tries = 0; }
+    if (tries > 5 && answers.size < 4) { range = 10; }
+    if (tries > 20 && answers.size < 4) { range = 20; }
   }
+  // Safety: fill remaining slots with sequential values if loop exhausted
+  let fill = 1;
+  while (answers.size < 4) { if (!answers.has(correct + fill)) answers.add(correct + fill); fill++; }
 
   // Shuffle
   const arr = Array.from(answers);

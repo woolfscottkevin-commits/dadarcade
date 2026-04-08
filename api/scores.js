@@ -51,7 +51,7 @@ function getCorsHeaders(req) {
   let origin;
   if (process.env.VERCEL_ENV !== 'production') {
     origin = '*';
-  } else if (allowed.some(a => reqOrigin.startsWith(a) || reqOrigin === a)) {
+  } else if (allowed.includes(reqOrigin)) {
     origin = reqOrigin;
   } else {
     origin = 'https://dadarcade.com';
