@@ -202,8 +202,14 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
     <h2 style="color:#ff4444">🐛 Report a Glitch</h2>
     <p>Found something broken? Let us know!</p>
     <form onsubmit="submitFeedback(event,'bug')">
-      <label for="bug-name">Your Name (optional)</label>
-      <input type="text" id="bug-name" placeholder="Player 1" maxlength="50">
+      <label for="bug-name">Which game?</label>
+      <select id="bug-name" style="width:100%;background:#111;border:2px solid #333;border-radius:8px;padding:0.75rem;color:#fff;font-family:'Courier New',monospace;font-size:1rem;margin-bottom:1rem;appearance:none;-webkit-appearance:none;cursor:pointer">
+        <option value="Space Invaders">Space Invaders</option>
+        <option value="Math Quest RPG">Math Quest RPG</option>
+        <option value="Snake">Snake</option>
+        <option value="Backyard Baseball">Backyard Baseball</option>
+        <option value="Website / Other">Website / Other</option>
+      </select>
       <label for="bug-msg">What happened?</label>
       <textarea id="bug-msg" placeholder="I was playing and then..." required maxlength="2000"></textarea>
       <button type="submit" class="modal-submit bug-submit" id="bug-submit">Send Report</button>
