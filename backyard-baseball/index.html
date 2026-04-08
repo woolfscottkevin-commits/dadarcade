@@ -539,6 +539,48 @@ function sndRunnerStep(ctx) {
   src.start(t); src.stop(t + 0.03);
 }
 
+function sndGlovePop(ctx) {
+  // Sharp pop for catching the ball
+  var t = ctx.currentTime;
+  var bufSize = ctx.sampleRate * 0.04;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i/bufSize);
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1200; f.Q.value = 1;
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.35, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
+  src.connect(f).connect(g).connect(ctx.destination);
+  src.start(t); src.stop(t + 0.04);
+}
+
+function sndThrowWhoosh(ctx) {
+  // Quick whoosh for a throw
+  var t = ctx.currentTime;
+  var bufSize = ctx.sampleRate * 0.08;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i/bufSize) * 0.3;
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 800;
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.25, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+  src.connect(f).connect(g).connect(ctx.destination);
+  src.start(t); src.stop(t + 0.08);
+}
+
+function sndUmpireOut(ctx) {
+  // "Out!" umpire call — descending two-tone
+  var t = ctx.currentTime;
+  var osc = ctx.createOscillator(); osc.type = 'triangle';
+  osc.frequency.setValueAtTime(550, t);
+  osc.frequency.exponentialRampToValueAtTime(350, t + 0.15);
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.35, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.15);
+}
+
 function sndSideRetired(ctx) {
   const t = ctx.currentTime;
   [523, 440, 349].forEach(function(freq, i) {
@@ -1576,6 +1618,151 @@ var BASE_WORLD_POS = [
   { x: -0.45, z: 0.5 }    // 3rd
 ];
 
+// ========== FIELDER POSITIONS ==========
+// Active fielders (animate on outs)
+var FIELDER_POS = [
+  { name: 'LF', x: -0.8, z: 1.8, active: true },
+  { name: 'CF', x: 0, z: 2.0, active: true },
+  { name: 'RF', x: 0.8, z: 1.8, active: true },
+  { name: '1B', x: 0.5, z: 0.55, active: true }
+];
+// Decorative fielders (static)
+var FIELDER_DECOR = [
+  { name: 'SS', x: -0.25, z: 0.65 },
+  { name: '2B', x: 0.2, z: 0.7 },
+  { name: '3B', x: -0.5, z: 0.45 },
+  { name: 'C', x: 0, z: -0.08 }
+  // Pitcher drawn separately
+];
+
+// Fielding animation state
+var fieldingAnim = {
+  active: false,        // is fielding sequence playing?
+  phase: 'none',        // 'chase', 'catch', 'throw', 'throwcatch', 'done'
+  timer: 0,
+  fielderIdx: -1,       // which FIELDER_POS index is fielding
+  startX: 0, startZ: 0, // fielder start position
+  targetX: 0, targetZ: 0, // ball landing position
+  currentX: 0, currentZ: 0, // current animated position
+  isGroundBall: false,  // ground ball → throw to 1B
+  throwProgress: 0,     // 0-1 for throw animation
+  throwBallX: 0, throwBallZ: 0, throwBallY: 0 // thrown ball position
+};
+
+function fieldingReset() {
+  fieldingAnim.active = false;
+  fieldingAnim.phase = 'none';
+  fieldingAnim.timer = 0;
+  fieldingAnim.fielderIdx = -1;
+}
+
+function fieldingStart(landX, landZ, isGroundBall) {
+  // Find nearest active fielder
+  var bestIdx = -1, bestDist = 999;
+  for (var i = 0; i < FIELDER_POS.length; i++) {
+    var f = FIELDER_POS[i];
+    var dx = f.x - landX, dz = f.z - landZ;
+    var d = Math.sqrt(dx*dx + dz*dz);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  if (bestIdx < 0) return false;
+
+  fieldingAnim.active = true;
+  fieldingAnim.phase = 'chase';
+  fieldingAnim.timer = 0;
+  fieldingAnim.fielderIdx = bestIdx;
+  fieldingAnim.startX = FIELDER_POS[bestIdx].x;
+  fieldingAnim.startZ = FIELDER_POS[bestIdx].z;
+  fieldingAnim.targetX = landX;
+  fieldingAnim.targetZ = landZ;
+  fieldingAnim.currentX = fieldingAnim.startX;
+  fieldingAnim.currentZ = fieldingAnim.startZ;
+  fieldingAnim.isGroundBall = isGroundBall;
+  fieldingAnim.throwProgress = 0;
+  return true;
+}
+
+function fieldingUpdate(dt) {
+  if (!fieldingAnim.active) return false;
+  fieldingAnim.timer += dt;
+
+  if (fieldingAnim.phase === 'chase') {
+    // Fielder runs toward ball landing spot (~0.8s)
+    var chaseDur = 0.8;
+    var t = Math.min(1, fieldingAnim.timer / chaseDur);
+    var et = easeInOut(t);
+    fieldingAnim.currentX = lerp(fieldingAnim.startX, fieldingAnim.targetX, et);
+    fieldingAnim.currentZ = lerp(fieldingAnim.startZ, fieldingAnim.targetZ, et);
+    if (t >= 1) {
+      fieldingAnim.phase = 'catch';
+      fieldingAnim.timer = 0;
+      ball.active = false; // hide ball — fielder has it now
+      playSound(sndGlovePop);
+    }
+    return true;
+  }
+
+  if (fieldingAnim.phase === 'catch') {
+    // Brief catch pause (0.2s)
+    if (fieldingAnim.timer >= 0.2) {
+      if (fieldingAnim.isGroundBall) {
+        // Throw to 1B
+        fieldingAnim.phase = 'throw';
+        fieldingAnim.timer = 0;
+        fieldingAnim.throwProgress = 0;
+        playSound(sndThrowWhoosh);
+      } else {
+        // Fly ball catch — done
+        fieldingAnim.phase = 'done';
+        fieldingAnim.timer = 0;
+        playSound(sndUmpireOut);
+      }
+    }
+    return true;
+  }
+
+  if (fieldingAnim.phase === 'throw') {
+    // Throw ball to 1B (0.5s)
+    var throwDur = 0.5;
+    var t = Math.min(1, fieldingAnim.timer / throwDur);
+    fieldingAnim.throwProgress = t;
+    // Ball arc from fielder to 1B
+    var fb1x = FIELDER_POS[3].x; // 1B position
+    var fb1z = FIELDER_POS[3].z;
+    fieldingAnim.throwBallX = lerp(fieldingAnim.currentX, fb1x, t);
+    fieldingAnim.throwBallZ = lerp(fieldingAnim.currentZ, fb1z, t);
+    fieldingAnim.throwBallY = Math.sin(t * Math.PI) * 0.3; // arc
+    if (t >= 1) {
+      fieldingAnim.phase = 'throwcatch';
+      fieldingAnim.timer = 0;
+      playSound(sndGlovePop);
+    }
+    return true;
+  }
+
+  if (fieldingAnim.phase === 'throwcatch') {
+    // 1B catches (0.2s pause)
+    if (fieldingAnim.timer >= 0.2) {
+      fieldingAnim.phase = 'done';
+      fieldingAnim.timer = 0;
+      playSound(sndUmpireOut);
+    }
+    return true;
+  }
+
+  if (fieldingAnim.phase === 'done') {
+    // Brief display (0.3s), then resolve
+    if (fieldingAnim.timer >= 0.3) {
+      fieldingAnim.active = false;
+      fieldingAnim.phase = 'none';
+      return false; // signals: animation complete
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function fgAddStrike() {
   fg.strikes++;
   if (fg.strikes >= STRIKES_FOR_OUT) {
@@ -1803,6 +1990,7 @@ function fgEndGame() {
 }
 
 function startNextPitch() {
+  fieldingReset(); // ensure no stale fielding animation
   pitchNum++;
   if (gameMode === 'derby' && pitchNum > totalPitches) {
     endDerby();
@@ -2297,9 +2485,12 @@ function updatePitch(dt) {
                 swingResult.isHR = false;
                 ball.isHR = false;
               }
-              swingResult.resultText = fgOutcome.label;
+              // Start fielding animation for the out
+              var isGround = dist < 200; // ground balls → throw to 1B
+              fieldingStart(ball.worldX, ball.worldZ, isGround);
+              swingResult.resultText = ''; // clear — will show "OUT!" after catch
               swingResult.resultColor = '#999';
-              swingResult.commentary = pick(OKAY_COMMENTS);
+              swingResult.commentary = '';
             } else if (fgOutcome.type === 'hit') {
               // If physics said HR but roll says hit, undo HR stats (Bug C/F fix)
               if (swingResult.isHR) {
@@ -2316,9 +2507,14 @@ function updatePitch(dt) {
             }
           }
 
-          // Go to result
-          state = STATES.PITCH_RESULT;
-          resultTimer = gameMode === 'fullgame' ? 1.0 : 0.5;
+          // Go to result (delay if fielding animation is playing)
+          if (fieldingAnim.active) {
+            // Don't transition yet — fielding animation will handle it
+            // Stay in PLAYING/swing phase, fieldingUpdate will run
+          } else {
+            state = STATES.PITCH_RESULT;
+            resultTimer = gameMode === 'fullgame' ? 1.0 : 0.5;
+          }
         }
       }
 
@@ -2336,6 +2532,20 @@ function updatePitch(dt) {
       if (state !== STATES.PITCH_RESULT) {
         state = STATES.PITCH_RESULT;
         resultTimer = 0.5;
+      }
+    }
+
+    // Fielding animation update (runs after ball lands on outs)
+    if (fieldingAnim.active) {
+      var stillRunning = fieldingUpdate(dt);
+      if (!stillRunning) {
+        // Fielding sequence complete — now show "OUT!" and go to result
+        swingResult.resultText = fg.atBatResult === 'out' ? 'OUT!' : swingResult.resultText;
+        swingResult.resultColor = '#FF4444';
+        swingResult.commentary = pick(OKAY_COMMENTS);
+        state = STATES.PITCH_RESULT;
+        resultTimer = 0.8;
+        fieldingReset();
       }
     }
     return;
@@ -3208,6 +3418,46 @@ function drawGameObjects(dt) {
   // Pitcher
   const pitcherPos = worldToScreen(0, 1.0);
   drawPitcher(pitcherPos.x, pitcherPos.y, pitcherPos.scale, teamColor, pitcherPhase === 'windup' ? pitcherAnim : 0);
+
+  // Fielders (Full Game only)
+  if (gameMode === 'fullgame') {
+    // Determine fielding team color (opposite of batting team)
+    var fieldTeamColor = teamColor;
+    if (fg.isPlayerBatting) {
+      // Player batting → CPU fields → CPU color
+      var cpuCI = (colorIdx + 3) % TEAM_COLORS.length;
+      fieldTeamColor = TEAM_COLORS[cpuCI].hex;
+    }
+    // else: CPU batting → player fields → player teamColor
+
+    // Active fielders
+    for (var fi = 0; fi < FIELDER_POS.length; fi++) {
+      var fp = FIELDER_POS[fi];
+      var fx = fp.x, fz = fp.z;
+      // If this fielder is animating (chasing ball), use animated position
+      if (fieldingAnim.active && fieldingAnim.fielderIdx === fi) {
+        fx = fieldingAnim.currentX;
+        fz = fieldingAnim.currentZ;
+      }
+      var fscreen = worldToScreen(fx, fz);
+      drawBobblehead(fscreen.x, fscreen.y, fscreen.scale * 0.6, fieldTeamColor, 1, 0, 'none', 0, true);
+    }
+
+    // Decorative infielders (smaller, static)
+    for (var di = 0; di < FIELDER_DECOR.length; di++) {
+      var dp = FIELDER_DECOR[di];
+      var dscreen = worldToScreen(dp.x, dp.z);
+      drawBobblehead(dscreen.x, dscreen.y, dscreen.scale * 0.45, fieldTeamColor, 1, 0, 'none', 0, true);
+    }
+
+    // Throw animation ball
+    if (fieldingAnim.active && (fieldingAnim.phase === 'throw' || fieldingAnim.phase === 'throwcatch')) {
+      var tbScreen = worldToScreen(fieldingAnim.throwBallX, fieldingAnim.throwBallZ);
+      var tbLift = fieldingAnim.throwBallY * tbScreen.scale * 200;
+      var tbSize = 4 * tbScreen.scale + 2;
+      drawBall(tbScreen.x, tbScreen.y - tbLift, tbSize);
+    }
+  }
 
   // Ball shadow and ball (during travel)
   if (ball.active) {
