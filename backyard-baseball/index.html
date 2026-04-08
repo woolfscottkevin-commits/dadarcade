@@ -490,6 +490,55 @@ function sndSafe(ctx) {
   });
 }
 
+function sndRunScored(ctx) {
+  // Ascending arpeggio for a run scoring
+  var t = ctx.currentTime;
+  [523, 659, 784].forEach(function(freq, i) {
+    var osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    var g = ctx.createGain(); g.gain.setValueAtTime(0.2, t + i * 0.08);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.08 + 0.2);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i * 0.08); osc.stop(t + i * 0.08 + 0.2);
+  });
+}
+
+function sndGrandSlam(ctx) {
+  // Big fanfare for grand slam (4 runs)
+  var t = ctx.currentTime;
+  [392, 494, 587, 659, 784, 880, 1047, 1175].forEach(function(freq, i) {
+    var osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    var g = ctx.createGain(); g.gain.setValueAtTime(0.3, t + i * 0.07);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.07 + 0.25);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i * 0.07); osc.stop(t + i * 0.07 + 0.25);
+  });
+  // Big crowd cheer
+  var bufSize = ctx.sampleRate * 1.5;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var j = 0; j < bufSize; j++) data[j] = (Math.random() * 2 - 1) * (1 - j/bufSize);
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var sg = ctx.createGain(); sg.gain.setValueAtTime(0.5, t);
+  sg.gain.exponentialRampToValueAtTime(0.01, t + 1.5);
+  src.connect(sg).connect(ctx.destination);
+  src.start(t); src.stop(t + 1.5);
+}
+
+function sndRunnerStep(ctx) {
+  // Quick noise burst for runner footsteps
+  var t = ctx.currentTime;
+  var bufSize = ctx.sampleRate * 0.03;
+  var buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+  var data = buf.getChannelData(0);
+  for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i/bufSize) * 0.3;
+  var src = ctx.createBufferSource(); src.buffer = buf;
+  var f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 600;
+  var g = ctx.createGain(); g.gain.setValueAtTime(0.2, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.03);
+  src.connect(f).connect(g).connect(ctx.destination);
+  src.start(t); src.stop(t + 0.03);
+}
+
 function sndSideRetired(ctx) {
   const t = ctx.currentTime;
   [523, 440, 349].forEach(function(freq, i) {
@@ -665,6 +714,14 @@ let fg = {
   cpuSpeedUp: false, // hold space to speed up CPU at-bats
   // Box score: runs per half-inning [top, bottom] for each inning
   boxScore: [[0,0],[0,0],[0,0]],
+  // Baserunner state
+  bases: [false, false, false], // [1st, 2nd, 3rd] — true = occupied
+  lastHitType: '', // 'single', 'double', 'triple' — for runner advancement
+  runsThisPlay: 0, // runs scored on current play (for celebration text)
+  runsThisPlayTimer: 0, // timer for "RUN SCORES!" display
+  // Runner animation: array of { fromBase, toBase, progress, scored }
+  runnerAnims: [],
+  runnerAnimTimer: 0,
   // Tiebreaker state
   tiebreaker: false,
   tbSwingsLeft: 0,
@@ -1378,6 +1435,12 @@ function startFullGame() {
   fg.waitingForPitch = false;
   fg.cpuSpeedUp = false;
   fg.boxScore = [[0,0],[0,0],[0,0]];
+  fg.bases = [false, false, false];
+  fg.lastHitType = '';
+  fg.runsThisPlay = 0;
+  fg.runsThisPlayTimer = 0;
+  fg.runnerAnims = [];
+  fg.runnerAnimTimer = 0;
   fg.tiebreaker = false;
   fg.tbSwingsLeft = 0;
   fg.tbPlayerDist = 0;
@@ -1396,6 +1459,122 @@ function fgResetAtBat() {
   fg.atBatResult = '';
   fg.atBatResultTimer = 0;
 }
+
+// ========== BASERUNNER LOGIC ==========
+function fgAdvanceRunners(hitType) {
+  // Advance runners based on hit type. Returns number of runs scored.
+  // hitType: 'walk', 'single', 'double', 'triple', 'hr'
+  var runsScored = 0;
+  var newBases = [false, false, false];
+  var anims = []; // runner animations: { fromBase, toBase, scored }
+
+  if (hitType === 'hr') {
+    // Everyone scores!
+    for (var i = 2; i >= 0; i--) {
+      if (fg.bases[i]) {
+        runsScored++;
+        anims.push({ fromBase: i, toBase: 'home', scored: true });
+      }
+    }
+    runsScored++; // batter scores
+    anims.push({ fromBase: -1, toBase: 'home', scored: true }); // batter from plate
+    newBases = [false, false, false];
+  } else if (hitType === 'triple') {
+    // All runners score, batter to 3rd
+    for (var i = 2; i >= 0; i--) {
+      if (fg.bases[i]) {
+        runsScored++;
+        anims.push({ fromBase: i, toBase: 'home', scored: true });
+      }
+    }
+    anims.push({ fromBase: -1, toBase: 2, scored: false }); // batter to 3rd
+    newBases = [false, false, true];
+  } else if (hitType === 'double') {
+    // Runners advance 2, batter to 2nd
+    if (fg.bases[2]) { runsScored++; anims.push({ fromBase: 2, toBase: 'home', scored: true }); } // 3rd scores
+    if (fg.bases[1]) { runsScored++; anims.push({ fromBase: 1, toBase: 'home', scored: true }); } // 2nd scores
+    if (fg.bases[0]) {
+      newBases[2] = true; // 1st → 3rd
+      anims.push({ fromBase: 0, toBase: 2, scored: false });
+    }
+    newBases[1] = true; // batter → 2nd
+    anims.push({ fromBase: -1, toBase: 1, scored: false });
+  } else if (hitType === 'single') {
+    // Runners advance 1, batter to 1st
+    if (fg.bases[2]) { runsScored++; anims.push({ fromBase: 2, toBase: 'home', scored: true }); } // 3rd scores
+    if (fg.bases[1]) {
+      newBases[2] = true; // 2nd → 3rd
+      anims.push({ fromBase: 1, toBase: 2, scored: false });
+    }
+    if (fg.bases[0]) {
+      newBases[1] = true; // 1st → 2nd
+      anims.push({ fromBase: 0, toBase: 1, scored: false });
+    }
+    newBases[0] = true; // batter → 1st
+    anims.push({ fromBase: -1, toBase: 0, scored: false });
+  } else if (hitType === 'walk') {
+    // Force advancement only — runners move only if pushed
+    if (fg.bases[0] && fg.bases[1] && fg.bases[2]) {
+      // Bases loaded walk — 3rd scores
+      runsScored++;
+      anims.push({ fromBase: 2, toBase: 'home', scored: true });
+      newBases = [true, true, true]; // everyone shifts up, batter fills 1st
+      anims.push({ fromBase: 1, toBase: 2, scored: false });
+      anims.push({ fromBase: 0, toBase: 1, scored: false });
+    } else if (fg.bases[0] && fg.bases[1]) {
+      // 1st & 2nd → force to 2nd & 3rd
+      newBases[2] = true;
+      newBases[1] = true;
+      newBases[0] = true;
+      anims.push({ fromBase: 1, toBase: 2, scored: false });
+      anims.push({ fromBase: 0, toBase: 1, scored: false });
+    } else if (fg.bases[0]) {
+      // 1st → force to 2nd
+      newBases[2] = fg.bases[2];
+      newBases[1] = true;
+      newBases[0] = true;
+      anims.push({ fromBase: 0, toBase: 1, scored: false });
+    } else {
+      // No force — batter to 1st, others stay
+      newBases[0] = true;
+      newBases[1] = fg.bases[1];
+      newBases[2] = fg.bases[2];
+    }
+    anims.push({ fromBase: -1, toBase: 0, scored: false }); // batter to 1st
+  }
+
+  fg.bases = newBases;
+  fg.runnerAnims = anims;
+  fg.runnerAnimTimer = 0;
+  return runsScored;
+}
+
+function fgScoreRuns(runs) {
+  if (runs <= 0) return;
+  if (fg.isPlayerBatting) fg.playerScore += runs;
+  else fg.cpuScore += runs;
+  // Box score
+  var bsInn = fg.inning - 1;
+  var bsHalf = fg.halfInning === 'top' ? 0 : 1;
+  if (fg.boxScore[bsInn]) fg.boxScore[bsInn][bsHalf] += runs;
+  // Celebration
+  fg.runsThisPlay = runs;
+  fg.runsThisPlayTimer = 1.5;
+  // Sound
+  if (runs >= 4) {
+    playSound(sndGrandSlam);
+  } else if (runs >= 1) {
+    playSound(sndRunScored);
+  }
+  playSound(sndRunnerStep);
+}
+
+// Base world positions for rendering
+var BASE_WORLD_POS = [
+  { x: 0.45, z: 0.5 },   // 1st
+  { x: 0, z: 1.0 },       // 2nd
+  { x: -0.45, z: 0.5 }    // 3rd
+];
 
 function fgAddStrike() {
   fg.strikes++;
@@ -1485,6 +1664,8 @@ function fgNextAtBat() {
 
 function fgEndHalfInning() {
   playSound(sndSideRetired);
+  fg.bases = [false, false, false]; // clear bases on side change
+  fg.runnerAnims = [];
   if (fg.halfInning === 'top') {
     fg.halfInning = 'bottom';
     fg.outs = 0;
@@ -2091,6 +2272,7 @@ function updatePitch(dt) {
           if (gameMode === 'fullgame' && !fg.tiebreaker) {
             var fgOutcome = fgRollHitOutcome(swingResult.quality, dist);
             fg.atBatResult = fgOutcome.type; // 'hr', 'hit', 'out'
+            fg.lastHitType = fgOutcome.hitType || ''; // 'single', 'double', 'triple', 'hr', 'out'
             if (fgOutcome.type === 'hr') {
               // Override to HR if roll says so (even if physics didn't clear fence)
               if (!swingResult.isHR) {
@@ -2196,17 +2378,25 @@ function updatePitchResult(dt) {
 
     if (gameMode === 'fullgame') {
       // Full game: handle at-bat result transitions
-      if (fg.atBatResult === 'strikeout' || fg.atBatResult === 'walk' || fg.atBatResult === 'out' || fg.atBatResult === 'hit') {
+      if (fg.atBatResult === 'strikeout' || fg.atBatResult === 'out') {
+        fgNextAtBat();
+        return;
+      }
+      if (fg.atBatResult === 'walk') {
+        var walkRuns = fgAdvanceRunners('walk');
+        fgScoreRuns(walkRuns);
+        fgNextAtBat();
+        return;
+      }
+      if (fg.atBatResult === 'hit') {
+        var hitRuns = fgAdvanceRunners(fg.lastHitType);
+        fgScoreRuns(hitRuns);
         fgNextAtBat();
         return;
       }
       if (fg.atBatResult === 'hr') {
-        if (fg.isPlayerBatting) fg.playerScore++;
-        else fg.cpuScore++;
-        // Box score
-        var bsInn = fg.inning - 1;
-        var bsHalf = fg.halfInning === 'top' ? 0 : 1;
-        if (fg.boxScore[bsInn]) fg.boxScore[bsInn][bsHalf]++;
+        var hrRuns = fgAdvanceRunners('hr');
+        fgScoreRuns(hrRuns);
         fgNextAtBat();
         return;
       }
@@ -2478,6 +2668,26 @@ function drawHUD() {
       ctx.beginPath(); ctx.arc(W/2 + 120 + oi * 14, countY - 4, 5, 0, Math.PI*2); ctx.fill();
     }
 
+    // Mini diamond (base indicator) — between count and score
+    var dX = W/2 + 165, dY = 30, dS = 8;
+    // Diamond shape — 4 bases as small squares
+    ctx.save();
+    ctx.translate(dX, dY);
+    // 2nd base (top)
+    ctx.fillStyle = fg.bases[1] ? '#FFD700' : '#444';
+    ctx.fillRect(-dS/2, -dS*1.4 - dS/2, dS, dS);
+    // 3rd base (left)
+    ctx.fillStyle = fg.bases[2] ? '#FFD700' : '#444';
+    ctx.fillRect(-dS*1.4 - dS/2, -dS/2, dS, dS);
+    // 1st base (right)
+    ctx.fillStyle = fg.bases[0] ? '#FFD700' : '#444';
+    ctx.fillRect(dS*1.4 - dS/2, -dS/2, dS, dS);
+    // Home (bottom) — always outlined
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-dS/2, dS*1.4 - dS/2, dS, dS);
+    ctx.restore();
+
     // Top-right: score + box score
     ctx.textAlign = 'right';
     ctx.fillStyle = '#FFF';
@@ -2669,6 +2879,24 @@ function drawHUD() {
     ctx.globalAlpha = Math.min(1, tutorialTextTimer * 2);
     ctx.fillText(tutorialText, W/2, 250);
     ctx.globalAlpha = 1;
+  }
+
+  // "RUN SCORES!" celebration text
+  if (gameMode === 'fullgame' && fg.runsThisPlayTimer > 0 && fg.runsThisPlay > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, fg.runsThisPlayTimer * 2);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    var runText = fg.runsThisPlay >= 4 ? 'GRAND SLAM!!!' :
+                  fg.runsThisPlay >= 3 ? fg.runsThisPlay + ' RUNS SCORE!' :
+                  fg.runsThisPlay >= 2 ? fg.runsThisPlay + ' RUNS SCORE!' :
+                  'RUN SCORES!';
+    // Float upward as timer decreases
+    var floatY = 280 - (1.5 - fg.runsThisPlayTimer) * 20;
+    ctx.fillText(runText, W/2, floatY);
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   drawFloatTexts();
@@ -3007,6 +3235,24 @@ function drawGameObjects(dt) {
     drawBall(ground.x, ground.y - liftPixels, ballSize);
   }
 
+  // Baserunners on bases (Full Game only)
+  if (gameMode === 'fullgame' && !fg.tiebreaker) {
+    var runnerColor = teamColor;
+    if (!fg.isPlayerBatting) {
+      // CPU runners use CPU team color
+      var cpuColorIdx = (colorIdx + 3) % TEAM_COLORS.length;
+      runnerColor = TEAM_COLORS[cpuColorIdx].hex;
+    }
+    for (var bi = 0; bi < 3; bi++) {
+      if (fg.bases[bi]) {
+        var bpos = worldToScreen(BASE_WORLD_POS[bi].x, BASE_WORLD_POS[bi].z);
+        // Offset slightly so runner stands next to base, not on it
+        var offsetX = bi === 0 ? 10 : bi === 2 ? -10 : 0;
+        drawBobblehead(bpos.x + offsetX, bpos.y - 5, bpos.scale * 0.7, runnerColor, 1, 0, 'none', 0, true);
+      }
+    }
+  }
+
   // Batter
   const batterPos = worldToScreen(0.15, 0);
   // Bobble spring physics
@@ -3071,6 +3317,7 @@ function update(dt) {
   if (goldFlash > 0) goldFlash -= dt;
   if (newBestHitFlash > 0) newBestHitFlash -= dt;
   if (goalFlashTime > 0) goalFlashTime -= dt;
+  if (fg.runsThisPlayTimer > 0) fg.runsThisPlayTimer -= dt;
 
   updateParticles(dt);
   updateFloatTexts(dt);
