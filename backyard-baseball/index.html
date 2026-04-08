@@ -3109,7 +3109,11 @@ function gameLoop(timestamp) {
     if (dt > 0.1) dt = 0.1;
 
     if (state !== STATES.MENU && state !== STATES.PAUSED) {
-      gameTime += dt;
+      let dtForGameTime = dt;
+      if (gameMode === 'fullgame' && !fg.isPlayerBatting && fg.cpuSpeedUp) {
+        dtForGameTime *= 2;
+      }
+      gameTime += dtForGameTime;
     }
 
     update(dt);
