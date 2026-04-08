@@ -185,6 +185,12 @@ const MISS_COMMENTS = ["Swing and a miss!", "Whiffed!", "Struck out swinging!"];
 
 const STATES = { MENU: 0, PLAYING: 1, PITCH_RESULT: 2, REPLAY: 3, GAME_OVER: 4, PAUSED: 5 };
 
+// Full Game constants
+const STRIKES_FOR_OUT = 3;
+const BALLS_FOR_WALK = 4;
+const OUTS_PER_HALF = 3;
+const INNINGS_PER_GAME = 3;
+
 // ========== CANVAS SETUP ==========
 const canvas = document.getElementById('gc');
 const ctx = canvas.getContext('2d');
@@ -417,6 +423,48 @@ function sndGoalChime(ctx) {
   });
 }
 
+function sndUmpireStrike(ctx) {
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(500, t);
+  osc.frequency.exponentialRampToValueAtTime(300, t + 0.12);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.35, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.12);
+}
+
+function sndUmpireBall(ctx) {
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.setValueAtTime(350, t);
+  osc.frequency.setValueAtTime(350, t + 0.08);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.25, t);
+  g.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+  osc.connect(g).connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.1);
+}
+
+function sndStrikeout(ctx) {
+  const t = ctx.currentTime;
+  [600, 500, 350].forEach(function(freq, i) {
+    const osc = ctx.createOscillator(); osc.type = 'triangle'; osc.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.3, t + i*0.1);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i*0.1 + 0.15);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i*0.1); osc.stop(t + i*0.1 + 0.15);
+  });
+}
+
+function sndWalk(ctx) {
+  const t = ctx.currentTime;
+  [400, 500, 600, 700].forEach(function(freq, i) {
+    const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.2, t + i*0.08);
+    g.gain.exponentialRampToValueAtTime(0.01, t + i*0.08 + 0.12);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t + i*0.08); osc.stop(t + i*0.08 + 0.12);
+  });
+}
+
 function toggleMute() {
   muted = !muted;
   try { localStorage.setItem('bb_muted', muted ? 'true' : 'false'); } catch(e) {}
@@ -458,8 +506,12 @@ let gameTime = 0;
 let paused = false;
 let lastTimestamp = 0;
 
+// Game mode
+let gameMode = 'derby'; // 'derby' | 'fullgame'
+
 // Menu state
-let menuRow = 0; // 0=name, 1=color, 2=difficulty
+let menuRow = 0; // 0=mode, 1=name, 2=color, 3=difficulty
+let menuModeIdx = 0; // 0=derby, 1=fullgame
 let playerName = ['A','A','A'];
 let nameCol = 0;
 let colorIdx = 0;
@@ -552,6 +604,21 @@ let tutorialTextTimer = 0;
 
 // HUD float texts
 let floatTexts = [];
+
+// ========== FULL GAME STATE ==========
+let fg = {
+  balls: 0,
+  strikes: 0,
+  outs: 0,
+  inning: 1,
+  halfInning: 'top', // 'top' = player bats, 'bottom' = CPU bats (future)
+  playerScore: 0,
+  cpuScore: 0,
+  isPlayerBatting: true,
+  atBatResult: '', // 'strikeout', 'walk', 'hit', 'out', 'hr'
+  atBatResultTimer: 0,
+  pitchInZone: false // whether current pitch is in strike zone
+};
 
 // ========== INIT ==========
 function initFromStorage() {
@@ -1029,29 +1096,38 @@ function drawMenu() {
     ctx.restore();
   }
 
-  // Mode buttons
+  // Mode selection (Row 0)
+  const modeY = 135;
+  const modeNames = ['HOME RUN DERBY', 'FULL GAME'];
+  const modeDescs = ['Swing for distance!', '3-inning game'];
   ctx.textAlign = 'center';
-  // Active mode
-  ctx.fillStyle = '#FFD700';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('HOME RUN DERBY', W/2, 130);
-
-  ctx.fillStyle = '#555';
-  ctx.font = '16px sans-serif';
-  ctx.fillText('FULL GAME — Coming Soon', W/2 - 150, 160);
-  ctx.fillText('2-PLAYER — Coming Soon', W/2 + 150, 160);
+  modeNames.forEach(function(name, i) {
+    const mx = W/2 + (i === 0 ? -120 : 120);
+    const isActive = menuModeIdx === i;
+    ctx.fillStyle = isActive ? '#FFD700' : (menuRow === 0 ? '#AAA' : '#555');
+    ctx.font = (isActive ? 'bold ' : '') + '20px sans-serif';
+    ctx.fillText(name, mx, modeY);
+    if (isActive) {
+      ctx.fillStyle = '#999';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(modeDescs[i], mx, modeY + 16);
+    }
+  });
+  ctx.fillStyle = '#444';
+  ctx.font = '14px sans-serif';
+  ctx.fillText('2-PLAYER \u2014 Coming Soon', W/2 + 350, modeY);
 
   // Player setup
-  const setupY = 200;
+  const setupY = 175;
 
-  // Row 0: Name
+  // Row 1: Name
   const nameY = setupY;
-  ctx.fillStyle = menuRow === 0 ? '#FFF' : '#888';
+  ctx.fillStyle = menuRow === 1 ? '#FFF' : '#888';
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Name:', W/2 - 80, nameY);
   for (let i = 0; i < 3; i++) {
-    const active = menuRow === 0 && nameCol === i;
+    const active = menuRow === 1 && nameCol === i;
     ctx.fillStyle = active ? '#FFD700' : '#FFF';
     ctx.font = (active ? 'bold ' : '') + '24px monospace';
     const lx = W/2 + (i - 1) * 35;
@@ -1069,9 +1145,9 @@ function drawMenu() {
     }
   }
 
-  // Row 1: Color
+  // Row 2: Color
   const colorY = setupY + 50;
-  ctx.fillStyle = menuRow === 1 ? '#FFF' : '#888';
+  ctx.fillStyle = menuRow === 2 ? '#FFF' : '#888';
   ctx.font = '18px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Color:', W/2 - 130, colorY);
@@ -1092,12 +1168,12 @@ function drawMenu() {
   drawBobblehead(prevX, prevY, 1.0, TEAM_COLORS[colorIdx].hex, 1, 0, 'none',
     Math.sin(menuBobbleTime * 3) * 0.04, true);
 
-  // Row 2: Difficulty
+  // Row 3: Difficulty
   const diffY = setupY + 110;
   DIFFICULTIES.forEach(function(d, i) {
     const dx = W/2 + (i - 1) * 150;
     const active = i === diffIdx;
-    ctx.fillStyle = active ? '#FFD700' : (menuRow === 2 ? '#AAA' : '#666');
+    ctx.fillStyle = active ? '#FFD700' : (menuRow === 3 ? '#AAA' : '#666');
     ctx.font = (active ? 'bold ' : '') + '20px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(d.name, dx, diffY);
@@ -1109,7 +1185,7 @@ function drawMenu() {
   });
 
   // Row indicator
-  const rowYs = [nameY - 8, colorY - 6, diffY - 8];
+  const rowYs = [modeY - 8, nameY - 8, colorY - 6, diffY - 8];
   ctx.fillStyle = '#FFD700';
   ctx.font = '16px sans-serif';
   ctx.textAlign = 'right';
@@ -1194,9 +1270,204 @@ function startDerby() {
   startNextPitch();
 }
 
+// ========== FULL GAME MODE ==========
+function startFullGame() {
+  gameMode = 'fullgame';
+  state = STATES.PLAYING;
+  // Reset shared pitch state
+  pitchNum = 0;
+  totalPitches = 999; // effectively unlimited in full game
+  totalDistance = 0;
+  bestHit = 0;
+  newBestHitFlash = 0;
+  hrCount = 0;
+  hitCount = 0;
+  whiffCount = 0;
+  contactDistances = [];
+  maxConsecutiveMisses = 0;
+  currentConsecutiveMisses = 0;
+  longestHR = 0;
+  longestHRPositions = [];
+  goalsReached = [];
+  goalFlashTime = 0;
+  goalFlashText = '';
+  particles = [];
+  floatTexts = [];
+  ball.active = false;
+  pitchPhase = 'none';
+  swung = false;
+  swingPhase = 0;
+  batterSwingAnim = 0;
+  batterSwingType = 'none';
+  bobbleAngle = 0;
+  bobbleVel = 0;
+  pitcherAnim = 0;
+  pitcherPhase = 'idle';
+  endScreenTimer = 0;
+  endReplayDone = false;
+  showStats = false;
+  endReplayPlaying = false;
+
+  // Reset full game state
+  fg.balls = 0;
+  fg.strikes = 0;
+  fg.outs = 0;
+  fg.inning = 1;
+  fg.halfInning = 'top';
+  fg.playerScore = 0;
+  fg.cpuScore = 0;
+  fg.isPlayerBatting = true;
+  fg.atBatResult = '';
+  fg.atBatResultTimer = 0;
+  fg.pitchInZone = false;
+
+  startCrowdMurmur();
+  lsSet('lastInitials', playerName);
+
+  startNextPitch();
+}
+
+function fgResetAtBat() {
+  fg.balls = 0;
+  fg.strikes = 0;
+  fg.atBatResult = '';
+  fg.atBatResultTimer = 0;
+}
+
+function fgAddStrike() {
+  fg.strikes++;
+  if (fg.strikes >= STRIKES_FOR_OUT) {
+    // Strikeout!
+    fg.outs++;
+    fg.atBatResult = 'strikeout';
+    fg.atBatResultTimer = 1.0;
+    playSound(sndStrikeout);
+    playSound(sndCrowdGroan);
+    commentaryText = 'STRUCK OUT!';
+    resultText = 'STRIKE THREE!';
+    resultColor = '#FF4444';
+    state = STATES.PITCH_RESULT;
+    resultTimer = 1.0;
+    return true; // at-bat is over
+  }
+  playSound(sndUmpireStrike);
+  return false;
+}
+
+function fgAddBall() {
+  fg.balls++;
+  if (fg.balls >= BALLS_FOR_WALK) {
+    // Walk!
+    fg.atBatResult = 'walk';
+    fg.atBatResultTimer = 1.0;
+    playSound(sndWalk);
+    commentaryText = 'Take your base!';
+    resultText = 'WALK!';
+    resultColor = '#4CAF50';
+    state = STATES.PITCH_RESULT;
+    resultTimer = 1.0;
+    return true; // at-bat is over
+  }
+  playSound(sndUmpireBall);
+  return false;
+}
+
+function fgIsStrikeZone() {
+  // Generous strike zone: pitch is "in the zone" ~65% of the time
+  // This keeps walks rare without changing the 4-ball rule
+  // In future sprints, this will be based on actual pitch location
+  return Math.random() < 0.65;
+}
+
+function fgNextAtBat() {
+  fgResetAtBat();
+  if (fg.outs >= OUTS_PER_HALF) {
+    fgEndHalfInning();
+    return;
+  }
+  startNextPitch();
+}
+
+function fgEndHalfInning() {
+  // For Sprint 1: only player bats (top half only)
+  // Toggle half inning
+  if (fg.halfInning === 'top') {
+    fg.halfInning = 'bottom';
+    fg.outs = 0;
+    fgResetAtBat();
+    // For now, auto-resolve CPU half (Sprint 3 will add real CPU batting)
+    // CPU scores 0-2 runs randomly based on difficulty
+    const cpuRuns = diffIdx === 0 ? (Math.random() < 0.3 ? 1 : 0) :
+                    diffIdx === 1 ? (Math.random() < 0.5 ? 1 : 0) :
+                    Math.floor(Math.random() * 3);
+    fg.cpuScore += cpuRuns;
+    // Show brief transition
+    fg.atBatResult = 'halfover';
+    fg.atBatResultTimer = 2.0;
+    commentaryText = cpuRuns > 0 ? 'CPU scored ' + cpuRuns + ' run' + (cpuRuns > 1 ? 's' : '') + '!' : 'CPU held scoreless!';
+    resultText = 'SIDE RETIRED';
+    resultColor = '#FFF';
+    state = STATES.PITCH_RESULT;
+    resultTimer = 2.0;
+  } else {
+    fg.halfInning = 'top';
+    fg.outs = 0;
+    fg.inning++;
+    fgResetAtBat();
+    if (fg.inning > INNINGS_PER_GAME) {
+      fgEndGame();
+      return;
+    }
+    // Show inning transition
+    fg.atBatResult = 'halfover';
+    fg.atBatResultTimer = 2.0;
+    commentaryText = '';
+    resultText = 'TOP ' + fgInningLabel(fg.inning);
+    resultColor = '#FFD700';
+    state = STATES.PITCH_RESULT;
+    resultTimer = 2.0;
+  }
+}
+
+function fgInningLabel(n) {
+  if (n === 1) return '1st';
+  if (n === 2) return '2nd';
+  if (n === 3) return '3rd';
+  return n + 'th';
+}
+
+function fgEndGame() {
+  state = STATES.GAME_OVER;
+  endScreenTimer = 0;
+  endReplayDone = longestHRPositions.length === 0;
+  endReplayPlaying = !endReplayDone;
+  endReplayPositions = longestHRPositions.slice();
+  endReplayIdx = 0;
+  endReplayTimer = 0;
+  showStats = false;
+  stopCrowdMurmur();
+
+  const g = lsGet('gamesPlayed', 0);
+  lsSet('gamesPlayed', g + 1);
+  gamesPlayed = g + 1;
+
+  // Save full game stats
+  const fgWins = lsGet('fg_wins', 0);
+  const fgLosses = lsGet('fg_losses', 0);
+  if (fg.playerScore > fg.cpuScore) {
+    lsSet('fg_wins', fgWins + 1);
+    endIsNewHigh = true; // reuse for "YOU WIN!"
+  } else if (fg.playerScore < fg.cpuScore) {
+    lsSet('fg_losses', fgLosses + 1);
+    endIsNewHigh = false;
+  } else {
+    endIsNewHigh = false; // tie
+  }
+}
+
 function startNextPitch() {
   pitchNum++;
-  if (pitchNum > totalPitches) {
+  if (gameMode === 'derby' && pitchNum > totalPitches) {
     endDerby();
     return;
   }
@@ -1308,6 +1579,14 @@ function doSwing(pressGameTime) {
     swingResult.resultText = 'STRIKE!';
     swingResult.resultColor = '#FF4444';
     swingResult.commentary = pick(MISS_COMMENTS);
+    if (gameMode === 'fullgame') {
+      // Track strike - fgAddStrike will handle strikeout transition
+      if (fgAddStrike()) {
+        // Strikeout already set state to PITCH_RESULT
+        // Still need the swing animation to play
+      }
+      swingResult.resultText = 'STRIKE ' + fg.strikes + '!';
+    }
     pitchPhase = 'swing';
     return;
   }
@@ -1341,6 +1620,12 @@ function doSwing(pressGameTime) {
       swingResult.resultColor = '#FFD700';
     }
     swingResult.commentary = 'Foul ball!';
+
+    // Full game: foul = strike (unless already at 2 strikes)
+    if (gameMode === 'fullgame' && fg.strikes < 2) {
+      fgAddStrike(); // won't cause strikeout since strikes < 2
+      swingResult.resultText += ' (Strike ' + fg.strikes + ')';
+    }
 
     // Contact effects
     const batter = worldToScreen(0, 0);
@@ -1447,12 +1732,30 @@ function updatePitch(dt) {
 
     // Check if ball passed without swing
     if (pitchTimer > pitchTravelDur + 0.3) {
-      // Watched it go by
-      pitchPhase = 'watched';
-      pitchTimer = 0;
       ball.active = false;
-      watchedText = 'Watched it go by \u2014 ' + (totalPitches - pitchNum) + ' pitches left';
-      watchedTimer = 1.0;
+      if (gameMode === 'fullgame') {
+        // Determine ball or strike based on zone
+        fg.pitchInZone = fgIsStrikeZone();
+        if (fg.pitchInZone) {
+          watchedText = 'Called strike!';
+          watchedTimer = 0.8;
+          pitchPhase = 'watched';
+          pitchTimer = 0;
+          if (fgAddStrike()) return; // strikeout handles transition
+        } else {
+          watchedText = 'Ball ' + (fg.balls + 1) + '!';
+          pitchPhase = 'watched';
+          pitchTimer = 0;
+          watchedTimer = 0.8;
+          if (fgAddBall()) return; // walk handles transition
+        }
+      } else {
+        // Derby mode: just watching
+        pitchPhase = 'watched';
+        pitchTimer = 0;
+        watchedText = 'Watched it go by \u2014 ' + (totalPitches - pitchNum) + ' pitches left';
+        watchedTimer = 1.0;
+      }
     }
     return;
   }
@@ -1567,9 +1870,24 @@ function updatePitch(dt) {
 
           distanceText = '+' + formatNum(dist) + ' ft';
 
+          // Full game: classify at-bat result
+          if (gameMode === 'fullgame') {
+            if (swingResult.isHR) {
+              fg.atBatResult = 'hr';
+            } else if (dist < 280) {
+              // Fly out, ground ball, dribbler = out in full game
+              fg.atBatResult = 'out';
+              fg.outs++;
+              swingResult.resultText += ' \u2014 OUT!';
+            } else {
+              // Single/Double/Triple = hit (no runners yet, just track it)
+              fg.atBatResult = 'hit';
+            }
+          }
+
           // Go to result
           state = STATES.PITCH_RESULT;
-          resultTimer = 0.5;
+          resultTimer = gameMode === 'fullgame' ? 1.0 : 0.5;
         }
       }
 
@@ -1603,7 +1921,7 @@ function updatePitchResult(dt) {
   resultTimer -= dt;
 
   if (resultTimer <= 0) {
-    // Check if we should replay
+    // Check if we should replay (HR in either mode)
     if (swingResult && swingResult.isHR && !swingResult.isFoul) {
       if (hrCount <= 2) {
         startReplay('full');
@@ -1621,7 +1939,29 @@ function updatePitchResult(dt) {
         return;
       }
     }
-    startNextPitch();
+
+    if (gameMode === 'fullgame') {
+      // Full game: handle at-bat result transitions
+      if (fg.atBatResult === 'strikeout' || fg.atBatResult === 'walk' || fg.atBatResult === 'out') {
+        fgNextAtBat();
+        return;
+      }
+      if (fg.atBatResult === 'hr') {
+        fg.playerScore++;
+        fgNextAtBat();
+        return;
+      }
+      if (fg.atBatResult === 'halfover') {
+        // Half-inning transition done, start next at-bat
+        fgResetAtBat();
+        startNextPitch();
+        return;
+      }
+      // Default: continue at-bat (e.g., foul ball, just go to next pitch)
+      startNextPitch();
+    } else {
+      startNextPitch();
+    }
   }
 }
 
@@ -1825,22 +2165,63 @@ function drawHUD() {
   ctx.textAlign = 'left';
   ctx.fillText(playerName.join(''), 48, 28);
 
-  // Top-center: pitch count
-  ctx.fillStyle = '#FFF';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('PITCH ' + Math.min(pitchNum, totalPitches) + ' / ' + totalPitches, W/2, 30);
+  if (gameMode === 'fullgame') {
+    // Top-center: inning + ball/strike/out count
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.textAlign = 'center';
+    var innLabel = (fg.halfInning === 'top' ? '\u25B2' : '\u25BC') + ' ' + fgInningLabel(fg.inning);
+    ctx.fillText(innLabel, W/2, 25);
 
-  // Top-right: totals
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#FFF';
-  ctx.font = 'bold 18px sans-serif';
-  ctx.fillText('TOTAL: ' + formatNum(totalDistance) + ' ft', W - 20, 25);
+    // Ball-Strike-Out count
+    ctx.font = '15px sans-serif';
+    ctx.textAlign = 'center';
+    // Balls (green dots)
+    var countY = 45;
+    ctx.fillText('B', W/2 - 60, countY);
+    for (var bi = 0; bi < BALLS_FOR_WALK; bi++) {
+      ctx.fillStyle = bi < fg.balls ? '#4CAF50' : '#333';
+      ctx.beginPath(); ctx.arc(W/2 - 35 + bi * 16, countY - 4, 5, 0, Math.PI*2); ctx.fill();
+    }
+    // Strikes (red dots)
+    ctx.fillStyle = '#FFF';
+    ctx.fillText('S', W/2 + 20, countY);
+    for (var si = 0; si < STRIKES_FOR_OUT; si++) {
+      ctx.fillStyle = si < fg.strikes ? '#FF4444' : '#333';
+      ctx.beginPath(); ctx.arc(W/2 + 43 + si * 16, countY - 4, 5, 0, Math.PI*2); ctx.fill();
+    }
+    // Outs (yellow dots)
+    ctx.fillStyle = '#FFF';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('OUT', W/2 + 95, countY);
+    for (var oi = 0; oi < OUTS_PER_HALF; oi++) {
+      ctx.fillStyle = oi < fg.outs ? '#FFD700' : '#333';
+      ctx.beginPath(); ctx.arc(W/2 + 120 + oi * 14, countY - 4, 4, 0, Math.PI*2); ctx.fill();
+    }
 
-  const prevBest = lsGet('derbyBest_' + diffIdx, 0);
-  ctx.fillStyle = '#888';
-  ctx.font = '13px sans-serif';
-  ctx.fillText('BEST: ' + formatNum(prevBest) + ' ft', W - 20, 42);
+    // Top-right: score
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('YOU ' + fg.playerScore + ' - ' + fg.cpuScore + ' CPU', W - 20, 25);
+  } else {
+    // Derby mode: pitch count
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PITCH ' + Math.min(pitchNum, totalPitches) + ' / ' + totalPitches, W/2, 30);
+
+    // Top-right: totals
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText('TOTAL: ' + formatNum(totalDistance) + ' ft', W - 20, 25);
+
+    var prevBest = lsGet('derbyBest_' + diffIdx, 0);
+    ctx.fillStyle = '#888';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('BEST: ' + formatNum(prevBest) + ' ft', W - 20, 42);
+  }
 
   // Mute icon
   ctx.fillStyle = '#666';
@@ -1869,7 +2250,7 @@ function drawHUD() {
   ctx.fillText(DIFFICULTIES[diffIdx].name, W - 20, H - 10);
 
   // Progress meter
-  drawProgressMeter(H - 35);
+  if (gameMode === 'derby') drawProgressMeter(H - 35);
 
   // Commentary text
   if (swingResult && swingResult.commentary && state !== STATES.REPLAY) {
@@ -2000,30 +2381,66 @@ function drawGameOver(dt) {
   ctx.fillStyle = '#FFD700';
   ctx.font = 'bold 40px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('DERBY OVER!', W/2, 80 - bounce);
 
-  // Total distance HUGE
-  ctx.fillStyle = '#FFF';
-  ctx.font = 'bold 72px sans-serif';
-  ctx.fillText(formatNum(totalDistance) + ' ft', W/2, 170);
+  if (gameMode === 'fullgame') {
+    // Full Game over screen
+    if (fg.playerScore > fg.cpuScore) {
+      ctx.fillText('YOU WIN!', W/2, 80 - bounce);
+      if (endScreenTimer < 2) { spawnFireworks(W/2, 100); }
+    } else if (fg.playerScore < fg.cpuScore) {
+      ctx.fillStyle = '#AAA';
+      ctx.fillText('GAME OVER', W/2, 80 - bounce);
+    } else {
+      ctx.fillText('TIE GAME!', W/2, 80 - bounce);
+    }
 
-  // High score
-  if (endIsNewHigh) {
-    const flash = 0.6 + 0.4 * Math.sin(endScreenTimer * 6);
-    ctx.globalAlpha = flash;
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillText('\uD83C\uDFC6 NEW HIGH SCORE!', W/2, 210);
-    ctx.globalAlpha = 1;
-  } else {
-    const prevBest = lsGet('derbyBest_' + diffIdx, 0);
+    // Score HUGE
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 72px sans-serif';
+    ctx.fillText(fg.playerScore + ' - ' + fg.cpuScore, W/2, 170);
+
+    // Win/loss message
     ctx.fillStyle = '#AAA';
-    ctx.font = '18px sans-serif';
-    ctx.fillText('Your best: ' + formatNum(prevBest) + ' ft', W/2, 210);
+    ctx.font = '20px sans-serif';
+    if (fg.playerScore > fg.cpuScore) {
+      ctx.fillText('Great game, ' + playerName.join('') + '!', W/2, 210);
+    } else if (fg.playerScore < fg.cpuScore) {
+      ctx.fillText("Great game! You'll get 'em next time!", W/2, 210);
+    } else {
+      ctx.fillText('What a battle!', W/2, 210);
+    }
+
+    // Stats
+    ctx.fillStyle = '#888';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(INNINGS_PER_GAME + ' innings \u2022 ' + hrCount + ' HR \u2022 ' + hitCount + ' hits', W/2, 245);
+
+  } else {
+    ctx.fillText('DERBY OVER!', W/2, 80 - bounce);
+
+    // Total distance HUGE
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 72px sans-serif';
+    ctx.fillText(formatNum(totalDistance) + ' ft', W/2, 170);
+
+    // High score
+    if (endIsNewHigh) {
+      const flash = 0.6 + 0.4 * Math.sin(endScreenTimer * 6);
+      ctx.globalAlpha = flash;
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText('\uD83C\uDFC6 NEW HIGH SCORE!', W/2, 210);
+      ctx.globalAlpha = 1;
+    } else {
+      const prevBest = lsGet('derbyBest_' + diffIdx, 0);
+      ctx.fillStyle = '#AAA';
+      ctx.font = '18px sans-serif';
+      ctx.fillText('Your best: ' + formatNum(prevBest) + ' ft', W/2, 210);
+    }
   }
 
-  // Progress meter final
-  drawProgressMeter(240);
+  // Progress meter final (derby only)
+  if (gameMode === 'derby') drawProgressMeter(240);
 
   // Longest blast
   if (longestHR > 0) {
@@ -2400,7 +2817,8 @@ canvas.addEventListener('keydown', function(e) {
   if (state === STATES.GAME_OVER) {
     e.preventDefault();
     if (key === 'Enter') {
-      startDerby();
+      if (gameMode === 'fullgame') startFullGame();
+      else startDerby();
     } else if (key === 'Escape') {
       state = STATES.MENU;
       stopCrowdMurmur();
@@ -2452,17 +2870,22 @@ function handleMenuInput(key) {
   if (key === 'Enter') {
     initAudio();
     playSound(sndMenuClick);
-    startDerby();
+    gameMode = menuModeIdx === 0 ? 'derby' : 'fullgame';
+    if (gameMode === 'derby') {
+      startDerby();
+    } else {
+      startFullGame();
+    }
     return;
   }
 
   if (key === 'ArrowUp') {
-    menuRow = (menuRow - 1 + 3) % 3;
+    menuRow = (menuRow - 1 + 4) % 4;
     playSound(sndMenuClick);
     return;
   }
   if (key === 'ArrowDown') {
-    menuRow = (menuRow + 1) % 3;
+    menuRow = (menuRow + 1) % 4;
     playSound(sndMenuClick);
     return;
   }
@@ -2472,24 +2895,25 @@ function handleMenuInput(key) {
     playSound(sndMenuClick);
 
     if (menuRow === 0) {
-      // Name: change letter at nameCol
+      // Mode selection
+      menuModeIdx = (menuModeIdx + dir + 2) % 2;
+    } else if (menuRow === 1) {
+      // Name: move cursor between letters
       if (key === 'ArrowLeft') {
         nameCol = (nameCol - 1 + 3) % 3;
       } else {
         nameCol = (nameCol + 1) % 3;
       }
-    } else if (menuRow === 1) {
-      colorIdx = (colorIdx + dir + TEAM_COLORS.length) % TEAM_COLORS.length;
     } else if (menuRow === 2) {
+      colorIdx = (colorIdx + dir + TEAM_COLORS.length) % TEAM_COLORS.length;
+    } else if (menuRow === 3) {
       diffIdx = (diffIdx + dir + DIFFICULTIES.length) % DIFFICULTIES.length;
     }
     return;
   }
 
-  // Name row: up/down for letter change
-  if (menuRow === 0) {
-    if (key === 'ArrowUp' || key === 'ArrowDown') return; // handled above
-    // Allow typing letters
+  // Name row: allow typing letters
+  if (menuRow === 1) {
     if (/^[a-zA-Z]$/.test(key)) {
       playerName[nameCol] = key.toUpperCase();
       nameCol = Math.min(2, nameCol + 1);
