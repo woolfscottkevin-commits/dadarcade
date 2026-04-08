@@ -578,6 +578,9 @@ let pitchPhase = 'none'; // 'pre', 'windup', 'travel', 'swing', 'result', 'watch
 let pitchTimer = 0;
 let pitchTravelDur = 0;
 let pitchDriftDir = 1; // 1 or -1, randomized per pitch
+let pitchIsInZone = false; // determined once per pitch for consistency
+let cpuWillSwing = false; // CPU decision made once per pitch
+let cpuSwingTimeOffset = 0; // CPU timing offset decided once per pitch
 let pitchStartTime = 0;
 let optimalTime = 0;
 let swung = false;
@@ -1885,6 +1888,17 @@ function updatePitch(dt) {
       pitcherAnim = 0;
       pitcherPhase = 'idle';
       pitchDriftDir = Math.random() > 0.5 ? 1 : -1;
+      // Determine strike zone ONCE per pitch (Bug D fix)
+      pitchIsInZone = fgIsStrikeZone();
+      // CPU swing decision made ONCE per pitch (Bug B fix)
+      if (gameMode === 'fullgame' && !fg.isPlayerBatting && !fg.tiebreaker) {
+        var cpuParams = CPU_BATTING[diffIdx] || CPU_BATTING[0];
+        var swingChance = pitchIsInZone ? cpuParams.swingProb : cpuParams.swingProb * 0.3;
+        cpuWillSwing = Math.random() < swingChance;
+        cpuSwingTimeOffset = (Math.random() - 0.5) * cpuParams.timingVariance * 2;
+      } else {
+        cpuWillSwing = false;
+      }
       playSound(sndPitchWhoosh);
     }
     return;
@@ -1917,20 +1931,12 @@ function updatePitch(dt) {
     if (tutorialTextTimer > 0) tutorialTextTimer -= dt;
 
     // CPU auto-swing during defense (CPU is batting)
-    if (gameMode === 'fullgame' && !fg.isPlayerBatting && !swung) {
-      var cpuParams = CPU_BATTING[diffIdx] || CPU_BATTING[0];
-      // CPU decides to swing when ball is near optimal time
-      var cpuTimingWindow = pitchTravelDur * 0.85; // CPU evaluates slightly before optimal
-      if (pitchTimer >= cpuTimingWindow && pitchTimer < pitchTravelDur) {
-        // Decide: swing or take?
-        var inZone = fgIsStrikeZone();
-        var swingChance = inZone ? cpuParams.swingProb : cpuParams.swingProb * 0.3;
-        if (Math.random() < swingChance) {
-          // CPU swings with timing variance
-          var cpuTimingOffset = (Math.random() - 0.5) * cpuParams.timingVariance * 2; // ms offset
-          var cpuSwingTime = optimalTime + cpuTimingOffset / 1000;
-          doSwing(cpuSwingTime);
-        }
+    // Decision was made once at ball release — just execute at the right time
+    if (gameMode === 'fullgame' && !fg.isPlayerBatting && !swung && cpuWillSwing) {
+      var cpuTimingWindow = pitchTravelDur * 0.85;
+      if (pitchTimer >= cpuTimingWindow) {
+        var cpuSwingTime = optimalTime + cpuSwingTimeOffset / 1000;
+        doSwing(cpuSwingTime);
       }
     }
 
@@ -1945,8 +1951,8 @@ function updatePitch(dt) {
           watchedText = 'Swing!';
           watchedTimer = 0.6;
         } else {
-          // Determine ball or strike based on zone
-          fg.pitchInZone = fgIsStrikeZone();
+          // Determine ball or strike based on zone (decided at release)
+          fg.pitchInZone = pitchIsInZone;
           if (fg.pitchInZone) {
             pitchPhase = 'watched';
             pitchTimer = 0;
@@ -2102,10 +2108,24 @@ function updatePitch(dt) {
               }
             } else if (fgOutcome.type === 'out') {
               fg.outs++;
+              // If physics said HR but roll says out, undo HR stats (Bug C/F fix)
+              if (swingResult.isHR) {
+                hrCount--;
+                if (dist >= longestHR) longestHR = 0; // will be recalculated
+                swingResult.isHR = false;
+                ball.isHR = false;
+              }
               swingResult.resultText = fgOutcome.label;
               swingResult.resultColor = '#999';
               swingResult.commentary = pick(OKAY_COMMENTS);
             } else if (fgOutcome.type === 'hit') {
+              // If physics said HR but roll says hit, undo HR stats (Bug C/F fix)
+              if (swingResult.isHR) {
+                hrCount--;
+                if (dist >= longestHR) longestHR = 0;
+                swingResult.isHR = false;
+                ball.isHR = false;
+              }
               swingResult.resultText = fgOutcome.label;
               swingResult.resultColor = fgOutcome.color;
               swingResult.commentary = pick(GOOD_COMMENTS);
@@ -2153,7 +2173,8 @@ function updatePitchResult(dt) {
 
   if (resultTimer <= 0) {
     // Check if we should replay (HR in either mode)
-    if (swingResult && swingResult.isHR && !swingResult.isFoul) {
+    // Skip if replay just finished — fall through to scoring logic
+    if (swingResult && swingResult.isHR && !swingResult.isFoul && !replayJustFinished) {
       if (hrCount <= 2) {
         startReplay('full');
         return;
@@ -2170,6 +2191,8 @@ function updatePitchResult(dt) {
         return;
       }
     }
+
+    replayJustFinished = false; // clear flag after replay check
 
     if (gameMode === 'fullgame') {
       // Full game: handle at-bat result transitions
@@ -2228,6 +2251,7 @@ function startReplay(type) {
 }
 
 let replayType = 'full';
+let replayJustFinished = false; // flag to skip re-entering replay after it ends
 
 function updateReplay(dt) {
   replayTimer += dt;
@@ -2267,8 +2291,15 @@ function updateReplay(dt) {
 
   if (replayPhase === 'fireworks') {
     if (replayTimer >= 1.5) {
-      state = STATES.PLAYING;
-      startNextPitch();
+      if (gameMode === 'fullgame') {
+        // Return to PITCH_RESULT so full game scoring/transition logic executes
+        state = STATES.PITCH_RESULT;
+        resultTimer = 0;
+        replayJustFinished = true;
+      } else {
+        state = STATES.PLAYING;
+        startNextPitch();
+      }
     }
   }
 }
@@ -3162,9 +3193,16 @@ canvas.addEventListener('keydown', function(e) {
       endScreenTimer = 0;
       particles = [];
     } else {
-      state = STATES.PLAYING;
       particles = [];
-      startNextPitch();
+      if (gameMode === 'fullgame') {
+        // Return to PITCH_RESULT so scoring/transition logic executes
+        state = STATES.PITCH_RESULT;
+        resultTimer = 0;
+        replayJustFinished = true;
+      } else {
+        state = STATES.PLAYING;
+        startNextPitch();
+      }
     }
     return;
   }
@@ -3222,8 +3260,10 @@ canvas.addEventListener('keydown', function(e) {
       // Transition from waitpitch to pre
       pitchPhase = 'pre';
       pitchTimer = 0;
+      return;
     }
-    return;
+    // Allow pause/escape to fall through (Bug E fix)
+    if (key !== 'p' && key !== 'P' && key !== 'Escape') return;
   }
 
   // Space: swing (player batting) or speed up (CPU batting)
