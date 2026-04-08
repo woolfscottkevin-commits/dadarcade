@@ -20,6 +20,8 @@
   <meta name="twitter:description" content="Play a full 3-inning game or Home Run Derby with bobblehead players. Free in your browser.">
   <meta name="twitter:image" content="https://dadarcade.com/og-image-baseball.svg">
   <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F579;</text></svg>">
   <script type="application/ld+json">
   {
@@ -60,22 +62,11 @@
     #back-link:hover { color: #ccc; }
     #game-container {
       display: flex; justify-content: center; align-items: center;
-      min-height: 100vh; padding: 10px;
+      min-height: calc(100vh - 60px); padding: 10px;
     }
     canvas {
-      display: block; max-width: 100%; max-height: 90vh;
-      image-rendering: auto;
-    }
-    #mobile-msg {
-      display: none; max-width: 400px; margin: 4rem auto; padding: 2rem;
-      text-align: center; color: #ccc; font-family: sans-serif;
-    }
-    #mobile-msg h2 { margin-bottom: 1rem; font-size: 2rem; }
-    #mobile-msg a { color: #88f; }
-    @media (max-width: 767px) {
-      #game-container { display: none; }
-      #mobile-msg { display: block; }
-      #game-info { display: none; }
+      display: block; max-width: 100%; max-height: calc(100vh - 60px);
+      image-rendering: auto; touch-action: none;
     }
   </style>
 </head>
@@ -83,11 +74,6 @@
   <a id="back-link" href="/" onclick="return confirm('Leave game?');">&larr; Dad Arcade</a>
   <div id="game-container">
     <canvas id="gc" tabindex="0" width="1000" height="700"></canvas>
-  </div>
-  <div id="mobile-msg">
-    <h2>&#x1F579;</h2>
-    <p>This game requires a keyboard.</p>
-    <p style="margin-top:1rem;"><a href="/">Back to Dad Arcade</a></p>
   </div>
   <noscript>
     <div style="max-width:700px; margin:2rem auto; padding:1.5rem; color:#ccc; font-family:sans-serif;">
@@ -111,7 +97,7 @@
         <li>P — Pause</li>
         <li>M — Mute</li>
       </ul>
-      <p>Requires JavaScript and a keyboard.</p>
+      <p>Requires JavaScript. Works on desktop and mobile.</p>
       <p><a href="/">&larr; Back to Dad Arcade</a></p>
     </div>
   </noscript>
@@ -287,11 +273,16 @@ let dpr = window.devicePixelRatio || 1;
 
 function resizeCanvas() {
   dpr = window.devicePixelRatio || 1;
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.width = W + 'px';
-  canvas.style.height = H + 'px';
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var maxW = window.innerWidth - 20;
+  var maxH = window.innerHeight - 70; // leave room for game-info
+  var scale = Math.min(maxW / W, maxH / H, 1);
+  var cw = Math.floor(W * scale);
+  var ch = Math.floor(H * scale);
+  canvas.style.width = cw + 'px';
+  canvas.style.height = ch + 'px';
+  canvas.width = Math.floor(cw * dpr);
+  canvas.height = Math.floor(ch * dpr);
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
   ctx.imageSmoothingEnabled = true;
 }
 resizeCanvas();
@@ -301,6 +292,163 @@ window.addEventListener('resize', function() {
   cancelAnimationFrame(resizeRAF);
   resizeRAF = requestAnimationFrame(resizeCanvas);
 });
+
+// ========== TOUCH INPUT SYSTEM ==========
+let inputMode = 'keyboard';
+window.addEventListener('touchstart', function() { inputMode = 'touch'; });
+window.addEventListener('keydown', function() { inputMode = 'keyboard'; });
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+let iosHintShown = false;
+let iosHintTimer = 0;
+let landscapeHintTimer = 0;
+
+function canvasTouchCoords(touch) {
+  var rect = canvas.getBoundingClientRect();
+  return {
+    x: (touch.clientX - rect.left) / rect.width * W,
+    y: (touch.clientY - rect.top) / rect.height * H
+  };
+}
+
+function promptText(kb, touch) {
+  return inputMode === 'touch' ? touch : kb;
+}
+
+var touchScale = 1.0;
+function updateTouchScale() {
+  touchScale = inputMode === 'touch' ? 1.2 : 1.0;
+}
+
+// Prevent scroll/zoom on canvas only
+canvas.addEventListener('touchstart', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchend', function(e) { e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchcancel', function(e) { e.preventDefault(); }, { passive: false });
+
+// Fullscreen toggle
+function toggleFullscreen() {
+  if (isIOS) return; // iOS uses Add to Home Screen
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    var el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen || function(){}).call(el);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
+  }
+}
+
+// Draw shared touch UI elements
+function drawTouchUI() {
+  if (inputMode !== 'touch') return;
+  updateTouchScale();
+
+  // Fullscreen button (non-iOS only) — top-right
+  if (!isIOS) {
+    var fsX = W - 40, fsY = 68;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath(); ctx.roundRect(fsX - 16, fsY - 16, 32, 32, 4); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u26F6', fsX, fsY + 5);
+  }
+
+  // iOS Add to Home Screen hint (one-time)
+  if (isIOS && !iosHintShown && !lsGet('iosHintShown', false)) {
+    iosHintShown = true;
+    iosHintTimer = 4.0;
+    lsSet('iosHintShown', true);
+  }
+  if (iosHintTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, iosHintTimer);
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.beginPath(); ctx.roundRect(W/2 - 160, H/2 - 30, 320, 60, 8); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('For fullscreen: tap Share \u2197 \u2192 Add to Home Screen', W/2, H/2 + 5);
+    ctx.restore();
+  }
+
+  // Landscape suggestion (portrait detection)
+  if (window.innerHeight > window.innerWidth && landscapeHintTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, landscapeHintTimer);
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u21BB Rotate for best experience', W/2, H/2);
+    ctx.restore();
+  }
+
+  // Info button — bottom edge
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.roundRect(W/2 - 18, H - 30, 36, 24, 4); ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2139\uFE0F', W/2, H - 12);
+
+  // Mute button — top area (48x48 touch target)
+  var muteX = W - 18, muteY = 56;
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.roundRect(muteX - 16, muteY - 14, 32, 28, 4); ctx.fill();
+  ctx.fillStyle = '#FFF';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(muted ? '\uD83D\uDD07' : '\uD83D\uDD0A', muteX, muteY + 5);
+
+  // Pause button — during gameplay
+  if (state === STATES.PLAYING || state === STATES.PITCH_RESULT) {
+    var pauseX = W - 55, pauseY = 56;
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.roundRect(pauseX - 16, pauseY - 14, 32, 28, 4); ctx.fill();
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u23F8', pauseX, pauseY + 6);
+  }
+}
+
+// Handle touch taps on shared UI elements
+function handleTouchUI(tx, ty) {
+  // Fullscreen button
+  if (!isIOS && tx > W - 56 && tx < W - 8 && ty > 52 && ty < 84) {
+    toggleFullscreen();
+    return true;
+  }
+  // iOS hint dismiss
+  if (iosHintTimer > 0) {
+    iosHintTimer = 0;
+    return true;
+  }
+  // Landscape hint dismiss
+  if (landscapeHintTimer > 0) {
+    landscapeHintTimer = 0;
+    return true;
+  }
+  // Info button
+  if (tx > W/2 - 24 && tx < W/2 + 24 && ty > H - 36 && ty < H) {
+    var gi = document.getElementById('game-info');
+    if (gi) gi.scrollIntoView({ behavior: 'smooth' });
+    return true;
+  }
+  // Mute button
+  if (tx > W - 34 && tx < W - 2 && ty > 42 && ty < 70) {
+    toggleMute();
+    return true;
+  }
+  // Pause button
+  if ((state === STATES.PLAYING || state === STATES.PITCH_RESULT) && tx > W - 71 && tx < W - 39 && ty > 42 && ty < 70) {
+    state = STATES.PAUSED;
+    if (crowdGain) crowdGain.gain.value = 0;
+    return true;
+  }
+  return false;
+}
 
 // ========== AUDIO ==========
 let audioCtx = null;
@@ -1571,7 +1719,7 @@ function drawMenu() {
   ctx.fillStyle = '#FFF';
   ctx.font = 'bold 24px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('Press ENTER to play!', W/2, H - 60);
+  ctx.fillText(promptText('Press ENTER to play!', 'TAP TO PLAY!'), W/2, H - 60);
   ctx.globalAlpha = 1;
 
   // Controls hint
@@ -1582,6 +1730,7 @@ function drawMenu() {
 
 // ========== PLAYING STATE ==========
 function startDerby() {
+  if (inputMode === 'touch' && window.innerHeight > window.innerWidth) landscapeHintTimer = 3.0;
   state = STATES.PLAYING;
   pitchNum = 0;
   totalPitches = DIFFICULTIES[diffIdx].pitches;
@@ -1625,6 +1774,7 @@ function startDerby() {
 
 // ========== FULL GAME MODE ==========
 function startFullGame() {
+  if (inputMode === 'touch' && window.innerHeight > window.innerWidth) landscapeHintTimer = 3.0;
   gameMode = 'fullgame';
   state = STATES.PLAYING;
   // Reset shared pitch state
@@ -2246,6 +2396,8 @@ function startNextPitch() {
     endDerby();
     return;
   }
+  // Ensure we transition to PLAYING state (fixes freeze when called from PITCH_RESULT)
+  state = STATES.PLAYING;
   // In Full Game defense: wait for pitch type selection
   if (gameMode === 'fullgame' && !fg.isPlayerBatting && !fg.tiebreaker) {
     fg.waitingForPitch = true;
@@ -2592,6 +2744,7 @@ function updatePitch(dt) {
             pitchTimer = 0;
             watchedTimer = 0.8;
             if (fgAddBall()) return; // walk handles transition
+            watchedText = 'Ball ' + fg.balls + '!';
           }
         }
       } else {
@@ -3029,7 +3182,7 @@ function drawReplay() {
   ctx.fillStyle = '#888';
   ctx.font = '14px sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText('Press any key to skip', W - 20, 40);
+  ctx.fillText(promptText('Press any key to skip', 'Tap to skip'), W - 20, 40);
 
   drawParticles();
 }
@@ -3279,7 +3432,7 @@ function drawHUD() {
     ctx.fillStyle = '#555';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Hold SPACE to speed up', W/2, H - 12);
+    ctx.fillText(promptText('Hold SPACE to speed up', 'Tap to speed up'), W/2, H - 12);
   }
 
   // Difficulty label
@@ -3347,7 +3500,7 @@ function drawHUD() {
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('Press SPACE when the ball is here!', W/2, hp.y + 30);
+      ctx.fillText(promptText('Press SPACE when the ball is here!', 'TAP when the ball is here!'), W/2, hp.y + 30);
     }
   }
 
@@ -3603,11 +3756,11 @@ function drawGameOver(dt) {
   ctx.globalAlpha = pulse;
   ctx.fillStyle = '#FFF';
   ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('Press ENTER to play again!', W/2, 440);
+  ctx.fillText(promptText('Press ENTER to play again!', 'TAP TO PLAY AGAIN!'), W/2, 440);
   ctx.globalAlpha = 1;
   ctx.fillStyle = '#888';
   ctx.font = '16px sans-serif';
-  ctx.fillText('Press ESCAPE for menu', W/2, 470);
+  ctx.fillText(promptText('Press ESCAPE for menu', 'TAP \u2715 FOR MENU'), W/2, 470);
 
   // Stats (collapsible)
   ctx.fillStyle = '#777';
@@ -3704,7 +3857,7 @@ function drawEndReplay(dt) {
   ctx.fillStyle = '#888';
   ctx.font = '14px sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText('Press any key to continue', W - 20, 40);
+  ctx.fillText(promptText('Press any key to continue', 'Tap to continue'), W - 20, 40);
 
   const endReplayDuration = Math.max(2.0, Math.min(4.0, endReplayPositions.length * 0.02));
   if (endReplayTimer >= endReplayDuration) {
@@ -3732,7 +3885,7 @@ function drawPaused(dt) {
 
   ctx.fillStyle = '#AAA';
   ctx.font = '20px sans-serif';
-  ctx.fillText('P to Resume, ESC for Menu', W/2, H/2 + 20);
+  ctx.fillText(promptText('P to Resume, ESC for Menu', ''), W/2, H/2 + 20);
 }
 
 // ========== DRAW GAME OBJECTS ==========
@@ -3898,6 +4051,8 @@ function update(dt) {
   if (goalFlashTime > 0) goalFlashTime -= dt;
   if (fg.runsThisPlayTimer > 0) fg.runsThisPlayTimer -= dt;
   fgUpdateCrowdExcitement(dt);
+  if (iosHintTimer > 0) iosHintTimer -= dt;
+  if (landscapeHintTimer > 0) landscapeHintTimer -= dt;
 
   updateParticles(dt);
   updateFloatTexts(dt);
@@ -3919,21 +4074,40 @@ function draw(dt) {
 
   if (state === STATES.MENU) {
     drawMenu();
+    drawTouchUI();
     return;
   }
 
   if (state === STATES.REPLAY) {
     drawReplay();
+    drawTouchUI();
     return;
   }
 
   if (state === STATES.GAME_OVER) {
     drawGameOver(dt);
+    drawTouchUI();
     return;
   }
 
   if (state === STATES.PAUSED) {
     drawPaused(dt);
+    // Touch pause overlay: Resume + Quit buttons
+    if (inputMode === 'touch') {
+      ctx.fillStyle = 'rgba(0,180,0,0.7)';
+      ctx.beginPath(); ctx.roundRect(W/2 - 80, H/2 + 40, 160, 48, 8); ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('TAP TO RESUME', W/2, H/2 + 70);
+
+      ctx.fillStyle = 'rgba(180,0,0,0.7)';
+      ctx.beginPath(); ctx.roundRect(W/2 - 60, H/2 + 100, 120, 40, 8); ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.font = '16px sans-serif';
+      ctx.fillText('QUIT', W/2, H/2 + 125);
+    }
+    drawTouchUI();
     return;
   }
 
@@ -3947,6 +4121,7 @@ function draw(dt) {
   } finally {
     endScreenEffects();
   }
+  drawTouchUI();
 }
 
 let running = true;
@@ -4000,6 +4175,184 @@ setInterval(function() {
 }, 50);
 
 // ========== INPUT ==========
+
+// ---- Touch Input ----
+canvas.addEventListener('touchstart', function(e) {
+  if (!e.touches.length) return;
+  var t = canvasTouchCoords(e.touches[0]);
+
+  // Shared UI (fullscreen, mute, pause, info)
+  if (handleTouchUI(t.x, t.y)) return;
+
+  // Init audio on first touch
+  initAudio();
+
+  // Paused state
+  if (state === STATES.PAUSED) {
+    // Resume button area
+    if (t.x > W/2 - 80 && t.x < W/2 + 80 && t.y > H/2 + 40 && t.y < H/2 + 88) {
+      state = STATES.PLAYING;
+      lastTimestamp = performance.now();
+      if (crowdGain && !muted) crowdGain.gain.value = 0.03;
+      return;
+    }
+    // Quit button area
+    if (t.x > W/2 - 60 && t.x < W/2 + 60 && t.y > H/2 + 100 && t.y < H/2 + 140) {
+      state = STATES.MENU;
+      stopCrowdMurmur();
+      particles = [];
+      return;
+    }
+    return;
+  }
+
+  // Menu state
+  if (state === STATES.MENU) {
+    handleMenuTouch(t.x, t.y);
+    return;
+  }
+
+  // Replay state — tap to skip
+  if (state === STATES.REPLAY) {
+    if (endReplayPlaying) {
+      endReplayDone = true;
+      endReplayPlaying = false;
+      endScreenTimer = 0;
+      particles = [];
+    } else {
+      particles = [];
+      if (gameMode === 'fullgame') {
+        state = STATES.PITCH_RESULT;
+        resultTimer = 0;
+        replayJustFinished = true;
+      } else {
+        state = STATES.PLAYING;
+        startNextPitch();
+      }
+    }
+    return;
+  }
+
+  // Game Over state
+  if (state === STATES.GAME_OVER) {
+    if (endReplayPlaying) {
+      endReplayDone = true;
+      endReplayPlaying = false;
+      endScreenTimer = 0;
+      particles = [];
+      return;
+    }
+    // Tap bottom half = play again, top = toggle stats
+    if (t.y > H/2 + 100) {
+      if (gameMode === 'fullgame') startFullGame();
+      else startDerby();
+    } else if (t.y > 490 && t.y < 520) {
+      showStats = !showStats;
+    }
+    return;
+  }
+
+  // PITCH_RESULT — tap to dismiss (don't interfere)
+  if (state === STATES.PITCH_RESULT) return;
+
+  // PLAYING state
+  // Pitch type selection (defense)
+  if (gameMode === 'fullgame' && !fg.isPlayerBatting && fg.waitingForPitch) {
+    // Check 3 pitch type buttons
+    var ptY = H/2 - 5, ptBtnH = 40;
+    for (var pi = 0; pi < 3; pi++) {
+      var ptX = W/2 + (pi - 1) * 120;
+      if (t.x > ptX - 60 && t.x < ptX + 60 && t.y > ptY && t.y < ptY + ptBtnH) {
+        fg.pitchType = pi;
+        fg.pitchSelected = true;
+        fg.waitingForPitch = false;
+        playSound(sndMenuClick);
+        pitchPhase = 'pre';
+        pitchTimer = 0;
+        return;
+      }
+    }
+    return;
+  }
+
+  // Tap anywhere = swing (player batting, ball in travel)
+  if (pitchPhase === 'travel' && !swung) {
+    if (gameMode === 'fullgame' && !fg.isPlayerBatting) {
+      // CPU batting — tap could toggle speed
+      fg.cpuSpeedUp = true;
+      setTimeout(function() { fg.cpuSpeedUp = false; }, 500);
+    } else {
+      doSwing(gameTime);
+    }
+    return;
+  }
+});
+
+// ---- Touch Menu Handler ----
+function handleMenuTouch(tx, ty) {
+  // "PLAY BALL!" / start button area (bottom of menu)
+  if (ty > 530 && ty < 600) {
+    initAudio();
+    playSound(sndMenuClick);
+    gameMode = menuModeIdx === 0 ? 'derby' : 'fullgame';
+    if (gameMode === 'derby') startDerby();
+    else startFullGame();
+    return;
+  }
+
+  // Mode selection (row 0) — y range ~290-320
+  if (ty > 275 && ty < 320) {
+    if (tx < W/2) menuModeIdx = 0;
+    else menuModeIdx = 1;
+    playSound(sndMenuClick);
+    return;
+  }
+
+  // Name row (row 1) — y range ~335-375
+  if (ty > 325 && ty < 380) {
+    // Detect which letter column
+    for (var ni = 0; ni < 3; ni++) {
+      var lx = W/2 - 30 + ni * 30;
+      if (tx > lx - 20 && tx < lx + 20) {
+        nameCol = ni;
+        // Cycle letter
+        var code = playerName[ni].charCodeAt(0);
+        playerName[ni] = String.fromCharCode(code >= 90 ? 65 : code + 1);
+        playSound(sndMenuClick);
+        return;
+      }
+    }
+    return;
+  }
+
+  // Color row (row 2) — y range ~395-430
+  if (ty > 390 && ty < 440) {
+    // Detect which color
+    for (var ci = 0; ci < TEAM_COLORS.length; ci++) {
+      var ccx = W/2 - (TEAM_COLORS.length * 15) + ci * 30 + 15;
+      if (tx > ccx - 16 && tx < ccx + 16) {
+        colorIdx = ci;
+        playSound(sndMenuClick);
+        return;
+      }
+    }
+    return;
+  }
+
+  // Difficulty row (row 3) — y range ~455-490
+  if (ty > 450 && ty < 500) {
+    for (var di = 0; di < DIFFICULTIES.length; di++) {
+      var dx = W/2 + (di - 1) * 120;
+      if (tx > dx - 60 && tx < dx + 60) {
+        diffIdx = di;
+        playSound(sndMenuClick);
+        return;
+      }
+    }
+    return;
+  }
+}
+
 canvas.addEventListener('keydown', function(e) {
   const key = e.key;
 
