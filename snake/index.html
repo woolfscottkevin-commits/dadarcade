@@ -434,18 +434,18 @@ function submitScore(initials,scoreVal){
 
 function handleInitialsInput(key){
   if(initialsSubmitting) return;
-  if(key==='ArrowUp'){
+  if(key==='arrowup'){
     initialsChars[initialsCursor]=(initialsChars[initialsCursor]+1)%26;
-  } else if(key==='ArrowDown'){
+  } else if(key==='arrowdown'){
     initialsChars[initialsCursor]=(initialsChars[initialsCursor]+25)%26;
-  } else if(key==='ArrowLeft'){
+  } else if(key==='arrowleft'){
     initialsCursor=Math.max(0,initialsCursor-1);
-  } else if(key==='ArrowRight'){
+  } else if(key==='arrowright'){
     initialsCursor=Math.min(2,initialsCursor+1);
-  } else if(key==='Enter'){
+  } else if(key==='enter'){
     var ini=initialsChars.map(function(c){return String.fromCharCode(65+c);}).join('');
     submitScore(ini,G.finalScore);
-  } else if(key==='Escape'){
+  } else if(key==='escape'){
     G.state=GAME_OVER; // skip submission
   }
 }
@@ -1913,7 +1913,7 @@ canvas.addEventListener('touchstart',function(e){
   if(G.state===INITIALS_ENTRY){
     if(initialsSubmitting) return;
     // Letter hit zones: 3 letters centered at LOG_W/2, spaced 50px
-    var iniBaseX=LOG_W/2-50, iniBaseY=240;
+    var iniBaseX=LOG_W/2-50, iniBaseY=270;
     for(var ii=0;ii<3;ii++){
       var lx=iniBaseX+ii*50;
       // Up arrow
@@ -2188,7 +2188,7 @@ function update(now){
     ctx.fillText('Score: '+G.finalScore,LOG_W/2,210);
 
     // 3 letter boxes
-    var iniBaseX=LOG_W/2-50, iniBaseY=240;
+    var iniBaseX=LOG_W/2-50, iniBaseY=270;
     for(var ii=0;ii<3;ii++){
       var lx=iniBaseX+ii*50;
       var letter=String.fromCharCode(65+initialsChars[ii]);
