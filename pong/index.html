@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pong — Free Online Arcade Game | Dad Arcade</title>
+<meta name="description" content="Play Pong free in your browser. The original Atari classic rebuilt — play against the computer with authentic retro visuals and sounds. No download needed.">
+<meta name="keywords" content="pong game online, free pong game, browser pong, atari pong, retro pong game, kids pong game, classic pong">
+<link rel="canonical" href="https://dadarcade.com/pong">
+<meta property="og:title" content="Pong — Free Online Arcade Game">
+<meta property="og:description" content="The original Atari classic rebuilt for the browser. Play free — no download needed.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/pong">
+<meta property="og:site_name" content="Dad Arcade">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Pong — Free Online Arcade Game">
+<meta name="twitter:description" content="The original Atari classic rebuilt for the browser. Free — no download needed.">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Pong",
+  "url": "https://dadarcade.com/pong",
+  "description": "The original Atari Pong rebuilt for the browser. Classic paddle vs. CPU gameplay with authentic retro visuals and sound effects.",
+  "genre": ["Arcade", "Sports"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dad Arcade" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Dad Arcade", "item": "https://dadarcade.com" },
+    { "@type": "ListItem", "position": 2, "name": "Pong", "item": "https://dadarcade.com/pong" }
+  ]
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;color:#fff;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden}
+#back-link{position:fixed;top:1rem;left:1rem;color:#0ff;text-decoration:none;font-size:0.9rem;z-index:9999;font-family:'Courier New',monospace}
+#back-link:hover{color:#fff}
+#game-wrapper{display:flex;justify-content:center;align-items:center;flex:1;padding:2.5rem 1rem 1rem}
+canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+#game-info{max-width:750px;margin:1.5rem auto;padding:0 1.5rem;color:#777;font-size:0.9rem;font-family:'Courier New',monospace}
+#game-info h1{font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0}
+#game-info a{color:#888}
+#game-info details{margin:0.8rem 0;color:#666}
+#game-info summary{cursor:pointer;color:#999}
+#game-info .links{font-size:0.8rem;color:#555}
+#game-info .links a{color:#666}
+</style>
+</head>
+<body>
+<a id="back-link" href="/" onclick="if(typeof G!=='undefined'&&G.state==='PLAYING'){if(!confirm('Leave game? Progress will be lost.'))event.preventDefault()}">&#8592; Dad Arcade</a>
+
+<div id="game-wrapper">
+<canvas id="c" tabindex="0"></canvas>
+</div>
+
+<noscript>
+<div style="max-width:700px;margin:2rem auto;padding:1.5rem;color:#ccc;font-family:sans-serif">
+<h1>Pong — Free Online Arcade Game</h1>
+<p>Play the classic Atari Pong game free in your browser at Dad Arcade. Move your paddle to hit the ball past the computer opponent. First to 11 wins!</p>
+<h2>Features</h2>
+<ul>
+<li>Authentic Atari-style visuals with dotted center line and blocky paddles</li>
+<li>3 difficulty levels: Easy, Normal, Hard</li>
+<li>Retro sound effects using Web Audio API</li>
+<li>Touch controls for mobile play</li>
+</ul>
+<h2>Controls</h2>
+<ul>
+<li>Arrow Keys or W/S — Move paddle up/down</li>
+<li>P — Pause</li>
+<li>M — Mute</li>
+</ul>
+<p>Requires JavaScript. Works on desktop and mobile.</p>
+</div>
+</noscript>
+
+<div id="game-info">
+  <h1>Pong — The Original Atari Classic</h1>
+  <p>Move your paddle to hit the ball past the computer. First to 11 points wins the match.</p>
+  <details>
+    <summary>About This Game</summary>
+    <div style="margin-top:0.5rem;line-height:1.6">
+      <p><strong style="color:#999">How to Play</strong><br>
+      Use the arrow keys (or W/S) to move your paddle up and down. Hit the ball past the computer's paddle to score. The ball speeds up with each volley and angles differently depending on where it hits your paddle. First player to 11 wins!</p>
+      <p style="margin-top:0.5rem"><strong style="color:#999">Features</strong></p>
+      <ul style="margin:0.3rem 0 0.5rem 1.2rem;color:#666">
+        <li>Authentic Atari-style visuals — dotted center line, blocky paddles, chunky score digits</li>
+        <li>3 difficulty levels: Easy, Normal, Hard</li>
+        <li>Ball speed increases with each rally</li>
+        <li>Paddle hit position affects ball angle</li>
+        <li>Retro sound effects</li>
+        <li>Touch controls for mobile</li>
+      </ul>
+      <p><strong style="color:#999">Controls</strong></p>
+      <ul style="margin:0.3rem 0 0.5rem 1.2rem;color:#666">
+        <li>Up/Down Arrow or W/S — Move paddle</li>
+        <li>P — Pause</li>
+        <li>M — Mute</li>
+        <li>Touch — Drag on left half of screen to move paddle</li>
+      </ul>
+    </div>
+  </details>
+  <p class="links">
+    <a href="/games">Browse all games</a> · <a href="/">Dad Arcade home</a>
+  </p>
+</div>
+
+<script>
+'use strict';
+(function() {
+
+// ── Constants ──
+var W = 800, H = 600;
+var PADDLE_W = 12, PADDLE_H = 80;
+var BALL_SIZE = 12;
+var PADDLE_MARGIN = 30;
+var WIN_SCORE = 11;
+var BALL_BASE_SPEED = 5;
+var BALL_SPEED_INCREMENT = 0.3;
+var BALL_MAX_SPEED = 12;
+
+// ── Canvas Setup ──
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var dpr = window.devicePixelRatio || 1;
+
+function resizeCanvas() {
+  var maxW = window.innerWidth - 20;
+  var maxH = window.innerHeight - 60;
+  var scale = Math.min(maxW / W, maxH / H, 1);
+  canvas.style.width = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── Audio ──
+var audioCtx = null;
+var muted = localStorage.getItem('pong_muted') === '1';
+
+function initAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+}
+
+function playTone(freq, duration, type, vol) {
+  if (muted || !audioCtx) return;
+  try {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = type || 'square';
+    osc.frequency.value = freq;
+    gain.gain.value = vol || 0.15;
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+function sndPaddleHit() { playTone(440, 0.08, 'square', 0.2); }
+function sndWallHit() { playTone(220, 0.08, 'square', 0.15); }
+function sndScore() { playTone(150, 0.3, 'square', 0.2); }
+function sndWin() {
+  playTone(523, 0.15, 'square', 0.2);
+  setTimeout(function() { playTone(659, 0.15, 'square', 0.2); }, 150);
+  setTimeout(function() { playTone(784, 0.3, 'square', 0.2); }, 300);
+}
+
+// ── Game State ──
+var MENU = 'MENU', PLAYING = 'PLAYING', PAUSED = 'PAUSED', SERVE = 'SERVE', GAME_OVER = 'GAME_OVER';
+var EASY = 0, NORMAL = 1, HARD = 2;
+var diffNames = ['EASY', 'NORMAL', 'HARD'];
+var diffSpeeds = [3, 4.5, 6]; // CPU paddle speed
+var diffReaction = [0.15, 0.08, 0.02]; // CPU delay factor (higher = dumber)
+
+var G = {
+  state: MENU,
+  difficulty: NORMAL,
+  menuSelection: 1, // 0=Easy, 1=Normal, 2=Hard
+  playerY: H / 2,
+  cpuY: H / 2,
+  playerScore: 0,
+  cpuScore: 0,
+  ballX: W / 2,
+  ballY: H / 2,
+  ballVX: 0,
+  ballVY: 0,
+  ballSpeed: BALL_BASE_SPEED,
+  serveDir: 1, // 1 = serve right (to CPU), -1 = serve left (to player)
+  serveTimer: 0,
+  rallyCount: 0,
+  winner: ''
+};
+
+// ── Input ──
+var keys = {};
+var touchY = null;
+var inputMode = 'keyboard'; // 'keyboard' or 'touch'
+
+document.addEventListener('keydown', function(e) {
+  keys[e.key] = true;
+  inputMode = 'keyboard';
+  initAudio();
+
+  if (G.state === MENU) {
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+      G.menuSelection = Math.max(0, G.menuSelection - 1);
+    } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+      G.menuSelection = Math.min(2, G.menuSelection + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      startGame(G.menuSelection);
+    }
+    e.preventDefault();
+  } else if (G.state === PLAYING) {
+    if (e.key === 'p' || e.key === 'P') {
+      G.state = PAUSED;
+    }
+  } else if (G.state === PAUSED) {
+    if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+      G.state = PLAYING;
+    }
+  } else if (G.state === SERVE) {
+    // Any key starts serve
+  } else if (G.state === GAME_OVER) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      G.state = MENU;
+    }
+  }
+
+  if (e.key === 'm' || e.key === 'M') {
+    muted = !muted;
+    localStorage.setItem('pong_muted', muted ? '1' : '0');
+  }
+
+  // Prevent scrolling
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) !== -1) {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener('keyup', function(e) {
+  keys[e.key] = false;
+});
+
+// Touch input
+canvas.addEventListener('touchstart', function(e) {
+  e.preventDefault();
+  inputMode = 'touch';
+  initAudio();
+  var rect = canvas.getBoundingClientRect();
+  var t = e.touches[0];
+  var y = (t.clientY - rect.top) / rect.height * H;
+  touchY = y;
+
+  if (G.state === MENU) {
+    // Tap anywhere to start on Normal
+    startGame(G.menuSelection);
+  } else if (G.state === GAME_OVER) {
+    G.state = MENU;
+  } else if (G.state === PAUSED) {
+    G.state = PLAYING;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+  e.preventDefault();
+  var rect = canvas.getBoundingClientRect();
+  var t = e.touches[0];
+  touchY = (t.clientY - rect.top) / rect.height * H;
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+  e.preventDefault();
+  touchY = null;
+}, { passive: false });
+
+// Mouse input (for desktop trackpad/mouse)
+canvas.addEventListener('mousemove', function(e) {
+  if (G.state === PLAYING || G.state === SERVE) {
+    var rect = canvas.getBoundingClientRect();
+    var y = (e.clientY - rect.top) / rect.height * H;
+    touchY = y;
+    inputMode = 'touch';
+  }
+});
+
+// ── Game Functions ──
+function startGame(diff) {
+  G.difficulty = diff;
+  G.playerScore = 0;
+  G.cpuScore = 0;
+  G.playerY = H / 2;
+  G.cpuY = H / 2;
+  G.serveDir = 1;
+  G.rallyCount = 0;
+  G.winner = '';
+  resetBall();
+  G.state = SERVE;
+  G.serveTimer = 60;
+}
+
+function resetBall() {
+  G.ballX = W / 2;
+  G.ballY = H / 2;
+  G.ballVX = 0;
+  G.ballVY = 0;
+  G.ballSpeed = BALL_BASE_SPEED;
+  G.rallyCount = 0;
+}
+
+function serveBall() {
+  var angle = (Math.random() * 0.8 - 0.4); // -0.4 to 0.4 radians
+  G.ballVX = G.ballSpeed * G.serveDir * Math.cos(angle);
+  G.ballVY = G.ballSpeed * Math.sin(angle);
+  G.state = PLAYING;
+}
+
+// ── Update ──
+function update() {
+  if (G.state === SERVE) {
+    G.serveTimer--;
+    if (G.serveTimer <= 0) {
+      serveBall();
+    }
+    return;
+  }
+
+  if (G.state !== PLAYING) return;
+
+  // Player paddle movement
+  var pSpeed = 7;
+  if (inputMode === 'touch' && touchY !== null) {
+    // Move paddle toward touch/mouse position
+    var diff = touchY - G.playerY;
+    if (Math.abs(diff) > 2) {
+      G.playerY += Math.sign(diff) * Math.min(Math.abs(diff), pSpeed * 1.5);
+    }
+  } else {
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) G.playerY -= pSpeed;
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) G.playerY += pSpeed;
+  }
+
+  // Clamp player paddle
+  G.playerY = Math.max(PADDLE_H / 2, Math.min(H - PADDLE_H / 2, G.playerY));
+
+  // CPU paddle AI
+  var cpuSpeed = diffSpeeds[G.difficulty];
+  var reaction = diffReaction[G.difficulty];
+  var targetY = G.ballY;
+
+  // Add imperfection — CPU tracks ball with delay and slight offset
+  if (G.ballVX > 0) {
+    // Ball moving toward CPU — track it
+    var offset = (G.difficulty === EASY) ? (Math.sin(Date.now() * 0.003) * 30) : 0;
+    targetY = G.ballY + offset;
+  } else {
+    // Ball moving away — drift toward center
+    targetY = H / 2 + (Math.sin(Date.now() * 0.002) * 40);
+  }
+
+  var cpuDiff = targetY - G.cpuY;
+  if (Math.abs(cpuDiff) > reaction * 50) {
+    G.cpuY += Math.sign(cpuDiff) * Math.min(Math.abs(cpuDiff), cpuSpeed);
+  }
+  G.cpuY = Math.max(PADDLE_H / 2, Math.min(H - PADDLE_H / 2, G.cpuY));
+
+  // Ball movement
+  G.ballX += G.ballVX;
+  G.ballY += G.ballVY;
+
+  // Wall collision (top/bottom)
+  if (G.ballY - BALL_SIZE / 2 <= 0) {
+    G.ballY = BALL_SIZE / 2;
+    G.ballVY = -G.ballVY;
+    sndWallHit();
+  }
+  if (G.ballY + BALL_SIZE / 2 >= H) {
+    G.ballY = H - BALL_SIZE / 2;
+    G.ballVY = -G.ballVY;
+    sndWallHit();
+  }
+
+  // Player paddle collision (left side)
+  var pLeft = PADDLE_MARGIN;
+  var pRight = PADDLE_MARGIN + PADDLE_W;
+  var pTop = G.playerY - PADDLE_H / 2;
+  var pBottom = G.playerY + PADDLE_H / 2;
+
+  if (G.ballVX < 0 &&
+      G.ballX - BALL_SIZE / 2 <= pRight &&
+      G.ballX + BALL_SIZE / 2 >= pLeft &&
+      G.ballY + BALL_SIZE / 2 >= pTop &&
+      G.ballY - BALL_SIZE / 2 <= pBottom) {
+    G.ballX = pRight + BALL_SIZE / 2;
+    G.rallyCount++;
+    // Angle based on where ball hits paddle
+    var hitPos = (G.ballY - G.playerY) / (PADDLE_H / 2); // -1 to 1
+    var maxAngle = Math.PI / 4; // 45 degrees
+    var angle = hitPos * maxAngle;
+    G.ballSpeed = Math.min(BALL_MAX_SPEED, G.ballSpeed + BALL_SPEED_INCREMENT);
+    G.ballVX = G.ballSpeed * Math.cos(angle);
+    G.ballVY = G.ballSpeed * Math.sin(angle);
+    sndPaddleHit();
+  }
+
+  // CPU paddle collision (right side)
+  var cLeft = W - PADDLE_MARGIN - PADDLE_W;
+  var cRight = W - PADDLE_MARGIN;
+  var cTop = G.cpuY - PADDLE_H / 2;
+  var cBottom = G.cpuY + PADDLE_H / 2;
+
+  if (G.ballVX > 0 &&
+      G.ballX + BALL_SIZE / 2 >= cLeft &&
+      G.ballX - BALL_SIZE / 2 <= cRight &&
+      G.ballY + BALL_SIZE / 2 >= cTop &&
+      G.ballY - BALL_SIZE / 2 <= cBottom) {
+    G.ballX = cLeft - BALL_SIZE / 2;
+    G.rallyCount++;
+    var hitPos2 = (G.ballY - G.cpuY) / (PADDLE_H / 2);
+    var angle2 = hitPos2 * (Math.PI / 4);
+    G.ballSpeed = Math.min(BALL_MAX_SPEED, G.ballSpeed + BALL_SPEED_INCREMENT);
+    G.ballVX = -(G.ballSpeed * Math.cos(angle2));
+    G.ballVY = G.ballSpeed * Math.sin(angle2);
+    sndPaddleHit();
+  }
+
+  // Scoring
+  if (G.ballX < -BALL_SIZE) {
+    // CPU scores
+    G.cpuScore++;
+    sndScore();
+    if (G.cpuScore >= WIN_SCORE) {
+      G.state = GAME_OVER;
+      G.winner = 'CPU';
+      return;
+    }
+    G.serveDir = -1; // Serve toward player (loser receives)
+    resetBall();
+    G.state = SERVE;
+    G.serveTimer = 60;
+  }
+
+  if (G.ballX > W + BALL_SIZE) {
+    // Player scores
+    G.playerScore++;
+    sndScore();
+    if (G.playerScore >= WIN_SCORE) {
+      G.state = GAME_OVER;
+      G.winner = 'PLAYER';
+      sndWin();
+      return;
+    }
+    G.serveDir = 1; // Serve toward CPU
+    resetBall();
+    G.state = SERVE;
+    G.serveTimer = 60;
+  }
+}
+
+// ── Render ──
+// Atari-style digit bitmaps (5x7 grid, each row is a 5-bit number)
+var DIGITS = [
+  [0x1F,0x11,0x11,0x11,0x11,0x11,0x1F], // 0
+  [0x04,0x0C,0x04,0x04,0x04,0x04,0x0E], // 1
+  [0x1F,0x01,0x01,0x1F,0x10,0x10,0x1F], // 2
+  [0x1F,0x01,0x01,0x1F,0x01,0x01,0x1F], // 3
+  [0x11,0x11,0x11,0x1F,0x01,0x01,0x01], // 4
+  [0x1F,0x10,0x10,0x1F,0x01,0x01,0x1F], // 5
+  [0x1F,0x10,0x10,0x1F,0x11,0x11,0x1F], // 6
+  [0x1F,0x01,0x01,0x02,0x04,0x04,0x04], // 7
+  [0x1F,0x11,0x11,0x1F,0x11,0x11,0x1F], // 8
+  [0x1F,0x11,0x11,0x1F,0x01,0x01,0x1F], // 9
+];
+
+function drawDigit(num, x, y, size) {
+  var d = DIGITS[num];
+  ctx.fillStyle = '#fff';
+  for (var row = 0; row < 7; row++) {
+    for (var col = 0; col < 5; col++) {
+      if (d[row] & (1 << (4 - col))) {
+        ctx.fillRect(x + col * size, y + row * size, size - 1, size - 1);
+      }
+    }
+  }
+}
+
+function drawScore(score, centerX, y) {
+  var s = String(score);
+  var digitW = 5 * 6 + 4; // 5 cols * 6px + gap
+  var totalW = s.length * digitW - 4;
+  var startX = centerX - totalW / 2;
+  for (var i = 0; i < s.length; i++) {
+    drawDigit(parseInt(s[i]), startX + i * digitW, y, 6);
+  }
+}
+
+function drawCenterLine() {
+  ctx.fillStyle = '#fff';
+  var dashH = 12;
+  var gap = 12;
+  for (var y = 0; y < H; y += dashH + gap) {
+    ctx.fillRect(W / 2 - 2, y, 4, dashH);
+  }
+}
+
+function drawPaddle(x, y) {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x, y - PADDLE_H / 2, PADDLE_W, PADDLE_H);
+}
+
+function drawBall() {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(G.ballX - BALL_SIZE / 2, G.ballY - BALL_SIZE / 2, BALL_SIZE, BALL_SIZE);
+}
+
+function drawTouchUI() {
+  if (inputMode !== 'touch') return;
+
+  // Mute button (top right)
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(W - 50, 10, 40, 30);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '14px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText(muted ? 'OFF' : 'SND', W - 30, 30);
+
+  // Pause button (top center-right)
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(W - 100, 10, 40, 30);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillText('| |', W - 80, 30);
+}
+
+// Touch button handling
+canvas.addEventListener('touchstart', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  for (var i = 0; i < e.touches.length; i++) {
+    var tx = (e.touches[i].clientX - rect.left) / rect.width * W;
+    var ty = (e.touches[i].clientY - rect.top) / rect.height * H;
+
+    // Mute button
+    if (tx > W - 50 && tx < W - 10 && ty < 40) {
+      muted = !muted;
+      localStorage.setItem('pong_muted', muted ? '1' : '0');
+    }
+    // Pause button
+    if (tx > W - 100 && tx < W - 60 && ty < 40) {
+      if (G.state === PLAYING) G.state = PAUSED;
+      else if (G.state === PAUSED) G.state = PLAYING;
+    }
+  }
+}, { passive: false });
+
+function render() {
+  // Clear — pure black like original Atari
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  if (G.state === MENU) {
+    drawMenuScreen();
+    return;
+  }
+
+  // Draw court
+  drawCenterLine();
+
+  // Draw scores
+  drawScore(G.playerScore, W / 4, 30);
+  drawScore(G.cpuScore, W * 3 / 4, 30);
+
+  // Draw paddles
+  drawPaddle(PADDLE_MARGIN, G.playerY);
+  drawPaddle(W - PADDLE_MARGIN - PADDLE_W, G.cpuY);
+
+  // Draw ball (blink during serve)
+  if (G.state === SERVE) {
+    if (Math.floor(G.serveTimer / 8) % 2 === 0) {
+      drawBall();
+    }
+  } else {
+    drawBall();
+  }
+
+  // Touch UI
+  if (G.state === PLAYING || G.state === SERVE) {
+    drawTouchUI();
+  }
+
+  // Pause overlay
+  if (G.state === PAUSED) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText('PAUSED', W / 2, H / 2 - 10);
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = '#888';
+    ctx.fillText(inputMode === 'touch' ? 'Tap to resume' : 'Press P to resume', W / 2, H / 2 + 25);
+  }
+
+  // Game Over
+  if (G.state === GAME_OVER) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 40px Courier New';
+    ctx.textAlign = 'center';
+    if (G.winner === 'PLAYER') {
+      ctx.fillText('YOU WIN!', W / 2, H / 2 - 20);
+    } else {
+      ctx.fillText('CPU WINS', W / 2, H / 2 - 20);
+    }
+    ctx.font = '18px Courier New';
+    ctx.fillStyle = '#888';
+    ctx.fillText(G.playerScore + ' - ' + G.cpuScore, W / 2, H / 2 + 20);
+    ctx.font = '16px Courier New';
+    ctx.fillStyle = '#666';
+    ctx.fillText(inputMode === 'touch' ? 'Tap for menu' : 'Press ENTER for menu', W / 2, H / 2 + 55);
+  }
+}
+
+function drawMenuScreen() {
+  // Title
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 64px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('PONG', W / 2, 160);
+
+  // Subtitle
+  ctx.font = '16px Courier New';
+  ctx.fillStyle = '#666';
+  ctx.fillText('First to 11 wins', W / 2, 200);
+
+  // Difficulty options
+  var startY = 280;
+  var gap = 50;
+  for (var i = 0; i < 3; i++) {
+    var selected = G.menuSelection === i;
+    ctx.font = (selected ? 'bold ' : '') + '24px Courier New';
+    ctx.fillStyle = selected ? '#fff' : '#555';
+    var label = diffNames[i];
+    if (selected) label = '> ' + label + ' <';
+    ctx.fillText(label, W / 2, startY + i * gap);
+  }
+
+  // Instructions
+  ctx.font = '14px Courier New';
+  ctx.fillStyle = '#444';
+  if (inputMode === 'touch') {
+    ctx.fillText('Tap to start', W / 2, 480);
+  } else {
+    ctx.fillText('Arrow keys to select, ENTER to start', W / 2, 480);
+  }
+
+  // Controls hint
+  ctx.fillStyle = '#333';
+  ctx.fillText('W/S or Arrow Keys to move paddle', W / 2, 520);
+  ctx.fillText('P = Pause    M = Mute', W / 2, 545);
+}
+
+// ── Game Loop ──
+var lastT = 0;
+function gameLoop(t) {
+  // Fixed-step update for consistent physics
+  update();
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+canvas.focus();
+requestAnimationFrame(gameLoop);
+
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>

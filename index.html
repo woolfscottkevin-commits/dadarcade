@@ -44,6 +44,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-bb h2{color:#FFD700}
 .card-bb:hover{border-color:#FFD700;box-shadow:0 0 30px rgba(255,215,0,0.2),0 8px 32px rgba(0,0,0,0.4)}
 
+.card-pong h2{color:#fff}
+.card-pong:hover{border-color:#fff;box-shadow:0 0 30px rgba(255,255,255,0.2),0 8px 32px rgba(0,0,0,0.4)}
+
 
 .feedback-section{display:flex;flex-direction:column;gap:1rem;max-width:700px;width:100%;margin-top:3rem}
 .feedback-btn{display:flex;align-items:center;justify-content:center;gap:1rem;padding:1.5rem 2rem;border-radius:12px;border:2px solid;font-family:'Courier New',monospace;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:bold;background:none;color:#fff;transition:all 0.3s ease;cursor:pointer;text-align:center;width:100%}
@@ -159,6 +162,24 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
     <p>Play a full 3-inning game or Home Run Derby with bobblehead players</p>
   </a>
 
+  <a href="/pong" class="card card-pong">
+    <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Left paddle -->
+      <rect x="8" y="22" width="8" height="36" rx="2" fill="#fff"/>
+      <!-- Right paddle -->
+      <rect x="64" y="28" width="8" height="36" rx="2" fill="#fff"/>
+      <!-- Ball -->
+      <rect x="36" y="36" width="8" height="8" fill="#fff"/>
+      <!-- Center line -->
+      <rect x="39" y="5" width="2" height="8" fill="#fff" opacity="0.4"/>
+      <rect x="39" y="19" width="2" height="8" fill="#fff" opacity="0.4"/>
+      <rect x="39" y="53" width="2" height="8" fill="#fff" opacity="0.4"/>
+      <rect x="39" y="67" width="2" height="8" fill="#fff" opacity="0.4"/>
+    </svg>
+    <h2>Pong</h2>
+    <p>The original Atari classic — paddle vs. CPU</p>
+  </a>
+
 </div>
 
 <section style="max-width:700px;width:100%;margin-top:2.5rem;text-align:center">
@@ -210,6 +231,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Math Quest RPG">Math Quest RPG</option>
         <option value="Snake">Snake</option>
         <option value="Backyard Baseball">Backyard Baseball</option>
+        <option value="Pong">Pong</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>
