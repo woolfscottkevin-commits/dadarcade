@@ -376,7 +376,7 @@ function spawnTraffic(){
   });
   var lanes=freeLanes.length>0?freeLanes:allLanes;
   var z=player.z+(OBJ_DRAW_DIST-10)*SEG_LEN;
-  var types=[{w:0.12,h:20,name:'sedan'},{w:0.15,h:24,name:'suv'},{w:0.2,h:28,name:'truck'}];
+  var types=[{w:0.35,h:20,name:'sedan'},{w:0.4,h:24,name:'suv'},{w:0.5,h:28,name:'truck'}];
   var type=pick(types);
   var colors=['#c44','#44c','#4a4','#ca4','#a4a','#4aa','#888'];
   traffic.push({
@@ -411,7 +411,7 @@ function updateTraffic(pdt){
       t.nearMissChecked=true;
       if(!nitroActive){
         var xd=Math.abs(player.x-t.x);
-        if(xd<0.3&&xd>=0.15+t.type.w/2){
+        if(xd<0.15+t.type.w/2+0.15&&xd>=0.15+t.type.w/2){
           nearMissScore+=50;nearMissCount++;score+=50;
           addFloat(W/2,H/2-60,'+50 NEAR MISS!','#fd0',20);
           sfxNearMiss();
