@@ -95,7 +95,7 @@ var BASE_CAM_DEPTH=1/Math.tan(40*Math.PI/180); // wider FOV = more dramatic pers
 var activeCamDepth=BASE_CAM_DEPTH;
 var MIN_CLIP=10;
 var OBJ_DRAW_DIST=80; // shorter distance for sprites/traffic/coins/powerups
-var ROAD_DARK='#333',ROAD_LIGHT='#444';
+var ROAD_DARK='#363636',ROAD_LIGHT='#3f3f3f';
 var FIXED_DT=1/120;
 var TOTAL_SEGS=500;
 
@@ -362,7 +362,7 @@ function advanceSegments(){
 // ═══════ TRAFFIC ═══════
 function spawnTraffic(){
   var dist=distanceM;
-  var maxCars=dist<2000?1:dist<4000?2:dist<6000?3:4;
+  var maxCars=dist<1000?2:dist<2000?4:dist<4000?6:8;
   maxCars=Math.round(maxCars*DIFFS[diffIdx].trafficMul);
   if(traffic.length>=maxCars)return;
   var spdPct=dist<2000?0.6:dist<4000?0.65:dist<6000?0.7:dist<8000?0.75:0.8;
@@ -375,7 +375,7 @@ function spawnTraffic(){
     return true;
   });
   var lanes=freeLanes.length>0?freeLanes:allLanes;
-  var z=player.z+(DRAW_DIST+50)*SEG_LEN;
+  var z=player.z+(OBJ_DRAW_DIST-10)*SEG_LEN;
   var types=[{w:0.12,h:20,name:'sedan'},{w:0.15,h:24,name:'suv'},{w:0.2,h:28,name:'truck'}];
   var type=pick(types);
   var colors=['#c44','#44c','#4a4','#ca4','#a4a','#4aa','#888'];
@@ -508,7 +508,10 @@ function physicsStep(fdt){
 
   // Hill effect
   player.speed-=seg.hill*30*fdt;
-  player.speed=clamp(player.speed,player.maxSpd*0.5,player.maxSpd*1.2);
+  if(coastToStop)
+    player.speed=clamp(player.speed,0,player.maxSpd*1.2);
+  else
+    player.speed=clamp(player.speed,player.maxSpd*0.5,player.maxSpd*1.2);
   if(nitroActive)player.speed=Math.max(player.speed,player.maxSpd*1.5);
 
   // Steering
@@ -534,7 +537,7 @@ function physicsStep(fdt){
 
   // Off-road
   if(Math.abs(player.x)>1.0){
-    var offPenalty=carIdx===2?0.75:1.5; // Truck halved
+    var offPenalty=carIdx===2?3:6; // Truck halved
     player.speed*=(1-offPenalty*fdt);
   }
   if(Math.abs(player.x)>1.5)player.x*=(1-1.0*fdt);
@@ -657,7 +660,7 @@ function update(dt){
   advanceSegments();
 
   // Traffic
-  if(gameState==='PLAYING'&&!coastToStop&&Math.random()<0.02*DIFFS[diffIdx].trafficMul)spawnTraffic();
+  if(gameState==='PLAYING'&&!coastToStop&&Math.random()<0.08*DIFFS[diffIdx].trafficMul)spawnTraffic();
   updateTraffic(pdt);
   updateEngine();
 
@@ -859,7 +862,7 @@ function drawRoad(){
     maxy=cur.y;
     var seg=cur.seg;
     var idx=cur.segIdx;
-    var alt=idx%2===0;
+    var alt=(Math.floor(idx/2))%2===0;
 
     // Height of this strip (+2 overlap to eliminate gaps)
     var stripH=Math.max(2,prev.y-cur.y+2);
