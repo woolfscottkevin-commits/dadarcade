@@ -90,8 +90,8 @@ var resizeRaf=0;
 window.addEventListener('resize',function(){cancelAnimationFrame(resizeRaf);resizeRaf=requestAnimationFrame(resize);});
 
 // ═══════ CONSTANTS ═══════
-var ROAD_W=2000,SEG_LEN=200,DRAW_DIST=300,CAM_H=150;
-var BASE_CAM_DEPTH=1/Math.tan(50*Math.PI/180);
+var ROAD_W=700,SEG_LEN=100,DRAW_DIST=300,CAM_H=120;
+var BASE_CAM_DEPTH=1/Math.tan(40*Math.PI/180); // wider FOV = more dramatic perspective
 var activeCamDepth=BASE_CAM_DEPTH;
 var MIN_CLIP=10;
 var OBJ_DRAW_DIST=80; // shorter distance for sprites/traffic/coins/powerups
@@ -309,7 +309,7 @@ function generateTrack(startIdx,count){
     sectionPos++;
 
     // Env index
-    var envI=Math.floor((i*SEG_LEN)/20000);
+    var envI=Math.floor((i*SEG_LEN)/1000000); // env change every ~2000m (matching distanceM)
     var curEnv=ENVS[envI%ENVS.length];
 
     // Ice patches (snow)
@@ -484,9 +484,9 @@ function physicsStep(fdt){
 
   // Accel/brake/coast
   if(gameState==='PLAYING'&&!coastToStop&&upHeld)
-    player.speed=Math.min(player.speed+player.accel*fdt*200,player.maxSpd);
+    player.speed=Math.min(player.speed+player.accel*fdt*400,player.maxSpd);
   else if(downHeld)
-    player.speed=Math.max(player.speed-player.accel*2*fdt*200,0);
+    player.speed=Math.max(player.speed-player.accel*2*fdt*400,0);
   else if(coastToStop)
     player.speed=Math.max(player.speed-(coastSpeed/2)*fdt,0);
   else
@@ -529,9 +529,9 @@ function physicsStep(fdt){
   if(Math.abs(player.x)>1.5)player.x*=(1-1.0*fdt);
   player.x=clamp(player.x,-2,2);
 
-  // Advance
+  // Advance — speed * 50 makes road scroll at visible rate
   prevPlayerZ=player.z;
-  player.z+=player.speed*fdt;
+  player.z+=player.speed*50*fdt;
 
   // Tilt
   player.tilt=lerp(player.tilt,player.steerInput*8,6*fdt);
@@ -594,8 +594,8 @@ function update(dt){
     steps++;
   }
 
-  distanceM=Math.floor(player.z/10);
-  score=Math.floor(player.z/10)+coinScore+nearMissScore;
+  distanceM=Math.floor(player.z/500); // adjusted for speed multiplier
+  score=distanceM+coinScore+nearMissScore;
 
   // Timer
   if(gameState==='PLAYING'&&!coastToStop){
@@ -852,7 +852,7 @@ function drawRoad(){
     ctx.fillRect(cur.x+cur.w-ew,cur.y,ew,Math.max(1,prev.y-cur.y));
 
     // Checkpoint banner
-    var cpSeg=Math.floor((checkpointsHit+1)*2000*10/SEG_LEN);
+    var cpSeg=Math.floor((checkpointsHit+1)*2000*500/SEG_LEN);
     if(idx===cpSeg||idx===cpSeg+1){
       ctx.fillStyle='#ff0';
       ctx.fillRect(cur.x-cur.w*1.1,cur.y-2,cur.w*2.2,4);
