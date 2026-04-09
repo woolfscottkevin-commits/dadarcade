@@ -809,15 +809,18 @@ function drawRoad(){
     var idx=cur.segIdx;
     var alt=idx%2===0;
 
-    // Grass
-    ctx.fillStyle=alt?groundCol:groundAlt;
-    ctx.fillRect(0,cur.y,W,prev.y-cur.y+1);
+    // Height of this strip (+2 overlap to eliminate gaps)
+    var stripH=Math.max(2,prev.y-cur.y+2);
 
-    // Road
+    // Grass — full width background
+    ctx.fillStyle=alt?groundCol:groundAlt;
+    ctx.fillRect(0,cur.y,W,stripH);
+
+    // Road — trapezoid connecting this segment to previous
     ctx.fillStyle=alt?ROAD_DARK:ROAD_LIGHT;
     ctx.beginPath();
     ctx.moveTo(cur.x-cur.w,cur.y);ctx.lineTo(cur.x+cur.w,cur.y);
-    ctx.lineTo(prev.x+prev.w,prev.y);ctx.lineTo(prev.x-prev.w,prev.y);
+    ctx.lineTo(prev.x+prev.w,prev.y+1);ctx.lineTo(prev.x-prev.w,prev.y+1);
     ctx.fill();
 
     // Ice overlay
@@ -832,24 +835,24 @@ function drawRoad(){
     // Rumble strips
     if(alt){
       ctx.fillStyle=rumbleCol;
-      var rw=cur.w*0.05;
-      ctx.fillRect(cur.x-cur.w-rw,cur.y,rw*2,Math.max(1,prev.y-cur.y));
-      ctx.fillRect(cur.x+cur.w-rw,cur.y,rw*2,Math.max(1,prev.y-cur.y));
+      var rw=Math.max(2,cur.w*0.05);
+      ctx.fillRect(cur.x-cur.w-rw,cur.y,rw*2,stripH);
+      ctx.fillRect(cur.x+cur.w-rw,cur.y,rw*2,stripH);
     }
 
     // Center line (dashed)
     var dashIdx=Math.floor((idx+Math.floor(player.z/SEG_LEN))%4);
     if(dashIdx<2){
       ctx.fillStyle=lineCol;
-      var lw=Math.max(1,cur.w*0.01);
-      ctx.fillRect(cur.x-lw,cur.y,lw*2,Math.max(1,prev.y-cur.y));
+      var lw=Math.max(2,cur.w*0.015);
+      ctx.fillRect(cur.x-lw/2,cur.y,lw,stripH);
     }
 
     // Edge lines
     ctx.fillStyle='#fff';
-    var ew=Math.max(1,cur.w*0.008);
-    ctx.fillRect(cur.x-cur.w,cur.y,ew,Math.max(1,prev.y-cur.y));
-    ctx.fillRect(cur.x+cur.w-ew,cur.y,ew,Math.max(1,prev.y-cur.y));
+    var ew=Math.max(1,cur.w*0.01);
+    ctx.fillRect(cur.x-cur.w,cur.y,ew,stripH);
+    ctx.fillRect(cur.x+cur.w-ew,cur.y,ew,stripH);
 
     // Checkpoint banner
     var cpSeg=Math.floor((checkpointsHit+1)*2000*500/SEG_LEN);
@@ -978,8 +981,9 @@ function drawSprite(type,x,y,sz){
 }
 
 function drawCar(){
-  var cx=W/2,cy=H-60;
+  var cx=W/2,cy=H-80;
   var car=CARS[carIdx];
+  var S=2.2; // car scale factor
   ctx.save();
   ctx.translate(cx,cy);
   ctx.rotate(player.tilt*Math.PI/180);
@@ -987,36 +991,43 @@ function drawCar(){
   // Flash during invincibility
   if(player.invincible&&Math.floor(player.invTimer*10)%2===0){ctx.globalAlpha=0.4;}
 
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath();ctx.ellipse(0,8*S,34*S,5*S,0,0,Math.PI*2);ctx.fill();
+
   // Body
   ctx.fillStyle=car.color;
-  ctx.fillRect(-30,-25,60,30);
-  // Roof
+  ctx.fillRect(-30*S,-22*S,60*S,26*S);
+  // Roof (darker)
   ctx.fillStyle=lerpColor(car.color,'#222',0.3);
-  ctx.fillRect(-22,-30,44,10);
+  ctx.fillRect(-20*S,-28*S,40*S,9*S);
   // Rear window
   ctx.fillStyle='#aad';
-  ctx.fillRect(-18,-28,36,6);
+  ctx.fillRect(-16*S,-26*S,32*S,5*S);
   // Taillights
   ctx.fillStyle='#f33';
-  ctx.fillRect(-28,-20,5,6);ctx.fillRect(23,-20,5,6);
+  ctx.fillRect(-27*S,-17*S,5*S,5*S);ctx.fillRect(22*S,-17*S,5*S,5*S);
   // Wheels
-  ctx.fillStyle='#222';
-  ctx.fillRect(-32,0,8,6);ctx.fillRect(24,0,8,6);
+  ctx.fillStyle='#111';
+  ctx.fillRect(-32*S,1*S,7*S,5*S);ctx.fillRect(25*S,1*S,7*S,5*S);
+  // Wheel rims
+  ctx.fillStyle='#444';
+  ctx.fillRect(-31*S,2*S,5*S,3*S);ctx.fillRect(26*S,2*S,5*S,3*S);
 
   // Shield glow
   if(shieldActive){
     ctx.strokeStyle='rgba(80,160,255,0.5)';ctx.lineWidth=3;
-    ctx.beginPath();ctx.arc(0,-10,38,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(0,-8*S,40*S,0,Math.PI*2);ctx.stroke();
   }
 
   ctx.globalAlpha=1;
   ctx.restore();
 
-  // Nitro flames
+  // Nitro flames (scaled)
   if(nitroActive){
     ctx.fillStyle='rgba(255,140,0,'+(0.5+Math.random()*0.3)+')';
-    ctx.beginPath();ctx.arc(cx-10,cy+10,rr(5,12),0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(cx+10,cy+10,rr(5,12),0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx-18,cy+14,rr(8,18),0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(cx+18,cy+14,rr(8,18),0,Math.PI*2);ctx.fill();
   }
 }
 
