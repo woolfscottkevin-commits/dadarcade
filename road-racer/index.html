@@ -95,7 +95,7 @@ var BASE_CAM_DEPTH=1/Math.tan(40*Math.PI/180); // wider FOV = more dramatic pers
 var activeCamDepth=BASE_CAM_DEPTH;
 var MIN_CLIP=10;
 var OBJ_DRAW_DIST=80; // shorter distance for sprites/traffic/coins/powerups
-var ROAD_DARK='#333',ROAD_LIGHT='#3a3a3a';
+var ROAD_DARK='#333',ROAD_LIGHT='#444';
 var FIXED_DT=1/120;
 var TOTAL_SEGS=500;
 
@@ -114,10 +114,14 @@ var DIFFS=[
 
 // ═══════ ENVIRONMENTS ═══════
 var ENVS=[
-  {name:'desert',skyTop:'#87CEEB',skyBot:'#E8F4FD',ground:'#D2B48C',groundAlt:'#C4A47C',lineCol:'#FF0',rumble:'#c00',sprites:['cactus','rock']},
-  {name:'forest',skyTop:'#7ec8e3',skyBot:'#c5e8f0',ground:'#2D5A27',groundAlt:'#3A6E34',lineCol:'#FFF',rumble:'#c00',sprites:['pine','bush']},
-  {name:'city',skyTop:'#0a0a2e',skyBot:'#1a1a3e',ground:'#222',groundAlt:'#2a2a2a',lineCol:'#FFF',rumble:'#fa0',sprites:['building','light']},
-  {name:'snow',skyTop:'#c8d0d8',skyBot:'#e8ecf0',ground:'#dde',groundAlt:'#ccd',lineCol:'#FFF',rumble:'#c00',sprites:['snowtree','drift']}
+  {name:'desert',skyTop:'#87CEEB',skyBot:'#E8F4FD',ground:'#D2B48C',groundAlt:'#C4A47C',lineCol:'#FF0',rumble:'#c00',fogCol:'#E8F4FD',sprites:['cactus','rock'],
+    bgLayers:[{color:'#C4A070',yBase:0.30,amp:25,freq:0.004,scroll:0.0008},{color:'#B09060',yBase:0.32,amp:18,freq:0.007,scroll:0.002},{color:'#A08050',yBase:0.34,amp:12,freq:0.011,scroll:0.005}]},
+  {name:'forest',skyTop:'#7ec8e3',skyBot:'#c5e8f0',ground:'#2D5A27',groundAlt:'#3A6E34',lineCol:'#FFF',rumble:'#c00',fogCol:'#c5e8f0',sprites:['pine','bush'],
+    bgLayers:[{color:'#3a7a4a',yBase:0.28,amp:30,freq:0.003,scroll:0.0008},{color:'#2a6a3a',yBase:0.31,amp:22,freq:0.006,scroll:0.002},{color:'#1a5a2a',yBase:0.33,amp:15,freq:0.01,scroll:0.005}]},
+  {name:'city',skyTop:'#0a0a2e',skyBot:'#1a1a3e',ground:'#222',groundAlt:'#2a2a2a',lineCol:'#FFF',rumble:'#fa0',fogCol:'#1a1a3e',sprites:['building','light'],
+    bgLayers:[{color:'#1a1a3e',yBase:0.25,amp:40,freq:0.008,scroll:0.0005},{color:'#151530',yBase:0.30,amp:30,freq:0.012,scroll:0.0015},{color:'#101028',yBase:0.33,amp:20,freq:0.018,scroll:0.004}]},
+  {name:'snow',skyTop:'#c8d0d8',skyBot:'#e8ecf0',ground:'#dde',groundAlt:'#ccd',lineCol:'#FFF',rumble:'#c00',fogCol:'#e8ecf0',sprites:['snowtree','drift'],
+    bgLayers:[{color:'#b0b8c0',yBase:0.28,amp:28,freq:0.003,scroll:0.0008},{color:'#a0a8b0',yBase:0.31,amp:20,freq:0.006,scroll:0.002},{color:'#9098a0',yBase:0.33,amp:14,freq:0.01,scroll:0.005}]}
 ];
 
 // ═══════ STATE ═══════
@@ -240,18 +244,22 @@ function ri(a,b){return Math.floor(rr(a,b+1));}
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function lerp(a,b,t){return a+(b-a)*Math.max(0,Math.min(1,t));}
 function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+function easeInOut(a,b,t){return a+(b-a)*(-Math.cos(t*Math.PI)/2+0.5);}
+function easeIn(a,b,t){return a+(b-a)*(1-Math.cos(t*Math.PI/2));}
+function parseHex(c){if(c.length===4)c='#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];return[parseInt(c.slice(1,3),16)||0,parseInt(c.slice(3,5),16)||0,parseInt(c.slice(5,7),16)||0];}
+function rgbStr(r,g,b){return'rgb('+r+','+g+','+b+')';}
 function lsGet(k,d){try{var v=localStorage.getItem('rr_'+k);return v!==null?JSON.parse(v):d;}catch(e){return d;}}
 function lsSet(k,v){try{localStorage.setItem('rr_'+k,JSON.stringify(v));}catch(e){}}
 
 // ═══════ PROJECTION ═══════
-function project(wz,cz){
+function project(wz,cz,worldY,camY){
   // Returns scale factor and base screen Y for a given world Z
   var tz=wz-cz;
   if(tz<MIN_CLIP)return null;
   var s=activeCamDepth/Math.max(tz,MIN_CLIP);
   return{
     x:W/2, // base center — curves and player offset applied separately
-    y:Math.round(H/2+s*CAM_H*H/2), // camera above road pushes road below center
+    y:Math.round(H/2+s*(camY-worldY)*H/2), // project Y difference between camera and segment
     w:Math.round(s*ROAD_W*W/2),
     s:s
   };
@@ -259,7 +267,7 @@ function project(wz,cz){
 
 // ═══════ SEGMENTS ═══════
 function makeSeg(z){
-  return{z:z,curve:0,hill:0,sprite:null,traffic:null,coin:null,powerUp:null,icy:false};
+  return{z:z,curve:0,hill:0,worldY:0,sprite:null,traffic:null,coin:null,powerUp:null,icy:false};
 }
 function initSegments(){
   segments=[];
@@ -279,7 +287,8 @@ function getSegByZ(z){
 }
 
 // Track generation
-var sectionType=0,sectionLen=0,sectionPos=0;
+var sectionType=0,sectionLen=0,sectionPos=0,cumWorldY=0;
+var lastCumCurve=0;
 var SECTIONS=['straight','gentleL','gentleR','sharpL','sharpR','hillUp','hillDown','sCurve','hilltop','valley'];
 
 function generateTrack(startIdx,count){
@@ -297,15 +306,17 @@ function generateTrack(startIdx,count){
     }
     var t=sectionPos/sectionLen;
     var sec=SECTIONS[sectionType];
-    if(sec==='gentleL')seg.curve=-0.3;
-    else if(sec==='gentleR')seg.curve=0.3;
-    else if(sec==='sharpL')seg.curve=-0.7;
-    else if(sec==='sharpR')seg.curve=0.7;
-    else if(sec==='hillUp')seg.hill=0.4;
-    else if(sec==='hillDown')seg.hill=-0.4;
+    if(sec==='gentleL')seg.curve=easeInOut(0,-0.3,t);
+    else if(sec==='gentleR')seg.curve=easeInOut(0,0.3,t);
+    else if(sec==='sharpL')seg.curve=easeInOut(0,-0.7,t);
+    else if(sec==='sharpR')seg.curve=easeInOut(0,0.7,t);
+    else if(sec==='hillUp')seg.hill=easeInOut(0,0.4,t);
+    else if(sec==='hillDown')seg.hill=easeInOut(0,-0.4,t);
     else if(sec==='sCurve')seg.curve=Math.sin(t*Math.PI*2)*0.6;
-    else if(sec==='hilltop'){seg.hill=t<0.5?0.5:-0.5;}
-    else if(sec==='valley'){seg.hill=t<0.5?-0.4:0.4;}
+    else if(sec==='hilltop'){seg.hill=t<0.5?easeIn(0,0.5,t*2):easeIn(0,-0.5,(t-0.5)*2);}
+    else if(sec==='valley'){seg.hill=t<0.5?easeIn(0,-0.4,t*2):easeIn(0,0.4,(t-0.5)*2);}
+    cumWorldY+=seg.hill*SEG_LEN;
+    seg.worldY=cumWorldY;
     sectionPos++;
 
     // Env index
@@ -339,7 +350,7 @@ function advanceSegments(){
     // Recycle front segment
     var recycled=segments.shift();
     recycled.traffic=null;recycled.coin=null;recycled.powerUp=null;
-    recycled.sprite=null;recycled.icy=false;recycled.curve=0;recycled.hill=0;
+    recycled.sprite=null;recycled.icy=false;recycled.curve=0;recycled.hill=0;recycled.worldY=0;
     recycled.z=totalGenerated*SEG_LEN;
     segments.push(recycled);
     segStart++;
@@ -472,7 +483,7 @@ function initGame(){
   activeCamDepth=BASE_CAM_DEPTH;
   statShowTimer=5;newHighScore=false;
   traffic=[];coins=[];powerups=[];particles=[];floatTexts=[];speedLines=[];
-  sectionType=0;sectionLen=0;sectionPos=0;
+  sectionType=0;sectionLen=0;sectionPos=0;cumWorldY=0;
   initSegments();
   upHeld=false;downHeld=false;leftHeld=false;rightHeld=false;
 }
@@ -754,6 +765,33 @@ function getEnvColor(prop){
   return lerpColor(prev[prop],cur[prop],envFade);
 }
 
+function drawBackground(horizon){
+  var env=ENVS[envIdx];
+  if(!env.bgLayers)return;
+  // Interpolate layer colors during env transitions
+  var prevEnv=ENVS[prevEnvIdx];
+  for(var li=0;li<env.bgLayers.length;li++){
+    var layer=env.bgLayers[li];
+    var col=layer.color;
+    if(envFade<1&&prevEnv.bgLayers&&prevEnv.bgLayers[li]){
+      col=lerpColor(prevEnv.bgLayers[li].color,layer.color,envFade);
+    }
+    var baseY=H*layer.yBase;
+    var offsetX=lastCumCurve*(li+1)*0.08+distanceM*layer.scroll;
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(0,H);
+    for(var x=0;x<=W;x+=4){
+      var y=baseY-layer.amp*Math.sin((x+offsetX)*layer.freq)
+              -layer.amp*0.4*Math.sin((x+offsetX)*layer.freq*2.3);
+      ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W,H);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
 function drawRoad(){
   var env=ENVS[envIdx];
   // Sky — fill to horizon (roughly H*0.4 for camera looking down at road)
@@ -762,6 +800,9 @@ function drawRoad(){
   grad.addColorStop(0,getEnvColor('skyTop'));
   grad.addColorStop(1,getEnvColor('skyBot'));
   ctx.fillStyle=grad;ctx.fillRect(0,0,W,horizon+20);
+
+  // Parallax background layers
+  drawBackground(horizon);
 
   // Ground fill — from horizon to bottom
   ctx.fillStyle=getEnvColor('ground');
@@ -779,32 +820,43 @@ function drawRoad(){
   var groundAlt=getEnvColor('groundAlt');
   var lineCol=getEnvColor('lineCol');
   var rumbleCol=getEnvColor('rumble');
+  var fogColor=getEnvColor('fogCol');
+  var fogRGB=parseHex(fogColor);
+  var roadDarkRGB=parseHex(ROAD_DARK),roadLightRGB=parseHex(ROAD_LIGHT);
+  var groundRGB=parseHex(groundCol),groundAltRGB=parseHex(groundAlt);
+
+  // Camera Y: follow player segment elevation
+  var playerSeg0=getSeg(playerSegIdx);
+  var camWorldY=(playerSeg0?playerSeg0.worldY:0)+CAM_H;
 
   // Collect projected segments (back to front)
-  // Classic pseudo-3D: accumulate curve/hill as screen-space offsets
+  // Curves use accumulated screen-space offset; hills use true Y projection
   var projected=[];
-  var cumDx=0,cumDy=0; // accumulated screen-space offsets
+  var cumDx=0;
   for(var i=drawStart;i>=drawEnd;i--){
     var seg=getSeg(i);
     if(!seg)continue;
-    var p=project(seg.z,camZ);
+    var p=project(seg.z,camZ,seg.worldY,camWorldY);
     if(!p)continue;
     // Apply curve: shift X in screen space, scaled by projection
     cumDx+=seg.curve*p.s*2*W;
-    // Apply hill: shift Y in screen space
-    cumDy+=seg.hill*p.s*H*0.5;
     // Apply player X offset (steering shifts the road)
     p.x=Math.round(W/2-player.x*p.w+cumDx);
-    p.y=Math.round(p.y+cumDy);
-    p.segIdx=i;p.seg=seg;p.cumCurve=cumDx;p.cumHill=cumDy;
+    p.segIdx=i;p.seg=seg;p.cumCurve=cumDx;
     projected.push(p);
   }
+  // Cache cumulative curve for parallax background next frame
+  lastCumCurve=projected.length>0?projected[0].cumCurve:0;
 
-  // Draw front to back (painter)
+  // Draw front to back (painter) with hill occlusion
+  var maxy=H;
   for(var i=projected.length-1;i>=0;i--){
     var cur=projected[i];
     var prev=i<projected.length-1?projected[i+1]:null;
     if(!prev)continue;
+    // Hill occlusion: skip segments hidden behind closer hills
+    if(cur.y>=maxy)continue;
+    maxy=cur.y;
     var seg=cur.seg;
     var idx=cur.segIdx;
     var alt=idx%2===0;
@@ -812,12 +864,24 @@ function drawRoad(){
     // Height of this strip (+2 overlap to eliminate gaps)
     var stripH=Math.max(2,prev.y-cur.y+2);
 
-    // Grass — full width background
-    ctx.fillStyle=alt?groundCol:groundAlt;
+    // Fog factor: quadratic falloff with distance
+    var fogDist=(idx-playerSegIdx)/DRAW_DIST;
+    var fogT=fogDist*fogDist;if(fogT>1)fogT=1;
+
+    // Grass — full width background (fog-blended)
+    var gRGB=alt?groundRGB:groundAltRGB;
+    var gr=Math.round(gRGB[0]+(fogRGB[0]-gRGB[0])*fogT);
+    var gg=Math.round(gRGB[1]+(fogRGB[1]-gRGB[1])*fogT);
+    var gb=Math.round(gRGB[2]+(fogRGB[2]-gRGB[2])*fogT);
+    ctx.fillStyle=rgbStr(gr,gg,gb);
     ctx.fillRect(0,cur.y,W,stripH);
 
-    // Road — single solid color (no alternating stripes)
-    ctx.fillStyle=ROAD_DARK;
+    // Road — alternating stripes for depth/speed perception (fog-blended)
+    var rRGB=alt?roadDarkRGB:roadLightRGB;
+    var rr2=Math.round(rRGB[0]+(fogRGB[0]-rRGB[0])*fogT);
+    var rg=Math.round(rRGB[1]+(fogRGB[1]-rRGB[1])*fogT);
+    var rb=Math.round(rRGB[2]+(fogRGB[2]-rRGB[2])*fogT);
+    ctx.fillStyle=rgbStr(rr2,rg,rb);
     ctx.beginPath();
     ctx.moveTo(cur.x-cur.w,cur.y);ctx.lineTo(cur.x+cur.w,cur.y);
     ctx.lineTo(prev.x+prev.w,prev.y+1);ctx.lineTo(prev.x-prev.w,prev.y+1);
@@ -864,6 +928,10 @@ function drawRoad(){
     // Skip expensive objects beyond OBJ_DRAW_DIST
     var objDist=idx-Math.floor(player.z/SEG_LEN);
     if(objDist>OBJ_DRAW_DIST){continue;} // road already drawn above
+
+    // Apply fog alpha to all objects
+    var objAlpha=1-fogT;
+    ctx.globalAlpha=objAlpha;
 
     // Sprites
     if(seg.sprite){
@@ -933,6 +1001,7 @@ function drawRoad(){
         }
       }
     }
+    ctx.globalAlpha=1;
   }
 }
 
