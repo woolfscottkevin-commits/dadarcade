@@ -63,16 +63,24 @@ function getCorsHeaders(req) {
   };
 }
 
-// Valid game prefixes → Redis key mapping
-const GAME_KEYS = {
-  si: 'si_leaderboard:alltime',
-  snake: 'snake_leaderboard:alltime',
-};
+// Valid game prefixes
+const VALID_GAMES = ['si', 'snake', 'pong'];
 
-function getLeaderboardKey(req) {
+function getGameId(req) {
   const url = new URL(req.url, `https://${req.headers.host}`);
   const game = url.searchParams.get('game') || 'si';
-  return GAME_KEYS[game] || GAME_KEYS.si;
+  return VALID_GAMES.includes(game) ? game : 'si';
+}
+
+function getAlltimeKey(game) {
+  return `${game}_leaderboard:alltime`;
+}
+
+function getDailyKey(game) {
+  // UTC date string as key suffix — auto-segments by day
+  const d = new Date();
+  const dateStr = d.toISOString().slice(0, 10); // "2026-04-09"
+  return `${game}_leaderboard:daily:${dateStr}`;
 }
 
 export default async function handler(req, res) {
@@ -84,12 +92,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const key = getLeaderboardKey(req);
+    const game = getGameId(req);
+    const alltimeKey = getAlltimeKey(game);
+    const dailyKey = getDailyKey(game);
     if (req.method === 'GET') {
-      return await handleGet(req, res, key);
+      return await handleGet(req, res, alltimeKey, dailyKey);
     }
     if (req.method === 'POST') {
-      return await handlePost(req, res, key);
+      return await handlePost(req, res, alltimeKey, dailyKey);
     }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
@@ -98,13 +108,17 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleGet(req, res, key) {
-  const raw = await redis('ZREVRANGE', key, 0, 9, 'WITHSCORES');
-  const alltime = parseLeaderboard(raw);
-  return res.status(200).json({ alltime });
+async function handleGet(req, res, alltimeKey, dailyKey) {
+  const results = await redisPipeline([
+    ['ZREVRANGE', alltimeKey, 0, 9, 'WITHSCORES'],
+    ['ZREVRANGE', dailyKey, 0, 9, 'WITHSCORES'],
+  ]);
+  const alltime = parseLeaderboard(results[0]);
+  const daily = parseLeaderboard(results[1]);
+  return res.status(200).json({ alltime, daily });
 }
 
-async function handlePost(req, res, key) {
+async function handlePost(req, res, alltimeKey, dailyKey) {
   const { initials, score } = req.body || {};
 
   // Validate initials
@@ -133,20 +147,29 @@ async function handlePost(req, res, key) {
   // Use initials + timestamp as unique member to allow same initials multiple times
   const member = `${initials}|${Date.now()}`;
 
-  // Pipeline: ZADD + ZREVRANK + fetch top 10
+  // Pipeline: ZADD to both alltime + daily, get ranks, fetch top 10 from both
   const results = await redisPipeline([
-    ['ZADD', key, encoded, member],
-    ['ZREVRANK', key, member],
-    ['ZREVRANGE', key, 0, 9, 'WITHSCORES'],
+    ['ZADD', alltimeKey, encoded, member],
+    ['ZADD', dailyKey, encoded, member],
+    ['EXPIRE', dailyKey, 86400], // TTL: 24 hours — auto-cleanup
+    ['ZREVRANK', alltimeKey, member],
+    ['ZREVRANK', dailyKey, member],
+    ['ZREVRANGE', alltimeKey, 0, 9, 'WITHSCORES'],
+    ['ZREVRANGE', dailyKey, 0, 9, 'WITHSCORES'],
   ]);
 
-  const rank = results[1]; // 0-indexed
-  const displayRank = rank !== null ? rank + 1 : null;
-  const alltime = parseLeaderboard(results[2]);
+  const alltimeRankRaw = results[3]; // 0-indexed
+  const dailyRankRaw = results[4];
+  const alltimeRank = alltimeRankRaw !== null ? alltimeRankRaw + 1 : null;
+  const dailyRank = dailyRankRaw !== null ? dailyRankRaw + 1 : null;
+  const alltime = parseLeaderboard(results[5]);
+  const daily = parseLeaderboard(results[6]);
 
   return res.status(200).json({
-    alltimeRank: displayRank <= 10 ? displayRank : null,
+    alltimeRank: alltimeRank <= 10 ? alltimeRank : null,
+    dailyRank: dailyRank <= 10 ? dailyRank : null,
     alltime,
+    daily,
   });
 }
 

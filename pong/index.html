@@ -30,7 +30,7 @@
   "@type": "VideoGame",
   "name": "Pong",
   "url": "https://dadarcade.com/pong",
-  "description": "The original Atari Pong rebuilt for the browser. Classic paddle vs. CPU gameplay with authentic retro visuals and sound effects.",
+  "description": "The original Atari Pong rebuilt for the browser. Classic paddle vs. CPU gameplay with authentic retro visuals and sound effects. Daily and all-time leaderboards.",
   "genre": ["Arcade", "Sports"],
   "gamePlatform": "Web Browser",
   "applicationCategory": "Game",
@@ -82,6 +82,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch
 <ul>
 <li>Authentic Atari-style visuals with dotted center line and blocky paddles</li>
 <li>3 difficulty levels: Easy, Normal, Hard</li>
+<li>Daily and all-time leaderboards with 3-letter initials</li>
 <li>Retro sound effects using Web Audio API</li>
 <li>Touch controls for mobile play</li>
 </ul>
@@ -107,6 +108,7 @@ canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;touch
       <ul style="margin:0.3rem 0 0.5rem 1.2rem;color:#666">
         <li>Authentic Atari-style visuals — dotted center line, blocky paddles, chunky score digits</li>
         <li>3 difficulty levels: Easy, Normal, Hard</li>
+        <li>Daily and all-time leaderboards</li>
         <li>Ball speed increases with each rally</li>
         <li>Paddle hit position affects ball angle</li>
         <li>Retro sound effects</li>
@@ -139,6 +141,7 @@ var WIN_SCORE = 11;
 var BALL_BASE_SPEED = 5;
 var BALL_SPEED_INCREMENT = 0.3;
 var BALL_MAX_SPEED = 12;
+var API_URL = 'https://dadarcade.com/api/scores?game=pong';
 
 // ── Canvas Setup ──
 var canvas = document.getElementById('c');
@@ -193,17 +196,19 @@ function sndWin() {
   setTimeout(function() { playTone(784, 0.3, 'square', 0.2); }, 300);
 }
 
-// ── Game State ──
-var MENU = 'MENU', PLAYING = 'PLAYING', PAUSED = 'PAUSED', SERVE = 'SERVE', GAME_OVER = 'GAME_OVER';
+// ── States ──
+var MENU = 'MENU', PLAYING = 'PLAYING', PAUSED = 'PAUSED', SERVE = 'SERVE';
+var GAME_OVER = 'GAME_OVER', INITIALS_ENTRY = 'INITIALS_ENTRY', RANK_DISPLAY = 'RANK_DISPLAY';
 var EASY = 0, NORMAL = 1, HARD = 2;
 var diffNames = ['EASY', 'NORMAL', 'HARD'];
-var diffSpeeds = [3, 4.5, 6]; // CPU paddle speed
-var diffReaction = [0.15, 0.08, 0.02]; // CPU delay factor (higher = dumber)
+var diffSpeeds = [3, 4.5, 6];
+var diffReaction = [0.15, 0.08, 0.02];
 
+// ── Game State ──
 var G = {
   state: MENU,
   difficulty: NORMAL,
-  menuSelection: 1, // 0=Easy, 1=Normal, 2=Hard
+  menuSelection: 1,
   playerY: H / 2,
   cpuY: H / 2,
   playerScore: 0,
@@ -213,16 +218,48 @@ var G = {
   ballVX: 0,
   ballVY: 0,
   ballSpeed: BALL_BASE_SPEED,
-  serveDir: 1, // 1 = serve right (to CPU), -1 = serve left (to player)
+  serveDir: 1,
   serveTimer: 0,
   rallyCount: 0,
   winner: ''
 };
 
+// ── Leaderboard State ──
+var leaderboardData = null; // { alltime: [...], daily: [...] }
+var leaderboardLoading = false;
+var leaderboardError = false;
+var leaderboardTab = 'daily'; // 'daily' or 'alltime'
+
+// Initials entry state
+var initialsChars = [0, 0, 0]; // 0-25 -> A-Z
+var initialsCursor = 0;
+var initialsSubmitting = false;
+var lastInitials = localStorage.getItem('pong_lastInitials') || '';
+if (lastInitials.length === 3) {
+  initialsChars = [lastInitials.charCodeAt(0) - 65, lastInitials.charCodeAt(1) - 65, lastInitials.charCodeAt(2) - 65];
+}
+
+// Rank display state
+var rankDisplayData = null;
+var rankDisplayTimer = 0;
+var rankDisplayUnlocked = false;
+var gameTime = 0;
+
+// Touch hit regions for initials
+var touchInitialsUp = [];
+var touchInitialsDown = [];
+var touchInitialsLetters = [];
+var touchInitialsSubmit = null;
+var touchInitialsSkip = null;
+
 // ── Input ──
 var keys = {};
 var touchY = null;
-var inputMode = 'keyboard'; // 'keyboard' or 'touch'
+var inputMode = 'keyboard';
+
+function promptText(kb, touch) {
+  return inputMode === 'touch' ? touch : kb;
+}
 
 document.addEventListener('keydown', function(e) {
   keys[e.key] = true;
@@ -236,6 +273,9 @@ document.addEventListener('keydown', function(e) {
       G.menuSelection = Math.min(2, G.menuSelection + 1);
     } else if (e.key === 'Enter' || e.key === ' ') {
       startGame(G.menuSelection);
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      leaderboardTab = leaderboardTab === 'daily' ? 'alltime' : 'daily';
     }
     e.preventDefault();
   } else if (G.state === PLAYING) {
@@ -246,11 +286,23 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
       G.state = PLAYING;
     }
-  } else if (G.state === SERVE) {
-    // Any key starts serve
+  } else if (G.state === INITIALS_ENTRY) {
+    handleInitialsKey(e.key);
+  } else if (G.state === RANK_DISPLAY) {
+    if (rankDisplayUnlocked && (e.key === 'Enter' || e.key === ' ')) {
+      G.state = GAME_OVER;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      leaderboardTab = leaderboardTab === 'daily' ? 'alltime' : 'daily';
+    }
   } else if (G.state === GAME_OVER) {
     if (e.key === 'Enter' || e.key === ' ') {
       G.state = MENU;
+    }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      leaderboardTab = leaderboardTab === 'daily' ? 'alltime' : 'daily';
     }
   }
 
@@ -259,8 +311,7 @@ document.addEventListener('keydown', function(e) {
     localStorage.setItem('pong_muted', muted ? '1' : '0');
   }
 
-  // Prevent scrolling
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].indexOf(e.key) !== -1) {
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' ','Tab'].indexOf(e.key) !== -1) {
     e.preventDefault();
   }
 });
@@ -269,6 +320,24 @@ document.addEventListener('keyup', function(e) {
   keys[e.key] = false;
 });
 
+function handleInitialsKey(key) {
+  if (initialsSubmitting) return;
+  if (key === 'ArrowUp' || key === 'w' || key === 'W') {
+    initialsChars[initialsCursor] = (initialsChars[initialsCursor] + 1) % 26;
+  } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
+    initialsChars[initialsCursor] = (initialsChars[initialsCursor] + 25) % 26;
+  } else if (key === 'ArrowLeft') {
+    initialsCursor = Math.max(0, initialsCursor - 1);
+  } else if (key === 'ArrowRight') {
+    initialsCursor = Math.min(2, initialsCursor + 1);
+  } else if (key === 'Enter') {
+    var initials = initialsChars.map(function(ch) { return String.fromCharCode(65 + ch); }).join('');
+    submitScore(initials, G.playerScore);
+  } else if (key === 'Escape') {
+    G.state = GAME_OVER;
+  }
+}
+
 // Touch input
 canvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
@@ -276,16 +345,39 @@ canvas.addEventListener('touchstart', function(e) {
   initAudio();
   var rect = canvas.getBoundingClientRect();
   var t = e.touches[0];
-  var y = (t.clientY - rect.top) / rect.height * H;
-  touchY = y;
+  var tx = (t.clientX - rect.left) / rect.width * W;
+  var ty = (t.clientY - rect.top) / rect.height * H;
+  touchY = ty;
 
   if (G.state === MENU) {
-    // Tap anywhere to start on Normal
+    // Check tab buttons
+    if (ty > 370 && ty < 400) {
+      if (tx < W / 2) { leaderboardTab = 'daily'; return; }
+      else { leaderboardTab = 'alltime'; return; }
+    }
     startGame(G.menuSelection);
   } else if (G.state === GAME_OVER) {
+    // Check tab buttons
+    if (handleTabTouch(tx, ty)) return;
     G.state = MENU;
   } else if (G.state === PAUSED) {
     G.state = PLAYING;
+  } else if (G.state === INITIALS_ENTRY) {
+    handleInitialsTouch(tx, ty);
+  } else if (G.state === RANK_DISPLAY) {
+    if (handleTabTouch(tx, ty)) return;
+    if (rankDisplayUnlocked) G.state = GAME_OVER;
+  }
+
+  // Mute button
+  if (tx > W - 50 && tx < W - 10 && ty < 40) {
+    muted = !muted;
+    localStorage.setItem('pong_muted', muted ? '1' : '0');
+  }
+  // Pause button
+  if (tx > W - 100 && tx < W - 60 && ty < 40) {
+    if (G.state === PLAYING) G.state = PAUSED;
+    else if (G.state === PAUSED) G.state = PLAYING;
   }
 }, { passive: false });
 
@@ -301,7 +393,7 @@ canvas.addEventListener('touchend', function(e) {
   touchY = null;
 }, { passive: false });
 
-// Mouse input (for desktop trackpad/mouse)
+// Mouse input
 canvas.addEventListener('mousemove', function(e) {
   if (G.state === PLAYING || G.state === SERVE) {
     var rect = canvas.getBoundingClientRect();
@@ -310,6 +402,116 @@ canvas.addEventListener('mousemove', function(e) {
     inputMode = 'touch';
   }
 });
+
+function handleTabTouch(tx, ty) {
+  // Tab buttons for leaderboard — positioned at the leaderboard header area
+  // We'll detect taps on "DAILY" and "ALL-TIME" text areas
+  if (ty > 245 && ty < 275) {
+    if (tx < W / 2) { leaderboardTab = 'daily'; return true; }
+    else { leaderboardTab = 'alltime'; return true; }
+  }
+  return false;
+}
+
+function handleInitialsTouch(tx, ty) {
+  if (initialsSubmitting) return;
+  // Check up arrows
+  for (var i = 0; i < touchInitialsUp.length; i++) {
+    var r = touchInitialsUp[i];
+    if (tx >= r.x && tx <= r.x + r.w && ty >= r.y && ty <= r.y + r.h) {
+      initialsChars[r.idx] = (initialsChars[r.idx] + 1) % 26;
+      return;
+    }
+  }
+  // Check down arrows
+  for (var i = 0; i < touchInitialsDown.length; i++) {
+    var r = touchInitialsDown[i];
+    if (tx >= r.x && tx <= r.x + r.w && ty >= r.y && ty <= r.y + r.h) {
+      initialsChars[r.idx] = (initialsChars[r.idx] + 25) % 26;
+      return;
+    }
+  }
+  // Check letter boxes (cycle letter)
+  for (var i = 0; i < touchInitialsLetters.length; i++) {
+    var r = touchInitialsLetters[i];
+    if (tx >= r.x && tx <= r.x + r.w && ty >= r.y && ty <= r.y + r.h) {
+      initialsCursor = r.idx;
+      initialsChars[r.idx] = (initialsChars[r.idx] + 1) % 26;
+      return;
+    }
+  }
+  // Submit button
+  if (touchInitialsSubmit) {
+    var r = touchInitialsSubmit;
+    if (tx >= r.x && tx <= r.x + r.w && ty >= r.y && ty <= r.y + r.h) {
+      var initials = initialsChars.map(function(ch) { return String.fromCharCode(65 + ch); }).join('');
+      submitScore(initials, G.playerScore);
+      return;
+    }
+  }
+  // Skip button
+  if (touchInitialsSkip) {
+    var r = touchInitialsSkip;
+    if (tx >= r.x && tx <= r.x + r.w && ty >= r.y && ty <= r.y + r.h) {
+      G.state = GAME_OVER;
+      return;
+    }
+  }
+}
+
+// ── Leaderboard API ──
+function fetchLeaderboard() {
+  leaderboardLoading = true;
+  leaderboardError = false;
+  var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 3000); });
+  Promise.race([fetch(API_URL), timeout])
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      leaderboardData = data;
+      leaderboardLoading = false;
+    })
+    .catch(function() {
+      leaderboardError = true;
+      leaderboardLoading = false;
+    });
+}
+
+function submitScore(initials, scoreVal) {
+  initialsSubmitting = true;
+  localStorage.setItem('pong_lastInitials', initials);
+  var timeout = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, 3000); });
+  Promise.race([
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initials: initials, score: scoreVal })
+    }),
+    timeout
+  ])
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      initialsSubmitting = false;
+      rankDisplayData = data;
+      leaderboardData = { alltime: data.alltime || [], daily: data.daily || [] };
+      // Show daily tab if they ranked on daily, otherwise alltime
+      if (data.dailyRank && data.dailyRank <= 10) {
+        leaderboardTab = 'daily';
+      } else if (data.alltimeRank && data.alltimeRank <= 10) {
+        leaderboardTab = 'alltime';
+      }
+      rankDisplayTimer = ((data.alltimeRank && data.alltimeRank <= 10) || (data.dailyRank && data.dailyRank <= 10)) ? 2.0 : 1.5;
+      rankDisplayUnlocked = false;
+      G.state = RANK_DISPLAY;
+    })
+    .catch(function() {
+      initialsSubmitting = false;
+      rankDisplayData = null;
+      G.state = GAME_OVER;
+    });
+}
+
+// Fetch on load
+fetchLeaderboard();
 
 // ── Game Functions ──
 function startGame(diff) {
@@ -336,18 +538,30 @@ function resetBall() {
 }
 
 function serveBall() {
-  var angle = (Math.random() * 0.8 - 0.4); // -0.4 to 0.4 radians
+  var angle = (Math.random() * 0.8 - 0.4);
   G.ballVX = G.ballSpeed * G.serveDir * Math.cos(angle);
   G.ballVY = G.ballSpeed * Math.sin(angle);
   G.state = PLAYING;
 }
 
 // ── Update ──
-function update() {
+function update(dt) {
+  gameTime += dt;
+
   if (G.state === SERVE) {
     G.serveTimer--;
     if (G.serveTimer <= 0) {
       serveBall();
+    }
+    return;
+  }
+
+  if (G.state === RANK_DISPLAY) {
+    if (rankDisplayTimer > 0) {
+      rankDisplayTimer -= dt;
+      if (rankDisplayTimer <= 0) {
+        rankDisplayUnlocked = true;
+      }
     }
     return;
   }
@@ -357,7 +571,6 @@ function update() {
   // Player paddle movement
   var pSpeed = 7;
   if (inputMode === 'touch' && touchY !== null) {
-    // Move paddle toward touch/mouse position
     var diff = touchY - G.playerY;
     if (Math.abs(diff) > 2) {
       G.playerY += Math.sign(diff) * Math.min(Math.abs(diff), pSpeed * 1.5);
@@ -366,8 +579,6 @@ function update() {
     if (keys['ArrowUp'] || keys['w'] || keys['W']) G.playerY -= pSpeed;
     if (keys['ArrowDown'] || keys['s'] || keys['S']) G.playerY += pSpeed;
   }
-
-  // Clamp player paddle
   G.playerY = Math.max(PADDLE_H / 2, Math.min(H - PADDLE_H / 2, G.playerY));
 
   // CPU paddle AI
@@ -375,13 +586,10 @@ function update() {
   var reaction = diffReaction[G.difficulty];
   var targetY = G.ballY;
 
-  // Add imperfection — CPU tracks ball with delay and slight offset
   if (G.ballVX > 0) {
-    // Ball moving toward CPU — track it
     var offset = (G.difficulty === EASY) ? (Math.sin(Date.now() * 0.003) * 30) : 0;
     targetY = G.ballY + offset;
   } else {
-    // Ball moving away — drift toward center
     targetY = H / 2 + (Math.sin(Date.now() * 0.002) * 40);
   }
 
@@ -407,7 +615,7 @@ function update() {
     sndWallHit();
   }
 
-  // Player paddle collision (left side)
+  // Player paddle collision (left)
   var pLeft = PADDLE_MARGIN;
   var pRight = PADDLE_MARGIN + PADDLE_W;
   var pTop = G.playerY - PADDLE_H / 2;
@@ -420,17 +628,15 @@ function update() {
       G.ballY - BALL_SIZE / 2 <= pBottom) {
     G.ballX = pRight + BALL_SIZE / 2;
     G.rallyCount++;
-    // Angle based on where ball hits paddle
-    var hitPos = (G.ballY - G.playerY) / (PADDLE_H / 2); // -1 to 1
-    var maxAngle = Math.PI / 4; // 45 degrees
-    var angle = hitPos * maxAngle;
+    var hitPos = (G.ballY - G.playerY) / (PADDLE_H / 2);
+    var angle = hitPos * (Math.PI / 4);
     G.ballSpeed = Math.min(BALL_MAX_SPEED, G.ballSpeed + BALL_SPEED_INCREMENT);
     G.ballVX = G.ballSpeed * Math.cos(angle);
     G.ballVY = G.ballSpeed * Math.sin(angle);
     sndPaddleHit();
   }
 
-  // CPU paddle collision (right side)
+  // CPU paddle collision (right)
   var cLeft = W - PADDLE_MARGIN - PADDLE_W;
   var cRight = W - PADDLE_MARGIN;
   var cTop = G.cpuY - PADDLE_H / 2;
@@ -453,31 +659,39 @@ function update() {
 
   // Scoring
   if (G.ballX < -BALL_SIZE) {
-    // CPU scores
     G.cpuScore++;
     sndScore();
     if (G.cpuScore >= WIN_SCORE) {
       G.state = GAME_OVER;
       G.winner = 'CPU';
+      fetchLeaderboard();
       return;
     }
-    G.serveDir = -1; // Serve toward player (loser receives)
+    G.serveDir = -1;
     resetBall();
     G.state = SERVE;
     G.serveTimer = 60;
   }
 
   if (G.ballX > W + BALL_SIZE) {
-    // Player scores
     G.playerScore++;
     sndScore();
     if (G.playerScore >= WIN_SCORE) {
-      G.state = GAME_OVER;
       G.winner = 'PLAYER';
       sndWin();
+      // Player wins — go to initials entry
+      initialsChars = [0, 0, 0];
+      var last = localStorage.getItem('pong_lastInitials') || '';
+      if (last.length === 3) {
+        initialsChars = [last.charCodeAt(0) - 65, last.charCodeAt(1) - 65, last.charCodeAt(2) - 65];
+      }
+      initialsCursor = 0;
+      initialsSubmitting = false;
+      rankDisplayData = null;
+      G.state = INITIALS_ENTRY;
       return;
     }
-    G.serveDir = 1; // Serve toward CPU
+    G.serveDir = 1;
     resetBall();
     G.state = SERVE;
     G.serveTimer = 60;
@@ -485,18 +699,18 @@ function update() {
 }
 
 // ── Render ──
-// Atari-style digit bitmaps (5x7 grid, each row is a 5-bit number)
+// Atari-style digit bitmaps (5x7 grid)
 var DIGITS = [
-  [0x1F,0x11,0x11,0x11,0x11,0x11,0x1F], // 0
-  [0x04,0x0C,0x04,0x04,0x04,0x04,0x0E], // 1
-  [0x1F,0x01,0x01,0x1F,0x10,0x10,0x1F], // 2
-  [0x1F,0x01,0x01,0x1F,0x01,0x01,0x1F], // 3
-  [0x11,0x11,0x11,0x1F,0x01,0x01,0x01], // 4
-  [0x1F,0x10,0x10,0x1F,0x01,0x01,0x1F], // 5
-  [0x1F,0x10,0x10,0x1F,0x11,0x11,0x1F], // 6
-  [0x1F,0x01,0x01,0x02,0x04,0x04,0x04], // 7
-  [0x1F,0x11,0x11,0x1F,0x11,0x11,0x1F], // 8
-  [0x1F,0x11,0x11,0x1F,0x01,0x01,0x1F], // 9
+  [0x1F,0x11,0x11,0x11,0x11,0x11,0x1F],
+  [0x04,0x0C,0x04,0x04,0x04,0x04,0x0E],
+  [0x1F,0x01,0x01,0x1F,0x10,0x10,0x1F],
+  [0x1F,0x01,0x01,0x1F,0x01,0x01,0x1F],
+  [0x11,0x11,0x11,0x1F,0x01,0x01,0x01],
+  [0x1F,0x10,0x10,0x1F,0x01,0x01,0x1F],
+  [0x1F,0x10,0x10,0x1F,0x11,0x11,0x1F],
+  [0x1F,0x01,0x01,0x02,0x04,0x04,0x04],
+  [0x1F,0x11,0x11,0x1F,0x11,0x11,0x1F],
+  [0x1F,0x11,0x11,0x1F,0x01,0x01,0x1F],
 ];
 
 function drawDigit(num, x, y, size) {
@@ -513,7 +727,7 @@ function drawDigit(num, x, y, size) {
 
 function drawScore(score, centerX, y) {
   var s = String(score);
-  var digitW = 5 * 6 + 4; // 5 cols * 6px + gap
+  var digitW = 5 * 6 + 4;
   var totalW = s.length * digitW - 4;
   var startX = centerX - totalW / 2;
   for (var i = 0; i < s.length; i++) {
@@ -523,8 +737,7 @@ function drawScore(score, centerX, y) {
 
 function drawCenterLine() {
   ctx.fillStyle = '#fff';
-  var dashH = 12;
-  var gap = 12;
+  var dashH = 12, gap = 12;
   for (var y = 0; y < H; y += dashH + gap) {
     ctx.fillRect(W / 2 - 2, y, 4, dashH);
   }
@@ -542,49 +755,253 @@ function drawBall() {
 
 function drawTouchUI() {
   if (inputMode !== 'touch') return;
-
-  // Mute button (top right)
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(W - 50, 10, 40, 30);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '14px Courier New';
   ctx.textAlign = 'center';
   ctx.fillText(muted ? 'OFF' : 'SND', W - 30, 30);
-
-  // Pause button (top center-right)
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
   ctx.fillRect(W - 100, 10, 40, 30);
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.fillText('| |', W - 80, 30);
 }
 
-// Touch button handling
-canvas.addEventListener('touchstart', function(e) {
-  var rect = canvas.getBoundingClientRect();
-  for (var i = 0; i < e.touches.length; i++) {
-    var tx = (e.touches[i].clientX - rect.left) / rect.width * W;
-    var ty = (e.touches[i].clientY - rect.top) / rect.height * H;
+// ── Leaderboard Table ──
+function renderLeaderboardTable(cx, startY) {
+  ctx.textAlign = 'center';
 
-    // Mute button
-    if (tx > W - 50 && tx < W - 10 && ty < 40) {
-      muted = !muted;
-      localStorage.setItem('pong_muted', muted ? '1' : '0');
+  if (leaderboardLoading) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px Courier New';
+    ctx.fillText('Loading leaderboard...', cx, startY + 20);
+    return;
+  }
+
+  if (leaderboardError) {
+    ctx.fillStyle = '#f88';
+    ctx.font = '14px Courier New';
+    ctx.fillText('Leaderboard offline', cx, startY + 20);
+    return;
+  }
+
+  if (!leaderboardData) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px Courier New';
+    ctx.fillText('No scores yet -- be the first!', cx, startY + 20);
+    return;
+  }
+
+  // Tab headers
+  var tabY = startY;
+  var dailyX = cx - 70;
+  var alltimeX = cx + 70;
+
+  // DAILY tab
+  ctx.font = (leaderboardTab === 'daily' ? 'bold ' : '') + '14px Courier New';
+  ctx.fillStyle = leaderboardTab === 'daily' ? '#0ff' : '#555';
+  ctx.fillText('DAILY', dailyX, tabY);
+  if (leaderboardTab === 'daily') {
+    ctx.fillRect(dailyX - 30, tabY + 4, 60, 2);
+  }
+
+  // ALL-TIME tab
+  ctx.font = (leaderboardTab === 'alltime' ? 'bold ' : '') + '14px Courier New';
+  ctx.fillStyle = leaderboardTab === 'alltime' ? '#0ff' : '#555';
+  ctx.fillText('ALL-TIME', alltimeX, tabY);
+  if (leaderboardTab === 'alltime') {
+    ctx.fillRect(alltimeX - 40, tabY + 4, 80, 2);
+  }
+
+  // Hint
+  ctx.fillStyle = '#333';
+  ctx.font = '11px Courier New';
+  ctx.fillText(inputMode === 'touch' ? 'tap to switch' : 'TAB to switch', cx, tabY + 16);
+
+  var entries = leaderboardTab === 'daily'
+    ? (leaderboardData.daily || [])
+    : (leaderboardData.alltime || []);
+
+  if (entries.length === 0) {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px Courier New';
+    ctx.fillText(leaderboardTab === 'daily' ? 'No scores today -- be the first!' : 'No scores yet -- be the first!', cx, tabY + 40);
+    return;
+  }
+
+  var listY = tabY + 30;
+  for (var i = 0; i < entries.length && i < 10; i++) {
+    var entry = entries[i];
+    var y = listY + i * 18;
+
+    // Highlight player's rank
+    var isPlayerAlltime = rankDisplayData && rankDisplayData.alltimeRank === i + 1 && leaderboardTab === 'alltime';
+    var isPlayerDaily = rankDisplayData && rankDisplayData.dailyRank === i + 1 && leaderboardTab === 'daily';
+    if (isPlayerAlltime || isPlayerDaily) {
+      ctx.fillStyle = '#ff0';
+    } else {
+      ctx.fillStyle = '#ccc';
     }
-    // Pause button
-    if (tx > W - 100 && tx < W - 60 && ty < 40) {
-      if (G.state === PLAYING) G.state = PAUSED;
-      else if (G.state === PAUSED) G.state = PLAYING;
+    ctx.font = '14px Courier New';
+    ctx.textAlign = 'center';
+
+    var rank = (i + 1).toString().padStart(2, ' ');
+    var initials = entry.initials || '???';
+    var sc = entry.score.toString().padStart(5, ' ');
+    ctx.fillText(rank + '. ' + initials + '  ' + sc, cx, y);
+  }
+}
+
+// ── Initials Entry Screen ──
+function renderInitialsEntry() {
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#ff0';
+  ctx.font = 'bold 24px Courier New';
+  ctx.fillText('ENTER YOUR INITIALS', W / 2, H / 2 - 100);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '20px Courier New';
+  ctx.fillText('You won ' + G.playerScore + ' - ' + G.cpuScore + '!', W / 2, H / 2 - 70);
+
+  // Draw initials boxes
+  var isTouch = (inputMode === 'touch');
+  var boxW = isTouch ? 80 : 50, boxH = isTouch ? 80 : 60, gap = isTouch ? 20 : 15;
+  var totalW = boxW * 3 + gap * 2;
+  var startX = W / 2 - totalW / 2;
+  var startY = H / 2 - 30;
+  var arrowH = isTouch ? 40 : 20;
+
+  touchInitialsLetters = [];
+  touchInitialsUp = [];
+  touchInitialsDown = [];
+
+  for (var i = 0; i < 3; i++) {
+    var bx = startX + i * (boxW + gap);
+    var by = startY;
+
+    var isActive = (i === initialsCursor);
+    ctx.strokeStyle = isActive ? '#0ff' : '#666';
+    ctx.lineWidth = isActive ? 3 : 1;
+    ctx.strokeRect(bx, by, boxW, boxH);
+
+    var ch = String.fromCharCode(65 + initialsChars[i]);
+    ctx.fillStyle = isActive ? '#0ff' : '#fff';
+    ctx.font = isTouch ? 'bold 48px Courier New' : 'bold 36px Courier New';
+    ctx.fillText(ch, bx + boxW / 2, by + boxH / 2 + (isTouch ? 16 : 12));
+
+    // Up arrow
+    ctx.fillStyle = '#0ff';
+    ctx.font = isTouch ? 'bold 28px Courier New' : '16px Courier New';
+    var upY = by - (isTouch ? 30 : 8);
+    ctx.fillText('\u25B2', bx + boxW / 2, upY);
+    touchInitialsUp.push({ x: bx, y: upY - (isTouch ? 30 : 16), w: boxW, h: arrowH, idx: i });
+
+    // Down arrow
+    var downY = by + boxH + (isTouch ? 30 : 18);
+    ctx.fillText('\u25BC', bx + boxW / 2, downY);
+    touchInitialsDown.push({ x: bx, y: downY - (isTouch ? 14 : 10), w: boxW, h: arrowH, idx: i });
+
+    touchInitialsLetters.push({ x: bx, y: by, w: boxW, h: boxH, idx: i });
+  }
+
+  // Submit and Skip buttons
+  var btnW = 140, btnH = 44;
+  var submitX = W / 2 - btnW - 10;
+  var skipX = W / 2 + 10;
+  var btnY = startY + boxH + (isTouch ? 65 : 50);
+
+  if (isTouch) {
+    ctx.fillStyle = '#0a0';
+    ctx.beginPath(); ctx.roundRect(submitX, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px Courier New';
+    ctx.fillText('SUBMIT', submitX + btnW / 2, btnY + btnH / 2 + 7);
+    touchInitialsSubmit = { x: submitX, y: btnY, w: btnW, h: btnH };
+
+    ctx.fillStyle = '#444';
+    ctx.beginPath(); ctx.roundRect(skipX, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 20px Courier New';
+    ctx.fillText('SKIP', skipX + btnW / 2, btnY + btnH / 2 + 7);
+    touchInitialsSkip = { x: skipX, y: btnY, w: btnW, h: btnH };
+  } else {
+    ctx.fillStyle = '#aaa';
+    ctx.font = '14px Courier New';
+    ctx.fillText('UP/DOWN: Change  LEFT/RIGHT: Move  ENTER: Confirm', W / 2, H / 2 + 85);
+    ctx.fillText('ESC: Skip', W / 2, H / 2 + 105);
+    touchInitialsSubmit = null;
+    touchInitialsSkip = null;
+  }
+
+  if (initialsSubmitting) {
+    ctx.fillStyle = '#ff0';
+    ctx.font = '16px Courier New';
+    ctx.fillText('Submitting...', W / 2, isTouch ? btnY + btnH + 30 : H / 2 + 130);
+  }
+}
+
+// ── Rank Display Screen ──
+function renderRankDisplay() {
+  ctx.textAlign = 'center';
+
+  var hasRank = rankDisplayData && (
+    (rankDisplayData.alltimeRank && rankDisplayData.alltimeRank <= 10) ||
+    (rankDisplayData.dailyRank && rankDisplayData.dailyRank <= 10)
+  );
+
+  if (hasRank) {
+    ctx.fillStyle = '#ff0';
+    ctx.font = 'bold 24px Courier New';
+    var msgs = [];
+    if (rankDisplayData.dailyRank && rankDisplayData.dailyRank <= 10) {
+      msgs.push('#' + rankDisplayData.dailyRank + ' today');
+    }
+    if (rankDisplayData.alltimeRank && rankDisplayData.alltimeRank <= 10) {
+      msgs.push('#' + rankDisplayData.alltimeRank + ' all-time');
+    }
+    ctx.fillText('You ranked ' + msgs.join(', ') + '!', W / 2, 100);
+  } else {
+    ctx.fillStyle = '#0ff';
+    ctx.font = 'bold 24px Courier New';
+    ctx.fillText('Score submitted!', W / 2, 100);
+  }
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px Courier New';
+  ctx.fillText('Won ' + G.playerScore + ' - ' + G.cpuScore, W / 2, 130);
+
+  // Show leaderboard
+  renderLeaderboardTable(W / 2, 170);
+
+  if (rankDisplayUnlocked) {
+    var flash = Math.floor(gameTime * 3) % 2;
+    if (flash) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '16px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(promptText('Press Enter to continue', 'Tap to continue'), W / 2, H - 30);
     }
   }
-}, { passive: false });
+}
 
+// ── Main Render ──
 function render() {
-  // Clear — pure black like original Atari
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
   if (G.state === MENU) {
     drawMenuScreen();
+    return;
+  }
+
+  if (G.state === INITIALS_ENTRY) {
+    renderInitialsEntry();
+    return;
+  }
+
+  if (G.state === RANK_DISPLAY) {
+    renderRankDisplay();
     return;
   }
 
@@ -623,7 +1040,7 @@ function render() {
     ctx.fillText('PAUSED', W / 2, H / 2 - 10);
     ctx.font = '16px Courier New';
     ctx.fillStyle = '#888';
-    ctx.fillText(inputMode === 'touch' ? 'Tap to resume' : 'Press P to resume', W / 2, H / 2 + 25);
+    ctx.fillText(promptText('Press P to resume', 'Tap to resume'), W / 2, H / 2 + 25);
   }
 
   // Game Over
@@ -634,16 +1051,21 @@ function render() {
     ctx.font = 'bold 40px Courier New';
     ctx.textAlign = 'center';
     if (G.winner === 'PLAYER') {
-      ctx.fillText('YOU WIN!', W / 2, H / 2 - 20);
+      ctx.fillText('YOU WIN!', W / 2, 100);
     } else {
-      ctx.fillText('CPU WINS', W / 2, H / 2 - 20);
+      ctx.fillText('CPU WINS', W / 2, 100);
     }
     ctx.font = '18px Courier New';
     ctx.fillStyle = '#888';
-    ctx.fillText(G.playerScore + ' - ' + G.cpuScore, W / 2, H / 2 + 20);
+    ctx.fillText(G.playerScore + ' - ' + G.cpuScore, W / 2, 130);
+
+    // Show leaderboard
+    renderLeaderboardTable(W / 2, 170);
+
     ctx.font = '16px Courier New';
     ctx.fillStyle = '#666';
-    ctx.fillText(inputMode === 'touch' ? 'Tap for menu' : 'Press ENTER for menu', W / 2, H / 2 + 55);
+    ctx.textAlign = 'center';
+    ctx.fillText(promptText('Press ENTER for menu', 'Tap for menu'), W / 2, H - 30);
   }
 }
 
@@ -652,45 +1074,48 @@ function drawMenuScreen() {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 64px Courier New';
   ctx.textAlign = 'center';
-  ctx.fillText('PONG', W / 2, 160);
+  ctx.fillText('PONG', W / 2, 100);
 
   // Subtitle
   ctx.font = '16px Courier New';
   ctx.fillStyle = '#666';
-  ctx.fillText('First to 11 wins', W / 2, 200);
+  ctx.fillText('First to 11 wins', W / 2, 135);
 
   // Difficulty options
-  var startY = 280;
-  var gap = 50;
+  var startY = 190;
+  var dgap = 40;
   for (var i = 0; i < 3; i++) {
     var selected = G.menuSelection === i;
-    ctx.font = (selected ? 'bold ' : '') + '24px Courier New';
+    ctx.font = (selected ? 'bold ' : '') + '22px Courier New';
     ctx.fillStyle = selected ? '#fff' : '#555';
     var label = diffNames[i];
     if (selected) label = '> ' + label + ' <';
-    ctx.fillText(label, W / 2, startY + i * gap);
+    ctx.fillText(label, W / 2, startY + i * dgap);
   }
 
   // Instructions
   ctx.font = '14px Courier New';
   ctx.fillStyle = '#444';
   if (inputMode === 'touch') {
-    ctx.fillText('Tap to start', W / 2, 480);
+    ctx.fillText('Tap to start', W / 2, 330);
   } else {
-    ctx.fillText('Arrow keys to select, ENTER to start', W / 2, 480);
+    ctx.fillText('Arrow keys to select, ENTER to start', W / 2, 330);
   }
 
-  // Controls hint
   ctx.fillStyle = '#333';
-  ctx.fillText('W/S or Arrow Keys to move paddle', W / 2, 520);
-  ctx.fillText('P = Pause    M = Mute', W / 2, 545);
+  ctx.fillText('W/S or Arrow Keys to move paddle', W / 2, 350);
+
+  // Leaderboard on menu
+  renderLeaderboardTable(W / 2, 390);
 }
 
 // ── Game Loop ──
 var lastT = 0;
 function gameLoop(t) {
-  // Fixed-step update for consistent physics
-  update();
+  var dt = lastT ? (t - lastT) / 1000 : 1/60;
+  if (dt > 0.1) dt = 1/60; // cap
+  lastT = t;
+  update(dt);
   render();
   requestAnimationFrame(gameLoop);
 }
