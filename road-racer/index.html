@@ -816,8 +816,8 @@ function drawRoad(){
     ctx.fillStyle=alt?groundCol:groundAlt;
     ctx.fillRect(0,cur.y,W,stripH);
 
-    // Road — trapezoid connecting this segment to previous
-    ctx.fillStyle=alt?ROAD_DARK:ROAD_LIGHT;
+    // Road — single solid color (no alternating stripes)
+    ctx.fillStyle=ROAD_DARK;
     ctx.beginPath();
     ctx.moveTo(cur.x-cur.w,cur.y);ctx.lineTo(cur.x+cur.w,cur.y);
     ctx.lineTo(prev.x+prev.w,prev.y+1);ctx.lineTo(prev.x-prev.w,prev.y+1);
@@ -981,9 +981,9 @@ function drawSprite(type,x,y,sz){
 }
 
 function drawCar(){
-  var cx=W/2,cy=H-80;
+  var cx=W/2,cy=H-100;
   var car=CARS[carIdx];
-  var S=2.2; // car scale factor
+  var S=3.5; // car scale — fills ~80% of one lane
   ctx.save();
   ctx.translate(cx,cy);
   ctx.rotate(player.tilt*Math.PI/180);
