@@ -47,6 +47,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-pong h2{color:#fff}
 .card-pong:hover{border-color:#fff;box-shadow:0 0 30px rgba(255,255,255,0.2),0 8px 32px rgba(0,0,0,0.4)}
 
+.card-pm h2{color:#FFD700}
+.card-pm:hover{border-color:#FFD700;box-shadow:0 0 30px rgba(255,215,0,0.2),0 8px 32px rgba(0,0,0,0.4)}
+
 
 .feedback-section{display:flex;flex-direction:column;gap:1rem;max-width:700px;width:100%;margin-top:3rem}
 .feedback-btn{display:flex;align-items:center;justify-content:center;gap:1rem;padding:1.5rem 2rem;border-radius:12px;border:2px solid;font-family:'Courier New',monospace;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:bold;background:none;color:#fff;transition:all 0.3s ease;cursor:pointer;text-align:center;width:100%}
@@ -162,6 +165,24 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
     <p>Play a full 3-inning game or Home Run Derby with bobblehead players</p>
   </a>
 
+  <a href="/pac-man" class="card card-pm">
+    <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Pac-Man body with mouth -->
+      <path d="M40 40 L72 22 A36 36 0 1 0 72 58 Z" fill="#FFD700"/>
+      <!-- Eye -->
+      <circle cx="42" cy="20" r="3" fill="#111"/>
+      <!-- Pellets -->
+      <circle cx="14" cy="40" r="2.5" fill="#FFD7A8"/>
+      <circle cx="6" cy="40" r="2.5" fill="#FFD7A8"/>
+      <!-- Tiny ghost -->
+      <path d="M62 62 Q62 56 68 56 Q74 56 74 62 L74 70 L72 68 L70 70 L68 68 L66 70 L64 68 L62 70 Z" fill="#FF6ec7"/>
+      <circle cx="66" cy="62" r="1.5" fill="#fff"/>
+      <circle cx="71" cy="62" r="1.5" fill="#fff"/>
+    </svg>
+    <h2>Pac-Man</h2>
+    <p>Navigate the maze, eat the pellets, and outsmart the ghosts in this classic arcade remake.</p>
+  </a>
+
   <a href="/pong" class="card card-pong">
     <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
       <!-- Left paddle -->
@@ -232,6 +253,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Snake">Snake</option>
         <option value="Backyard Baseball">Backyard Baseball</option>
         <option value="Pong">Pong</option>
+        <option value="Pac-Man">Pac-Man</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>
