@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Mini Golf — Dad Arcade</title>
+<meta name="description" content="Play mini golf in your browser — 9 holes of neon-lit putting action. Free at Dad Arcade.">
+<meta name="keywords" content="mini golf game online, free mini golf, browser mini golf, putting game, neon mini golf, kids golf game">
+<link rel="canonical" href="https://dadarcade.com/mini-golf">
+<meta property="og:title" content="Mini Golf — Dad Arcade">
+<meta property="og:description" content="9 holes of neon-lit mini golf in your browser. Free, no download.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/mini-golf">
+<meta property="og:site_name" content="Dad Arcade">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mini Golf — Dad Arcade">
+<meta name="twitter:description" content="9 holes of neon-lit mini golf in your browser. Free — no download needed.">
+<meta name="theme-color" content="#0a1f0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Mini Golf",
+  "url": "https://dadarcade.com/mini-golf",
+  "description": "9 holes of neon-lit mini golf in your browser. Drag to aim, release to putt. Free — no download needed.",
+  "genre": ["Arcade", "Sports", "Casual"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dad Arcade" }
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a1410;color:#fff;font-family:'Courier New',monospace;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+canvas{display:block;position:absolute;top:0;left:0;touch-action:none}
+#back-link{position:fixed;top:12px;left:16px;z-index:9999;color:rgba(255,255,255,0.55);text-decoration:none;font-family:'Courier New',monospace;font-size:0.85rem;letter-spacing:0.05em;transition:color 0.2s}
+#back-link:hover{color:#fff}
+#mute-btn{position:fixed;top:8px;right:14px;z-index:9999;background:none;border:none;color:rgba(255,255,255,0.55);font-size:1.4rem;cursor:pointer;font-family:inherit;padding:4px 8px;transition:color 0.2s}
+#mute-btn:hover{color:#fff}
+#noscript-fallback{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:2rem;text-align:center;color:#ccc;font-family:sans-serif}
+</style>
+</head>
+<body>
+<a id="back-link" href="/">&#8592; Dad Arcade</a>
+<button id="mute-btn" aria-label="Toggle sound">🔊</button>
+<canvas id="c"></canvas>
+
+<noscript>
+<div id="noscript-fallback">
+<div>
+<h1>Mini Golf — Dad Arcade</h1>
+<p>This game requires JavaScript. Please enable JavaScript and reload.</p>
+<p><a href="/" style="color:#0ff">&larr; Back to Dad Arcade</a></p>
+</div>
+</div>
+</noscript>
+
+<script>
+'use strict';
+(function(){
+
+// ─────────────────────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────────────────────
+var VW = 400, VH = 600;          // virtual world size
+var HUD_H = 56;                  // top HUD height in screen px
+var BALL_R = 7;
+var CUP_R = 13;
+var WALL_BOUNCE = 0.62;
+var BUMPER_BOUNCE = 1.05;
+var FRICTION_GREEN = 0.987;
+var FRICTION_SAND = 0.90;
+var STOP_SPEED = 9;
+var CUP_CAPTURE_SPEED = 280;
+var MAX_DRAG = 140;              // max drag length (virtual units)
+var MAX_POWER = 720;             // max launch speed (units/sec)
+var MIN_DRAG = 6;                // ignore tiny drags
+
+// ─────────────────────────────────────────────────────────
+// Canvas + scaling
+// ─────────────────────────────────────────────────────────
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var W = 0, H = 0, dpr = 1;
+var scale = 1, vOffsetX = 0, vOffsetY = 0;
+
+function resize(){
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var availW = W - 12;
+  var availH = H - HUD_H - 12;
+  scale = Math.min(availW / VW, availH / VH);
+  vOffsetX = (W - VW * scale) / 2;
+  vOffsetY = HUD_H + (H - HUD_H - VH * scale) / 2;
+}
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', function(){ setTimeout(resize, 60); });
+
+function toVirtual(clientX, clientY){
+  return {
+    x: (clientX - vOffsetX) / scale,
+    y: (clientY - vOffsetY) / scale
+  };
+}
+
+// ─────────────────────────────────────────────────────────
+// Audio (Web Audio API, all procedural)
+// ─────────────────────────────────────────────────────────
+var audioCtx = null;
+var muted = localStorage.getItem('dadarcade-minigolf-muted') === '1';
+var muteBtn = document.getElementById('mute-btn');
+muteBtn.textContent = muted ? '🔇' : '🔊';
+
+function initAudio(){
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(function(){});
+  }
+}
+
+function tone(freq, dur, type, vol, freqEnd){
+  if (muted || !audioCtx) return;
+  try {
+    var t0 = audioCtx.currentTime;
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    if (freqEnd) osc.frequency.exponentialRampToValueAtTime(freqEnd, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, t0 + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  } catch(e) {}
+}
+
+function noiseBurst(dur, vol, filterFreq){
+  if (muted || !audioCtx) return;
+  try {
+    var t0 = audioCtx.currentTime;
+    var bufLen = Math.floor(audioCtx.sampleRate * dur);
+    var buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < bufLen; i++) d[i] = (Math.random()*2 - 1) * (1 - i/bufLen);
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    var filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = filterFreq || 2000;
+    var g = audioCtx.createGain();
+    g.gain.value = vol || 0.2;
+    src.connect(filt); filt.connect(g); g.connect(audioCtx.destination);
+    src.start(t0);
+  } catch(e) {}
+}
+
+function sndPutt(power){
+  // soft tock; pitch slightly higher with more power
+  var f = 480 + power * 220;
+  tone(f, 0.07, 'triangle', 0.22, f * 0.55);
+}
+function sndWall(){ tone(180, 0.06, 'square', 0.13, 130); }
+function sndBumper(){
+  tone(880, 0.09, 'square', 0.2, 1320);
+  setTimeout(function(){ tone(1320, 0.06, 'square', 0.13); }, 30);
+}
+function sndSplash(){ noiseBurst(0.25, 0.22, 1400); }
+function sndSand(){ tone(110, 0.12, 'sine', 0.18, 70); noiseBurst(0.12, 0.07, 600); }
+function sndCup(){
+  tone(220, 0.08, 'sine', 0.2, 110);
+  setTimeout(function(){ tone(523, 0.1, 'triangle', 0.22); }, 90);
+  setTimeout(function(){ tone(659, 0.1, 'triangle', 0.22); }, 200);
+  setTimeout(function(){ tone(784, 0.18, 'triangle', 0.22); }, 310);
+}
+function sndWin(){
+  var notes = [523, 659, 784, 1047, 784, 1047];
+  notes.forEach(function(n, i){
+    setTimeout(function(){ tone(n, 0.18, 'triangle', 0.22); }, i * 130);
+  });
+}
+
+muteBtn.addEventListener('click', function(){
+  muted = !muted;
+  localStorage.setItem('dadarcade-minigolf-muted', muted ? '1' : '0');
+  muteBtn.textContent = muted ? '🔇' : '🔊';
+  initAudio();
+});
+
+// ─────────────────────────────────────────────────────────
+// Holes
+// ─────────────────────────────────────────────────────────
+// Each hole has: name, par, surfaces (filled green), walls (collidable
+// rects), optional bumpers/water/sand/moving, start, cup.
+// All coordinates are in virtual units (0..VW, 0..VH).
+var HOLES = [
+  // 1 — Straight Shot
+  {
+    name: "Straight Shot",
+    par: 2,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500}
+    ],
+    start: {x:200, y:480},
+    cup: {x:200, y:140}
+  },
+  // 2 — L-Shape (vertical column on left, arm sweeping right at top)
+  {
+    name: "Around the Bend",
+    par: 3,
+    surfaces: [
+      {x:80, y:80, w:240, h:120},   // top horizontal arm
+      {x:80, y:80, w:120, h:460}    // left vertical column
+    ],
+    walls: [
+      {x:60, y:60, w:280, h:20},          // top of arm
+      {x:320, y:60, w:20, h:160},         // right of arm
+      {x:200, y:200, w:140, h:20},        // bottom of arm (right of col)
+      {x:200, y:200, w:20, h:360},        // right of column
+      {x:60, y:540, w:160, h:20},         // bottom of column
+      {x:60, y:60, w:20, h:500}           // left of column
+    ],
+    start: {x:140, y:490},
+    cup: {x:280, y:140}
+  },
+  // 3 — Narrow Corridor
+  {
+    name: "Threading the Needle",
+    par: 2,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500},
+      // gap blocks (gap from x=215..245)
+      {x:80, y:300, w:135, h:28},
+      {x:245, y:300, w:75, h:28}
+    ],
+    start: {x:200, y:490},
+    cup: {x:200, y:150}
+  },
+  // 4 — Bumpers
+  {
+    name: "Bumper City",
+    par: 3,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500}
+    ],
+    bumpers: [
+      {x:200, y:220, r:18},
+      {x:140, y:340, r:18},
+      {x:260, y:340, r:18}
+    ],
+    start: {x:200, y:490},
+    cup: {x:200, y:140}
+  },
+  // 5 — Water Hazard
+  {
+    name: "Wet Feet",
+    par: 3,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500}
+    ],
+    water: {x:130, y:280, w:140, h:90},
+    start: {x:200, y:490},
+    cup: {x:200, y:160}
+  },
+  // 6 — Sand Trap
+  {
+    name: "Sandstorm",
+    par: 3,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500}
+    ],
+    sand: {x:120, y:260, w:160, h:130},
+    start: {x:200, y:495},
+    cup: {x:200, y:150}
+  },
+  // 7 — Zigzag
+  {
+    name: "The Zigzag",
+    par: 4,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500},
+      // zigzag rails
+      {x:80, y:200, w:185, h:20},   // from left, gap at right
+      {x:135, y:330, w:185, h:20},  // from right, gap at left
+      {x:80, y:460, w:185, h:20}    // from left, gap at right
+    ],
+    start: {x:285, y:510},
+    cup: {x:115, y:140}
+  },
+  // 8 — Moving Obstacle
+  {
+    name: "Sliding Door",
+    par: 4,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500}
+    ],
+    moving: {x:140, y:290, w:120, h:24, axis:'x', min:80, max:200, speed:90, t:0},
+    start: {x:200, y:495},
+    cup: {x:200, y:150}
+  },
+  // 9 — The Gauntlet
+  {
+    name: "The Gauntlet",
+    par: 5,
+    surfaces: [{x:80, y:80, w:240, h:460}],
+    walls: [
+      {x:60, y:60, w:280, h:20},
+      {x:60, y:540, w:280, h:20},
+      {x:60, y:60, w:20, h:500},
+      {x:320, y:60, w:20, h:500},
+      // narrow gap near top
+      {x:80, y:170, w:120, h:24},
+      {x:240, y:170, w:80, h:24}
+    ],
+    bumpers: [
+      {x:140, y:430, r:16},
+      {x:260, y:430, r:16}
+    ],
+    sand: {x:130, y:260, w:140, h:60},
+    start: {x:200, y:510},
+    cup: {x:200, y:120}
+  }
+];
+
+// ─────────────────────────────────────────────────────────
+// Game state
+// ─────────────────────────────────────────────────────────
+var STATE = { TITLE:'TITLE', PLAYING:'PLAYING', HOLE_COMPLETE:'HOLE_COMPLETE', GAME_OVER:'GAME_OVER' };
+var state = STATE.TITLE;
+var holeIdx = 0;
+var hole = null;
+var ball = { x:0, y:0, vx:0, vy:0, r:BALL_R, moving:false };
+var lastSafePos = { x:0, y:0 };
+var strokes = 0;
+var totalStrokes = 0;
+var holeStrokes = [];          // strokes per hole
+var aim = { active:false, startX:0, startY:0, curX:0, curY:0 };
+var transitionAlpha = 0;       // for fades
+var holeCompleteTimer = 0;
+var holeCompleteText = '';
+var bestScore = parseInt(localStorage.getItem('dadarcade-minigolf-best') || '0', 10) || null;
+var pulse = 0;                 // for cup glow animation
+var celebrateParticles = [];
+
+function loadHole(i){
+  hole = HOLES[i];
+  ball.x = hole.start.x;
+  ball.y = hole.start.y;
+  ball.vx = ball.vy = 0;
+  ball.moving = false;
+  lastSafePos.x = ball.x;
+  lastSafePos.y = ball.y;
+  strokes = 0;
+  if (hole.moving) hole.moving.t = 0;
+  aim.active = false;
+}
+
+function startGame(){
+  holeIdx = 0;
+  totalStrokes = 0;
+  holeStrokes = [];
+  loadHole(0);
+  state = STATE.PLAYING;
+  transitionAlpha = 1;
+}
+
+function nextHole(){
+  holeStrokes[holeIdx] = strokes;
+  totalStrokes += strokes;
+  holeIdx++;
+  if (holeIdx >= HOLES.length){
+    state = STATE.GAME_OVER;
+    if (!bestScore || totalStrokes < bestScore){
+      bestScore = totalStrokes;
+      localStorage.setItem('dadarcade-minigolf-best', String(bestScore));
+    }
+    sndWin();
+  } else {
+    loadHole(holeIdx);
+    state = STATE.PLAYING;
+    transitionAlpha = 1;
+  }
+}
+
+function holeComplete(){
+  state = STATE.HOLE_COMPLETE;
+  holeCompleteTimer = 2.0;
+  var diff = strokes - hole.par;
+  if (strokes === 1) holeCompleteText = "HOLE IN ONE!";
+  else if (diff <= -2) holeCompleteText = "EAGLE!";
+  else if (diff === -1) holeCompleteText = "BIRDIE!";
+  else if (diff === 0) holeCompleteText = "PAR";
+  else if (diff === 1) holeCompleteText = "BOGEY";
+  else if (diff === 2) holeCompleteText = "DOUBLE BOGEY";
+  else holeCompleteText = "+" + diff + " OVER PAR";
+  sndCup();
+  spawnCelebration();
+}
+
+function spawnCelebration(){
+  celebrateParticles = [];
+  var colors = ['#00ffff', '#ff00ff', '#00ff88', '#ffff00'];
+  for (var i = 0; i < 24; i++){
+    var ang = (Math.PI * 2 * i) / 24 + Math.random() * 0.3;
+    var sp = 80 + Math.random() * 100;
+    celebrateParticles.push({
+      x: hole.cup.x, y: hole.cup.y,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      life: 1.2,
+      color: colors[(Math.random() * colors.length) | 0]
+    });
+  }
+}
+
+function restartHole(penalty){
+  ball.x = hole.start.x;
+  ball.y = hole.start.y;
+  ball.vx = ball.vy = 0;
+  ball.moving = false;
+  lastSafePos.x = ball.x;
+  lastSafePos.y = ball.y;
+  if (penalty) strokes++;
+}
+
+// ─────────────────────────────────────────────────────────
+// Physics & collisions
+// ─────────────────────────────────────────────────────────
+function clamp(v, a, b){ return v < a ? a : (v > b ? b : v); }
+
+function collideRect(r){
+  var cx = clamp(ball.x, r.x, r.x + r.w);
+  var cy = clamp(ball.y, r.y, r.y + r.h);
+  var dx = ball.x - cx;
+  var dy = ball.y - cy;
+  var d2 = dx*dx + dy*dy;
+  if (d2 < ball.r * ball.r){
+    var d = Math.sqrt(d2);
+    var nx, ny;
+    if (d < 0.0001){
+      // ball center inside rect — push out via shortest axis
+      var leftPen = ball.x - r.x;
+      var rightPen = (r.x + r.w) - ball.x;
+      var topPen = ball.y - r.y;
+      var botPen = (r.y + r.h) - ball.y;
+      var minP = Math.min(leftPen, rightPen, topPen, botPen);
+      if (minP === leftPen){ nx = -1; ny = 0; ball.x = r.x - ball.r; }
+      else if (minP === rightPen){ nx = 1; ny = 0; ball.x = r.x + r.w + ball.r; }
+      else if (minP === topPen){ nx = 0; ny = -1; ball.y = r.y - ball.r; }
+      else { nx = 0; ny = 1; ball.y = r.y + r.h + ball.r; }
+    } else {
+      nx = dx / d; ny = dy / d;
+      ball.x = cx + nx * ball.r;
+      ball.y = cy + ny * ball.r;
+    }
+    var dot = ball.vx * nx + ball.vy * ny;
+    if (dot < 0){
+      ball.vx -= (1 + WALL_BOUNCE) * dot * nx;
+      ball.vy -= (1 + WALL_BOUNCE) * dot * ny;
+      var sp = Math.hypot(ball.vx, ball.vy);
+      if (sp > 40) sndWall();
+    }
+  }
+}
+
+function collideBumper(b){
+  var dx = ball.x - b.x;
+  var dy = ball.y - b.y;
+  var minD = ball.r + b.r;
+  var d2 = dx*dx + dy*dy;
+  if (d2 < minD * minD){
+    var d = Math.sqrt(d2) || 0.001;
+    var nx = dx / d, ny = dy / d;
+    ball.x = b.x + nx * minD;
+    ball.y = b.y + ny * minD;
+    var dot = ball.vx * nx + ball.vy * ny;
+    if (dot < 0){
+      ball.vx -= (1 + BUMPER_BOUNCE) * dot * nx;
+      ball.vy -= (1 + BUMPER_BOUNCE) * dot * ny;
+      sndBumper();
+    }
+  }
+}
+
+function inRect(r){
+  return ball.x > r.x && ball.x < r.x + r.w && ball.y > r.y && ball.y < r.y + r.h;
+}
+
+var wasInSand = false;
+function update(dt){
+  if (state !== STATE.PLAYING && state !== STATE.HOLE_COMPLETE) return;
+
+  // moving obstacle update
+  if (hole.moving){
+    var m = hole.moving;
+    m.t += dt;
+    var range = m.max - m.min;
+    var s = (Math.sin(m.t * (m.speed / range)) + 1) / 2; // 0..1
+    if (m.axis === 'x') m.x = m.min + s * range;
+    else m.y = m.min + s * range;
+  }
+
+  // Particles for celebration
+  if (celebrateParticles.length){
+    for (var i = celebrateParticles.length - 1; i >= 0; i--){
+      var p = celebrateParticles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      p.life -= dt;
+      if (p.life <= 0) celebrateParticles.splice(i, 1);
+    }
+  }
+
+  if (state === STATE.HOLE_COMPLETE){
+    holeCompleteTimer -= dt;
+    if (holeCompleteTimer <= 0) nextHole();
+    return;
+  }
+
+  if (transitionAlpha > 0) transitionAlpha = Math.max(0, transitionAlpha - dt * 2);
+
+  if (!ball.moving) return;
+
+  // Apply friction
+  var onSand = hole.sand && inRect(hole.sand);
+  var fr = onSand ? FRICTION_SAND : FRICTION_GREEN;
+  if (onSand && !wasInSand) sndSand();
+  wasInSand = onSand;
+  var k = Math.pow(fr, dt * 60);
+  ball.vx *= k;
+  ball.vy *= k;
+
+  // Substepped movement for stable collisions
+  var steps = 6;
+  var sdt = dt / steps;
+  for (var si = 0; si < steps; si++){
+    ball.x += ball.vx * sdt;
+    ball.y += ball.vy * sdt;
+    // walls
+    for (var wi = 0; wi < hole.walls.length; wi++) collideRect(hole.walls[wi]);
+    if (hole.moving) collideRect(hole.moving);
+    // bumpers
+    if (hole.bumpers){
+      for (var bi = 0; bi < hole.bumpers.length; bi++) collideBumper(hole.bumpers[bi]);
+    }
+    // cup capture (mid-substep so fast balls still get caught fairly)
+    var ddx = ball.x - hole.cup.x;
+    var ddy = ball.y - hole.cup.y;
+    var dd = Math.hypot(ddx, ddy);
+    var sp2 = Math.hypot(ball.vx, ball.vy);
+    if (dd < CUP_R * 0.55 || (dd < CUP_R && sp2 < CUP_CAPTURE_SPEED)){
+      ball.x = hole.cup.x;
+      ball.y = hole.cup.y;
+      ball.vx = ball.vy = 0;
+      ball.moving = false;
+      holeComplete();
+      return;
+    }
+  }
+
+  // Water hazard
+  if (hole.water && inRect(hole.water)){
+    sndSplash();
+    ball.x = lastSafePos.x;
+    ball.y = lastSafePos.y;
+    ball.vx = ball.vy = 0;
+    ball.moving = false;
+    strokes++;
+    return;
+  }
+
+  // Stop check
+  var sp = Math.hypot(ball.vx, ball.vy);
+  if (sp < STOP_SPEED){
+    ball.vx = ball.vy = 0;
+    ball.moving = false;
+    lastSafePos.x = ball.x;
+    lastSafePos.y = ball.y;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// Input
+// ─────────────────────────────────────────────────────────
+function onPointerDown(e){
+  initAudio();
+  if (e.target === muteBtn) return;
+  e.preventDefault();
+  var pt = pointerPoint(e);
+  if (state === STATE.TITLE){ startGame(); return; }
+  if (state === STATE.GAME_OVER){ state = STATE.TITLE; return; }
+  if (state === STATE.HOLE_COMPLETE){
+    holeCompleteTimer = 0; nextHole(); return;
+  }
+  if (state !== STATE.PLAYING) return;
+  if (ball.moving) return;
+  var v = toVirtual(pt.x, pt.y);
+  aim.active = true;
+  aim.startX = v.x;
+  aim.startY = v.y;
+  aim.curX = v.x;
+  aim.curY = v.y;
+}
+
+function onPointerMove(e){
+  if (!aim.active) return;
+  e.preventDefault();
+  var pt = pointerPoint(e);
+  var v = toVirtual(pt.x, pt.y);
+  aim.curX = v.x;
+  aim.curY = v.y;
+}
+
+function onPointerUp(e){
+  if (!aim.active) return;
+  e.preventDefault();
+  aim.active = false;
+  if (state !== STATE.PLAYING || ball.moving) return;
+  var dx = aim.startX - aim.curX;
+  var dy = aim.startY - aim.curY;
+  var dragLen = Math.hypot(dx, dy);
+  if (dragLen < MIN_DRAG) return;
+  var capped = Math.min(dragLen, MAX_DRAG);
+  var power = capped / MAX_DRAG;
+  var ang = Math.atan2(dy, dx);
+  var sp = power * MAX_POWER;
+  ball.vx = Math.cos(ang) * sp;
+  ball.vy = Math.sin(ang) * sp;
+  ball.moving = true;
+  strokes++;
+  sndPutt(power);
+}
+
+function pointerPoint(e){
+  if (e.touches && e.touches.length) return { x:e.touches[0].clientX, y:e.touches[0].clientY };
+  if (e.changedTouches && e.changedTouches.length) return { x:e.changedTouches[0].clientX, y:e.changedTouches[0].clientY };
+  return { x:e.clientX, y:e.clientY };
+}
+
+canvas.addEventListener('mousedown', onPointerDown);
+canvas.addEventListener('mousemove', onPointerMove);
+canvas.addEventListener('mouseup', onPointerUp);
+canvas.addEventListener('mouseleave', onPointerUp);
+canvas.addEventListener('touchstart', onPointerDown, { passive:false });
+canvas.addEventListener('touchmove', onPointerMove, { passive:false });
+canvas.addEventListener('touchend', onPointerUp, { passive:false });
+canvas.addEventListener('touchcancel', onPointerUp, { passive:false });
+
+document.addEventListener('keydown', function(e){
+  if (e.key === 'r' || e.key === 'R'){
+    if (state === STATE.PLAYING) restartHole(true);
+  } else if (e.key === 'm' || e.key === 'M'){
+    muted = !muted;
+    localStorage.setItem('dadarcade-minigolf-muted', muted ? '1' : '0');
+    muteBtn.textContent = muted ? '🔇' : '🔊';
+  } else if (e.key === 'Escape'){
+    state = STATE.TITLE;
+  } else if (e.key === ' ' || e.key === 'Enter'){
+    if (state === STATE.TITLE) startGame();
+    else if (state === STATE.GAME_OVER) state = STATE.TITLE;
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// Rendering
+// ─────────────────────────────────────────────────────────
+function drawWorld(){
+  // background outside playfield
+  ctx.fillStyle = '#0a1410';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(vOffsetX, vOffsetY);
+  ctx.scale(scale, scale);
+
+  // Outer frame around the virtual world
+  ctx.fillStyle = '#050a08';
+  ctx.fillRect(0, 0, VW, VH);
+
+  // Putting surface
+  for (var i = 0; i < hole.surfaces.length; i++){
+    var s = hole.surfaces[i];
+    var grad = ctx.createRadialGradient(s.x + s.w/2, s.y + s.h/2, 10, s.x + s.w/2, s.y + s.h/2, Math.max(s.w, s.h));
+    grad.addColorStop(0, '#0e4a18');
+    grad.addColorStop(1, '#082b0d');
+    ctx.fillStyle = grad;
+    ctx.fillRect(s.x, s.y, s.w, s.h);
+  }
+  // subtle grid stripes on green for texture
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = '#00ff88';
+  for (var i2 = 0; i2 < hole.surfaces.length; i2++){
+    var s2 = hole.surfaces[i2];
+    for (var y = s2.y; y < s2.y + s2.h; y += 16){
+      ctx.fillRect(s2.x, y, s2.w, 1);
+    }
+  }
+  ctx.restore();
+
+  // Sand
+  if (hole.sand){
+    var sa = hole.sand;
+    ctx.fillStyle = '#c9a86a';
+    ctx.fillRect(sa.x, sa.y, sa.w, sa.h);
+    ctx.fillStyle = 'rgba(120, 80, 30, 0.55)';
+    for (var sx = sa.x + 4; sx < sa.x + sa.w; sx += 8){
+      for (var sy = sa.y + 4; sy < sa.y + sa.h; sy += 8){
+        var jx = ((sx * 13 + sy * 7) % 5) - 2;
+        var jy = ((sx * 5 + sy * 11) % 5) - 2;
+        ctx.fillRect(sx + jx, sy + jy, 2, 2);
+      }
+    }
+    ctx.strokeStyle = 'rgba(255,220,150,0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sa.x + 0.5, sa.y + 0.5, sa.w - 1, sa.h - 1);
+  }
+
+  // Water (animated waves)
+  if (hole.water){
+    var wa = hole.water;
+    var wgrad = ctx.createLinearGradient(wa.x, wa.y, wa.x, wa.y + wa.h);
+    wgrad.addColorStop(0, '#0a2a55');
+    wgrad.addColorStop(1, '#04162e');
+    ctx.fillStyle = wgrad;
+    ctx.fillRect(wa.x, wa.y, wa.w, wa.h);
+    ctx.strokeStyle = 'rgba(80, 180, 255, 0.45)';
+    ctx.lineWidth = 1.2;
+    var t = pulse;
+    for (var wy = wa.y + 8; wy < wa.y + wa.h - 4; wy += 9){
+      ctx.beginPath();
+      for (var wx = wa.x + 2; wx <= wa.x + wa.w - 2; wx += 4){
+        var off = Math.sin((wx * 0.18) + t * 2 + wy * 0.25) * 1.8;
+        if (wx === wa.x + 2) ctx.moveTo(wx, wy + off);
+        else ctx.lineTo(wx, wy + off);
+      }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(120, 200, 255, 0.6)';
+    ctx.strokeRect(wa.x + 0.5, wa.y + 0.5, wa.w - 1, wa.h - 1);
+  }
+
+  // Cup (with pulsing glow)
+  var cp = hole.cup;
+  var glowR = CUP_R + 6 + Math.sin(pulse * 3) * 2;
+  var cgrad = ctx.createRadialGradient(cp.x, cp.y, 2, cp.x, cp.y, glowR + 8);
+  cgrad.addColorStop(0, 'rgba(255, 255, 100, 0.45)');
+  cgrad.addColorStop(1, 'rgba(255, 255, 100, 0)');
+  ctx.fillStyle = cgrad;
+  ctx.beginPath();
+  ctx.arc(cp.x, cp.y, glowR + 8, 0, Math.PI * 2);
+  ctx.fill();
+  // dark cup hole
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(cp.x, cp.y, CUP_R, 0, Math.PI * 2);
+  ctx.fill();
+  // ring
+  ctx.strokeStyle = '#ffff66';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cp.x, cp.y, CUP_R, 0, Math.PI * 2);
+  ctx.stroke();
+  // little flag pole next to cup (decorative)
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cp.x + CUP_R - 1, cp.y);
+  ctx.lineTo(cp.x + CUP_R - 1, cp.y - 22);
+  ctx.stroke();
+  ctx.fillStyle = '#ff3366';
+  ctx.beginPath();
+  ctx.moveTo(cp.x + CUP_R - 1, cp.y - 22);
+  ctx.lineTo(cp.x + CUP_R + 9, cp.y - 18);
+  ctx.lineTo(cp.x + CUP_R - 1, cp.y - 14);
+  ctx.closePath();
+  ctx.fill();
+
+  // Bumpers
+  if (hole.bumpers){
+    for (var bi = 0; bi < hole.bumpers.length; bi++){
+      var b = hole.bumpers[bi];
+      var bg = ctx.createRadialGradient(b.x, b.y, 1, b.x, b.y, b.r + 8);
+      bg.addColorStop(0, 'rgba(255, 0, 255, 0.6)');
+      bg.addColorStop(1, 'rgba(255, 0, 255, 0)');
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ff3df0';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffaaff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r - 3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Walls (neon cyan)
+  for (var wi = 0; wi < hole.walls.length; wi++){
+    var w = hole.walls[wi];
+    ctx.fillStyle = '#003a4a';
+    ctx.fillRect(w.x, w.y, w.w, w.h);
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+    // glow accent
+    ctx.fillStyle = 'rgba(0, 255, 255, 0.18)';
+    ctx.fillRect(w.x + 2, w.y + 2, w.w - 4, 2);
+  }
+
+  // Moving obstacle (neon red)
+  if (hole.moving){
+    var m = hole.moving;
+    ctx.fillStyle = '#4a0000';
+    ctx.fillRect(m.x, m.y, m.w, m.h);
+    ctx.strokeStyle = '#ff3333';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(m.x + 1, m.y + 1, m.w - 2, m.h - 2);
+    ctx.fillStyle = 'rgba(255, 80, 80, 0.5)';
+    for (var sx2 = m.x + 4; sx2 < m.x + m.w - 4; sx2 += 8){
+      ctx.fillRect(sx2, m.y + 4, 4, m.h - 8);
+    }
+  }
+
+  // Aim indicator
+  if (aim.active && !ball.moving && state === STATE.PLAYING){
+    var ddx = aim.startX - aim.curX;
+    var ddy = aim.startY - aim.curY;
+    var dragLen = Math.hypot(ddx, ddy);
+    if (dragLen >= MIN_DRAG){
+      var capped = Math.min(dragLen, MAX_DRAG);
+      var t2 = capped / MAX_DRAG;
+      var ang = Math.atan2(ddy, ddx);
+      var len = 30 + capped * 0.8;
+      var color = t2 < 0.4 ? '#00ff88' : (t2 < 0.75 ? '#ffff00' : '#ff4444');
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(ball.x + Math.cos(ang) * len, ball.y + Math.sin(ang) * len);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // arrow head
+      ctx.fillStyle = color;
+      var hx = ball.x + Math.cos(ang) * len;
+      var hy = ball.y + Math.sin(ang) * len;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx - Math.cos(ang - 0.4) * 9, hy - Math.sin(ang - 0.4) * 9);
+      ctx.lineTo(hx - Math.cos(ang + 0.4) * 9, hy - Math.sin(ang + 0.4) * 9);
+      ctx.closePath();
+      ctx.fill();
+      // power bar above ball
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(ball.x - 22, ball.y - 22, 44, 5);
+      ctx.fillStyle = color;
+      ctx.fillRect(ball.x - 21, ball.y - 21, 42 * t2, 3);
+    }
+  }
+
+  // Ball with glow
+  ctx.save();
+  var bgrad = ctx.createRadialGradient(ball.x, ball.y, 1, ball.x, ball.y, BALL_R + 6);
+  bgrad.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+  bgrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = bgrad;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, BALL_R + 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(180, 230, 255, 0.7)';
+  ctx.beginPath();
+  ctx.arc(ball.x - 2, ball.y - 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Celebration particles
+  for (var pi = 0; pi < celebrateParticles.length; pi++){
+    var p = celebrateParticles[pi];
+    ctx.globalAlpha = Math.max(0, p.life / 1.2);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  // Fade overlay (transition between holes)
+  if (transitionAlpha > 0){
+    ctx.fillStyle = 'rgba(0, 0, 0, ' + transitionAlpha + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function drawHUD(){
+  // top bar
+  ctx.fillStyle = 'rgba(8, 18, 14, 0.92)';
+  ctx.fillRect(0, 0, W, HUD_H);
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, HUD_H - 0.5);
+  ctx.lineTo(W, HUD_H - 0.5);
+  ctx.stroke();
+
+  if (state !== STATE.PLAYING && state !== STATE.HOLE_COMPLETE) return;
+
+  // Reserve space for back link (left ~110px) and mute button (right ~50px)
+  var padL = 110;
+  var padR = 50;
+  var innerW = W - padL - padR;
+  var cx = padL + innerW / 2;
+
+  ctx.textBaseline = 'middle';
+
+  // Top row: HOLE · PAR · STROKES · TOTAL — evenly spaced
+  var labels = [
+    { label: 'HOLE',    value: (holeIdx + 1) + '/' + HOLES.length, color: '#00ffff' },
+    { label: 'PAR',     value: String(hole.par),                   color: '#ffff66' },
+    { label: 'STROKES', value: String(strokes),                    color: '#00ff88' },
+    { label: 'TOTAL',   value: String(totalStrokes + strokes),     color: '#ff9ff5' }
+  ];
+  var n = labels.length;
+  var step = innerW / n;
+  ctx.textAlign = 'center';
+  for (var i = 0; i < n; i++){
+    var x = padL + step * (i + 0.5);
+    ctx.font = '9px "Courier New", monospace';
+    ctx.fillStyle = '#888';
+    ctx.fillText(labels[i].label, x, 14);
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillStyle = labels[i].color;
+    ctx.fillText(labels[i].value, x, 32);
+  }
+
+  // Hole name strip at bottom of HUD
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillStyle = '#666';
+  ctx.textAlign = 'center';
+  ctx.fillText(hole.name.toUpperCase(), W / 2, 48);
+}
+
+function drawTitle(){
+  ctx.fillStyle = '#0a1410';
+  ctx.fillRect(0, 0, W, H);
+
+  // animated background grid
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.06)';
+  ctx.lineWidth = 1;
+  var spacing = 32;
+  for (var gx = 0; gx < W; gx += spacing){
+    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+  }
+  for (var gy = 0; gy < H; gy += spacing){
+    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  var titleY = H * 0.28;
+  // shadow / glow layers
+  ctx.font = 'bold ' + Math.floor(Math.min(W, 480) * 0.13) + 'px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(0, 255, 255, 0.25)';
+  ctx.fillText('MINI GOLF', W/2 + 2, titleY + 2);
+  ctx.fillStyle = 'rgba(255, 0, 255, 0.25)';
+  ctx.fillText('MINI GOLF', W/2 - 2, titleY - 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText('MINI GOLF', W/2, titleY);
+
+  ctx.font = '14px "Courier New", monospace';
+  ctx.fillStyle = '#00ff88';
+  ctx.fillText('9 HOLES OF NEON PUTTING', W/2, titleY + 50);
+
+  // little ball + cup graphic
+  var iconY = titleY + 100;
+  // cup
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(W/2 + 30, iconY, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffff66';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(W/2 + 30, iconY, 10, 0, Math.PI * 2); ctx.stroke();
+  // flag
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(W/2 + 39, iconY); ctx.lineTo(W/2 + 39, iconY - 18); ctx.stroke();
+  ctx.fillStyle = '#ff3366';
+  ctx.beginPath();
+  ctx.moveTo(W/2 + 39, iconY - 18); ctx.lineTo(W/2 + 50, iconY - 14);
+  ctx.lineTo(W/2 + 39, iconY - 10); ctx.closePath(); ctx.fill();
+  // ball
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(W/2 - 30, iconY, 6, 0, Math.PI * 2); ctx.fill();
+
+  ctx.font = 'bold 16px "Courier New", monospace';
+  var blink = (Math.sin(pulse * 4) + 1) / 2;
+  ctx.fillStyle = 'rgba(0, 255, 255,' + (0.5 + blink * 0.5) + ')';
+  ctx.fillText('TAP TO PLAY', W/2, H * 0.6);
+
+  ctx.font = '12px "Courier New", monospace';
+  ctx.fillStyle = '#888';
+  ctx.fillText('Drag from the ball to aim, release to putt', W/2, H * 0.66);
+  ctx.fillText('Pull back further for more power', W/2, H * 0.69);
+
+  if (bestScore){
+    ctx.fillStyle = '#ffff66';
+    ctx.font = 'bold 13px "Courier New", monospace';
+    ctx.fillText('BEST SCORE: ' + bestScore, W/2, H * 0.78);
+  }
+
+  ctx.fillStyle = '#444';
+  ctx.font = '10px "Courier New", monospace';
+  ctx.fillText('R = restart hole · M = mute · ESC = title', W/2, H - 30);
+}
+
+function drawHoleComplete(){
+  // dim overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + Math.floor(Math.min(W, 480) * 0.09) + 'px "Courier New", monospace';
+  // glow
+  ctx.fillStyle = 'rgba(255, 255, 100, 0.4)';
+  ctx.fillText(holeCompleteText, W/2 + 2, H/2 + 2);
+  ctx.fillStyle = '#ffff66';
+  ctx.fillText(holeCompleteText, W/2, H/2);
+
+  ctx.font = '13px "Courier New", monospace';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Hole ' + (holeIdx + 1) + ' · ' + strokes + ' stroke' + (strokes === 1 ? '' : 's') + ' · par ' + hole.par, W/2, H/2 + 50);
+  ctx.fillStyle = '#888';
+  ctx.fillText('Tap to continue', W/2, H/2 + 75);
+}
+
+function drawGameOver(){
+  ctx.fillStyle = '#0a1410';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = 'bold ' + Math.floor(Math.min(W, 480) * 0.1) + 'px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+  ctx.fillText('FINAL SCORE', W/2 + 2, 80);
+  ctx.fillStyle = '#00ffff';
+  ctx.fillText('FINAL SCORE', W/2, 78);
+
+  // scorecard
+  var totalPar = 0;
+  for (var i = 0; i < HOLES.length; i++) totalPar += HOLES[i].par;
+  var diff = totalStrokes - totalPar;
+
+  var msg;
+  if (diff < 0) msg = (-diff) + ' UNDER PAR — AMAZING!';
+  else if (diff === 0) msg = 'EVEN PAR — PERFECT!';
+  else if (diff <= 3) msg = '+' + diff + ' OVER PAR — NICE ROUND';
+  else msg = '+' + diff + ' OVER PAR';
+
+  ctx.font = 'bold 16px "Courier New", monospace';
+  ctx.fillStyle = diff <= 0 ? '#00ff88' : (diff <= 3 ? '#ffff66' : '#ff8844');
+  ctx.fillText(msg, W/2, 130);
+
+  // table — sized responsively
+  var tableW = Math.min(W - 40, 320);
+  var startX = (W - tableW) / 2;
+  var rowH = 22;
+  var startY = 165;
+  // column positions
+  var holeColX = startX + 4;
+  var parColX = startX + tableW - 80;
+  var strColX = startX + tableW - 4;
+
+  ctx.font = 'bold 11px "Courier New", monospace';
+  ctx.fillStyle = '#aaa';
+  ctx.textAlign = 'left';
+  ctx.fillText('HOLE', holeColX, startY);
+  ctx.textAlign = 'center';
+  ctx.fillText('PAR', parColX, startY);
+  ctx.textAlign = 'right';
+  ctx.fillText('STROKES', strColX, startY);
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(startX, startY + 10);
+  ctx.lineTo(startX + tableW, startY + 10);
+  ctx.stroke();
+
+  ctx.font = '11px "Courier New", monospace';
+  for (var r = 0; r < HOLES.length; r++){
+    var y = startY + 18 + r * rowH;
+    var name = HOLES[r].name;
+    if (name.length > 14) name = name.slice(0, 13) + '…';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.fillText((r + 1) + '. ' + name, holeColX, y);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText(String(HOLES[r].par), parColX, y);
+    ctx.textAlign = 'right';
+    var s = holeStrokes[r];
+    var sd = s - HOLES[r].par;
+    ctx.fillStyle = s === 1 ? '#ffff66' : (sd < 0 ? '#00ff88' : (sd === 0 ? '#fff' : (sd === 1 ? '#ffaa66' : '#ff6666')));
+    ctx.fillText(String(s), strColX, y);
+  }
+
+  // total row
+  var totalY = startY + 18 + HOLES.length * rowH + 6;
+  ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(startX, totalY - 4);
+  ctx.lineTo(startX + tableW, totalY - 4);
+  ctx.stroke();
+  ctx.font = 'bold 12px "Courier New", monospace';
+  ctx.fillStyle = '#00ffff';
+  ctx.textAlign = 'left';
+  ctx.fillText('TOTAL', holeColX, totalY + 8);
+  ctx.textAlign = 'center';
+  ctx.fillText(String(totalPar), parColX, totalY + 8);
+  ctx.textAlign = 'right';
+  ctx.fillText(String(totalStrokes), strColX, totalY + 8);
+
+  if (bestScore){
+    ctx.font = '11px "Courier New", monospace';
+    ctx.fillStyle = '#ffff66';
+    ctx.textAlign = 'center';
+    ctx.fillText('BEST: ' + bestScore, W/2, totalY + 38);
+  }
+
+  ctx.font = 'bold 16px "Courier New", monospace';
+  var blink = (Math.sin(pulse * 4) + 1) / 2;
+  ctx.fillStyle = 'rgba(0, 255, 255,' + (0.5 + blink * 0.5) + ')';
+  ctx.textAlign = 'center';
+  ctx.fillText('TAP TO PLAY AGAIN', W/2, H - 50);
+}
+
+// ─────────────────────────────────────────────────────────
+// Main loop
+// ─────────────────────────────────────────────────────────
+var lastT = 0;
+function frame(now){
+  var dt = lastT ? (now - lastT) / 1000 : 0.016;
+  if (dt > 0.05) dt = 0.05;
+  lastT = now;
+  pulse += dt;
+
+  update(dt);
+
+  ctx.fillStyle = '#0a1410';
+  ctx.fillRect(0, 0, W, H);
+
+  if (state === STATE.TITLE){
+    drawTitle();
+  } else if (state === STATE.GAME_OVER){
+    drawGameOver();
+  } else {
+    drawWorld();
+    drawHUD();
+    if (state === STATE.HOLE_COMPLETE) drawHoleComplete();
+  }
+
+  requestAnimationFrame(frame);
+}
+
+// init
+loadHole(0);
+state = STATE.TITLE;
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
