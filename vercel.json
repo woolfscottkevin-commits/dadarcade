@@ -7,7 +7,9 @@
     { "source": "/space-invaders", "destination": "/alien-descent", "permanent": true },
     { "source": "/space-invaders/(.*)", "destination": "/alien-descent/$1", "permanent": true },
     { "source": "/blog/how-to-play-space-invaders", "destination": "/blog/how-to-play-alien-descent", "permanent": true },
-    { "source": "/blog/how-to-play-space-invaders.html", "destination": "/blog/how-to-play-alien-descent", "permanent": true }
+    { "source": "/blog/how-to-play-space-invaders.html", "destination": "/blog/how-to-play-alien-descent", "permanent": true },
+    { "source": "/pong", "destination": "/paddle-duel", "permanent": true },
+    { "source": "/pong/(.*)", "destination": "/paddle-duel/$1", "permanent": true }
   ],
   "headers": [
     {

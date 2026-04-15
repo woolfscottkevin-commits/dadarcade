@@ -64,7 +64,7 @@ function getCorsHeaders(req) {
 }
 
 // Valid game prefixes
-const VALID_GAMES = ['si', 'snake', 'pong'];
+const VALID_GAMES = ['si', 'snake', 'pd'];
 
 function getGameId(req) {
   const url = new URL(req.url, `https://${req.headers.host}`);
