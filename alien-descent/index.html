@@ -6,38 +6,38 @@
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Space Invaders — Dad Arcade</title>
+<title>Alien Descent — Dad Arcade</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#111111">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="canonical" href="https://dadarcade.com/space-invaders">
+<link rel="canonical" href="https://dadarcade.com/alien-descent">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; min-height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; }
 body { overflow-x: hidden; overflow-y: auto; padding-top: env(safe-area-inset-top, 0); }
 canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; margin-top: auto; }
-.back-link{position:fixed;top:10px;left:10px;z-index:9999;color:rgba(255,255,255,0.45);text-decoration:none;font-family:'Courier New',monospace;font-size:18px;padding:8px 14px;border-radius:6px;background:rgba(255,255,255,0.08);transition:all 0.3s}.back-link:hover{color:#fff;background:rgba(255,255,255,0.18)}
+.back-link{position:fixed;top:10px;left:10px;z-index:9999;color:#4af;text-decoration:none;font-family:'Courier New',monospace;font-size:18px;padding:8px 14px;border-radius:6px;background:rgba(68,170,255,0.12);transition:all 0.3s}.back-link:hover{color:#9cf;background:rgba(68,170,255,0.22)}
 </style>
 </head>
 <body>
 <a href="/" class="back-link" onclick="event.preventDefault();if(confirm('Leave game? Progress will be lost.'))window.location='/';">&larr; Dad Arcade</a>
 <canvas id="game" tabindex="0"></canvas>
 <div id="game-info" style="max-width:750px;width:100%;margin:1.5rem auto;margin-bottom:2rem;padding:0 1.5rem;color:#777;font-size:0.9rem;flex-shrink:0">
-<h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Space Invaders — Free Online Arcade Game</h1>
-<p>Play Space Invaders free in your browser at <a href="/" style="color:#888">Dad Arcade</a>. This modern remake features the classic alien-shooting gameplay plus power-ups, boss fights, and a global leaderboard.</p>
+<h1 style="font-size:1.1rem;color:#999;font-weight:normal;margin:0 0 0.5rem 0">Alien Descent — Free Online Arcade Game</h1>
+<p>Play Alien Descent free in your browser at <a href="/" style="color:#888">Dad Arcade</a>. This modern fixed shooter features classic drone-blasting gameplay plus power-ups, boss fights, and a global leaderboard.</p>
 <details style="margin:0.8rem 0;color:#666"><summary style="cursor:pointer;color:#999">About This Game</summary><div style="padding:0.5rem 0">
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">How to Play</h2>
-<p>Works on desktop and mobile. Move your ship with the arrow keys (or A/D) and press spacebar to fire, or use the on-screen touch controls on mobile. Destroy all aliens to advance to the next wave. The aliens march side to side and drop down — if they reach your level, it's game over.</p>
+<p>Works on desktop and mobile. Move your Defender with the arrow keys (or A/D) and press spacebar to fire, or use the on-screen touch controls on mobile. Destroy all drones to advance to the next wave. The drones march side to side and drop down — if they reach your level, it's game over.</p>
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Power-Ups</h2>
-<p>Defeated aliens may drop power-ups: Triple Shot fires three bullets in a spread, Rapid Fire lets you hold spacebar for automatic shooting, and Barrier places a shield in front of your ship that blocks one hit.</p>
+<p>Defeated drones may drop power-ups: Triple Shot fires three bullets in a spread, Rapid Fire lets you hold spacebar for automatic shooting, and Barrier places a shield in front of your Defender that blocks one hit.</p>
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Boss Fights</h2>
 <p>Every 5th wave features a boss battle. Bosses have unique attack patterns including spread shots, aimed bullets, and bombs that explode into fragments. Destroy the boss and its escort fleet to advance.</p>
 <h2 style="font-size:0.95rem;color:#888;margin:0.8rem 0 0.3rem">Leaderboard</h2>
 <p>When your game ends, enter your 3-letter initials to submit your score to the global leaderboard. Compete with players worldwide for the top 10.</p>
 </div></details>
-<p style="font-size:0.8rem;color:#555"><a href="/games" style="color:#666">Browse all games</a> · <a href="/blog/how-to-play-space-invaders" style="color:#666">Strategy guide</a> · <a href="/" style="color:#666">Dad Arcade home</a></p>
+<p style="font-size:0.8rem;color:#555"><a href="/games" style="color:#666">Browse all games</a> · <a href="/blog/how-to-play-alien-descent" style="color:#666">Strategy guide</a> · <a href="/" style="color:#666">Dad Arcade home</a></p>
 </div>
 <script>
 'use strict';
@@ -97,6 +97,40 @@ function toggleFullscreen() {
   }
 }
 
+// ========== SPEED TOGGLE BUTTON ==========
+// Visible on-canvas button that flips the unified game speed multiplier
+// between Normal (1x) and Fast (1.5x). Works mid-game without resetting.
+const SPEED_BTN = { x: W / 2 - 60, y: 32, w: 120, h: 26 };
+const FAST_SPEED = 1.5;
+function toggleGameSpeed() {
+  // Cycle: anything other than FAST -> FAST; FAST -> 1.0
+  if (Math.abs(settings.gameSpeed - FAST_SPEED) < 0.001) {
+    settings.gameSpeed = 1.0;
+  } else {
+    settings.gameSpeed = FAST_SPEED;
+  }
+  if (typeof saveSettings === 'function') saveSettings();
+}
+function drawSpeedToggleButton() {
+  const isFast = settings.gameSpeed >= FAST_SPEED - 0.001;
+  // Background
+  ctx.fillStyle = isFast ? 'rgba(255, 170, 0, 0.85)' : 'rgba(40, 40, 60, 0.75)';
+  ctx.beginPath();
+  ctx.roundRect(SPEED_BTN.x, SPEED_BTN.y, SPEED_BTN.w, SPEED_BTN.h, 6);
+  ctx.fill();
+  // Border
+  ctx.strokeStyle = isFast ? '#ffdd66' : 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = isFast ? 2 : 1;
+  ctx.stroke();
+  // Label
+  ctx.fillStyle = isFast ? '#000' : '#fff';
+  ctx.font = (isFast ? 'bold ' : '') + '13px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(isFast ? '\u26A1 FAST 1.5\u00D7' : 'SPEED 1\u00D7', SPEED_BTN.x + SPEED_BTN.w / 2, SPEED_BTN.y + SPEED_BTN.h / 2 + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
 // ========== MULTI-TOUCH VIRTUAL CONTROLS ==========
 let leftTouchId = null, rightTouchId = null, fireTouchId = null;
 let touchLeft = false, touchRight = false, touchFire = false, touchFireReleased = false;
@@ -127,6 +161,11 @@ canvas.addEventListener('touchstart', function(e) {
     var id = t.identifier;
 
     // Handle touch UI buttons first
+    // Speed toggle button (works on title, gameplay, and pause)
+    if (hitTest(c.x, c.y, SPEED_BTN) && (state === PLAYING || state === PAUSED || state === TITLE || state === WAVE_BANNER)) {
+      toggleGameSpeed();
+      return;
+    }
     // Fullscreen button
     if (!isIOS && c.x >= W - 56 && c.x <= W - 24 && c.y >= 52 && c.y <= 84) {
       toggleFullscreen(); return;
@@ -285,6 +324,21 @@ function handleTouchRelease(e) {
 canvas.addEventListener('touchend', handleTouchRelease, { passive: false });
 canvas.addEventListener('touchcancel', handleTouchRelease, { passive: false });
 
+// Desktop mouse click handler — currently only used for the speed toggle
+// button, since other buttons are driven by keyboard shortcuts on desktop.
+canvas.addEventListener('mousedown', function(e) {
+  if (inputMode === 'touch') return;
+  var rect = canvas.getBoundingClientRect();
+  var cx = (e.clientX - rect.left) / rect.width * W;
+  var cy = (e.clientY - rect.top) / rect.height * H;
+  if (hitTest(cx, cy, SPEED_BTN) && (state === PLAYING || state === PAUSED || state === TITLE || state === WAVE_BANNER)) {
+    initAudio();
+    toggleGameSpeed();
+    canvas.focus();
+    e.preventDefault();
+  }
+});
+
 // ========== DRAW VIRTUAL CONTROLS ==========
 function drawVirtualControls() {
   if (inputMode !== 'touch') return;
@@ -397,12 +451,12 @@ function drawTouchUI() {
 // Game constants
 const PLAYER_SPEED = 300;
 const PLAYER_BULLET_SPEED = 500;
-const ALIEN_BULLET_SPEED = 250;
-const MAX_ALIEN_BULLETS = 3;
+const DRONE_BULLET_SPEED = 250;
+const MAX_DRONE_BULLETS = 3;
 const UFO_SPEED = 150;
-const ALIEN_COLS = 8;
-const ALIEN_ROWS = 5;
-const ALIEN_TOTAL = ALIEN_COLS * ALIEN_ROWS;
+const DRONE_COLS = 8;
+const DRONE_ROWS = 5;
+const DRONE_TOTAL = DRONE_COLS * DRONE_ROWS;
 const INVINCIBILITY_TIME = 2;
 const SHIELD_CELL = 4;
 const PARTICLE_MAX = 200;
@@ -428,21 +482,26 @@ const INITIALS_ENTRY = 5, RANK_DISPLAY = 6, SETTINGS = 7;
 let state = TITLE;
 
 // Settings
+// Note: shipSpeed is kept as a backward-compat mirror of gameSpeed; the
+// game uses a single unified speed multiplier so everything (ship,
+// drones, projectiles, timers) scales together. The toggle button on
+// the HUD and the slider in the settings menu both write gameSpeed.
 let settings = { gameSpeed: 1.0, shipSpeed: 1.0 };
 let settingsOpen = false;
-let settingsRow = 0; // 0=presets, 1=gameSpeed, 2=shipSpeed
+let settingsRow = 0; // 0=presets, 1=gameSpeed
 const SETTINGS_KEY = 'si_settings';
 
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-    if (s && typeof s.gameSpeed === 'number' && typeof s.shipSpeed === 'number') {
+    if (s && typeof s.gameSpeed === 'number') {
       settings.gameSpeed = Math.max(0.5, Math.min(2.0, s.gameSpeed));
-      settings.shipSpeed = Math.max(0.5, Math.min(2.0, s.shipSpeed));
+      settings.shipSpeed = settings.gameSpeed;
     }
   } catch(e) {}
 }
 function saveSettings() {
+  settings.shipSpeed = settings.gameSpeed;
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e) {}
 }
 
@@ -478,7 +537,7 @@ function playTone(freq, duration, type, vol, freqEnd) {
 }
 
 function playShoot() { playTone(880, 0.1, 'square', 0.08); }
-function playAlienHit() { playTone(200, 0.15, 'sawtooth', 0.12, 80); }
+function playDroneHit() { playTone(200, 0.15, 'sawtooth', 0.12, 80); }
 function playPlayerDeath() { playTone(300, 0.5, 'sawtooth', 0.15, 30); }
 function playPowerUpPickup() { playTone(400, 0.15, 'sine', 0.1, 800); }
 function playBarrierHit() { playTone(500, 0.2, 'triangle', 0.1, 200); }
@@ -572,13 +631,13 @@ let groupOffsetX = 0;
 let groupOffsetY = 0;
 
 // Game state variables
-let score, lives, wave, player, aliens, alienDir, alienStepTimer, alienBaseDelay;
-let alienDropping, alienMarchIdx;
-let playerBullets, alienBullets, shields, ufo, ufoTimer, ufoFromLeft;
+let score, lives, wave, player, drones, droneDir, droneStepTimer, droneBaseDelay;
+let droneDropping, droneMarchIdx;
+let playerBullets, droneBullets, shields, ufo, ufoTimer, ufoFromLeft;
 let particles, shakeTimer, shakeAmount;
 let invTimer, bannerTimer, bannerWave;
 let accumulator, gameTime;
-let alienFireTimer, alienFireBaseInterval;
+let droneFireTimer, droneFireBaseInterval;
 // Power-up state
 let powerUps, activePowerUp, barrierActive, rapidFireCooldown;
 // Heart power-up
@@ -849,9 +908,9 @@ function getFormationForWave(w) {
 }
 
 // ============================================================
-// ALIEN CREATION HELPER
+// DRONE CREATION HELPER
 // ============================================================
-function makeAlien(homeX, homeY, type, points) {
+function makeDrone(homeX, homeY, type, points) {
   return {
     x: homeX, y: homeY,
     homeX, homeY,
@@ -878,13 +937,13 @@ function makeAlien(homeX, homeY, type, points) {
 // ============================================================
 // SPECIAL ASSIGNMENT
 // ============================================================
-function assignSpecials(alienArr, w) {
+function assignSpecials(droneArr, w) {
   if (w < 4) return;
 
   // Collect eligible indices (alive, not escort)
   const eligible = [];
-  for (let i = 0; i < alienArr.length; i++) {
-    if (alienArr[i].alive && !alienArr[i].isEscort) eligible.push(i);
+  for (let i = 0; i < droneArr.length; i++) {
+    if (droneArr[i].alive && !droneArr[i].isEscort) eligible.push(i);
   }
   if (eligible.length === 0) return;
 
@@ -900,7 +959,7 @@ function assignSpecials(alienArr, w) {
   if (w >= 4) {
     const count = Math.min(2 + Math.floor((w - 4) * 0.5), 6, eligible.length - idx);
     for (let i = 0; i < count && idx < eligible.length; i++, idx++) {
-      const a = alienArr[eligible[idx]];
+      const a = droneArr[eligible[idx]];
       a.hp = 2; a.maxHp = 2;
       a.special = 'shielded';
     }
@@ -910,7 +969,7 @@ function assignSpecials(alienArr, w) {
   if (w >= 5 && w % 5 !== 0) {
     const count = Math.min(1 + Math.floor((w - 5) * 0.5), 5, eligible.length - idx);
     for (let i = 0; i < count && idx < eligible.length; i++, idx++) {
-      const a = alienArr[eligible[idx]];
+      const a = droneArr[eligible[idx]];
       a.special = 'fast';
       a.pointMultiplier = 1.5;
     }
@@ -920,7 +979,7 @@ function assignSpecials(alienArr, w) {
   if (w >= 6 && w % 5 !== 0) {
     const count = Math.min(1 + Math.floor((w - 6) * 0.3), 3, eligible.length - idx);
     for (let i = 0; i < count && idx < eligible.length; i++, idx++) {
-      const a = alienArr[eligible[idx]];
+      const a = droneArr[eligible[idx]];
       a.special = 'splitter';
     }
   }
@@ -938,7 +997,7 @@ function resetGame() {
   shakeTimer = 0;
   shakeAmount = 0;
   playerBullets = [];
-  alienBullets = [];
+  droneBullets = [];
   particles = [];
   powerUps = [];
   activePowerUp = null;
@@ -949,8 +1008,8 @@ function resetGame() {
   ufoFromLeft = true;
   accumulator = 0;
   gameTime = 0;
-  alienMarchIdx = 0;
-  alienFireTimer = 0;
+  droneMarchIdx = 0;
+  droneFireTimer = 0;
   gameEnding = false;
   heartDroppedThisWave = false;
   lifeGainFlash = 0;
@@ -997,7 +1056,7 @@ function spawnWave() {
 
   if (isBossWave) {
     // Boss wave
-    aliens = [];
+    drones = [];
     bossLevel = Math.floor(wave / 5);
     const hp = 20 + bossLevel * 10;
 
@@ -1038,14 +1097,14 @@ function spawnWave() {
     };
     bossDelayTimer = 2.0;
 
-    alienDir = 1;
-    alienDropping = false;
+    droneDir = 1;
+    droneDropping = false;
     const speedMult = Math.min(1 + (wave - 1) * 0.1, 3);
-    alienBaseDelay = 0.6 / speedMult;
-    alienStepTimer = alienBaseDelay;
+    droneBaseDelay = 0.6 / speedMult;
+    droneStepTimer = droneBaseDelay;
     const fireMult = Math.min(1 + (wave - 1) * 0.1, 3);
-    alienFireBaseInterval = 1.5 / fireMult;
-    alienFireTimer = alienFireBaseInterval;
+    droneFireBaseInterval = 1.5 / fireMult;
+    droneFireTimer = droneFireBaseInterval;
     return;
   }
 
@@ -1054,11 +1113,11 @@ function spawnWave() {
   const formFn = formationFns[formName] || formationGrid;
   const positions = formFn();
 
-  aliens = [];
+  drones = [];
   for (const pos of positions) {
     const homeX = PLAY_LEFT + pos.gx * PLAY_WIDTH;
     const homeY = PLAY_TOP + pos.gy * PLAY_HEIGHT;
-    const a = makeAlien(homeX, homeY, pos.type, pos.points);
+    const a = makeDrone(homeX, homeY, pos.type, pos.points);
 
     if (swoopWave) {
       a.swooping = true;
@@ -1072,26 +1131,26 @@ function spawnWave() {
       a.y = -50;
     }
 
-    aliens.push(a);
+    drones.push(a);
   }
 
   // Assign specials
-  assignSpecials(aliens, wave);
+  assignSpecials(drones, wave);
 
   boss = null;
-  alienDir = 1;
-  alienDropping = false;
-  const totalCount = aliens.length;
+  droneDir = 1;
+  droneDropping = false;
+  const totalCount = drones.length;
   const speedMult = Math.min(1 + (wave - 1) * 0.1, 3);
-  alienBaseDelay = 0.6 / speedMult;
-  alienStepTimer = alienBaseDelay;
+  droneBaseDelay = 0.6 / speedMult;
+  droneStepTimer = droneBaseDelay;
   const fireMult = Math.min(1 + (wave - 1) * 0.1, 3);
-  alienFireBaseInterval = 1.5 / fireMult;
-  alienFireTimer = alienFireBaseInterval;
+  droneFireBaseInterval = 1.5 / fireMult;
+  droneFireTimer = droneFireBaseInterval;
 }
 
-// Alien sprites (pixel art as arrays of rectangles)
-function drawAlienType0(x, y, frame) {
+// Drone sprites (pixel art as arrays of rectangles)
+function drawDroneType0(x, y, frame) {
   ctx.fillStyle = '#f44';
   const s = 2;
   if (frame === 0) {
@@ -1121,7 +1180,7 @@ function drawAlienType0(x, y, frame) {
   }
 }
 
-function drawAlienType1(x, y, frame) {
+function drawDroneType1(x, y, frame) {
   ctx.fillStyle = '#4f4';
   const s = 2;
   if (frame === 0) {
@@ -1151,7 +1210,7 @@ function drawAlienType1(x, y, frame) {
   }
 }
 
-function drawAlienType2(x, y, frame) {
+function drawDroneType2(x, y, frame) {
   ctx.fillStyle = '#88f';
   const s = 2;
   if (frame === 0) {
@@ -1181,7 +1240,7 @@ function drawAlienType2(x, y, frame) {
   }
 }
 
-const alienDrawFns = [drawAlienType0, drawAlienType1, drawAlienType2];
+const droneDrawFns = [drawDroneType0, drawDroneType1, drawDroneType2];
 
 function drawPlayer(x, y) {
   ctx.fillStyle = '#0f0';
@@ -1296,7 +1355,7 @@ function bossAttack(b) {
     // Spread: 5 bullets fan
     for (let i = -2; i <= 2; i++) {
       const angle = Math.PI / 2 + i * (Math.PI / 6);
-      alienBullets.push({
+      droneBullets.push({
         x: b.x + b.w / 2 - 2, y: b.y + b.h,
         w: 4, h: 8,
         vx: Math.cos(angle) * 200 * settings.gameSpeed,
@@ -1310,7 +1369,7 @@ function bossAttack(b) {
     const dy = player.y - (b.y + b.h);
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     for (let i = 0; i < 2; i++) {
-      alienBullets.push({
+      droneBullets.push({
         x: b.x + b.w / 2 - 2 + (i - 0.5) * 20, y: b.y + b.h,
         w: 4, h: 8,
         vx: (dx / dist) * 350 * settings.gameSpeed,
@@ -1320,7 +1379,7 @@ function bossAttack(b) {
     }
   } else if (phase === 2) {
     // Bomb
-    alienBullets.push({
+    droneBullets.push({
       x: b.x + b.w / 2 - 4, y: b.y + b.h,
       w: 8, h: 8,
       vx: 0, vy: 150 * settings.gameSpeed,
@@ -1330,7 +1389,7 @@ function bossAttack(b) {
   } else if (phase === 3) {
     // Summon escorts if none alive
     if (!gameEnding) {
-      const aliveEscorts = aliens.filter(a => a.alive && a.isEscort);
+      const aliveEscorts = drones.filter(a => a.alive && a.isEscort);
       if (aliveEscorts.length === 0) {
         spawnEscorts(b);
       }
@@ -1347,7 +1406,7 @@ function spawnEscorts(b) {
     for (let col = 0; col < perSide; col++) {
       const ex = b.x + b.w / 2 + side * (80 + col * 30);
       const ey = b.y + 30;
-      const escort = makeAlien(ex, ey, Math.floor(Math.random() * 3), 20);
+      const escort = makeDrone(ex, ey, Math.floor(Math.random() * 3), 20);
       escort.isEscort = true;
       escort.escortSide = side;
       escort.escortCol = col;
@@ -1355,8 +1414,8 @@ function spawnEscorts(b) {
       escortTemp.push(escort);
     }
   }
-  // Push after (not during) alien loop per rules
-  for (const e of escortTemp) aliens.push(e);
+  // Push after (not during) drone loop per rules
+  for (const e of escortTemp) drones.push(e);
 }
 
 // ============================================================
@@ -1366,7 +1425,7 @@ function detonateBomb(bomb) {
   // 8 fragments at 45 degree intervals
   for (let i = 0; i < 8; i++) {
     const angle = i * (Math.PI / 4);
-    alienBullets.push({
+    droneBullets.push({
       x: bomb.x, y: bomb.y,
       w: 3, h: 3,
       vx: Math.cos(angle) * 200 * settings.gameSpeed,
@@ -1392,7 +1451,7 @@ function update() {
   let dx = 0;
   if (keys.has('ArrowLeft') || keys.has('a') || touchLeft) dx -= 1;
   if (keys.has('ArrowRight') || keys.has('d') || touchRight) dx += 1;
-  player.x += dx * PLAYER_SPEED * settings.shipSpeed * DT;
+  player.x += dx * PLAYER_SPEED * settings.gameSpeed * DT;
   player.x = Math.max(15, Math.min(W - 15, player.x));
 
   // Check if power-up timer should freeze
@@ -1477,7 +1536,7 @@ function update() {
     }
 
     // Update escorts: track boss position
-    for (const a of aliens) {
+    for (const a of drones) {
       if (a.alive && a.isEscort && boss.alive) {
         a.homeX = boss.x + boss.w / 2 + a.escortSide * (80 + a.escortCol * 30);
         a.homeY = boss.y + 30;
@@ -1506,8 +1565,8 @@ function update() {
       boss.alive = false;
       boss.dying = false;
       // Clear boss bullets
-      for (let i = alienBullets.length - 1; i >= 0; i--) {
-        if (alienBullets[i].isBossBullet) alienBullets.splice(i, 1);
+      for (let i = droneBullets.length - 1; i >= 0; i--) {
+        if (droneBullets[i].isBossBullet) droneBullets.splice(i, 1);
       }
       // Award points
       score += boss.points;
@@ -1519,7 +1578,7 @@ function update() {
       powerUps.push({ x: boss.x + boss.w / 2 - 8, y: boss.y + boss.h / 2, w: 16, h: 16, type: ptype });
 
       // Escorts: freeze homeX/homeY, join march
-      for (const a of aliens) {
+      for (const a of drones) {
         if (a.alive && a.isEscort) {
           a.homeX = a.x;
           a.homeY = a.y;
@@ -1529,8 +1588,8 @@ function update() {
     }
   }
 
-  // ---- ALIEN UPDATE (swooping, diving, fly-out, march) ----
-  const alienTemp = []; // for splitter minis
+  // ---- DRONE UPDATE (swooping, diving, fly-out, march) ----
+  const droneTemp = []; // for splitter minis
 
   // Compute zigzag group offset
   if (zigzagActive) {
@@ -1540,7 +1599,7 @@ function update() {
   }
 
   // Process swoop animations
-  for (const a of aliens) {
+  for (const a of drones) {
     if (!a.alive) continue;
 
     // Fly-out timer (splitter minis)
@@ -1613,14 +1672,14 @@ function update() {
     }
   }
 
-  // ---- ALIEN MARCH (step-based) ----
-  alienStepTimer -= DT;
-  if (alienStepTimer <= 0) {
-    const aliveNonEscort = aliens.filter(a => a.alive && !a.isEscort && !a.swooping && !a.movement && a.flyOutTimer <= 0);
+  // ---- DRONE MARCH (step-based) ----
+  droneStepTimer -= DT;
+  if (droneStepTimer <= 0) {
+    const aliveNonEscort = drones.filter(a => a.alive && !a.isEscort && !a.swooping && !a.movement && a.flyOutTimer <= 0);
     const aliveCount = aliveNonEscort.length;
     if (aliveCount === 0 && (!boss || !boss.alive && !boss.dying)) {
       // Check total alive (including escorts)
-      const totalAlive = aliens.filter(a => a.alive).length;
+      const totalAlive = drones.filter(a => a.alive).length;
       if (totalAlive === 0) {
         bannerWave = wave + 1;
         bannerTimer = 1.5;
@@ -1631,43 +1690,43 @@ function update() {
       }
     }
 
-    const totalForSpeed = aliens.filter(a => a.alive).length || 1;
-    const stepDelay = Math.max(alienBaseDelay / settings.gameSpeed * (totalForSpeed / Math.max(aliens.length, ALIEN_TOTAL)), 0.05);
-    alienStepTimer = stepDelay;
+    const totalForSpeed = drones.filter(a => a.alive).length || 1;
+    const stepDelay = Math.max(droneBaseDelay / settings.gameSpeed * (totalForSpeed / Math.max(drones.length, DRONE_TOTAL)), 0.05);
+    droneStepTimer = stepDelay;
 
-    if (alienDropping) {
-      for (const a of aliens) {
+    if (droneDropping) {
+      for (const a of drones) {
         if (a.alive && !a.isEscort && !a.swooping && !a.movement && a.flyOutTimer <= 0) {
           a.offsetY += 12;
         }
       }
-      alienDropping = false;
+      droneDropping = false;
     } else {
-      const stepX = 8 * alienDir;
-      // Fast aliens get 1.5x step
+      const stepX = 8 * droneDir;
+      // Fast drones get 1.5x step
       let shouldDrop = false;
-      for (const a of aliens) {
+      for (const a of drones) {
         if (!a.alive || a.isEscort || a.swooping || a.movement || a.flyOutTimer > 0) continue;
         const ax = a.homeX + a.offsetX + stepX + groupOffsetX;
         if (ax < 10 || ax + a.w > W - 10) { shouldDrop = true; break; }
       }
       if (shouldDrop) {
-        alienDir *= -1;
-        alienDropping = true;
-        alienStepTimer = stepDelay;
+        droneDir *= -1;
+        droneDropping = true;
+        droneStepTimer = stepDelay;
       } else {
-        for (const a of aliens) {
+        for (const a of drones) {
           if (!a.alive || a.isEscort || a.swooping || a.movement || a.flyOutTimer > 0) continue;
           const mult = (a.special === 'fast') ? 1.5 : 1;
           a.offsetX += stepX * mult;
           a.frame = 1 - a.frame;
         }
-        playMarch(alienMarchIdx++);
+        playMarch(droneMarchIdx++);
       }
     }
 
-    // Check if aliens reached player row
-    for (const a of aliens) {
+    // Check if drones reached player row
+    for (const a of drones) {
       if (a.alive && a.y + a.h >= player.y - 10) {
         lives = 0;
         gameEnding = true;
@@ -1680,8 +1739,8 @@ function update() {
       }
     }
 
-    // Aliens destroy shields
-    for (const a of aliens) {
+    // Drones destroy shields
+    for (const a of drones) {
       if (!a.alive) continue;
       for (const sh of shields) {
         damageShield(sh, a.x, a.y, a.w, a.h, 1);
@@ -1694,10 +1753,10 @@ function update() {
     diveBomberTimer -= DT;
     if (diveBomberTimer <= 0) {
       diveBomberTimer = 3 + Math.random() * 2;
-      const currentDivers = aliens.filter(a => a.alive && a.movement && a.movement.type === 'dive').length;
+      const currentDivers = drones.filter(a => a.alive && a.movement && a.movement.type === 'dive').length;
       if (currentDivers < maxDiveBombers) {
         // Find candidate
-        const candidates = aliens.filter(a =>
+        const candidates = drones.filter(a =>
           a.alive && !a.movement && !a.swooping && a.flyOutTimer <= 0 &&
           a.special !== 'splitter' && !a.isEscort
         );
@@ -1717,12 +1776,12 @@ function update() {
     }
   }
 
-  // ---- ALIEN FIRING ----
-  alienFireTimer -= DT;
-  if (alienFireTimer <= 0 && alienBullets.filter(b => !b.isBossBullet).length < MAX_ALIEN_BULLETS) {
-    const aliveForFiring = aliens.filter(a => a.alive && !a.swooping && a.flyOutTimer <= 0 && !a.movement);
-    const interval = Math.max(alienFireBaseInterval / settings.gameSpeed * (aliveForFiring.length / Math.max(aliens.length, ALIEN_TOTAL)), 0.15);
-    alienFireTimer = interval * (0.5 + Math.random() * 0.5);
+  // ---- DRONE FIRING ----
+  droneFireTimer -= DT;
+  if (droneFireTimer <= 0 && droneBullets.filter(b => !b.isBossBullet).length < MAX_DRONE_BULLETS) {
+    const aliveForFiring = drones.filter(a => a.alive && !a.swooping && a.flyOutTimer <= 0 && !a.movement);
+    const interval = Math.max(droneFireBaseInterval / settings.gameSpeed * (aliveForFiring.length / Math.max(drones.length, DRONE_TOTAL)), 0.15);
+    droneFireTimer = interval * (0.5 + Math.random() * 0.5);
 
     // Virtual columns for firing candidates
     const columns = {};
@@ -1736,21 +1795,21 @@ function update() {
     const candidates = Object.values(columns);
     if (candidates.length > 0) {
       const shooter = candidates[Math.floor(Math.random() * candidates.length)];
-      alienBullets.push({
+      droneBullets.push({
         x: shooter.x + shooter.w / 2 - 2, y: shooter.y + shooter.h,
         w: 4, h: 10
       });
     }
   }
 
-  // Move alien bullets
-  for (let i = alienBullets.length - 1; i >= 0; i--) {
-    const b = alienBullets[i];
+  // Move drone bullets
+  for (let i = droneBullets.length - 1; i >= 0; i--) {
+    const b = droneBullets[i];
     if (b.vx !== undefined) {
       b.x += b.vx * DT;
       b.y += b.vy * DT;
     } else {
-      b.y += ALIEN_BULLET_SPEED * settings.gameSpeed * DT;
+      b.y += DRONE_BULLET_SPEED * settings.gameSpeed * DT;
     }
 
     // Bomb detonation check
@@ -1763,7 +1822,7 @@ function update() {
           addParticles(player.x, player.y - 18, 8, '#44f', 80, 0.3);
           playBarrierHit();
           barrierActive = false;
-          alienBullets.splice(i, 1);
+          droneBullets.splice(i, 1);
           continue;
         }
       }
@@ -1772,7 +1831,7 @@ function update() {
       for (const sh of shields) {
         if (damageShield(sh, b.x, b.y, b.w, b.h, 0)) {
           detonateBomb(b);
-          alienBullets.splice(i, 1);
+          droneBullets.splice(i, 1);
           bombHitShield = true;
           break;
         }
@@ -1781,18 +1840,18 @@ function update() {
       // Check if near player
       if (b.y > player.y - 80) {
         detonateBomb(b);
-        alienBullets.splice(i, 1);
+        droneBullets.splice(i, 1);
         continue;
       }
     }
 
     if (b.y > H || b.y < -20 || b.x < -20 || b.x > W + 20) {
-      alienBullets.splice(i, 1);
+      droneBullets.splice(i, 1);
     }
   }
 
   // ---- COLLISION: Player bullets ----
-  // Order: boss first, then aliens, then shields
+  // Order: boss first, then drones, then shields
   for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
     const pb = playerBullets[bi];
     let bulletConsumed = false;
@@ -1804,7 +1863,7 @@ function update() {
         boss.hp--;
         boss.flashTimer = 0.1;
         addParticles(pb.x + 2, pb.y, 5, '#ff0', 60, 0.2);
-        playAlienHit();
+        playDroneHit();
         playerBullets.splice(bi, 1);
         bulletConsumed = true;
         if (boss.hp <= 0) {
@@ -1815,8 +1874,8 @@ function update() {
     }
     if (bulletConsumed) continue;
 
-    // 2. Check vs aliens (includes escorts, minis)
-    for (const a of aliens) {
+    // 2. Check vs drones (includes escorts, minis)
+    for (const a of drones) {
       if (!a.alive) continue;
       if (aabb(pb, a)) {
         a.hp--;
@@ -1826,19 +1885,19 @@ function update() {
           addParticles(a.x + a.w / 2, a.y + a.h / 2, 6, '#0ff', 60, 0.2);
           playTone(400, 0.1, 'triangle', 0.08);
         } else {
-          // Kill alien
+          // Kill drone
           a.alive = false;
           const pts = Math.round(a.points * a.pointMultiplier);
           score += pts;
           const colors = ['#f44', '#4f4', '#88f'];
           addParticles(a.x + a.w / 2, a.y + a.h / 2, 10, colors[a.type] || '#fff', 80, 0.3);
-          playAlienHit();
+          playDroneHit();
 
           // Splitter death: queue minis
           if (a.special === 'splitter' && !gameEnding) {
             for (let si = 0; si < 2; si++) {
               const offsetX = si === 0 ? -30 : 30;
-              const mini = makeAlien(a.x + offsetX, a.y, a.type, a.points);
+              const mini = makeDrone(a.x + offsetX, a.y, a.type, a.points);
               mini.pointMultiplier = 0.5;
               mini.flyOutTimer = 0.3;
               mini.flyOutStartX = a.x + a.w / 2;
@@ -1847,7 +1906,7 @@ function update() {
               mini.homeY = a.y;
               mini.offsetX = a.offsetX;
               mini.offsetY = a.offsetY;
-              alienTemp.push(mini);
+              droneTemp.push(mini);
             }
           }
 
@@ -1897,12 +1956,12 @@ function update() {
   for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
     const pb = playerBullets[bi];
     let bulletConsumed = false;
-    for (let ai = alienBullets.length - 1; ai >= 0; ai--) {
-      const ab = alienBullets[ai];
+    for (let ai = droneBullets.length - 1; ai >= 0; ai--) {
+      const ab = droneBullets[ai];
       if (ab.isFragment && aabb(pb, ab)) {
         addParticles(pb.x + 2, pb.y + 5, 6, '#f80', 50, 0.2);
         playerBullets.splice(bi, 1);
-        alienBullets.splice(ai, 1);
+        droneBullets.splice(ai, 1);
         bulletConsumed = true;
         break;
       }
@@ -1910,16 +1969,16 @@ function update() {
     if (bulletConsumed) continue;
   }
 
-  // Player bullets vs alien bullets (non-fragment)
+  // Player bullets vs drone bullets (non-fragment)
   for (let bi = playerBullets.length - 1; bi >= 0; bi--) {
     const pb = playerBullets[bi];
     let bulletConsumed = false;
-    for (let ai = alienBullets.length - 1; ai >= 0; ai--) {
-      const ab = alienBullets[ai];
+    for (let ai = droneBullets.length - 1; ai >= 0; ai--) {
+      const ab = droneBullets[ai];
       if (!ab.isFragment && !ab.isBossBullet && aabb(pb, ab)) {
         addParticles(pb.x + 2, pb.y + 5, 6, '#ff0', 50, 0.2);
         playerBullets.splice(bi, 1);
-        alienBullets.splice(ai, 1);
+        droneBullets.splice(ai, 1);
         bulletConsumed = true;
         break;
       }
@@ -1928,14 +1987,14 @@ function update() {
   }
 
   // Push splitter minis after all iteration
-  for (const mini of alienTemp) {
-    aliens.push(mini);
+  for (const mini of droneTemp) {
+    drones.push(mini);
   }
 
-  // Alien bullets vs barrier, then player
+  // Drone bullets vs barrier, then player
   if (invTimer <= 0) {
-    for (let i = alienBullets.length - 1; i >= 0; i--) {
-      const ab = alienBullets[i];
+    for (let i = droneBullets.length - 1; i >= 0; i--) {
+      const ab = droneBullets[i];
       // Skip bombs (handled above)
       if (ab.isBomb) continue;
       // Check barrier first
@@ -1945,14 +2004,14 @@ function update() {
           addParticles(player.x, player.y - 18, 8, '#44f', 80, 0.3);
           playBarrierHit();
           barrierActive = false;
-          alienBullets.splice(i, 1);
+          droneBullets.splice(i, 1);
           continue;
         }
       }
       // Check player hit
       const pb = { x: player.x - 15, y: player.y - 12, w: 30, h: 20 };
       if (aabb(ab, pb)) {
-        alienBullets.splice(i, 1);
+        droneBullets.splice(i, 1);
         lives--;
         addParticles(player.x, player.y, 15, '#0f0', 150, 0.5);
         playPlayerDeath();
@@ -1973,14 +2032,14 @@ function update() {
     }
   }
 
-  // Alien bullets vs shields
-  for (let i = alienBullets.length - 1; i >= 0; i--) {
-    const b = alienBullets[i];
+  // Drone bullets vs shields
+  for (let i = droneBullets.length - 1; i >= 0; i--) {
+    const b = droneBullets[i];
     if (b.isBomb) continue; // bombs handled separately
     for (const sh of shields) {
       if (damageShield(sh, b.x, b.y, b.w, b.h, 1)) {
         addParticles(b.x + 2, b.y + 5, 4, '#0a0', 40, 0.2);
-        alienBullets.splice(i, 1);
+        droneBullets.splice(i, 1);
         break;
       }
     }
@@ -2080,7 +2139,7 @@ function update() {
   }
 
   // Check wave clear
-  const totalAlive = aliens.filter(a => a.alive).length;
+  const totalAlive = drones.filter(a => a.alive).length;
   const bossCleared = !boss || (!boss.alive && !boss.dying);
   if (totalAlive === 0 && bossCleared) {
     bannerWave = wave + 1;
@@ -2108,7 +2167,7 @@ function update() {
   if (lifeGainFlash > 0) lifeGainFlash -= DT;
 
   // Shield flash timers
-  for (const a of aliens) {
+  for (const a of drones) {
     if (a.shieldFlash > 0) a.shieldFlash -= DT;
   }
 }
@@ -2119,33 +2178,27 @@ function update() {
 function handleSettingsInput(e) {
   const k = e.key;
   if (k === 'ArrowUp') {
-    settingsRow = (settingsRow + 2) % 3;
+    settingsRow = (settingsRow + 1) % 2;
   } else if (k === 'ArrowDown') {
-    settingsRow = (settingsRow + 1) % 3;
+    settingsRow = (settingsRow + 1) % 2;
   } else if (k === 'ArrowLeft') {
     if (settingsRow === 1) {
       settings.gameSpeed = Math.max(0.5, Math.round((settings.gameSpeed - 0.25) * 100) / 100);
-      saveSettings();
-    } else if (settingsRow === 2) {
-      settings.shipSpeed = Math.max(0.5, Math.round((settings.shipSpeed - 0.25) * 100) / 100);
       saveSettings();
     }
   } else if (k === 'ArrowRight') {
     if (settingsRow === 1) {
       settings.gameSpeed = Math.min(2.0, Math.round((settings.gameSpeed + 0.25) * 100) / 100);
       saveSettings();
-    } else if (settingsRow === 2) {
-      settings.shipSpeed = Math.min(2.0, Math.round((settings.shipSpeed + 0.25) * 100) / 100);
-      saveSettings();
     }
   } else if (k === 'Enter' || k === 'Escape' || k === 's' || k === 'S') {
     settingsOpen = false;
   } else if (k === '1') {
-    settings.gameSpeed = 0.75; settings.shipSpeed = 0.75; saveSettings();
+    settings.gameSpeed = 0.75; saveSettings();
   } else if (k === '2') {
-    settings.gameSpeed = 1.0; settings.shipSpeed = 1.0; saveSettings();
+    settings.gameSpeed = 1.0; saveSettings();
   } else if (k === '3') {
-    settings.gameSpeed = 1.5; settings.shipSpeed = 1.25; saveSettings();
+    settings.gameSpeed = 1.5; saveSettings();
   }
 }
 
@@ -2160,15 +2213,15 @@ function renderSettingsScreen() {
 
   // Detect preset
   let activePreset = 'CUSTOM';
-  if (settings.gameSpeed === 0.75 && settings.shipSpeed === 0.75) activePreset = 'CHILL';
-  else if (settings.gameSpeed === 1.0 && settings.shipSpeed === 1.0) activePreset = 'NORMAL';
-  else if (settings.gameSpeed === 1.5 && settings.shipSpeed === 1.25) activePreset = 'INTENSE';
+  if (settings.gameSpeed === 0.75) activePreset = 'CHILL';
+  else if (settings.gameSpeed === 1.0) activePreset = 'NORMAL';
+  else if (settings.gameSpeed === 1.5) activePreset = 'INTENSE';
 
   // Row 0: Presets
   const presets = [
-    { name: 'CHILL', key: '1', gs: 0.75, ss: 0.75 },
-    { name: 'NORMAL', key: '2', gs: 1.0, ss: 1.0 },
-    { name: 'INTENSE', key: '3', gs: 1.5, ss: 1.25 }
+    { name: 'CHILL', key: '1', gs: 0.75 },
+    { name: 'NORMAL', key: '2', gs: 1.0 },
+    { name: 'INTENSE', key: '3', gs: 1.5 }
   ];
   const presetY = 160;
   const rowSelected0 = (settingsRow === 0);
@@ -2183,7 +2236,7 @@ function renderSettingsScreen() {
     // Sub-label
     ctx.font = '11px monospace';
     ctx.fillStyle = isActive ? '#088' : '#555';
-    ctx.fillText(Math.round(p.gs * 100) + '%/' + Math.round(p.ss * 100) + '%', px, presetY + 16);
+    ctx.fillText(Math.round(p.gs * 100) + '%', px, presetY + 16);
   }
   if (activePreset === 'CUSTOM') {
     ctx.fillStyle = '#f80';
@@ -2231,38 +2284,14 @@ function renderSettingsScreen() {
     ctx.fillText('\u25B6', barX1 - 30, sliderY1);
   }
 
-  // Row 2: Ship Speed slider
-  const sliderY2 = 280;
-  const rowSelected2 = (settingsRow === 2);
-  ctx.fillStyle = rowSelected2 ? '#fff' : '#aaa';
-  ctx.font = (rowSelected2 ? 'bold ' : '') + '18px monospace';
-  ctx.textAlign = 'right';
-  ctx.fillText('Ship Speed:', W / 2 - 20, sliderY2);
-  ctx.textAlign = 'left';
-  ctx.fillStyle = rowSelected2 ? '#0ff' : '#aaa';
-  ctx.fillText(Math.round(settings.shipSpeed * 100) + '%', W / 2 + 130, sliderY2);
-  const barY2 = sliderY2 - 10;
-  ctx.fillStyle = '#333';
-  ctx.fillRect(barX1, barY2, barW, barH);
-  const fill2 = (settings.shipSpeed - 0.5) / 1.5;
-  ctx.fillStyle = rowSelected2 ? '#0ff' : '#088';
-  ctx.fillRect(barX1, barY2, barW * fill2, barH);
-  ctx.strokeStyle = rowSelected2 ? '#fff' : '#666';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(barX1, barY2, barW, barH);
-  if (rowSelected2) {
-    ctx.fillStyle = '#0ff';
-    ctx.font = '14px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText('\u25B6', barX1 - 30, sliderY2);
-  }
-
   // Hint text
   ctx.fillStyle = '#666';
   ctx.font = '14px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('\u2190 \u2192 adjust   \u2191\u2193 select   Enter to close', W / 2, 340);
-  ctx.fillText('1/2/3: Chill / Normal / Intense preset', W / 2, 362);
+  ctx.fillText('Speed scales the entire game uniformly', W / 2, 290);
+  ctx.fillText('\u2190 \u2192 adjust   \u2191\u2193 select   Enter to close', W / 2, 320);
+  ctx.fillText('1/2/3: Chill / Normal / Intense preset', W / 2, 342);
+  ctx.fillText('T toggles Normal \u2194 Fast in-game', W / 2, 364);
 }
 
 // ============================================================
@@ -2408,25 +2437,28 @@ function render() {
 // TITLE SCREEN
 // ============================================================
 function renderTitleScreen() {
+  // Speed toggle visible from the start
+  drawSpeedToggleButton();
+
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 48px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('SPACE INVADERS', W / 2, 100);
+  ctx.fillText('ALIEN DESCENT', W / 2, 100);
   ctx.font = '20px monospace';
   ctx.fillText(promptText('Press ENTER to Start', 'TAP TO START'), W / 2, 160);
   ctx.font = '16px monospace';
   ctx.fillStyle = '#aaa';
   ctx.fillText(promptText('S \u2014 Settings', ''), W / 2, 185);
   ctx.fillText(promptText('Arrow Keys / A,D - Move   |   Space - Fire', 'Touch controls on screen'), W / 2, 210);
-  ctx.fillText(promptText('P / Esc - Pause   |   M - Mute', ''), W / 2, 235);
+  ctx.fillText(promptText('P / Esc - Pause   |   M - Mute   |   T - Speed', ''), W / 2, 235);
 
-  // Alien point values
-  drawAlienType0(W / 2 - 80, 260, 0);
+  // Drone point values
+  drawDroneType0(W / 2 - 80, 260, 0);
   ctx.fillStyle = '#fff'; ctx.font = '14px monospace'; ctx.textAlign = 'left';
   ctx.fillText('= 30 pts', W / 2 - 50, 272);
-  drawAlienType1(W / 2 - 80, 280, 0);
+  drawDroneType1(W / 2 - 80, 280, 0);
   ctx.fillText('= 20 pts', W / 2 - 50, 292);
-  drawAlienType2(W / 2 - 80, 300, 0);
+  drawDroneType2(W / 2 - 80, 300, 0);
   ctx.fillText('= 10 pts', W / 2 - 50, 312);
 
   if (highScore > 0) {
@@ -2744,8 +2776,8 @@ function renderGameplay() {
     }
   }
 
-  // Aliens
-  for (const a of aliens) {
+  // Drones
+  for (const a of drones) {
     if (!a.alive) continue;
 
     // Dive-bomber returning: flash alpha
@@ -2753,10 +2785,10 @@ function renderGameplay() {
       ctx.globalAlpha = 0.3 + 0.7 * Math.abs(Math.sin(gameTime * 8));
     }
 
-    // Fast alien trail
+    // Fast drone trail
     if (a.special === 'fast') {
       ctx.globalAlpha = 0.3;
-      alienDrawFns[a.type](a.x - alienDir * 4, a.y, a.frame);
+      droneDrawFns[a.type](a.x - droneDir * 4, a.y, a.frame);
       ctx.globalAlpha = 1;
     }
 
@@ -2767,7 +2799,7 @@ function renderGameplay() {
       ctx.scale(1.3, 1.3);
       ctx.translate(-(a.x + a.w / 2), -(a.y + a.h / 2));
       const origFill = ctx.fillStyle;
-      alienDrawFns[a.type](a.x, a.y, a.frame);
+      droneDrawFns[a.type](a.x, a.y, a.frame);
       // Yellow-green overlay
       ctx.globalAlpha = 0.3;
       ctx.fillStyle = '#af0';
@@ -2775,7 +2807,7 @@ function renderGameplay() {
       ctx.globalAlpha = 1;
       ctx.restore();
     } else {
-      alienDrawFns[a.type](a.x, a.y, a.frame);
+      droneDrawFns[a.type](a.x, a.y, a.frame);
     }
 
     // Shielded overlay
@@ -2825,8 +2857,8 @@ function renderGameplay() {
     ctx.fillRect(b.x, b.y, b.w, b.h);
   }
 
-  // Alien bullets
-  for (const b of alienBullets) {
+  // Drone bullets
+  for (const b of droneBullets) {
     if (b.isBomb) {
       // Draw bomb as larger red square
       ctx.fillStyle = '#f80';
@@ -2942,13 +2974,16 @@ function renderGameplay() {
   }
 
   // Settings indicator
-  if (settings.gameSpeed !== 1.0 || settings.shipSpeed !== 1.0) {
+  if (settings.gameSpeed !== 1.0) {
     ctx.fillStyle = '#aaa';
     ctx.font = '14px monospace';
     ctx.textAlign = 'left';
     const gearX = muted ? 70 : 10;
     ctx.fillText('\u2699', gearX, H - 10);
   }
+
+  // Speed toggle button (top-left under SCORE)
+  drawSpeedToggleButton();
 
   // Mute indicator
   if (muted) {
@@ -2964,7 +2999,7 @@ function renderGameplay() {
 // ============================================================
 window.addEventListener('keydown', (e) => {
   const k = e.key;
-  const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd', ' ', 'p', 'P', 'Escape', 'Enter', 'm', 'M', 'Backspace', 's', 'S', '1', '2', '3'];
+  const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd', ' ', 'p', 'P', 'Escape', 'Enter', 'm', 'M', 'Backspace', 's', 'S', 't', 'T', '1', '2', '3'];
   if (gameKeys.includes(k)) e.preventDefault();
 
   // ---- INPUT HARD GATE ----
@@ -2996,6 +3031,11 @@ window.addEventListener('keydown', (e) => {
     muted = !muted;
     if (muted) stopUfoSound();
     else if (ufo && !ufo.dead) startUfoSound();
+  }
+
+  // Speed toggle (T) — works on title, gameplay, pause, and wave banner
+  if ((k === 't' || k === 'T') && (state === TITLE || state === PLAYING || state === PAUSED || state === WAVE_BANNER)) {
+    toggleGameSpeed();
   }
 
   if (state === TITLE && (k === 's' || k === 'S')) {

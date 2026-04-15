@@ -7,8 +7,8 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://dadarcade.com/space-invaders</loc>
-    <lastmod>2026-04-07</lastmod>
+    <loc>https://dadarcade.com/alien-descent</loc>
+    <lastmod>2026-04-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -36,6 +36,12 @@
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://dadarcade.com/chomp-chase</loc>
+    <lastmod>2026-04-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 
   <url>
     <loc>https://dadarcade.com/games</loc>
@@ -56,8 +62,8 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://dadarcade.com/blog/how-to-play-space-invaders</loc>
-    <lastmod>2026-04-07</lastmod>
+    <loc>https://dadarcade.com/blog/how-to-play-alien-descent</loc>
+    <lastmod>2026-04-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

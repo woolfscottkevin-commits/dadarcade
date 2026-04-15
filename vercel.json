@@ -1,6 +1,14 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/pac-man", "destination": "/chomp-chase", "permanent": true },
+    { "source": "/pac-man/(.*)", "destination": "/chomp-chase/$1", "permanent": true },
+    { "source": "/space-invaders", "destination": "/alien-descent", "permanent": true },
+    { "source": "/space-invaders/(.*)", "destination": "/alien-descent/$1", "permanent": true },
+    { "source": "/blog/how-to-play-space-invaders", "destination": "/blog/how-to-play-alien-descent", "permanent": true },
+    { "source": "/blog/how-to-play-space-invaders.html", "destination": "/blog/how-to-play-alien-descent", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/manifest.json",

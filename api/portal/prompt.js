@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     });
 
     prompt += `---\n\n## Files that may need changes:\n`;
-    prompt += `- space-invaders/index.html\n`;
+    prompt += `- alien-descent/index.html\n`;
     prompt += `- math-quest-rpg/index.html\n`;
     prompt += `- index.html\n`;
     prompt += `- api/scores.js\n`;
