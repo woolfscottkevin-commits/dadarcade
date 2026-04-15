@@ -41,6 +41,10 @@ a{color:#0ff;text-decoration:none}
 .feed-item .name{color:#0ff}
 .feed-item .msg{color:#ddd;font-size:0.9rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .feed-item.archived{opacity:0.4}
+.feed-item .actions{display:flex;justify-content:flex-end;margin-top:0.6rem}
+.btn-done{background:#0f0;color:#111;border:none;padding:0.3rem 0.9rem;border-radius:4px;font-family:inherit;font-size:0.75rem;font-weight:bold;cursor:pointer}
+.btn-done:hover{background:#0c0}
+.btn-done:disabled{opacity:0.5;cursor:not-allowed}
 
 .empty{color:#555;text-align:center;padding:3rem;font-size:0.95rem}
 
@@ -66,7 +70,7 @@ a{color:#0ff;text-decoration:none}
 const API = window.location.hostname === 'localhost' ? '' : 'https://dadarcade.com';
 let token = sessionStorage.getItem('portal_token') || '';
 let currentTab = 'bugs';
-let ideas = [], bugs = [], archive = [];
+let ideas = [], bugs = [], archive = [], ideasArchive = [];
 let promptText = '';
 let loading = false;
 
@@ -139,16 +143,18 @@ function logout() {
 
 async function loadDashboard() {
   try {
-    const [ideasRes, bugsRes, archRes] = await Promise.all([
+    const [ideasRes, bugsRes, archRes, ideasArchRes] = await Promise.all([
       api('/api/portal/feedback?type=ideas'),
       api('/api/portal/feedback?type=bugs'),
       api('/api/portal/feedback?type=archive'),
+      api('/api/portal/feedback?type=ideas-archive'),
     ]);
     ideas = (await ideasRes.json()).items || [];
     bugs = (await bugsRes.json()).items || [];
     archive = (await archRes.json()).items || [];
+    ideasArchive = (await ideasArchRes.json()).items || [];
   } catch(e) {
-    ideas = []; bugs = []; archive = [];
+    ideas = []; bugs = []; archive = []; ideasArchive = [];
   }
   promptText = '';
   renderDashboard();
@@ -192,9 +198,13 @@ function renderDashboard() {
     for (const item of items) {
       const d = new Date(item.timestamp);
       const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' });
+      const doneBtn = currentTab === 'ideas'
+        ? `<div class="actions"><button class="btn-done" onclick="archiveIdea('${escAttr(item.timestamp)}', this)">Done</button></div>`
+        : '';
       html += `<div class="feed-item">
         <div class="meta"><span class="name">${escHtml(item.name)}</span><span>${date}</span></div>
         <div class="msg">${escHtml(item.message)}</div>
+        ${doneBtn}
       </div>`;
     }
     html += '</div>';
@@ -204,6 +214,20 @@ function renderDashboard() {
   if (currentTab === 'bugs' && archive.length > 0) {
     html += `<details style="margin-top:1.5rem"><summary class="archive-toggle">Archive (${archive.length} processed)</summary><div class="feed-list" style="margin-top:0.8rem;max-height:30vh">`;
     for (const item of archive) {
+      const d = new Date(item.timestamp);
+      const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      html += `<div class="feed-item archived">
+        <div class="meta"><span class="name">${escHtml(item.name)}</span><span>${date}</span></div>
+        <div class="msg">${escHtml(item.message)}</div>
+      </div>`;
+    }
+    html += '</div></details>';
+  }
+
+  // Archive section for ideas tab
+  if (currentTab === 'ideas' && ideasArchive.length > 0) {
+    html += `<details style="margin-top:1.5rem"><summary class="archive-toggle">Archive (${ideasArchive.length} reviewed)</summary><div class="feed-list" style="margin-top:0.8rem;max-height:30vh">`;
+    for (const item of ideasArchive) {
       const d = new Date(item.timestamp);
       const date = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
       html += `<div class="feed-item archived">
@@ -253,6 +277,34 @@ function copyPrompt() {
 
 function escHtml(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return (s||'').toString().replace(/'/g, "\\'");
+}
+
+async function archiveIdea(timestamp, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Archiving...'; }
+  try {
+    const res = await api('/api/portal/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'archive', type: 'ideas', timestamp }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to archive');
+    }
+    // Move locally to avoid full reload
+    const idx = ideas.findIndex(i => i.timestamp === timestamp);
+    if (idx >= 0) {
+      const [moved] = ideas.splice(idx, 1);
+      ideasArchive.unshift(moved);
+    }
+    renderDashboard();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Done'; }
+    alert('Could not archive: ' + e.message);
+  }
 }
 </script>
 </body>
