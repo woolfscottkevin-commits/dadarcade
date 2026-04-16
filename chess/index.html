@@ -47,6 +47,38 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .btn-row{display:flex;gap:0.5rem;width:100%;flex-wrap:wrap}
 .btn-row > *{flex:1;min-width:0}
 
+/* Home mode grid: 1 col on narrow, 2x2 on >=600px */
+.home-grid{width:100%;display:grid;grid-template-columns:1fr;gap:0.75rem}
+@media (min-width:600px){.home-grid{grid-template-columns:1fr 1fr}}
+
+/* Pass & Play resume banner on home */
+.resume-banner{width:100%;background:linear-gradient(135deg,rgba(0,255,255,0.08),rgba(255,110,199,0.08));border:2px solid #0ff;border-radius:12px;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.35rem;margin-bottom:0.5rem}
+.resume-banner .resume-title{font-size:0.9rem;color:#0ff;letter-spacing:0.05em;font-weight:bold}
+.resume-banner .resume-names{color:#ccc;font-size:0.85rem}
+.resume-banner .resume-actions{display:flex;gap:0.5rem;margin-top:0.4rem}
+.resume-banner .resume-actions button{flex:1;padding:0.55rem;border:1.5px solid;border-radius:6px;font-size:0.85rem;font-weight:bold;background:transparent;transition:all .15s;font-family:inherit}
+.resume-banner .resume-btn-yes{border-color:#0f0;color:#0f0}
+.resume-banner .resume-btn-yes:hover{background:rgba(0,255,0,0.08);box-shadow:0 0 12px rgba(0,255,0,0.3)}
+.resume-banner .resume-btn-new{border-color:#666;color:#ccc}
+.resume-banner .resume-btn-new:hover{background:rgba(255,255,255,0.05)}
+
+/* Auto-flip animation for Pass & Play */
+@keyframes boardFlip{0%{transform:rotateY(0deg)}50%{transform:rotateY(90deg)}50.01%{transform:rotateY(-90deg)}100%{transform:rotateY(0deg)}}
+
+/* In-game gear (flip toggle) */
+.game-gear{background:transparent;border:1.5px solid #2a2a4a;border-radius:6px;padding:0.3rem 0.55rem;color:#888;font-size:0.85rem;transition:all .15s;cursor:pointer;font-family:inherit;white-space:nowrap}
+.game-gear:hover{border-color:#0ff;color:#0ff}
+.game-gear.on{border-color:#0f0;color:#0f0}
+
+/* Toggle switch for the Pass & Play setup screen */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.15rem 0}
+.toggle-row .toggle-label{color:#ccc;font-size:0.95rem}
+.toggle-hint{color:#777;font-size:0.75rem;margin-top:-0.25rem;line-height:1.35}
+.toggle{position:relative;width:46px;height:26px;border:2px solid #2a2a4a;border-radius:999px;background:#0a0a1a;cursor:pointer;transition:all .15s;flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:1px;left:1px;width:18px;height:18px;border-radius:50%;background:#666;transition:all .15s}
+.toggle.on{border-color:#0f0;background:rgba(0,255,0,0.1)}
+.toggle.on::after{left:22px;background:#0f0;box-shadow:0 0 8px rgba(0,255,0,0.6)}
+
 .card-box{width:100%;background:#12122a;border:2px solid #2a2a4a;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem}
 .card-box h3{color:#0ff;font-size:1rem;letter-spacing:0.08em}
 .card-box label{color:#aaa;font-size:0.85rem;display:block;margin-bottom:0.3rem}
@@ -85,7 +117,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .captures .cap-label{color:#666;font-size:0.7rem;margin-right:0.3rem}
 .captures .cap-score{color:#ffd700;font-size:0.8rem;margin-left:auto;font-weight:bold}
 
-#board-wrap{width:100%;max-width:min(95vw,500px);aspect-ratio:1/1;position:relative;margin:0.25rem 0}
+#board-wrap{width:100%;max-width:min(95vw,500px);aspect-ratio:1/1;position:relative;margin:0.25rem 0;perspective:1200px;transform-style:preserve-3d}
+#board-wrap.flipping{animation:boardFlip 400ms ease-in-out}
 #board{width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:3px solid #333;border-radius:6px;overflow:hidden;box-shadow:0 0 24px rgba(0,0,0,0.5);position:relative}
 .sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,box-shadow .12s;user-select:none}
 .sq-light{background:var(--sq-light,#f0d9b5)}
@@ -200,13 +233,24 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 </div>
 
 <h1 class="title">CHESS</h1>
-<p class="subtitle" id="subtitle">Six themes. Three modes. One board.</p>
+<p class="subtitle" id="subtitle">Six themes. Four modes. One board.</p>
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <button class="menu-btn btn-cyan" onclick="goto('cpu')">▶ Play vs Computer</button>
-  <button class="menu-btn btn-magenta" onclick="goto('friend')">◉ Play vs Friend</button>
-  <button class="menu-btn btn-yellow" onclick="goto('lobby')">★ Public Lobby</button>
+  <div class="resume-banner" id="resume-banner" style="display:none">
+    <div class="resume-title">⟲ RESUME PASS &amp; PLAY</div>
+    <div class="resume-names" id="resume-names">—</div>
+    <div class="resume-actions">
+      <button class="resume-btn-yes" onclick="resumeLocalGame()">Resume</button>
+      <button class="resume-btn-new" onclick="startNewLocalFromBanner()">Start New</button>
+    </div>
+  </div>
+  <div class="home-grid">
+    <button class="menu-btn btn-cyan" onclick="goto('cpu')">▶ Play vs Computer</button>
+    <button class="menu-btn btn-green" onclick="goto('local')">⇄ Pass &amp; Play<br><span style="font-size:0.75rem;font-weight:normal;opacity:0.75">2 players, one device</span></button>
+    <button class="menu-btn btn-magenta" onclick="goto('friend')">◉ Play vs Friend</button>
+    <button class="menu-btn btn-yellow" onclick="goto('lobby')">★ Public Lobby</button>
+  </div>
 </div>
 
 <!-- VS CPU SETUP -->
@@ -227,6 +271,24 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
   </div>
   <button class="menu-btn btn-cyan" onclick="startCpuGame()">Start Game</button>
+  <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
+</div>
+
+<!-- PASS & PLAY SETUP -->
+<div id="screen-local" class="screen">
+  <div class="card-box">
+    <h3 style="color:#0f0">⇄ PASS &amp; PLAY</h3>
+    <label for="local-white-name">White player name</label>
+    <input id="local-white-name" maxlength="20" placeholder="White">
+    <label for="local-black-name">Black player name</label>
+    <input id="local-black-name" maxlength="20" placeholder="Black">
+    <div class="toggle-row" style="margin-top:0.5rem">
+      <div class="toggle-label">Auto-flip board between turns</div>
+      <div class="toggle on" id="local-autoflip" role="switch" aria-checked="true" tabindex="0"></div>
+    </div>
+    <div class="toggle-hint">Turn the board so the next player's pieces are at the bottom.</div>
+  </div>
+  <button class="menu-btn btn-green" onclick="startLocalGame()">Start Game</button>
   <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
 </div>
 
@@ -288,17 +350,21 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <div class="reconnect-banner" id="reconnect-banner" style="display:none">Reconnecting…</div>
     <div class="status-bar">
       <div id="status-turn" class="status-turn">White to move</div>
-      <div id="status-info"></div>
+      <div style="display:flex;gap:0.4rem;align-items:center">
+        <div id="status-info"></div>
+        <button class="game-gear on" id="flip-toggle" onclick="toggleAutoFlipInGame()" title="Auto-flip board between turns" style="display:none">⇅ Flip: ON</button>
+      </div>
     </div>
-    <div class="captures" id="cap-top"><span class="cap-label">OPP</span><span id="cap-top-pieces"></span><span class="cap-score" id="cap-top-score"></span></div>
+    <div class="captures" id="cap-top"><span class="cap-label" id="cap-top-label">OPP</span><span id="cap-top-pieces"></span><span class="cap-score" id="cap-top-score"></span></div>
     <div id="board-wrap"><div id="board"></div></div>
-    <div class="captures" id="cap-bot"><span class="cap-label">YOU</span><span id="cap-bot-pieces"></span><span class="cap-score" id="cap-bot-score"></span></div>
+    <div class="captures" id="cap-bot"><span class="cap-label" id="cap-bot-label">YOU</span><span id="cap-bot-pieces"></span><span class="cap-score" id="cap-bot-score"></span></div>
     <div class="btn-row" id="game-controls">
       <button class="menu-btn btn-red" onclick="resign()" style="font-size:0.85rem;padding:0.7rem">Resign</button>
       <button class="menu-btn btn-yellow" onclick="offerDraw()" id="draw-btn" style="font-size:0.85rem;padding:0.7rem">Offer Draw</button>
+      <button class="menu-btn btn-cyan" onclick="undoMove()" id="undo-btn" style="font-size:0.85rem;padding:0.7rem;display:none">↶ Undo</button>
       <button class="menu-btn btn-grey" onclick="copyCurrentCode()" id="copy-code-btn" style="font-size:0.85rem;padding:0.7rem;display:none">Copy Code</button>
     </div>
-    <button class="menu-btn btn-grey" onclick="leaveGame()" style="font-size:0.85rem;padding:0.6rem">← Leave Game</button>
+    <button class="menu-btn btn-grey" onclick="backToHomeFromGame()" style="font-size:0.85rem;padding:0.6rem">← Back to Home</button>
   </div>
 </div>
 
@@ -308,9 +374,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     <div class="go-title" id="go-title">Game Over</div>
     <div class="go-reason" id="go-reason"></div>
   </div>
-  <div class="btn-row">
+  <!-- Default Play Again (cpu / friend / public) -->
+  <div class="btn-row" id="gameover-actions-default">
     <button class="menu-btn btn-cyan" onclick="playAgain()">↻ Play Again</button>
-    <button class="menu-btn btn-grey" onclick="goto('home');leaveGame()">Home</button>
+    <button class="menu-btn btn-grey" onclick="leaveGame()">Home</button>
+  </div>
+  <!-- Pass & Play variant actions -->
+  <div id="gameover-actions-local" style="display:none;width:100%;flex-direction:column;gap:0.5rem">
+    <button class="menu-btn btn-green" onclick="playAgainLocal(true)">↻ Play Again (swap colors)</button>
+    <button class="menu-btn btn-cyan" onclick="playAgainLocal(false)">↻ Play Again (same colors)</button>
+    <button class="menu-btn btn-grey" onclick="leaveGame()">Home</button>
   </div>
 </div>
 
@@ -559,10 +632,10 @@ function segmentValue(id) {
    GAME STATE
    ============================================================ */
 const STATE = {
-  mode: null,          // 'cpu' | 'friend' | 'public'
+  mode: null,          // 'cpu' | 'friend' | 'public' | 'local'
   chess: null,         // chess.js instance
   api: null,           // shimmed api
-  myColor: 'w',        // 'w' or 'b' — the local player's color
+  myColor: 'w',        // 'w' or 'b' — the local player's color (unused in 'local' mode)
   orientation: 'w',    // board orientation (bottom rank)
   gameId: null,        // Supabase id for PvP
   gameCode: null,      // 6-char code
@@ -575,6 +648,7 @@ const STATE = {
   legalTargets: [],    // legal destination squares for selected piece
   lastMove: null,      // {from, to}
   aiBusy: false,       // locks input while AI is computing/animating
+  flipBusy: false,     // locks input while auto-flip animation is running
   pendingPromo: null,  // {from, to, resolve}
   backoff: 1000,
   captured: { w: [], b: [] }, // pieces captured FROM each color
@@ -584,6 +658,10 @@ const STATE = {
   myName: null,
   gameOverShown: false,
   rematchNewCode: null,
+  // Pass & Play (local) mode fields
+  localWhiteName: 'White',
+  localBlackName: 'Black',
+  localAutoFlip: true,
 };
 
 function resetState() {
@@ -599,6 +677,7 @@ function resetState() {
   STATE.legalTargets = [];
   STATE.lastMove = null;
   STATE.aiBusy = false;
+  STATE.flipBusy = false;
   STATE.pendingPromo = null;
   STATE.backoff = 1000;
   STATE.captured = { w: [], b: [] };
@@ -698,6 +777,10 @@ function updateStatusBar() {
   } else if (STATE.mode === 'friend' || STATE.mode === 'public') {
     if (turn === STATE.myColor) txt = 'Your move';
     else txt = (STATE.opponentName || 'Opponent') + '\u2019s move';
+  } else if (STATE.mode === 'local') {
+    const who = turn === 'w' ? (STATE.localWhiteName || 'White') : (STATE.localBlackName || 'Black');
+    const col = turn === 'w' ? 'White' : 'Black';
+    txt = who + ' (' + col + ') to move';
   }
   turnEl.textContent = txt;
   turnEl.className = 'status-turn';
@@ -717,40 +800,60 @@ function updateCaptures() {
   // Compute from history
   const hist = STATE.api.history({ verbose: true });
   const capByWhite = []; // black pieces captured by white
-  const capByBlack = [];
+  const capByBlack = []; // white pieces captured by black
   hist.forEach(h => {
     if (h.captured) {
       if (h.color === 'w') capByWhite.push(h.captured);
       else capByBlack.push(h.captured);
     }
   });
-  const myCap = STATE.myColor === 'w' ? capByWhite : capByBlack;
-  const oppCap = STATE.myColor === 'w' ? capByBlack : capByWhite;
-  const oppColor = STATE.myColor === 'w' ? 'b' : 'w';
-  const myColor = STATE.myColor;
 
-  const myScore = myCap.reduce((s, p) => s + PIECE_VAL[p], 0);
-  const oppScore = oppCap.reduce((s, p) => s + PIECE_VAL[p], 0);
-  const diff = myScore - oppScore;
+  // Determine which color sits at the BOTTOM of the screen (= STATE.orientation)
+  const bottomColor = STATE.orientation === 'b' ? 'b' : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  // "bot" tray shows pieces captured BY the bottom-side player (glyphs are the opposite color)
+  const botCap = bottomColor === 'w' ? capByWhite : capByBlack;
+  const topCap = topColor === 'w' ? capByWhite : capByBlack;
+  const botGlyphColor = bottomColor === 'w' ? 'b' : 'w';
+  const topGlyphColor = topColor === 'w' ? 'b' : 'w';
 
-  // "YOU" row shows pieces you captured (opponent color glyphs)
-  const youEl = document.getElementById('cap-bot-pieces');
-  youEl.innerHTML = '';
-  myCap.forEach(pt => {
+  const botScore = botCap.reduce((s, p) => s + PIECE_VAL[p], 0);
+  const topScore = topCap.reduce((s, p) => s + PIECE_VAL[p], 0);
+  const diff = botScore - topScore;
+
+  // Labels
+  const topLabelEl = document.getElementById('cap-top-label');
+  const botLabelEl = document.getElementById('cap-bot-label');
+  if (STATE.mode === 'local') {
+    const wn = STATE.localWhiteName || 'White';
+    const bn = STATE.localBlackName || 'Black';
+    topLabelEl.textContent = (topColor === 'w' ? wn : bn).toUpperCase();
+    botLabelEl.textContent = (bottomColor === 'w' ? wn : bn).toUpperCase();
+  } else if (STATE.mode === 'cpu') {
+    topLabelEl.textContent = 'CPU';
+    botLabelEl.textContent = 'YOU';
+  } else {
+    topLabelEl.textContent = 'OPP';
+    botLabelEl.textContent = 'YOU';
+  }
+
+  const botEl = document.getElementById('cap-bot-pieces');
+  botEl.innerHTML = '';
+  botCap.forEach(pt => {
     const s = document.createElement('span');
-    s.className = 'piece ' + (oppColor === 'w' ? 'white' : 'black');
-    s.textContent = PIECE_GLYPH[oppColor][pt];
-    youEl.appendChild(s);
+    s.className = 'piece ' + (botGlyphColor === 'w' ? 'white' : 'black');
+    s.textContent = PIECE_GLYPH[botGlyphColor][pt];
+    botEl.appendChild(s);
   });
   document.getElementById('cap-bot-score').textContent = diff > 0 ? ('+' + diff) : '';
 
-  const oppEl = document.getElementById('cap-top-pieces');
-  oppEl.innerHTML = '';
-  oppCap.forEach(pt => {
+  const topEl = document.getElementById('cap-top-pieces');
+  topEl.innerHTML = '';
+  topCap.forEach(pt => {
     const s = document.createElement('span');
-    s.className = 'piece ' + (myColor === 'w' ? 'white' : 'black');
-    s.textContent = PIECE_GLYPH[myColor][pt];
-    oppEl.appendChild(s);
+    s.className = 'piece ' + (topGlyphColor === 'w' ? 'white' : 'black');
+    s.textContent = PIECE_GLYPH[topGlyphColor][pt];
+    topEl.appendChild(s);
   });
   document.getElementById('cap-top-score').textContent = diff < 0 ? ('' + diff) : '';
 }
@@ -760,7 +863,7 @@ function updateCaptures() {
    ============================================================ */
 function onSquareClick(e) {
   if (!STATE.chess) return;
-  if (STATE.aiBusy) return;
+  if (STATE.aiBusy || STATE.flipBusy) return;
   if (STATE.api.isGameOver()) return;
 
   // In PvP, only allow moves when it's my turn
@@ -769,6 +872,7 @@ function onSquareClick(e) {
   }
   // In CPU, only allow on my turn
   if (STATE.mode === 'cpu' && STATE.api.turn() !== STATE.myColor) return;
+  // In local pass-and-play, both players move on this device — allow any piece of the turn color
 
   const sq = e.currentTarget.dataset.sq;
   const piece = STATE.api.get(sq);
@@ -885,6 +989,17 @@ function commitMove(m) {
   } else if (STATE.mode === 'friend' || STATE.mode === 'public') {
     // Persist to Supabase
     syncMoveToServer(prevFen);
+  } else if (STATE.mode === 'local') {
+    // Persist locally
+    saveLocalGame();
+    if (STATE.api.isGameOver()) {
+      handleLocalModeGameOver();
+      return;
+    }
+    // Auto-flip if enabled
+    if (STATE.localAutoFlip) {
+      autoFlipBoard();
+    }
   }
 }
 
@@ -917,6 +1032,9 @@ function showGameOver(winner, reason, serverOverride) {
   if (winner === 'draw') t = 'Draw';
   else if (STATE.mode === 'cpu') {
     t = (winner === (STATE.myColor === 'w' ? 'white' : 'black')) ? 'You Win!' : 'Computer Wins';
+  } else if (STATE.mode === 'local') {
+    const winnerName = winner === 'white' ? (STATE.localWhiteName || 'White') : (STATE.localBlackName || 'Black');
+    t = winnerName + ' Wins!';
   } else {
     const myName = winner === (STATE.myColor === 'w' ? 'white' : 'black');
     t = myName ? 'You Win!' : (STATE.opponentName || 'Opponent') + ' Wins';
@@ -933,9 +1051,23 @@ function showGameOver(winner, reason, serverOverride) {
     timeout: 'Timeout',
   }[reason] || '';
   r.textContent = reasonTxt;
+  // Switch the right action set on the gameover screen
+  const defActions = document.getElementById('gameover-actions-default');
+  const localActions = document.getElementById('gameover-actions-local');
+  if (STATE.mode === 'local') {
+    defActions.style.display = 'none';
+    localActions.style.display = 'flex';
+  } else {
+    defActions.style.display = '';
+    localActions.style.display = 'none';
+  }
   goto('gameover');
-  // Clear active-game marker
+  // Clear PvP active-game marker
   localStorage.removeItem('dadarcade_chess_active_game');
+  // Mark local game as completed (kept in storage until the player chooses Play Again or Home)
+  if (STATE.mode === 'local') {
+    saveLocalGame({ status: 'completed', winner, endReason: reason });
+  }
 }
 
 /* ============================================================
@@ -1095,12 +1227,238 @@ function startCpuGame() {
   STATE.orientation = col;
   STATE.chess = new Chess();
   STATE.api = api(STATE.chess);
-  document.getElementById('copy-code-btn').style.display = 'none';
-  document.getElementById('draw-btn').style.display = 'none'; // no draws vs CPU
+  configureGameControls();
   goto('game');
   renderBoard();
   // If player is black, CPU moves first
   if (STATE.myColor === 'b') setTimeout(() => triggerAI(), 400);
+}
+
+/* ============================================================
+   LOCAL (Pass & Play) MODE
+   ============================================================ */
+const LOCAL_STORAGE_KEY = 'dadarcade_chess_local_game';
+
+function startLocalGame(opts) {
+  // opts: optional {whiteName, blackName, autoFlip, startingColor, fen, pgn}
+  let whiteName, blackName, autoFlip;
+  if (opts) {
+    whiteName = opts.whiteName; blackName = opts.blackName; autoFlip = opts.autoFlip;
+  } else {
+    whiteName = (document.getElementById('local-white-name').value || '').trim();
+    blackName = (document.getElementById('local-black-name').value || '').trim();
+    const tg = document.getElementById('local-autoflip');
+    autoFlip = tg ? tg.classList.contains('on') : true;
+  }
+  whiteName = whiteName || 'White';
+  blackName = blackName || 'Black';
+  resetState();
+  STATE.mode = 'local';
+  STATE.localWhiteName = whiteName;
+  STATE.localBlackName = blackName;
+  STATE.localAutoFlip = !!autoFlip;
+  STATE.chess = new Chess();
+  if (opts && opts.pgn) {
+    try {
+      if (STATE.chess.load_pgn) STATE.chess.load_pgn(opts.pgn);
+      else if (STATE.chess.loadPgn) STATE.chess.loadPgn(opts.pgn);
+    } catch (e) { console.error('load pgn failed', e); }
+  } else if (opts && opts.fen) {
+    try { STATE.chess.load(opts.fen); } catch (e) { console.error('load fen failed', e); }
+  }
+  STATE.api = api(STATE.chess);
+  // Orientation: bottom side = the player whose turn it is
+  STATE.orientation = STATE.api.turn();
+  // Last move (best-effort) if we have history
+  try {
+    const hist = STATE.api.history({ verbose: true });
+    if (hist.length) {
+      const last = hist[hist.length - 1];
+      STATE.lastMove = { from: last.from, to: last.to };
+    }
+  } catch (e) {}
+  configureGameControls();
+  goto('game');
+  renderBoard();
+  saveLocalGame();
+}
+
+function autoFlipBoard() {
+  if (!STATE.chess || STATE.mode !== 'local') return;
+  const wrap = document.getElementById('board-wrap');
+  if (!wrap) { STATE.orientation = STATE.orientation === 'w' ? 'b' : 'w'; renderBoard(); return; }
+  STATE.flipBusy = true;
+  wrap.classList.add('flipping');
+  setTimeout(() => {
+    STATE.orientation = STATE.orientation === 'w' ? 'b' : 'w';
+    renderBoard();
+  }, 200);
+  setTimeout(() => {
+    wrap.classList.remove('flipping');
+    STATE.flipBusy = false;
+  }, 420);
+}
+
+function undoMove() {
+  if (!STATE.chess || STATE.mode !== 'local') return;
+  if (STATE.flipBusy || STATE.aiBusy) return;
+  const undone = STATE.chess.undo();
+  if (!undone) return;
+  STATE.selected = null;
+  STATE.legalTargets = [];
+  // Update last move to previous-previous move
+  try {
+    const hist = STATE.api.history({ verbose: true });
+    if (hist.length) {
+      const last = hist[hist.length - 1];
+      STATE.lastMove = { from: last.from, to: last.to };
+    } else {
+      STATE.lastMove = null;
+    }
+  } catch (e) { STATE.lastMove = null; }
+  // Reset orientation to match the side-to-move (so current player's pieces are at bottom when auto-flip is on)
+  if (STATE.localAutoFlip) {
+    STATE.orientation = STATE.api.turn();
+  }
+  renderBoard();
+  saveLocalGame();
+}
+
+function toggleAutoFlipInGame() {
+  STATE.localAutoFlip = !STATE.localAutoFlip;
+  const btn = document.getElementById('flip-toggle');
+  if (btn) {
+    btn.classList.toggle('on', STATE.localAutoFlip);
+    btn.textContent = '⇅ Flip: ' + (STATE.localAutoFlip ? 'ON' : 'OFF');
+  }
+  saveLocalGame();
+}
+
+function saveLocalGame(overrides) {
+  if (STATE.mode !== 'local' || !STATE.chess) return;
+  const base = {
+    fen: STATE.api.fen(),
+    pgn: STATE.api.pgn(),
+    whiteName: STATE.localWhiteName,
+    blackName: STATE.localBlackName,
+    autoFlip: STATE.localAutoFlip,
+    status: 'active',
+    winner: null,
+    endReason: null,
+    updatedAt: new Date().toISOString(),
+  };
+  const data = Object.assign(base, overrides || {});
+  try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data)); } catch (e) { console.error(e); }
+}
+
+function loadLocalGame() {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { return null; }
+}
+
+function clearLocalGame() {
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
+}
+
+function handleLocalModeGameOver() {
+  const { winner, reason } = computeGameOver();
+  showGameOver(winner, reason);
+}
+
+function playAgainLocal(swapColors) {
+  const prev = {
+    whiteName: STATE.localWhiteName,
+    blackName: STATE.localBlackName,
+    autoFlip: STATE.localAutoFlip,
+  };
+  clearLocalGame();
+  if (swapColors) {
+    startLocalGame({ whiteName: prev.blackName, blackName: prev.whiteName, autoFlip: prev.autoFlip });
+  } else {
+    startLocalGame({ whiteName: prev.whiteName, blackName: prev.blackName, autoFlip: prev.autoFlip });
+  }
+}
+
+function resumeLocalGame() {
+  const saved = loadLocalGame();
+  if (!saved) { hideResumeBanner(); return; }
+  if (saved.status === 'completed') { clearLocalGame(); hideResumeBanner(); return; }
+  startLocalGame({
+    whiteName: saved.whiteName,
+    blackName: saved.blackName,
+    autoFlip: !!saved.autoFlip,
+    pgn: saved.pgn,
+    fen: saved.fen,
+  });
+  hideResumeBanner();
+}
+
+async function startNewLocalFromBanner() {
+  const yes = await confirmModal('Discard the saved game?', 'Starting a new Pass & Play will erase the saved game.');
+  if (!yes) return;
+  clearLocalGame();
+  hideResumeBanner();
+  goto('local');
+}
+
+function hideResumeBanner() {
+  const b = document.getElementById('resume-banner');
+  if (b) b.style.display = 'none';
+}
+
+function maybeShowResumeBanner() {
+  // Do not show if an active PvP game is saved (PvP takes priority)
+  if (localStorage.getItem('dadarcade_chess_active_game')) { hideResumeBanner(); return; }
+  const saved = loadLocalGame();
+  if (!saved || saved.status !== 'active') { hideResumeBanner(); return; }
+  const b = document.getElementById('resume-banner');
+  if (!b) return;
+  const w = saved.whiteName || 'White';
+  const bl = saved.blackName || 'Black';
+  document.getElementById('resume-names').textContent = w + ' (White) vs ' + bl + ' (Black)';
+  b.style.display = '';
+}
+
+async function backToHomeFromGame() {
+  if (STATE.mode === 'local' && !STATE.gameOverShown) {
+    const yes = await confirmModal('Leave this game?', 'You can resume it from the home screen later.');
+    if (!yes) return;
+  }
+  leaveGame();
+}
+
+function configureGameControls() {
+  // Toggle which buttons appear based on mode
+  const draw = document.getElementById('draw-btn');
+  const undo = document.getElementById('undo-btn');
+  const copy = document.getElementById('copy-code-btn');
+  const flip = document.getElementById('flip-toggle');
+  if (STATE.mode === 'cpu') {
+    draw.style.display = 'none';
+    undo.style.display = 'none';
+    copy.style.display = 'none';
+    flip.style.display = 'none';
+  } else if (STATE.mode === 'local') {
+    draw.style.display = '';
+    undo.style.display = '';
+    copy.style.display = 'none';
+    flip.style.display = '';
+    flip.classList.toggle('on', STATE.localAutoFlip);
+    flip.textContent = '⇅ Flip: ' + (STATE.localAutoFlip ? 'ON' : 'OFF');
+  } else if (STATE.mode === 'friend') {
+    draw.style.display = '';
+    undo.style.display = 'none';
+    copy.style.display = '';
+    flip.style.display = 'none';
+  } else if (STATE.mode === 'public') {
+    draw.style.display = '';
+    undo.style.display = 'none';
+    copy.style.display = 'none';
+    flip.style.display = 'none';
+  }
 }
 
 /* ============================================================
@@ -1335,8 +1693,9 @@ function enterGameFromRow(row) {
   // Reconstruct captured from history — we don't persist PGN replay; captured computes from chess instance's history.
   // But chess loaded from FEN has no history, so captures may be empty after refresh. That's OK (cosmetic only).
   localStorage.setItem('dadarcade_chess_active_game', row.id);
+  configureGameControls();
+  // Copy code button is only for friend mode (shown in configureGameControls for non-local but we override specifically)
   document.getElementById('copy-code-btn').style.display = STATE.mode === 'friend' ? '' : 'none';
-  document.getElementById('draw-btn').style.display = '';
   STATE.gameOverShown = false;
   goto('game');
   renderBoard();
@@ -1457,6 +1816,13 @@ async function resign() {
     showGameOver(STATE.myColor === 'w' ? 'black' : 'white', 'resignation');
     return;
   }
+  if (STATE.mode === 'local') {
+    // Current player (whose turn it is) resigns — opposite side wins
+    const turn = STATE.api.turn();
+    const winner = turn === 'w' ? 'black' : 'white';
+    showGameOver(winner, 'resignation');
+    return;
+  }
   if (!STATE.gameId) return;
   const winner = STATE.myColor === 'w' ? 'black' : 'white';
   const now = new Date().toISOString();
@@ -1473,6 +1839,12 @@ async function resign() {
 let drawOfferedByMe = false;
 async function offerDraw() {
   if (STATE.mode === 'cpu') { toast('No draws vs computer', 'info'); return; }
+  if (STATE.mode === 'local') {
+    // Both players are at the same device — one tap = mutual agreement
+    const yes = await confirmModal('Draw?', 'Both players agree to a draw?');
+    if (yes) showGameOver('draw', 'draw_agreement');
+    return;
+  }
   if (!STATE.channel) return;
   drawOfferedByMe = true;
   await STATE.channel.send({ type: 'broadcast', event: 'draw_offer', payload: { from_player: PLAYER_ID } });
@@ -1525,6 +1897,11 @@ async function playAgain() {
     startCpuGame();
     return;
   }
+  if (STATE.mode === 'local') {
+    // Default variant when user taps single Play Again — swap colors
+    playAgainLocal(true);
+    return;
+  }
   if (!STATE.gameId) { goto('home'); return; }
   // Rematch: create new game with opposite colors.
   const sb = ensureSupabase();
@@ -1560,9 +1937,14 @@ async function acceptRematch() {
    LEAVE / RESUME
    ============================================================ */
 function leaveGame() {
+  // If local game is completed, clear its saved state; an active game is kept so the resume banner can show.
+  if (STATE.mode === 'local' && STATE.gameOverShown) {
+    clearLocalGame();
+  }
   if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} STATE.channel = null; }
   resetState();
   goto('home');
+  maybeShowResumeBanner();
 }
 
 async function attemptResume() {
@@ -1693,13 +2075,23 @@ function init() {
   document.getElementById('join-code').addEventListener('input', (e) => {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   });
-  // Hook goto transitions
-  const originalGoto = window.goto;
-  // Attempt resume
-  attemptResume().catch(e => console.error(e));
+  // Auto-flip toggle on Pass & Play setup
+  const tg = document.getElementById('local-autoflip');
+  if (tg) {
+    const toggleTg = () => {
+      const on = tg.classList.toggle('on');
+      tg.setAttribute('aria-checked', on ? 'true' : 'false');
+    };
+    tg.addEventListener('click', toggleTg);
+    tg.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggleTg(); } });
+  }
+  // Attempt PvP resume first (it has priority). If it returns false (no active PvP), show local resume banner if applicable.
+  attemptResume()
+    .then(resumed => { if (!resumed) maybeShowResumeBanner(); })
+    .catch(e => { console.error(e); maybeShowResumeBanner(); });
 }
 
-// wrap goto to handle lobby lifecycle
+// wrap goto to handle lobby lifecycle and home-screen resume banner
 const _goto = goto;
 window.goto = function (name) {
   const prev = document.querySelector('.screen.active');
@@ -1707,7 +2099,12 @@ window.goto = function (name) {
   if (prevName === 'lobby' && name !== 'lobby') stopLobby();
   _goto(name);
   if (name === 'lobby') startLobby();
-  if (name === 'home') { document.getElementById('subtitle').style.display = ''; }
+  if (name === 'home') {
+    document.getElementById('subtitle').style.display = '';
+    maybeShowResumeBanner();
+  } else {
+    hideResumeBanner();
+  }
 };
 
 // Boot
