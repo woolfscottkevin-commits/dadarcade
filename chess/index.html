@@ -98,6 +98,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .personality-card .p-name{font-size:0.95rem;font-weight:bold;color:#0ff}
 .personality-card .p-tag{color:#aaa;font-size:0.78rem;line-height:1.3}
 .personality-card .p-depth{color:#888;font-size:0.7rem;letter-spacing:0.05em}
+.personality-card.grandmaster{border-color:#ffd700;background:linear-gradient(135deg,rgba(255,215,0,0.08),rgba(179,102,255,0.05));box-shadow:0 0 14px rgba(255,215,0,0.25)}
+.personality-card.grandmaster .p-name{color:#ffd700;text-shadow:0 0 8px rgba(255,215,0,0.4)}
+.personality-card.grandmaster .p-emoji{filter:drop-shadow(0 0 6px rgba(255,215,0,0.6));animation:crownPulse 2.5s ease-in-out infinite}
+.personality-card.grandmaster.active{border-color:#ffd700;box-shadow:0 0 22px rgba(255,215,0,0.55)}
+@keyframes crownPulse{0%,100%{filter:drop-shadow(0 0 6px rgba(255,215,0,0.6))}50%{filter:drop-shadow(0 0 14px rgba(255,215,0,0.9))}}
+
+/* Inline loader used on personality grid while Stockfish fetches */
+.gm-loading{display:flex;align-items:center;gap:0.5rem;color:#ffd700;font-size:0.8rem;padding:0.4rem 0.6rem;border:1px dashed rgba(255,215,0,0.4);border-radius:6px;margin-top:0.35rem}
+.gm-spinner{width:14px;height:14px;border:2px solid rgba(255,215,0,0.25);border-top-color:#ffd700;border-radius:50%;animation:gmSpin 0.8s linear infinite}
+@keyframes gmSpin{to{transform:rotate(360deg)}}
 
 /* Secondary row on home (utilities) */
 .home-secondary{width:100%;display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;margin-top:0.5rem}
@@ -674,6 +684,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     </div>
     <div class="modal-actions">
       <button class="menu-btn btn-grey" onclick="closeModal('settings')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-grandmaster-error">
+  <div class="modal-box">
+    <h2 style="color:#ffd700">👑 Grandmaster Unavailable</h2>
+    <p>The Grandmaster engine couldn't load. You can try again or play Dr. Deep instead.</p>
+    <div class="modal-actions">
+      <button class="menu-btn btn-yellow" onclick="retryGrandmasterLoad()">Try Again</button>
+      <button class="menu-btn btn-cyan" onclick="fallbackToDrDeep()">Play Dr. Deep</button>
     </div>
   </div>
 </div>
@@ -1779,12 +1800,138 @@ const PERSONALITIES = [
   { id: 'gambit',    name: 'Captain Gambit',       emoji: '⚔️', tag: 'Attacks! All the time!',                    depth: 2, delay: 400 },
   { id: 'prudence',  name: 'Princess Prudence',    emoji: '🛡️', tag: 'Defense wins championships.',               depth: 2, delay: 600 },
   { id: 'deep',      name: 'Dr. Deep',             emoji: '🧠', tag: 'The real challenge.',                       depth: 3, delay: 1200 },
+  { id: 'grandmaster', name: 'The Grandmaster',    emoji: '👑', tag: 'Real chess engine. This is the wall.',       engine: 'stockfish', moveTimeMs: 2000 },
 ];
 function getPersonality() {
   const id = localStorage.getItem('dadarcade_chess_ai_personality') || 'benny';
   return PERSONALITIES.find(p => p.id === id) || PERSONALITIES[0];
 }
 function setPersonality(id) { localStorage.setItem('dadarcade_chess_ai_personality', id); }
+
+/* ---------- Stockfish (Grandmaster tier) ---------- */
+const STOCKFISH_URLS = [
+  'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
+];
+const SF = { worker: null, ready: false, loading: null, newGameNeeded: true, usedUrl: null, pending: null };
+
+function _attachInlineLoader(btn) {
+  if (!btn) return null;
+  const existing = btn.querySelector('.gm-loading');
+  if (existing) return existing;
+  const loader = document.createElement('div');
+  loader.className = 'gm-loading';
+  loader.innerHTML = '<span class="gm-spinner"></span><span>Loading Grandmaster engine… (~1 MB, one-time)</span>';
+  btn.appendChild(loader);
+  return loader;
+}
+function _removeInlineLoader(btn) {
+  if (!btn) return;
+  const l = btn.querySelector('.gm-loading');
+  if (l) l.remove();
+}
+
+async function ensureStockfishLoaded(cardBtn) {
+  if (SF.ready && SF.worker) return SF.worker;
+  if (SF.loading) return SF.loading;
+  const loader = _attachInlineLoader(cardBtn);
+  SF.loading = (async () => {
+    let src = null;
+    let lastErr = null;
+    for (const url of STOCKFISH_URLS) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        src = await res.text();
+        SF.usedUrl = url;
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (!src) throw (lastErr || new Error('Stockfish load failed'));
+    const blob = new Blob([src], { type: 'application/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+    const worker = new Worker(blobUrl);
+    // UCI handshake
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        worker.terminate();
+        reject(new Error('Stockfish handshake timeout'));
+      }, 10000);
+      worker.onmessage = (e) => {
+        const line = typeof e.data === 'string' ? e.data : '';
+        if (line === 'uciok') {
+          worker.postMessage('isready');
+        } else if (line === 'readyok') {
+          clearTimeout(timer);
+          resolve();
+        }
+      };
+      worker.onerror = (err) => { clearTimeout(timer); reject(err); };
+      worker.postMessage('uci');
+    });
+    SF.worker = worker;
+    SF.ready = true;
+    SF.newGameNeeded = true;
+    // Install the in-game message handler (best-move + thinking updates)
+    worker.onmessage = (e) => {
+      const line = typeof e.data === 'string' ? e.data : '';
+      if (line.startsWith('bestmove ') && SF.pending) {
+        const parts = line.split(/\s+/);
+        const bestmove = parts[1];
+        const resolver = SF.pending;
+        SF.pending = null;
+        resolver(bestmove);
+      }
+    };
+    return worker;
+  })();
+  try {
+    const w = await SF.loading;
+    _removeInlineLoader(cardBtn);
+    return w;
+  } catch (e) {
+    _removeInlineLoader(cardBtn);
+    SF.loading = null;
+    throw e;
+  } finally {
+    SF.loading = null;
+  }
+}
+
+function askStockfishForMove(fen, movetimeMs) {
+  if (!SF.worker || !SF.ready) return Promise.reject(new Error('Stockfish not ready'));
+  return new Promise((resolve, reject) => {
+    // Safety: if bestmove doesn't come back, reject after movetime + 5s
+    const guard = setTimeout(() => {
+      if (SF.pending) { SF.pending = null; reject(new Error('Stockfish timed out')); }
+    }, (movetimeMs || 2000) + 5000);
+    SF.pending = (bestmove) => { clearTimeout(guard); resolve(bestmove); };
+    if (SF.newGameNeeded) {
+      SF.worker.postMessage('ucinewgame');
+      SF.worker.postMessage('isready');
+      SF.newGameNeeded = false;
+    }
+    SF.worker.postMessage('position fen ' + fen);
+    SF.worker.postMessage('go movetime ' + (movetimeMs || 2000));
+  });
+}
+
+function showGrandmasterError() { openModal('grandmaster-error'); }
+async function retryGrandmasterLoad() {
+  closeModal('grandmaster-error');
+  SF.loading = null;
+  SF.ready = false;
+  if (SF.worker) { try { SF.worker.terminate(); } catch (e) {} SF.worker = null; }
+  const btn = document.querySelector('#cpu-personality .personality-card[data-val="grandmaster"]');
+  try { await ensureStockfishLoaded(btn); } catch (e) { showGrandmasterError(); }
+}
+function fallbackToDrDeep() {
+  closeModal('grandmaster-error');
+  setPersonality('deep');
+  renderPersonalityGrid();
+}
 function renderPersonalityGrid() {
   const grid = document.getElementById('cpu-personality');
   if (!grid) return;
@@ -1792,18 +1939,24 @@ function renderPersonalityGrid() {
   grid.innerHTML = '';
   PERSONALITIES.forEach(p => {
     const btn = document.createElement('button');
-    btn.className = 'personality-card' + (p.id === cur ? ' active' : '');
+    const extraClass = p.id === 'grandmaster' ? ' grandmaster' : '';
+    btn.className = 'personality-card' + (p.id === cur ? ' active' : '') + extraClass;
     btn.type = 'button';
     btn.dataset.val = p.id;
+    const depthLine = p.engine === 'stockfish' ? 'Stockfish · 2s/move' : 'Depth ' + p.depth;
     btn.innerHTML = '<span class="p-emoji">' + p.emoji + '</span>' +
       '<span class="p-body">' +
       '  <span class="p-name">' + p.name + '</span>' +
       '  <span class="p-tag">' + p.tag + '</span>' +
-      '  <span class="p-depth">Depth ' + p.depth + '</span>' +
+      '  <span class="p-depth">' + depthLine + '</span>' +
       '</span>';
     btn.onclick = () => {
       setPersonality(p.id);
       renderPersonalityGrid();
+      // For Grandmaster, kick off lazy load on select (non-blocking)
+      if (p.id === 'grandmaster') {
+        ensureStockfishLoaded(btn).catch(() => showGrandmasterError());
+      }
     };
     grid.appendChild(btn);
   });
@@ -2619,6 +2772,24 @@ async function chooseAiMove() {
   const moves = a.moves({ verbose: true });
   if (!moves.length) return null;
 
+  // Grandmaster: delegate to Stockfish
+  if (pers.engine === 'stockfish') {
+    try {
+      const bestmove = await askStockfishForMove(STATE.chess.fen(), pers.moveTimeMs || 2000);
+      if (!bestmove || bestmove === '(none)') return null;
+      const from = bestmove.slice(0, 2);
+      const to = bestmove.slice(2, 4);
+      const promotion = bestmove.length >= 5 ? bestmove[4] : undefined;
+      // Find the matching verbose move from chess.js legal moves
+      const match = moves.find(m => m.from === from && m.to === to && (promotion ? m.promotion === promotion : true));
+      return match || moves[0];
+    } catch (e) {
+      console.error('Stockfish move failed', e);
+      // Fall through to random-legal fallback rather than freezing
+      return moves[Math.floor(Math.random() * moves.length)];
+    }
+  }
+
   // Benny: random-move chance
   if (pers.randomChance && Math.random() < pers.randomChance) {
     return moves[Math.floor(Math.random() * moves.length)];
@@ -2679,10 +2850,23 @@ async function triggerAI() {
 /* ============================================================
    CPU MODE
    ============================================================ */
-function startCpuGame() {
+async function startCpuGame() {
   let col = segmentValue('cpu-color') || 'w';
   if (col === 'random') col = Math.random() < 0.5 ? 'w' : 'b';
   const pers = getPersonality();
+  // Grandmaster: ensure engine is loaded before entering the board
+  if (pers.engine === 'stockfish') {
+    const cardBtn = document.querySelector('#cpu-personality .personality-card[data-val="grandmaster"]');
+    try {
+      await ensureStockfishLoaded(cardBtn);
+    } catch (e) {
+      console.error(e);
+      showGrandmasterError();
+      return;
+    }
+    // Send ucinewgame to reset Stockfish's internal state for a fresh game
+    SF.newGameNeeded = true;
+  }
   // Preserve variant chosen on the variant screen
   const variant = STATE.variant || 'standard';
   const variantState = STATE.variantState || (variant === 'three_check' ? { whiteChecks: 0, blackChecks: 0 } : null);
