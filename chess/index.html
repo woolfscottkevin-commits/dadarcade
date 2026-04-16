@@ -1228,193 +1228,87 @@ function renderReplayBoard() {
   }
 }
 
-/* ---------- Daily puzzles ---------- */
-// Mix of hand-curated compositions PLUS runtime-generated K+R/K+Q vs K mate-in-1 positions.
-// EVERY puzzle is verified with chess.js before inclusion (see buildVerifiedPuzzleSet below).
-const PUZZLE_HANDCRAFTED = [
-  // Back-rank mates (mate in 1)
-  { fen: '6k1/5ppp/8/8/8/8/8/R6K w - - 0 1', solution: ['Ra8#'], description: 'Back-rank mate.' },
-  { fen: '3R2k1/5ppp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Rd8#'], description: 'Back-rank mate.' },
-  { fen: '1Q4k1/5ppp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qb8#'], description: 'Back-rank mate.' },
-  { fen: '6k1/5pp1/7p/8/8/8/8/R6K w - - 0 1', solution: ['Ra8#'], description: 'Back-rank mate with luft.' },
-  // Queen mates on 7th/8th
-  { fen: '6k1/5Qpp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qe8#'], description: 'Queen mate on the back rank.' },
-  { fen: '6k1/6pp/5Q2/8/8/8/8/6K1 w - - 0 1', solution: ['Qf8#'], description: 'Queen invasion mate.' },
-  { fen: '7k/5Qpp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qf8#'], description: 'Corner mate.' },
-  { fen: '6k1/Q5pp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qa8#'], description: 'Queen back-rank mate.' },
-  // King + queen box mate
-  { fen: '7k/5K2/6Q1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
-  { fen: '7k/8/5KQ1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
-  { fen: '7k/6K1/5Q2/8/8/8/8/8 w - - 0 1', solution: ['Qf8#'], description: 'King and queen mate.' },
-  // Smothered-style
-  { fen: '5rk1/6pp/8/6N1/8/8/8/6K1 w - - 0 1', solution: ['Nf7#'], description: 'Smothered-style mate.' },
-  // Rook + king
-  { fen: '7k/6R1/5K2/8/8/8/8/8 w - - 0 1', solution: ['Rh7#'], description: 'Rook mate.' },
-  { fen: '7k/8/5K2/8/8/8/8/7R w - - 0 1', solution: ['Rh8#'], description: 'Rook mate on back rank.' },
-  // Two rooks
-  { fen: '7k/7R/8/8/8/8/R7/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Two-rook ladder mate.' },
-  { fen: 'R6k/7R/8/8/8/8/8/6K1 w - - 0 1', solution: ['Rh8#'], description: 'Two-rook corner mate.' },
-  // Queen + bishop battery
-  { fen: '6k1/5p1p/6p1/8/2B5/8/6Q1/6K1 w - - 0 1', solution: ['Qb7#'], description: 'Queen + bishop battery.' },
-  // Pawn-promotion mate? (keep solution as promotion move)
-  { fen: '8/4P1k1/5Q2/8/8/8/8/6K1 w - - 0 1', solution: ['Qg7#'], description: 'Queen close mate.' },
-  { fen: '8/5Qpk/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qg8#'], description: 'Corner trap.' },
-  { fen: '6k1/4Q3/5K2/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'Queen + king mate.' },
-  { fen: '5k2/4Q3/5K2/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'King-and-queen mate.' },
-  { fen: '4k3/4Q3/4K3/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'Centered K+Q mate.' },
-  { fen: '3k4/3Q4/3K4/8/8/8/8/8 w - - 0 1', solution: ['Qd8#'], description: 'K+Q mate on d-file.' },
-  { fen: '2k5/2Q5/2K5/8/8/8/8/8 w - - 0 1', solution: ['Qc8#'], description: 'K+Q mate on c-file.' },
-  // Ladder with rooks
-  { fen: '7k/R7/8/1R6/8/8/8/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Rook ladder mate.' },
-  { fen: '7k/1R6/R7/8/8/8/8/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Rook ladder mate.' },
-  // Bishop + rook
-  { fen: '7k/6pp/8/8/8/5B2/8/6RK w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop battery.' },
-  { fen: '5k2/8/5K2/5B2/8/8/8/6R1 w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop mate.' },
-  // Queen close support
-  { fen: '6k1/6Q1/6K1/8/8/8/8/8 w - - 0 1', solution: ['Qg8#'], description: 'King-queen close mate.' },
-  { fen: '8/6k1/6Q1/5K2/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
-  // Mate-in-2 puzzles (solution includes black's reply + white's final mate)
-  { fen: '6k1/6pp/8/8/8/8/5PPP/R6K w - - 0 1', solution: ['Ra8+','Kxa8'], description: 'This one is not a valid mate — fallback filter will drop.', difficulty: 2 },
-  // More mate-in-1 attempts with pawn shields
-  { fen: '5rk1/5ppp/8/8/8/8/5PPP/6KR w - - 0 1', solution: ['Rh8+','Kxh8'], difficulty: 2, description: 'Rook trade.' },
-  // Anastasia's mate
-  { fen: '4r3/4kppp/8/8/8/8/3N4/3R2K1 w - - 0 1', solution: ['Rd7+','Ke8'], difficulty: 2, description: 'Anastasia\u2019s mate setup.' },
-  // Boden's mate pattern
-  { fen: '2kr3r/pppb1ppp/2n5/3p4/3P4/2N1B3/PPP2PPP/R2QK2R w KQ - 0 1', solution: ['Bxa7'], description: 'Attacking the king.' },
-  // Smothered mates (philidor)
-  { fen: '6rk/6pp/8/8/8/8/6PP/5N1K w - - 0 1', solution: ['Nf2'], description: 'Not mate — placeholder' },
-  // Some simple positions I\u2019m confident about:
-  { fen: '8/8/8/8/8/5K1k/8/5R2 w - - 0 1', solution: ['Rh1#'], description: 'Rook-and-king mate.' },
-  { fen: '8/8/8/8/8/5K1k/5R2/8 w - - 0 1', solution: ['Rh2#'], description: 'Rook-and-king mate.' },
-  { fen: '8/8/8/8/8/5KRk/8/8 w - - 0 1', solution: ['Rg8'], description: 'Not mate (filter)' },
-  { fen: '7k/6R1/8/8/8/8/8/7K w - - 0 1', solution: ['Rh7'], description: 'Not mate (filter)' },
-  { fen: '5K1k/6R1/8/8/8/8/8/8 w - - 0 1', solution: ['Rg8#'], description: 'Two-piece mate.' },
-  { fen: '5k2/5K2/5R2/8/8/8/8/8 w - - 0 1', solution: ['Rf8#'], description: 'Rook mate.' },
-  { fen: '4k3/4K3/4R3/8/8/8/8/8 w - - 0 1', solution: ['Re8#'], description: 'Rook mate.' },
-  { fen: '3k4/3K4/3R4/8/8/8/8/8 w - - 0 1', solution: ['Rd8#'], description: 'Rook mate.' },
-  { fen: '2k5/2K5/2R5/8/8/8/8/8 w - - 0 1', solution: ['Rc8#'], description: 'Rook mate.' },
-  { fen: '1k6/1K6/1R6/8/8/8/8/8 w - - 0 1', solution: ['Rb8#'], description: 'Rook mate.' },
-  { fen: 'k7/K7/R7/8/8/8/8/8 w - - 0 1', solution: ['Ra8#'], description: 'Rook mate on a-file.' },
-  // Q+K corner mates
-  { fen: '6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'K+Q mate.' },
-  { fen: '5k2/4Q3/4K3/8/8/8/8/8 w - - 0 1', solution: ['Qe7#'], description: 'K+Q mate.' },
-  { fen: '4k3/3Q4/3K4/8/8/8/8/8 w - - 0 1', solution: ['Qd7#'], description: 'K+Q mate.' },
-  { fen: '3k4/2Q5/2K5/8/8/8/8/8 w - - 0 1', solution: ['Qc7#'], description: 'K+Q mate.' },
-  { fen: '2k5/1Q6/1K6/8/8/8/8/8 w - - 0 1', solution: ['Qb7#'], description: 'K+Q mate.' },
-  { fen: '1k6/Q7/K7/8/8/8/8/8 w - - 0 1', solution: ['Qa7#'], description: 'K+Q mate.' },
-  { fen: 'k7/1Q6/K7/8/8/8/8/8 w - - 0 1', solution: ['Qb7#'], description: 'K+Q mate on b-file.' },
-  { fen: 'k7/2Q5/K7/8/8/8/8/8 w - - 0 1', solution: ['Qc8#'], description: 'K+Q diagonal mate.' },
-  // Queen+king on same file
-  { fen: '8/8/8/8/7k/8/6K1/7Q w - - 0 1', solution: ['Qh3#'], description: 'Queen mate with king support.' },
-  { fen: '8/8/8/8/k7/8/1K6/Q7 w - - 0 1', solution: ['Qa3#'], description: 'Queen mate with king support.' },
-  // Rook supported by king
-  { fen: '8/8/8/8/7k/8/6K1/7R w - - 0 1', solution: ['Rh3'], description: 'Not mate (filter).' },
-  // Straight-forward back-rank with b+r
-  { fen: '6k1/6p1/6Bp/8/8/8/8/6RK w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop mate.' },
-  { fen: '5rk1/6p1/6Bp/8/8/8/8/5R1K w - - 0 1', solution: ['Rxf8+','Kxf8'], difficulty: 2, description: 'Exchange then mate.' },
-  // Legal queen sacrifice-style mate in 2
-  { fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1', solution: ['Qxf7#'], description: 'Scholar\u2019s mate.' },
+/* ---------- Daily puzzles (static, pre-validated) ----------
+ * 50 puzzles sourced from the Lichess open puzzle database (CC0), filtered for
+ * themes mateIn1/mateIn2/mateIn3 and rating ≤ 1400. EVERY puzzle was validated
+ * against chess.js: FEN loads cleanly, every solution move is legal, and the
+ * final position is checkmate. See commit history for the sourcing / validation
+ * pipeline.
+ *
+ * Lichess solution format: `Moves` is a space-separated UCI list where move[0]
+ * is the opponent's setup move (auto-played on open) and move[1+] alternate
+ * solver / opponent. For mate-in-N the list has length 2*N.
+ */
+const DAILY_PUZZLES = [
+  { id: "lichess_000rZ", fen: "2kr1b1r/p1p2pp1/2pqb3/7p/3N2n1/2NPB3/PPP2PPP/R2Q1RK1 w - - 2 13", solution: ["d4e6","d6h2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_001KR", fen: "6Qk/p1p3pp/4N3/1p6/2q1r1n1/2B5/PP4PP/3R1R1K b - - 0 28", solution: ["h8g8","f1f8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_001gi", fen: "r6r/1pNk1ppp/2np4/b3p3/4P1b1/N1Q5/P4PPP/R3KB1R w KQ - 3 18", solution: ["c7a8","a5c3"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_001pC", fen: "r4rk1/pp3ppp/3b4/2p1pPB1/7N/2PP3n/PP4PP/R2Q1RqK w - - 5 18", solution: ["f1g1","h3f2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_001wb", fen: "r3k2r/pb1p1ppp/1b4q1/1Q2P3/8/2NP1Pn1/PP4PP/R1B2R1K w kq - 1 17", solution: ["h2g3","g6h5"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_002CP", fen: "r5k1/pp4pp/4p1q1/4p3/3n4/P5P1/1PP2Q1P/2KR1R2 w - - 4 24", solution: ["f2e3","g6c2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_002HE", fen: "1qr2rk1/1p1p1ppp/pB2p1n1/7n/2P1P3/1Q2NP1P/PP2B1Pb/3R1RK1 w - - 1 20", solution: ["g1f2","b8g3"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_002Q2", fen: "7k/p4R1p/3p3r/2pN1n2/2PbBBb1/3P2P1/P3r3/5R1K w - - 1 28", solution: ["f4h6","f5g3"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_002vV", fen: "8/6k1/2R4p/5p1P/5P1K/6P1/8/r7 w - - 2 58", solution: ["c6b6","a1h1"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_003AX", fen: "2r2rk1/5ppp/bq2p3/p1ppP1N1/Pb1P2P1/1P2P2P/2QN4/2R1K2R b K - 1 18", solution: ["c5d4","c2h7"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_003YF", fen: "r4rk1/1pp2ppp/p2p4/2bPp3/2P1Pn1q/P1N2B2/1P3P2/R1BQK1R1 w Q - 1 15", solution: ["c1f4","h4f2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_00465", fen: "3r1Q1k/pp4pp/2p5/6q1/5R2/2P5/P1P2PPP/3rR1K1 b - - 8 27", solution: ["d8f8","f4f8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_004WZ", fen: "r6k/1b3pp1/p1q1pn1p/2p5/P1B5/1PN4Q/2P1RP1P/R4Kr1 w - - 2 26", solution: ["f1g1","c6h1"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_004iZ", fen: "r2r2k1/2q1bpp1/3p1n1p/1ppN4/1P1BP3/P5Q1/4RPPP/R5K1 b - - 1 20", solution: ["f6d5","g3g7"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_005Ep", fen: "5kr1/ppR3p1/3R3p/8/1r1n4/8/1P3PPP/2K5 b - - 4 31", solution: ["d4b5","d6d8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_005x9", fen: "r1b1kb1Q/ppp4p/6pB/3P4/2pn4/8/PPP1qPPP/RN1K3R w q - 2 13", solution: ["d1c1","e2c2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_00656", fen: "7r/ppp2kp1/2nb1pp1/3p3r/3P2q1/2PQB2P/PP3PP1/R3R1K1 w - - 0 18", solution: ["h3g4","h5h1"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_006GK", fen: "2kr1br1/ppBb1ppp/8/3P2Q1/3n2n1/5N2/PP3qPP/RN2R2K b - - 0 16", solution: ["d4f3","g5d8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_007AH", fen: "3r1n2/1bp1bkpp/p1q2n2/1p6/3P4/P1N3B1/1PP2PPP/R2QR1K1 w - - 5 18", solution: ["d1e2","c6g2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_007HB", fen: "rn2q1k1/pp3ppp/2pb4/3p1B2/2Pn4/1Q3N2/PP3PPP/R1B4K w - - 0 15", solution: ["f3d4","e8e1"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_007QU", fen: "2rq1rk1/1b3p1p/p3p3/1p1pB1p1/2nP2N1/1RP1PP2/P1Q3PP/3R2K1 b - - 1 22", solution: ["f7f5","g4h6"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_007c6", fen: "2kr3r/pp1n2pp/2QB1bp1/5q2/2B5/8/PPP2PPP/3R1RK1 b - - 0 17", solution: ["b7c6","c4a6"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_007fJ", fen: "8/1P3ppp/8/8/8/2pk3P/3p2P1/3K4 w - - 0 52", solution: ["b7b8q","c3c2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_0082f", fen: "r4rk1/2q2ppp/3pp3/4Pb1N/pp6/1B4Q1/PPP3PP/1K1RR3 b - - 0 21", solution: ["a4b3","g3g7"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_008LD", fen: "8/6pp/4N1k1/5p2/5P2/5rPb/4R2P/6K1 w - - 0 35", solution: ["e6g5","f3f1"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_008Nz", fen: "6k1/2p2ppp/pnp5/B7/2P3PP/1P1bPPR1/r6r/3R2K1 b - - 1 29", solution: ["d3e2","d1d8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_008cl", fen: "r3k2r/ppp2p1p/2n1pp2/7q/2PN2b1/2BP1Pb1/PP2B1P1/R2Q1RK1 w kq - 1 16", solution: ["f3g4","h5h2"], difficulty: 1, description: "Black to play and mate in 1" },
+  { id: "lichess_008o6", fen: "Q5k1/p1p3p1/5rP1/8/3P4/7P/q3r3/B4RK1 b - - 1 34", solution: ["f6f8","a8f8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_008rw", fen: "rn2kb1r/pp2pppp/2p2n2/4q3/8/2N4Q/PPPPBPPP/R1B1K2R b KQkq - 2 8", solution: ["g7g6","h3c8"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_009J1", fen: "rn2k2r/pp2bp1p/2p1pNp1/6B1/5P2/7P/PPP4P/2K1RR2 b - - 3 17", solution: ["e8f8","g5h6"], difficulty: 1, description: "White to play and mate in 1" },
+  { id: "lichess_001Wz", fen: "4r1k1/5ppp/r1p5/p1n1RP2/8/2P2N1P/2P3P1/3R2K1 b - - 0 21", solution: ["e8e5","d1d8","e5e8","d8e8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_001om", fen: "5r1k/pp4pp/5p2/1BbQp1r1/6K1/7P/1PP3P1/3R3R w - - 2 26", solution: ["g4h4","c5f2","g2g3","f2g3"], difficulty: 2, description: "Black to play and mate in 2" },
+  { id: "lichess_001w5", fen: "1rb2rk1/q5P1/4p2p/3p3p/3P1P2/2P5/2QK3P/3R2R1 b - - 0 29", solution: ["f8f7","c2h7","g8h7","g7g8q"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_002Mm", fen: "rn1qr1k1/ppp3pQ/3p1pP1/3Pp3/2P1P3/8/PP3PP1/R1B1K3 b Q - 2 16", solution: ["g8f8","h7h8","f8e7","h8g7"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_002p5", fen: "r1bqr1k1/pp1nbpp1/2p2n2/6P1/2BP4/P7/1PQNNPP1/R3K2R b KQ - 0 13", solution: ["f6d5","c2h7","g8f8","h7h8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_0030b", fen: "6k1/5ppp/5nb1/pp6/6rP/5N1Q/Pq2r1P1/3R2RK b - - 4 32", solution: ["g6e4","d1d8","f6e8","d8e8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_0042j", fen: "3r2k1/4nppp/pq1p1b2/1p2P3/2r2P2/2P1NR2/PP1Q2BP/3R2K1 b - - 0 24", solution: ["d6e5","d2d8","b6d8","d1d8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_004X6", fen: "1r4k1/p4ppp/2Q5/3pq3/8/P6P/2PR1PP1/Rr4K1 w - - 1 26", solution: ["a1b1","b8b1","d2d1","b1d1"], difficulty: 2, description: "Black to play and mate in 2" },
+  { id: "lichess_004XI", fen: "8/3kqp2/4p3/p2p4/3P1P2/4P1rP/7r/1QR2K2 b - - 1 34", solution: ["e7a3","b1b7","d7e8","c1c8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_005N7", fen: "r6k/2q3pp/8/2p1n3/R1Qp4/7P/2PB1PP1/6K1 b - - 0 32", solution: ["e5c4","a4a8","c7b8","a8b8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_005nD", fen: "3rk2r/2qn1pp1/p1Q1R3/3n3p/8/8/PP4PP/5R1K b k - 0 23", solution: ["f7e6","c6e6","d5e7","e6f7"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_0061g", fen: "6k1/pp3pp1/2p1q1Pp/3b4/8/6Q1/PB3Pp1/3RrNK1 b - - 2 27", solution: ["e1d1","g3b8","e6e8","b8e8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_006HV", fen: "1r6/5k2/2p1pNp1/p5Pp/1pQ1P2P/2P4R/KP3P2/3q4 w - - 4 31", solution: ["c4c6","b4b3","a2a3","d1a1"], difficulty: 2, description: "Black to play and mate in 2" },
+  { id: "lichess_0071N", fen: "6k1/p4pp1/1p5p/4b3/4B3/4P1P1/PpR2PKP/3r4 b - - 1 30", solution: ["b2b1q","c2c8","d1d8","c8d8"], difficulty: 2, description: "White to play and mate in 2" },
+  { id: "lichess_007Rn", fen: "4r1k1/p4p1p/1p6/6q1/3P2n1/P4Q2/1P1B2P1/7K w - - 0 34", solution: ["d2g5","e8e1","f3f1","e1f1"], difficulty: 2, description: "Black to play and mate in 2" },
+  { id: "lichess_001wR", fen: "6nr/pp3p1p/k1p5/8/1QN5/2P1P3/4KPqP/8 b - - 5 26", solution: ["b7b5","b4a5","a6b7","c4d6","b7b8","a5d8"], difficulty: 3, description: "White to play and mate in 3" },
+  { id: "lichess_004kB", fen: "4rr1k/pQpn2pp/3p1q2/8/8/2P5/PP3PPP/RN3RK1 w - - 1 16", solution: ["b7c7","f6f2","f1f2","e8e1","f2f1","e1f1"], difficulty: 3, description: "Black to play and mate in 3" },
+  { id: "lichess_00BrZ", fen: "r6r/pp2kb2/3p1p1Q/1N1Pp3/3bP3/P2B2P1/1P4PP/7K w - - 6 28", solution: ["h6d2","h8h2","h1h2","a8h8","d2h6","h8h6"], difficulty: 3, description: "Black to play and mate in 3" },
+  { id: "lichess_00F6y", fen: "2k3r1/ppp2prp/1q2b3/8/Q7/2P1R1P1/P4P1P/4R1K1 b - - 3 23", solution: ["e6d7","e3e8","d7e8","e1e8","g8e8","a4e8"], difficulty: 3, description: "White to play and mate in 3" },
+  { id: "lichess_00GuD", fen: "1n5k/4r1p1/p2q1rPp/1ppB4/8/3P4/PPP1RPQ1/2K4R b - - 4 25", solution: ["e7e2","h1h6","g7h6","g6g7","h8h7","g7g8q"], difficulty: 3, description: "White to play and mate in 3" }
 ];
 
-function generateKpieceVsKMates(maxCount) {
-  // Fast runtime generator for K+R and K+Q vs K mate-in-1 positions.
-  // Black king constrained to corner/edge squares where K+piece mates concentrate.
-  // White king within 2 squares of black king (supported mates). Piece on any square.
-  // Caps at maxCount for O(few-thousand) work.
-  const files = 'abcdefgh';
-  const allSquares = [];
-  for (let f = 0; f < 8; f++) for (let r = 0; r < 8; r++) allSquares.push({ sq: files[f] + (r + 1), f, r });
-  const buildFen = (p) => {
-    const rows = [];
-    for (let r = 7; r >= 0; r--) {
-      let row = ''; let empty = 0;
-      for (let f = 0; f < 8; f++) {
-        const sq = files[f] + (r + 1);
-        if (p[sq]) { if (empty) { row += empty; empty = 0; } row += p[sq]; }
-        else empty++;
-      }
-      if (empty) row += empty;
-      rows.push(row);
-    }
-    return rows.join('/') + ' w - - 0 1';
+// Clean up deprecated runtime-generator cache (written by the pre-cleanup code path)
+try { localStorage.removeItem('dadarcade_chess_puzzles_v1'); } catch (e) {}
+
+// Helper: convert UCI move string into a chess.js-compatible move object
+function uciToMoveObj(uci) {
+  return {
+    from: uci.slice(0, 2),
+    to: uci.slice(2, 4),
+    promotion: uci.length >= 5 ? uci[4] : undefined,
   };
-  // Black king set: corners + edge midpoints
-  const edgeBk = allSquares.filter(s => s.f === 0 || s.f === 7 || s.r === 0 || s.r === 7);
-  const seen = new Set();
-  const out = [];
-  const seenFamily = new Map();
-  // Work queue: for each bk, try each wk within 2 squares (but not adjacent), then each piece square within 4 squares of bk
-  for (const bk of edgeBk) {
-    for (const wk of allSquares) {
-      if (wk.sq === bk.sq) continue;
-      const dx = Math.abs(wk.f - bk.f), dy = Math.abs(wk.r - bk.r);
-      if (dx <= 1 && dy <= 1) continue;
-      if (Math.max(dx, dy) > 2) continue;
-      for (const wp of allSquares) {
-        if (wp.sq === bk.sq || wp.sq === wk.sq) continue;
-        const px = Math.abs(wp.f - bk.f), py = Math.abs(wp.r - bk.r);
-        if (Math.max(px, py) > 4) continue;
-        for (const kind of ['R', 'Q']) {
-          const p = {}; p[bk.sq] = 'k'; p[wk.sq] = 'K'; p[wp.sq] = kind;
-          const fen = buildFen(p);
-          if (seen.has(fen)) continue;
-          const c = new Chess();
-          if (!c.load(fen)) continue;
-          if (c.in_check() || c.game_over()) continue;
-          const moves = c.moves({ verbose: true });
-          let mate = null;
-          for (const m of moves) {
-            c.move(m);
-            if (c.in_checkmate()) { mate = m.san; c.undo(); break; }
-            c.undo();
-          }
-          if (!mate) continue;
-          const familyKey = kind + bk.sq;
-          if ((seenFamily.get(familyKey) || 0) >= 2) continue;
-          seenFamily.set(familyKey, (seenFamily.get(familyKey) || 0) + 1);
-          seen.add(fen);
-          out.push({ fen, solution: [mate], description: (kind === 'R' ? 'Rook + king mate-in-1.' : 'Queen + king mate-in-1.') });
-          if (out.length >= maxCount) return out;
-        }
-      }
-    }
-  }
-  return out;
 }
 
-let _puzzlesValidated = null;
-const PUZZLE_CACHE_KEY = 'dadarcade_chess_puzzles_v1';
-function validatePuzzles() {
-  if (_puzzlesValidated) return _puzzlesValidated;
-  // Try cache first
-  try {
-    const cached = JSON.parse(localStorage.getItem(PUZZLE_CACHE_KEY) || 'null');
-    if (cached && Array.isArray(cached) && cached.length >= 50) {
-      _puzzlesValidated = cached;
-      return cached;
-    }
-  } catch (e) {}
-  // Generate + verify
-  const out = [];
-  const all = PUZZLE_HANDCRAFTED.concat(generateKpieceVsKMates(80));
-  for (const p of all) {
-    try {
-      const c = new Chess();
-      if (!c.load(p.fen)) continue;
-      let ok = true;
-      for (const mv of p.solution) {
-        if (!c.move(mv)) { ok = false; break; }
-      }
-      if (!ok) continue;
-      if (!c.in_checkmate()) continue;
-      out.push(Object.assign({}, p, { id: 'p' + String(out.length + 1).padStart(3, '0') }));
-      if (out.length >= 50) break;
-    } catch (e) { /* skip */ }
-  }
-  _puzzlesValidated = out;
-  try { localStorage.setItem(PUZZLE_CACHE_KEY, JSON.stringify(out)); } catch (e) {}
-  return out;
-}
+
+/* Legacy runtime puzzle generator and validator removed 2026-04-16.
+ * Puzzles now ship as a pre-validated static set (DAILY_PUZZLES above);
+ * the runtime cache key `dadarcade_chess_puzzles_v1` is cleaned up in the
+ * removeItem call just below the DAILY_PUZZLES literal. */
 
 function getTodayUTC() {
   const d = new Date();
@@ -1424,10 +1318,9 @@ function getTodayUTC() {
   return y + '-' + m + '-' + day;
 }
 function getTodayPuzzle() {
-  const puzzles = validatePuzzles();
-  if (!puzzles.length) return null;
+  if (!DAILY_PUZZLES.length) return null;
   const daysSinceEpoch = Math.floor(Date.now() / 86400000);
-  return puzzles[daysSinceEpoch % puzzles.length];
+  return DAILY_PUZZLES[daysSinceEpoch % DAILY_PUZZLES.length];
 }
 function loadPuzzleStreak() {
   try { return JSON.parse(localStorage.getItem('dadarcade_chess_puzzle_streak') || 'null') || { lastSolvedDate: null, currentStreak: 0, longestStreak: 0, totalSolved: 0, solvedIds: [] }; }
@@ -1464,29 +1357,37 @@ function markPuzzleSolved(puzzleId) {
 /* Puzzle gameplay state (separate from STATE to avoid crossing wires with main modes) */
 const PUZZLE = { chess: null, api: null, solution: [], step: 0, orientation: 'w', today: null, solvedToday: false };
 
-function startDailyPuzzle() {
-  const puzzle = getTodayPuzzle();
-  if (!puzzle) { toast('No puzzles available', 'error'); return; }
+function _primePuzzleState(puzzle) {
   PUZZLE.puzzle = puzzle;
   PUZZLE.chess = new Chess(puzzle.fen);
   PUZZLE.api = api(PUZZLE.chess);
   PUZZLE.solution = puzzle.solution.slice();
-  PUZZLE.step = 0;
+  // Auto-play the Lichess setup move (index 0) so the solver's turn is next
+  try {
+    const setup = PUZZLE.solution[0];
+    if (setup) PUZZLE.chess.move(uciToMoveObj(setup));
+  } catch (e) { console.error('puzzle setup move failed', e); }
+  PUZZLE.step = 1;
+  // Orient the board so the solver is at the bottom (their pieces visible)
   PUZZLE.orientation = PUZZLE.api.turn();
+}
+
+function startDailyPuzzle() {
+  const puzzle = getTodayPuzzle();
+  if (!puzzle) { toast('No puzzles available', 'error'); return; }
+  _primePuzzleState(puzzle);
   const s = loadPuzzleStreak();
   PUZZLE.solvedToday = s.lastSolvedDate === getTodayUTC();
   document.getElementById('puzzle-meta').textContent = (PUZZLE.solvedToday ? '✓ Solved today · ' : '→ Play · ') +
     'Streak ' + (s.currentStreak || 0) + ' · Total ' + (s.totalSolved || 0);
-  document.getElementById('puzzle-prompt').textContent = (PUZZLE.api.turn() === 'w' ? 'White' : 'Black') + ' to play — ' + (puzzle.description || '');
+  document.getElementById('puzzle-prompt').textContent = (puzzle.description || '');
   document.getElementById('puzzle-status').textContent = PUZZLE.solvedToday ? 'You already solved today — practice freely (streak won\u2019t change).' : '';
   goto('puzzle');
   renderPuzzleBoard();
 }
 function resetDailyPuzzle() {
   if (!PUZZLE.puzzle) return;
-  PUZZLE.chess = new Chess(PUZZLE.puzzle.fen);
-  PUZZLE.api = api(PUZZLE.chess);
-  PUZZLE.step = 0;
+  _primePuzzleState(PUZZLE.puzzle);
   document.getElementById('puzzle-status').textContent = '';
   renderPuzzleBoard();
 }
@@ -1543,19 +1444,19 @@ function onPuzzleSquareClick(e) {
   if (piece && piece.color === turn) { _puzzleSel = sq; renderPuzzleBoard(); }
 }
 function attemptPuzzleMove(from, to) {
-  const expected = PUZZLE.solution[PUZZLE.step];
-  // Try the move first to get SAN & handle promotion
+  const expectedUci = PUZZLE.solution[PUZZLE.step]; // UCI, e.g. "e7e8q"
+  // Expected promotion (if any) from the UCI string
+  const expectedPromotion = expectedUci && expectedUci.length >= 5 ? expectedUci[4] : undefined;
   const piece = PUZZLE.api.get(from);
   const promoteRank = piece && piece.color === 'w' ? '8' : '1';
   const needsPromo = piece && piece.type === 'p' && to[1] === promoteRank;
-  const mvObj = needsPromo ? { from, to, promotion: 'q' } : { from, to };
+  const mvObj = needsPromo ? { from, to, promotion: expectedPromotion || 'q' } : { from, to };
   const result = PUZZLE.chess.move(mvObj);
   if (!result) return;
-  const actualSan = result.san;
-  // Normalize for comparison (strip annotations)
-  const eq = actualSan === expected || stripSan(actualSan) === stripSan(expected);
+  // UCI comparison: from+to (+ promotion if present)
+  const actualUci = result.from + result.to + (result.promotion || '');
+  const eq = actualUci === expectedUci;
   if (!eq) {
-    // Wrong move — undo and hint
     PUZZLE.chess.undo();
     _puzzleSel = null;
     renderPuzzleBoard();
@@ -1565,11 +1466,11 @@ function attemptPuzzleMove(from, to) {
   _puzzleSel = null;
   PUZZLE.step++;
   renderPuzzleBoard();
-  // If more moves, play opponent's reply
+  // If more moves remain, auto-play opponent's reply
   if (PUZZLE.step < PUZZLE.solution.length) {
     setTimeout(() => {
-      const reply = PUZZLE.solution[PUZZLE.step];
-      PUZZLE.chess.move(reply);
+      const replyUci = PUZZLE.solution[PUZZLE.step];
+      PUZZLE.chess.move(uciToMoveObj(replyUci));
       PUZZLE.step++;
       renderPuzzleBoard();
       document.getElementById('puzzle-status').textContent = 'Your move!';
