@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brickfall | DadArcade</title>
+<meta name="description" content="Stack falling bricks, clear lines, beat the high score. A classic arcade stacker game on DadArcade.">
+<meta name="keywords" content="brickfall, falling blocks game, stacker game, free arcade game, browser block game, line clear game, kids stacking game">
+<link rel="canonical" href="https://dadarcade.com/brickfall">
+<meta property="og:title" content="Brickfall — Free Online Stacker Arcade | Dad Arcade">
+<meta property="og:description" content="Stack falling bricks, clear lines, beat the high score. A classic arcade stacker game on DadArcade.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/brickfall">
+<meta property="og:site_name" content="Dad Arcade">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Brickfall — Free Online Stacker Arcade">
+<meta name="twitter:description" content="Stack falling bricks, clear lines, beat the high score. A classic arcade stacker game on DadArcade.">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Brickfall",
+  "url": "https://dadarcade.com/brickfall",
+  "description": "An original falling-blocks arcade stacker. Rotate, slide, and drop seven shapes into a 10-wide pit. Clear lines, level up, beat the high score.",
+  "genre": ["Arcade", "Puzzle"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dad Arcade" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Dad Arcade", "item": "https://dadarcade.com" },
+    { "@type": "ListItem", "position": 2, "name": "Brickfall", "item": "https://dadarcade.com/brickfall" }
+  ]
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#0a0a14;color:#fff;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden}
+body{display:flex;flex-direction:column;align-items:center;padding:0.5rem 0.75rem 1.5rem;-webkit-tap-highlight-color:transparent}
+a{color:#0ff;text-decoration:none}
+a:hover{color:#9ff}
+
+#back-link{position:fixed;top:0.6rem;left:0.75rem;color:#4af;font-size:0.85rem;z-index:50}
+#back-link:hover{color:#9cf}
+
+#title{font-size:clamp(1.4rem,4vw,2rem);font-weight:bold;letter-spacing:0.3em;margin:1.7rem 0 0.4rem;background:linear-gradient(90deg,#E91E63,#FFB300,#00897B,#7CB342,#3949AB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(233,30,99,0.25))}
+#tagline{color:#666;font-size:0.78rem;margin-bottom:0.9rem;letter-spacing:0.1em}
+
+#game-area{display:flex;gap:1rem;align-items:flex-start;justify-content:center;flex-wrap:wrap;width:100%;max-width:780px}
+
+.left-col{display:flex;flex-direction:column;align-items:center}
+#playfield-wrap{position:relative;border:3px solid #2a2a44;background:#06060d;box-shadow:0 0 40px rgba(0,255,255,0.12),inset 0 0 30px rgba(0,0,0,0.7);border-radius:6px;padding:4px}
+#playfield{display:block;background:#06060d;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none}
+
+#overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.78);border-radius:4px;text-align:center;padding:1rem;z-index:10}
+#overlay.show{display:flex}
+#overlay .panel{max-width:90%}
+#overlay h2{font-size:1.6rem;margin-bottom:0.6rem;letter-spacing:0.1em;color:#fff}
+#overlay .stat{color:#aaa;font-size:0.95rem;margin:0.2rem 0}
+#overlay .stat b{color:#0ff}
+#overlay .hint{color:#666;font-size:0.78rem;margin-top:0.8rem;line-height:1.5}
+#overlay button{display:inline-block;margin-top:0.9rem;background:linear-gradient(135deg,#E91E63,#FB8C00);color:#fff;border:none;font-family:inherit;font-weight:bold;font-size:0.95rem;padding:0.7rem 1.4rem;border-radius:8px;cursor:pointer;letter-spacing:0.1em;transition:transform 0.15s}
+#overlay button:hover{transform:translateY(-2px)}
+#overlay button:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+#overlay .secondary-btn{background:#1a1a2e;border:2px solid #444}
+
+#initials-row{display:flex;justify-content:center;gap:0.5rem;margin:0.8rem 0 0.4rem}
+.init-cell{width:2.4rem;height:2.8rem;border:2px solid #444;background:#06060d;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:bold;color:#0ff;border-radius:6px;font-family:'Courier New',monospace}
+.init-cell.active{border-color:#E91E63;box-shadow:0 0 12px rgba(233,30,99,0.5)}
+
+.right-col{display:flex;flex-direction:column;gap:0.7rem;min-width:150px;width:170px}
+.panel-box{background:#10101e;border:2px solid #2a2a44;border-radius:8px;padding:0.6rem 0.8rem}
+.panel-box h3{font-size:0.7rem;color:#888;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.3rem}
+.panel-value{font-size:1.3rem;color:#fff;font-weight:bold;line-height:1}
+.panel-value.score{color:#FFB300}
+.panel-value.lines{color:#7CB342}
+.panel-value.level{color:#00897B}
+#next-canvas{display:block;background:#06060d;border-radius:4px;margin-top:0.3rem}
+
+.toggle-row{display:flex;gap:0.4rem;margin-top:0.4rem}
+.toggle-btn{flex:1;background:#0a0a14;border:1px solid #333;color:#888;font-family:inherit;font-size:0.65rem;padding:0.4rem 0.3rem;border-radius:5px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase}
+.toggle-btn.on{border-color:#0ff;color:#0ff}
+
+#leaderboard-box{background:#10101e;border:2px solid #2a2a44;border-radius:8px;padding:0.8rem 1rem;width:100%;max-width:780px;margin-top:1.5rem}
+#leaderboard-box .lb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.7rem;flex-wrap:wrap;gap:0.4rem}
+#leaderboard-box h3{font-size:0.85rem;color:#0ff;letter-spacing:0.15em;text-transform:uppercase}
+#leaderboard-box .lb-tabs{display:flex;gap:0.3rem}
+.lb-tab{background:#0a0a14;border:1px solid #333;color:#888;font-family:inherit;font-size:0.7rem;padding:0.3rem 0.7rem;border-radius:5px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase}
+.lb-tab.active{border-color:#0ff;color:#0ff}
+#leaderboard-box .lb-list{display:grid;grid-template-columns:auto 1fr auto;gap:0.4rem 1rem;font-size:0.85rem;color:#bbb}
+#leaderboard-box .lb-empty{color:#666;font-size:0.85rem;text-align:center;padding:0.6rem 0}
+#leaderboard-box .lb-rank{color:#666}
+#leaderboard-box .lb-rank.top{color:#FFB300}
+#leaderboard-box .lb-init{color:#fff;font-weight:bold;letter-spacing:0.1em}
+#leaderboard-box .lb-score{color:#0ff;text-align:right;font-variant-numeric:tabular-nums}
+#leaderboard-box .lb-foot{margin-top:0.7rem;font-size:0.78rem;color:#555;text-align:center}
+
+#retry-banner{display:none;background:rgba(255,68,68,0.12);border:1px solid #ff4444;color:#ff8888;padding:0.6rem 0.9rem;border-radius:8px;font-size:0.8rem;margin:0.8rem auto 0;max-width:780px;text-align:center}
+#retry-banner.show{display:block}
+#retry-banner button{margin-left:0.6rem;background:#ff4444;color:#fff;border:none;font-family:inherit;font-size:0.78rem;padding:0.3rem 0.7rem;border-radius:5px;cursor:pointer}
+
+/* Mobile touch controls */
+#touch-controls{display:none;width:100%;max-width:420px;margin-top:1rem;user-select:none;-webkit-user-select:none;touch-action:none}
+.touch-row{display:flex;gap:0.5rem;margin-bottom:0.5rem}
+.touch-btn{flex:1;background:#1a1a2e;border:2px solid #2a2a44;color:#fff;font-family:inherit;font-size:1.1rem;font-weight:bold;min-height:54px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;letter-spacing:0.05em;-webkit-tap-highlight-color:transparent;transition:background 0.05s}
+.touch-btn:active,.touch-btn.pressed{background:#2a2a44;border-color:#0ff;box-shadow:inset 0 0 12px rgba(0,255,255,0.3)}
+.touch-btn.rotate{color:#00897B;border-color:#00897B33}
+.touch-btn.harddrop{color:#E91E63;border-color:#E91E6333}
+.touch-btn.softdrop{color:#FFB300;border-color:#FFB30033}
+.touch-btn.pause{color:#7CB342;border-color:#7CB34233}
+
+@media(hover:none) and (pointer:coarse), (max-width:560px){
+  #touch-controls{display:block}
+}
+
+#info{max-width:780px;margin:1.5rem auto 0;padding:0 0.5rem;color:#777;font-size:0.85rem;line-height:1.6}
+#info h1{font-size:1rem;color:#999;font-weight:normal;margin-bottom:0.4rem}
+#info details{margin:0.6rem 0;color:#666}
+#info summary{cursor:pointer;color:#999;padding:0.3rem 0}
+#info ul{margin:0.4rem 0 0.6rem 1.3rem;color:#666}
+#info .links{font-size:0.78rem;color:#555;margin-top:1rem;text-align:center}
+#info .links a{color:#666}
+#info .legal{font-size:0.7rem;color:#444;margin-top:1rem;text-align:center;line-height:1.5}
+
+@media(max-width:560px){
+  #title{font-size:1.4rem;margin-top:1.4rem}
+  .right-col{width:100%;flex-direction:row;flex-wrap:wrap;max-width:420px}
+  .right-col .panel-box{flex:1 1 30%;min-width:90px}
+  .right-col .panel-box.next-box{flex:1 1 100%}
+  #game-area{flex-direction:column;align-items:center}
+  #leaderboard-box{padding:0.7rem}
+}
+</style>
+</head>
+<body>
+<a id="back-link" href="/">&larr; Dad Arcade</a>
+
+<noscript>
+<div style="max-width:700px;margin:2rem auto;padding:1.5rem;color:#ccc;font-family:sans-serif">
+<h1>Brickfall — Falling Blocks Stacker</h1>
+<p>Brickfall requires JavaScript to run. Enable JavaScript and reload the page.</p>
+</div>
+</noscript>
+
+<h1 id="title">BRICKFALL</h1>
+<p id="tagline">STACK • CLEAR • SURVIVE</p>
+
+<div id="game-area">
+  <div class="left-col">
+    <div id="playfield-wrap">
+      <canvas id="playfield" width="300" height="600" aria-label="Brickfall playfield"></canvas>
+      <div id="overlay">
+        <div class="panel">
+          <h2 id="overlay-title">PRESS START</h2>
+          <div id="overlay-body"></div>
+          <button id="overlay-btn">START</button>
+          <button id="overlay-btn-2" class="secondary-btn" style="display:none">VIEW LEADERBOARD</button>
+          <p class="hint" id="overlay-hint">Arrows to move • Up to rotate • Space hard-drop • P pause</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-col">
+    <div class="panel-box">
+      <h3>Score</h3>
+      <div id="score-val" class="panel-value score">0</div>
+    </div>
+    <div class="panel-box">
+      <h3>Level</h3>
+      <div id="level-val" class="panel-value level">1</div>
+    </div>
+    <div class="panel-box">
+      <h3>Lines</h3>
+      <div id="lines-val" class="panel-value lines">0</div>
+    </div>
+    <div class="panel-box next-box">
+      <h3>Next</h3>
+      <canvas id="next-canvas" width="120" height="80"></canvas>
+    </div>
+    <div class="panel-box">
+      <h3>Audio</h3>
+      <div class="toggle-row">
+        <button class="toggle-btn" id="sfx-toggle" type="button">SFX</button>
+        <button class="toggle-btn" id="music-toggle" type="button">Music</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="touch-controls" aria-hidden="true">
+  <div class="touch-row">
+    <button class="touch-btn" data-action="left" type="button" aria-label="Move left">&#9664;</button>
+    <button class="touch-btn rotate" data-action="rotate" type="button" aria-label="Rotate">&#8635;</button>
+    <button class="touch-btn" data-action="right" type="button" aria-label="Move right">&#9654;</button>
+  </div>
+  <div class="touch-row">
+    <button class="touch-btn softdrop" data-action="soft" type="button" aria-label="Soft drop">&#9660;</button>
+    <button class="touch-btn harddrop" data-action="hard" type="button" aria-label="Hard drop">&#11015;</button>
+    <button class="touch-btn pause" data-action="pause" type="button" aria-label="Pause">&#9208;</button>
+  </div>
+</div>
+
+<div id="retry-banner">A score from your last session didn't submit. <button id="retry-btn" type="button">Retry</button></div>
+
+<div id="leaderboard-box">
+  <div class="lb-head">
+    <h3>Top Stackers</h3>
+    <div class="lb-tabs">
+      <button class="lb-tab active" data-tab="alltime" type="button">All-Time</button>
+      <button class="lb-tab" data-tab="daily" type="button">Today</button>
+    </div>
+  </div>
+  <div id="lb-list" class="lb-list"></div>
+  <div class="lb-foot"><a href="/brickfall/leaderboard">View top 50 &rarr;</a></div>
+</div>
+
+<div id="info">
+  <h1>Brickfall — Original falling-blocks arcade stacker</h1>
+  <p>Seven shapes drop into a 10-wide pit. Slide them, rotate them, fill rows to clear them. The longer you survive, the faster they fall.</p>
+  <details>
+    <summary>How to play</summary>
+    <p style="margin-top:0.4rem"><strong style="color:#999">Keyboard</strong></p>
+    <ul>
+      <li>Left / Right — move piece sideways</li>
+      <li>Up — rotate 90&deg; clockwise</li>
+      <li>Down — soft drop (1 point per row)</li>
+      <li>Space — hard drop (2 points per row, locks instantly)</li>
+      <li>P or Esc — pause / resume</li>
+      <li>R — restart on game-over screen</li>
+    </ul>
+    <p><strong style="color:#999">Touch</strong></p>
+    <ul>
+      <li>On-screen buttons appear below the playfield on phones and tablets</li>
+      <li>Hold a button to repeat the action</li>
+    </ul>
+    <p><strong style="color:#999">Scoring</strong></p>
+    <ul>
+      <li>1 line: 100 &times; level</li>
+      <li>2 lines: 300 &times; level</li>
+      <li>3 lines: 500 &times; level</li>
+      <li>4 lines (a four-line clear): 800 &times; level</li>
+      <li>Every 10 lines, level goes up and pieces fall faster</li>
+    </ul>
+  </details>
+  <p class="links">
+    <a href="/brickfall/leaderboard">Full leaderboard</a> &middot;
+    <a href="/games">All games</a> &middot;
+    <a href="/">Dad Arcade home</a>
+  </p>
+  <p class="legal">Brickfall is an original game in the falling-blocks arcade genre. Not affiliated with, endorsed by, or connected to The Tetris&reg; Company or any of its branded properties. All shape colors, music, and gameplay tuning are original to DadArcade.</p>
+</div>
+
+<script>
+// Brickfall - An original falling-blocks arcade game
+// Part of the DadArcade collection. Not affiliated with, endorsed by,
+// or connected to The Tetris Company or any Tetris-branded property.
+'use strict';
+(function(){
+
+// ===== Constants =====
+var COLS = 10;
+var ROWS = 20;
+var BUFFER = 2;            // hidden rows above the visible playfield
+var TOTAL_ROWS = ROWS + BUFFER;
+var CELL = 30;             // base render size (canvas is 300 x 600)
+var API_URL = 'https://dadarcade.com/api/scores?game=brickfall';
+var LB_LIMIT = 10;
+var LOCK_DELAY_MS = 500;
+var CLEAR_FLASH_MS = 240;
+var SOFT_DROP_INTERVAL = 50; // ms per row when soft-dropping
+
+// Piece definitions — functional geometric shapes only.
+// Colors are an ORIGINAL palette, deliberately distinct from the
+// historical official coloring of these geometric shapes.
+var SHAPES = {
+  I: { color: '#E91E63', cells: [[0,1],[1,1],[2,1],[3,1]], box: 4 },
+  O: { color: '#FFB300', cells: [[1,0],[2,0],[1,1],[2,1]], box: 4 },
+  T: { color: '#00897B', cells: [[1,0],[0,1],[1,1],[2,1]], box: 3 },
+  S: { color: '#7CB342', cells: [[1,0],[2,0],[0,1],[1,1]], box: 3 },
+  Z: { color: '#C62828', cells: [[0,0],[1,0],[1,1],[2,1]], box: 3 },
+  J: { color: '#3949AB', cells: [[0,0],[0,1],[1,1],[2,1]], box: 3 },
+  L: { color: '#FB8C00', cells: [[2,0],[0,1],[1,1],[2,1]], box: 3 }
+};
+var SHAPE_KEYS = ['I','O','T','S','Z','J','L'];
+
+// ===== State =====
+var board;        // TOTAL_ROWS x COLS, each cell null or color string
+var current;      // { key, cells: [[x,y],...], color, x, y, box }
+var nextKey;
+var score = 0, lines = 0, level = 1;
+var dropInterval = 800;
+var dropTimer = 0;
+var lastFrame = 0;
+var rafId = 0;
+var state = 'menu'; // 'menu' | 'playing' | 'paused' | 'clearing' | 'gameover'
+var clearAnimation = null; // { rows: [...], start: timestamp }
+var lockTimer = 0;
+var softDropping = false;
+var holdTimers = {}; // for touch repeat
+
+// Initials entry
+var initialsChars = [0,0,0];
+var initialsCursor = 0;
+var initialsSubmitting = false;
+var pendingScore = null;
+
+// ===== DOM =====
+var canvas = document.getElementById('playfield');
+var ctx = canvas.getContext('2d');
+var nextCanvas = document.getElementById('next-canvas');
+var nextCtx = nextCanvas.getContext('2d');
+var scoreEl = document.getElementById('score-val');
+var linesEl = document.getElementById('lines-val');
+var levelEl = document.getElementById('level-val');
+var overlay = document.getElementById('overlay');
+var overlayTitle = document.getElementById('overlay-title');
+var overlayBody = document.getElementById('overlay-body');
+var overlayBtn = document.getElementById('overlay-btn');
+var overlayBtn2 = document.getElementById('overlay-btn-2');
+var overlayHint = document.getElementById('overlay-hint');
+var sfxToggle = document.getElementById('sfx-toggle');
+var musicToggle = document.getElementById('music-toggle');
+var lbList = document.getElementById('lb-list');
+var lbTabs = document.querySelectorAll('.lb-tab');
+var retryBanner = document.getElementById('retry-banner');
+var retryBtn = document.getElementById('retry-btn');
+
+// ===== Audio =====
+var audioCtx = null;
+var sfxOn = false;
+var musicOn = false;
+var musicNode = null;
+
+function loadAudioPrefs(){
+  try {
+    sfxOn = localStorage.getItem('brickfall_sfx') === 'on';
+    musicOn = localStorage.getItem('brickfall_music') === 'on';
+  } catch(e){}
+  refreshAudioToggles();
+}
+function refreshAudioToggles(){
+  sfxToggle.classList.toggle('on', sfxOn);
+  musicToggle.classList.toggle('on', musicOn);
+}
+function ensureAudio(){
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch(e){ audioCtx = null; }
+  }
+  return audioCtx;
+}
+function blip(freq, dur, type, vol){
+  if (!sfxOn) return;
+  var ac = ensureAudio(); if (!ac) return;
+  try {
+    var o = ac.createOscillator();
+    var g = ac.createGain();
+    o.type = type || 'square';
+    o.frequency.value = freq;
+    g.gain.value = vol || 0.05;
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start();
+    o.stop(ac.currentTime + dur);
+  } catch(e){}
+}
+function sfxLock(){ blip(180, 0.06, 'square', 0.04); }
+function sfxClear(n){
+  if (n >= 4) { blip(440, 0.08, 'square', 0.06); setTimeout(function(){blip(660,0.12,'square',0.07)},80); setTimeout(function(){blip(880,0.16,'square',0.08)},180); }
+  else { blip(330 + n*60, 0.1, 'square', 0.05); }
+}
+function sfxLevel(){ blip(523, 0.1, 'triangle', 0.06); setTimeout(function(){blip(784,0.14,'triangle',0.07)},90); }
+function sfxOver(){ blip(220,0.12,'sawtooth',0.06); setTimeout(function(){blip(165,0.16,'sawtooth',0.06)},120); setTimeout(function(){blip(110,0.22,'sawtooth',0.06)},260); }
+function sfxMove(){ blip(140, 0.02, 'square', 0.025); }
+function sfxRotate(){ blip(280, 0.03, 'triangle', 0.03); }
+
+// Original chiptune-style background loop — a simple arpeggio sequencer.
+// No external samples; not based on or arranged from any third-party melody.
+function startMusic(){
+  if (musicNode) return;
+  var ac = ensureAudio(); if (!ac) return;
+  var notes = [220, 277, 330, 415, 330, 277, 220, 247];  // generic minor arpeggio
+  var step = 0;
+  var gain = ac.createGain();
+  gain.gain.value = 0.025;
+  gain.connect(ac.destination);
+  var interval = setInterval(function(){
+    if (!musicOn || !audioCtx) return;
+    try {
+      var o = ac.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = notes[step % notes.length];
+      var g = ac.createGain();
+      g.gain.value = 0.06;
+      g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.18);
+      o.connect(g); g.connect(gain);
+      o.start();
+      o.stop(ac.currentTime + 0.2);
+      step++;
+    } catch(e){}
+  }, 220);
+  musicNode = { interval: interval, gain: gain };
+}
+function stopMusic(){
+  if (!musicNode) return;
+  clearInterval(musicNode.interval);
+  try { musicNode.gain.disconnect(); } catch(e){}
+  musicNode = null;
+}
+
+sfxToggle.addEventListener('click', function(){
+  sfxOn = !sfxOn;
+  try { localStorage.setItem('brickfall_sfx', sfxOn ? 'on' : 'off'); } catch(e){}
+  refreshAudioToggles();
+  if (sfxOn) { ensureAudio(); blip(440,0.05,'square',0.04); }
+});
+musicToggle.addEventListener('click', function(){
+  musicOn = !musicOn;
+  try { localStorage.setItem('brickfall_music', musicOn ? 'on' : 'off'); } catch(e){}
+  refreshAudioToggles();
+  if (musicOn) { ensureAudio(); startMusic(); }
+  else stopMusic();
+});
+
+// ===== Board helpers =====
+function newBoard(){
+  var b = new Array(TOTAL_ROWS);
+  for (var y = 0; y < TOTAL_ROWS; y++){
+    b[y] = new Array(COLS);
+    for (var x = 0; x < COLS; x++) b[y][x] = null;
+  }
+  return b;
+}
+
+function spawnPiece(key){
+  var def = SHAPES[key];
+  // clone cells
+  var cells = def.cells.map(function(c){ return [c[0], c[1]]; });
+  var piece = {
+    key: key, color: def.color, cells: cells, box: def.box,
+    x: Math.floor((COLS - def.box) / 2),
+    y: 0  // y=0 is top of buffer (hidden)
+  };
+  return piece;
+}
+
+function pickRandomKey(){
+  // Simple uniform random selection (no 7-bag).
+  return SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)];
+}
+
+function pieceAbsCells(p){
+  var out = [];
+  for (var i = 0; i < p.cells.length; i++) out.push([p.x + p.cells[i][0], p.y + p.cells[i][1]]);
+  return out;
+}
+
+function collides(piece, dx, dy, cellsOverride){
+  var cells = cellsOverride || piece.cells;
+  for (var i = 0; i < cells.length; i++){
+    var nx = piece.x + cells[i][0] + dx;
+    var ny = piece.y + cells[i][1] + dy;
+    if (nx < 0 || nx >= COLS) return true;
+    if (ny >= TOTAL_ROWS) return true;
+    if (ny >= 0 && board[ny][nx]) return true;
+  }
+  return false;
+}
+
+function rotateCellsCW(cells, box){
+  // Rotate inside an N x N bounding box: (x, y) -> (box - 1 - y, x)
+  var out = [];
+  for (var i = 0; i < cells.length; i++){
+    var x = cells[i][0], y = cells[i][1];
+    out.push([box - 1 - y, x]);
+  }
+  return out;
+}
+
+function tryRotate(){
+  if (!current || current.key === 'O') return;
+  var rotated = rotateCellsCW(current.cells, current.box);
+  // Try as-is first
+  if (!collides(current, 0, 0, rotated)){
+    current.cells = rotated;
+    sfxRotate();
+    if (lockTimer > 0) lockTimer = 0; // reset lock delay on successful rotate
+    return;
+  }
+  // Simple nudge attempts: ±1 column. NOT SRS wall kicks.
+  var kicks = [-1, 1, -2, 2];
+  for (var i = 0; i < kicks.length; i++){
+    if (!collides(current, kicks[i], 0, rotated)){
+      current.x += kicks[i];
+      current.cells = rotated;
+      sfxRotate();
+      if (lockTimer > 0) lockTimer = 0;
+      return;
+    }
+  }
+  // Cancel rotation
+}
+
+function move(dx){
+  if (!current) return;
+  if (!collides(current, dx, 0)){
+    current.x += dx;
+    sfxMove();
+    if (lockTimer > 0) lockTimer = 0;
+  }
+}
+
+function softDropStep(){
+  if (!current) return false;
+  if (!collides(current, 0, 1)){
+    current.y++;
+    score += 1;
+    updateHud();
+    return true;
+  }
+  return false;
+}
+
+function hardDrop(){
+  if (!current) return;
+  var dropped = 0;
+  while (!collides(current, 0, 1)){
+    current.y++;
+    dropped++;
+  }
+  score += dropped * 2;
+  lockPiece();
+}
+
+function lockPiece(){
+  if (!current) return;
+  var abs = pieceAbsCells(current);
+  for (var i = 0; i < abs.length; i++){
+    var x = abs[i][0], y = abs[i][1];
+    if (y >= 0 && y < TOTAL_ROWS && x >= 0 && x < COLS){
+      board[y][x] = current.color;
+    }
+  }
+  sfxLock();
+  current = null;
+  // Detect full rows (in visible region only — buffer rows can't be full anyway)
+  var full = [];
+  for (var y2 = 0; y2 < TOTAL_ROWS; y2++){
+    var allFilled = true;
+    for (var x2 = 0; x2 < COLS; x2++){
+      if (!board[y2][x2]) { allFilled = false; break; }
+    }
+    if (allFilled) full.push(y2);
+  }
+  if (full.length > 0){
+    state = 'clearing';
+    clearAnimation = { rows: full, start: performance.now() };
+    sfxClear(full.length);
+  } else {
+    spawnNext();
+  }
+}
+
+function clearLines(rowsToClear){
+  // Remove rows from top of stack downward; works regardless of order
+  rowsToClear.sort(function(a,b){ return a - b; });
+  for (var i = 0; i < rowsToClear.length; i++){
+    var r = rowsToClear[i];
+    for (var y = r; y > 0; y--){
+      board[y] = board[y-1].slice();
+    }
+    board[0] = new Array(COLS); for (var c = 0; c < COLS; c++) board[0][c] = null;
+  }
+  var n = rowsToClear.length;
+  var pts = (n === 1 ? 100 : n === 2 ? 300 : n === 3 ? 500 : 800) * level;
+  score += pts;
+  var prevLevel = level;
+  lines += n;
+  level = 1 + Math.floor(lines / 10);
+  if (level !== prevLevel){
+    sfxLevel();
+    if (typeof gtag === 'function') gtag('event', 'brickfall_level_up', { new_level: level });
+    dropInterval = computeDropInterval(level);
+  }
+  updateHud();
+}
+
+function computeDropInterval(lvl){
+  // Smooth curve from ~800ms at lvl 1 to ~50ms at lvl 20+
+  if (lvl >= 20) return 50;
+  // Exponential: 800 * 0.85^(lvl-1)
+  var v = 800 * Math.pow(0.85, lvl - 1);
+  if (v < 50) v = 50;
+  return v;
+}
+
+function spawnNext(){
+  current = spawnPiece(nextKey);
+  nextKey = pickRandomKey();
+  drawNext();
+  // Game over if newly-spawned piece collides on entry
+  if (collides(current, 0, 0)){
+    // Try shifting up by one (piece may overlap buffer); if still bad, game over
+    if (collides(current, 0, -1)) {
+      gameOver();
+      return;
+    }
+    current.y -= 1;
+    if (collides(current, 0, 0)){
+      gameOver();
+      return;
+    }
+  }
+}
+
+function gameOver(){
+  state = 'gameover';
+  current = null;
+  sfxOver();
+  if (typeof gtag === 'function') gtag('event', 'brickfall_game_over', { score: score, level: level, lines: lines });
+  showGameOver();
+}
+
+// ===== HUD =====
+function updateHud(){
+  scoreEl.textContent = score;
+  linesEl.textContent = lines;
+  levelEl.textContent = level;
+}
+
+// ===== Render =====
+function drawCell(x, y, color, isLanding){
+  // y is in TOTAL_ROWS coords; visible y is y - BUFFER
+  var vy = y - BUFFER;
+  if (vy < 0) return;
+  var px = x * CELL;
+  var py = vy * CELL;
+  if (isLanding){
+    // Subtle landing-row highlight — a thin line at top of landing cells, NOT a full ghost
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(px, py, CELL, CELL);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.35;
+    ctx.fillRect(px, py + CELL - 3, CELL, 3);
+    ctx.globalAlpha = 1;
+    return;
+  }
+  ctx.fillStyle = color;
+  ctx.fillRect(px+1, py+1, CELL-2, CELL-2);
+  // bevel highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fillRect(px+1, py+1, CELL-2, 3);
+  ctx.fillRect(px+1, py+1, 3, CELL-2);
+  ctx.fillStyle = 'rgba(0,0,0,0.32)';
+  ctx.fillRect(px+1, py+CELL-4, CELL-2, 3);
+  ctx.fillRect(px+CELL-4, py+1, 3, CELL-2);
+}
+
+function drawGrid(){
+  ctx.fillStyle = '#06060d';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (var x = 1; x < COLS; x++){
+    ctx.beginPath(); ctx.moveTo(x*CELL+0.5, 0); ctx.lineTo(x*CELL+0.5, canvas.height); ctx.stroke();
+  }
+  for (var y = 1; y < ROWS; y++){
+    ctx.beginPath(); ctx.moveTo(0, y*CELL+0.5); ctx.lineTo(canvas.width, y*CELL+0.5); ctx.stroke();
+  }
+}
+
+function render(now){
+  drawGrid();
+  // settled board
+  for (var y = BUFFER; y < TOTAL_ROWS; y++){
+    for (var x = 0; x < COLS; x++){
+      if (board[y][x]) drawCell(x, y, board[y][x], false);
+    }
+  }
+
+  // line clear flash
+  if (state === 'clearing' && clearAnimation){
+    var t = (now - clearAnimation.start) / CLEAR_FLASH_MS;
+    var alpha = 0.6 - 0.6 * t; if (alpha < 0) alpha = 0;
+    ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
+    for (var i = 0; i < clearAnimation.rows.length; i++){
+      var r = clearAnimation.rows[i] - BUFFER;
+      if (r >= 0) ctx.fillRect(0, r * CELL, canvas.width, CELL);
+    }
+  }
+
+  // current piece + landing indicator
+  if (current && (state === 'playing' || state === 'paused')){
+    // landing position
+    var landDy = 0;
+    while (!collides(current, 0, landDy + 1)) landDy++;
+    if (landDy > 0){
+      var abs = pieceAbsCells(current);
+      // Landing-row indicator: subtle bottom-row strip only on the lowest cells of the piece's landing footprint.
+      // Find lowest y per column.
+      var lowest = {};
+      for (var i2 = 0; i2 < abs.length; i2++){
+        var ax = abs[i2][0], ay = abs[i2][1] + landDy;
+        if (lowest[ax] === undefined || ay > lowest[ax]) lowest[ax] = ay;
+      }
+      for (var k in lowest){
+        if (Object.prototype.hasOwnProperty.call(lowest,k)) drawCell(parseInt(k,10), lowest[k], current.color, true);
+      }
+    }
+
+    // active piece
+    var abs2 = pieceAbsCells(current);
+    for (var j = 0; j < abs2.length; j++){
+      drawCell(abs2[j][0], abs2[j][1], current.color, false);
+    }
+  }
+}
+
+function drawNext(){
+  nextCtx.fillStyle = '#06060d';
+  nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+  if (!nextKey) return;
+  var def = SHAPES[nextKey];
+  var sz = 18;
+  // bounding box of the cells
+  var minX = 4, maxX = 0, minY = 4, maxY = 0;
+  for (var i = 0; i < def.cells.length; i++){
+    if (def.cells[i][0] < minX) minX = def.cells[i][0];
+    if (def.cells[i][0] > maxX) maxX = def.cells[i][0];
+    if (def.cells[i][1] < minY) minY = def.cells[i][1];
+    if (def.cells[i][1] > maxY) maxY = def.cells[i][1];
+  }
+  var w = (maxX - minX + 1) * sz, h = (maxY - minY + 1) * sz;
+  var ox = (nextCanvas.width - w) / 2 - minX * sz;
+  var oy = (nextCanvas.height - h) / 2 - minY * sz;
+  for (var j = 0; j < def.cells.length; j++){
+    var px = ox + def.cells[j][0] * sz;
+    var py = oy + def.cells[j][1] * sz;
+    nextCtx.fillStyle = def.color;
+    nextCtx.fillRect(px+1, py+1, sz-2, sz-2);
+    nextCtx.fillStyle = 'rgba(255,255,255,0.18)';
+    nextCtx.fillRect(px+1, py+1, sz-2, 2);
+    nextCtx.fillRect(px+1, py+1, 2, sz-2);
+    nextCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    nextCtx.fillRect(px+1, py+sz-3, sz-2, 2);
+    nextCtx.fillRect(px+sz-3, py+1, 2, sz-2);
+  }
+}
+
+// ===== Loop =====
+function frame(now){
+  var dt = now - lastFrame;
+  if (dt > 200) dt = 200; // clamp on tab refocus
+  lastFrame = now;
+
+  if (state === 'playing'){
+    var step = softDropping ? SOFT_DROP_INTERVAL : dropInterval;
+    dropTimer += dt;
+    while (dropTimer >= step && state === 'playing' && current){
+      dropTimer -= step;
+      if (softDropping){
+        if (!softDropStep()){
+          // can't go down — begin lock delay
+          lockTimer += step;
+          if (lockTimer >= LOCK_DELAY_MS){ lockPiece(); lockTimer = 0; }
+        }
+      } else {
+        if (!collides(current, 0, 1)){
+          current.y++;
+          lockTimer = 0;
+        } else {
+          lockTimer += step;
+          if (lockTimer >= LOCK_DELAY_MS){ lockPiece(); lockTimer = 0; }
+        }
+      }
+    }
+  } else if (state === 'clearing' && clearAnimation){
+    if (now - clearAnimation.start >= CLEAR_FLASH_MS){
+      var rowsToClear = clearAnimation.rows;
+      clearAnimation = null;
+      clearLines(rowsToClear);
+      state = 'playing';
+      spawnNext();
+    }
+  }
+
+  render(now);
+  rafId = requestAnimationFrame(frame);
+}
+
+// ===== Game lifecycle =====
+function startNewGame(){
+  board = newBoard();
+  score = 0; lines = 0; level = 1;
+  dropInterval = computeDropInterval(level);
+  dropTimer = 0;
+  lockTimer = 0;
+  softDropping = false;
+  nextKey = pickRandomKey();
+  spawnNext();
+  if (state === 'gameover') {
+    // already had spawn-blocked? handled by spawnNext setting state
+  }
+  state = 'playing';
+  hideOverlay();
+  updateHud();
+  if (typeof gtag === 'function') gtag('event', 'brickfall_game_start');
+  if (musicOn) startMusic();
+  lastFrame = performance.now();
+  if (!rafId) rafId = requestAnimationFrame(frame);
+}
+
+function pauseGame(){
+  if (state !== 'playing') return;
+  state = 'paused';
+  showPause();
+}
+function resumeGame(){
+  if (state !== 'paused') return;
+  state = 'playing';
+  hideOverlay();
+  lastFrame = performance.now();
+}
+
+// ===== Overlay UI =====
+function showMenu(){
+  state = 'menu';
+  overlayTitle.textContent = 'BRICKFALL';
+  overlayBody.innerHTML = '<p class="stat">Stack the falling shapes.</p><p class="stat">Clear lines. Beat the high score.</p>';
+  overlayBtn.textContent = 'START';
+  overlayBtn.style.display = 'inline-block';
+  overlayBtn.disabled = false;
+  overlayBtn2.style.display = 'none';
+  overlayHint.textContent = 'Arrows to move • Up to rotate • Space hard-drop • P pause';
+  overlay.classList.add('show');
+  overlayBtn.onclick = function(){ ensureAudio(); startNewGame(); };
+}
+function showPause(){
+  overlayTitle.textContent = 'PAUSED';
+  overlayBody.innerHTML = '<p class="stat">Score: <b>' + score + '</b></p><p class="stat">Lines: <b>' + lines + '</b></p>';
+  overlayBtn.textContent = 'RESUME';
+  overlayBtn.style.display = 'inline-block';
+  overlayBtn.disabled = false;
+  overlayBtn2.style.display = 'none';
+  overlayHint.textContent = 'Press P or Esc to resume';
+  overlay.classList.add('show');
+  overlayBtn.onclick = function(){ resumeGame(); };
+}
+function showGameOver(){
+  overlayTitle.textContent = 'GAME OVER';
+  overlayBody.innerHTML = '<p class="stat">Score: <b>' + score + '</b></p>' +
+    '<p class="stat">Lines: <b>' + lines + '</b></p>' +
+    '<p class="stat">Level: <b>' + level + '</b></p>' +
+    '<div id="rank-line" class="stat" style="margin-top:0.4rem;color:#666">Checking leaderboard…</div>';
+  overlayBtn.textContent = 'PLAY AGAIN';
+  overlayBtn.style.display = 'inline-block';
+  overlayBtn.disabled = false;
+  overlayBtn2.style.display = 'inline-block';
+  overlayBtn2.textContent = 'LEADERBOARD';
+  overlayHint.textContent = 'Press R to restart';
+  overlay.classList.add('show');
+  overlayBtn.onclick = function(){ startNewGame(); };
+  overlayBtn2.onclick = function(){ window.location.href = '/brickfall/leaderboard'; };
+  // Decide if score qualifies (top 10) and prompt for initials.
+  evaluateScoreForSubmission();
+}
+
+function hideOverlay(){
+  overlay.classList.remove('show');
+}
+
+// ===== Leaderboard =====
+var lbCache = { alltime: [], daily: [] };
+var lbActiveTab = 'alltime';
+
+function fetchLeaderboard(cb){
+  fetch(API_URL + '&limit=' + LB_LIMIT, { method: 'GET' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(data){
+      if (data){
+        lbCache.alltime = data.alltime || [];
+        lbCache.daily = data.daily || [];
+      }
+      renderLeaderboard();
+      if (cb) cb(data);
+    })
+    .catch(function(){ if (cb) cb(null); });
+}
+
+function renderLeaderboard(){
+  var list = lbCache[lbActiveTab] || [];
+  if (list.length === 0){
+    lbList.innerHTML = '<div class="lb-empty" style="grid-column:1/-1">No scores yet — be the first!</div>';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < list.length; i++){
+    var e = list[i];
+    var topClass = e.rank <= 3 ? ' top' : '';
+    html += '<div class="lb-rank' + topClass + '">' + e.rank + '.</div>' +
+            '<div class="lb-init">' + escapeHtml(e.initials) + '</div>' +
+            '<div class="lb-score">' + e.score.toLocaleString() + '</div>';
+  }
+  lbList.innerHTML = html;
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+lbTabs.forEach(function(t){
+  t.addEventListener('click', function(){
+    lbTabs.forEach(function(x){ x.classList.remove('active'); });
+    t.classList.add('active');
+    lbActiveTab = t.getAttribute('data-tab');
+    renderLeaderboard();
+  });
+});
+
+function evaluateScoreForSubmission(){
+  if (score <= 0){
+    var rl = document.getElementById('rank-line');
+    if (rl) rl.textContent = '';
+    fetchLeaderboard();
+    return;
+  }
+  fetchLeaderboard(function(data){
+    var rl = document.getElementById('rank-line');
+    var atTop = lbCache.alltime;
+    var qualifies = atTop.length < LB_LIMIT || (atTop[atTop.length-1] && score > atTop[atTop.length-1].score);
+    if (qualifies){
+      if (rl) rl.textContent = 'New top-10 score! Enter your initials below:';
+      promptInitials();
+    } else {
+      if (rl) rl.textContent = atTop.length ? ('High score to beat: ' + atTop[0].score.toLocaleString()) : '';
+    }
+  });
+}
+
+function promptInitials(){
+  pendingScore = score;
+  var saved = '';
+  try { saved = localStorage.getItem('brickfall_initials') || ''; } catch(e){}
+  if (/^[A-Z]{3}$/.test(saved)){
+    initialsChars = [saved.charCodeAt(0)-65, saved.charCodeAt(1)-65, saved.charCodeAt(2)-65];
+  } else {
+    initialsChars = [0,0,0];
+  }
+  initialsCursor = 0;
+  initialsSubmitting = false;
+
+  var html = '<div id="initials-row">' +
+    '<div class="init-cell active" data-i="0">' + String.fromCharCode(65+initialsChars[0]) + '</div>' +
+    '<div class="init-cell" data-i="1">' + String.fromCharCode(65+initialsChars[1]) + '</div>' +
+    '<div class="init-cell" data-i="2">' + String.fromCharCode(65+initialsChars[2]) + '</div>' +
+    '</div>' +
+    '<input id="initials-input" maxlength="3" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" inputmode="text" ' +
+    'style="position:absolute;opacity:0;pointer-events:none;height:0;width:0" />' +
+    '<p class="hint" style="margin-top:0.4rem">Tap a slot to type, or use letter keys</p>';
+  // append below body
+  var rl = document.getElementById('rank-line');
+  if (rl){
+    rl.insertAdjacentHTML('afterend', html);
+  }
+  overlayBtn.textContent = 'SUBMIT';
+  overlayBtn.onclick = submitInitials;
+  // Wire up cell taps
+  var cells = overlay.querySelectorAll('.init-cell');
+  cells.forEach(function(c){
+    c.addEventListener('click', function(){
+      initialsCursor = parseInt(c.getAttribute('data-i'), 10);
+      updateInitialsUI();
+      var inp = document.getElementById('initials-input');
+      if (inp){ inp.value = ''; inp.focus(); }
+    });
+  });
+  // Wire up hidden input for mobile keyboards
+  var inp = document.getElementById('initials-input');
+  if (inp){
+    inp.addEventListener('input', function(e){
+      var v = (e.target.value || '').toUpperCase().replace(/[^A-Z]/g,'');
+      if (v.length){
+        initialsChars[initialsCursor] = v.charCodeAt(v.length-1) - 65;
+        if (initialsCursor < 2) initialsCursor++;
+        updateInitialsUI();
+      }
+      e.target.value = '';
+    });
+    // Auto-focus on mobile so keyboard pops
+    setTimeout(function(){ try { inp.focus({preventScroll:true}); } catch(e){ try { inp.focus(); } catch(e2){} } }, 80);
+  }
+  updateInitialsUI();
+}
+
+function updateInitialsUI(){
+  var cells = overlay.querySelectorAll('.init-cell');
+  for (var i = 0; i < cells.length; i++){
+    cells[i].textContent = String.fromCharCode(65 + initialsChars[i]);
+    cells[i].classList.toggle('active', i === initialsCursor);
+  }
+}
+
+function submitInitials(){
+  if (initialsSubmitting) return;
+  var initials = String.fromCharCode(65+initialsChars[0]) + String.fromCharCode(65+initialsChars[1]) + String.fromCharCode(65+initialsChars[2]);
+  if (!/^[A-Z]{3}$/.test(initials)) return;
+  try { localStorage.setItem('brickfall_initials', initials); } catch(e){}
+  initialsSubmitting = true;
+  overlayBtn.disabled = true;
+  overlayBtn.textContent = 'SUBMITTING…';
+  doSubmit(initials, pendingScore, function(ok, data){
+    initialsSubmitting = false;
+    overlayBtn.disabled = false;
+    if (ok){
+      overlayBtn.textContent = 'SUBMITTED';
+      var rl = document.getElementById('rank-line');
+      if (rl){
+        var rank = data && data.alltimeRank;
+        rl.textContent = rank ? ('Ranked #' + rank + ' all-time!') : 'Score submitted.';
+      }
+      // refresh local cache
+      if (data){
+        lbCache.alltime = data.alltime || lbCache.alltime;
+        lbCache.daily = data.daily || lbCache.daily;
+        renderLeaderboard();
+      }
+      if (typeof gtag === 'function') gtag('event', 'brickfall_score_submitted', { score: pendingScore, level: level, lines: lines });
+      // Restore Play Again button after a beat
+      setTimeout(function(){
+        overlayBtn.textContent = 'PLAY AGAIN';
+        overlayBtn.onclick = function(){ startNewGame(); };
+      }, 900);
+    } else {
+      // Save for retry on next page load
+      try {
+        localStorage.setItem('brickfall_pending', JSON.stringify({ initials: initials, score: pendingScore, ts: Date.now() }));
+      } catch(e){}
+      overlayBtn.textContent = 'RETRY SUBMIT';
+      overlayBtn.onclick = function(){ submitInitials(); };
+      var rl2 = document.getElementById('rank-line');
+      if (rl2) rl2.textContent = 'Submission failed. Score saved — we\'ll retry.';
+    }
+  });
+}
+
+function doSubmit(initials, scoreVal, cb){
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initials: initials, score: scoreVal })
+  })
+  .then(function(r){
+    if (!r.ok) return r.json().then(function(d){ cb(false, d); });
+    return r.json().then(function(d){
+      try { localStorage.removeItem('brickfall_pending'); } catch(e){}
+      cb(true, d);
+    });
+  })
+  .catch(function(){ cb(false, null); });
+}
+
+function checkPendingSubmission(){
+  var raw = null;
+  try { raw = localStorage.getItem('brickfall_pending'); } catch(e){}
+  if (!raw) return;
+  retryBanner.classList.add('show');
+  retryBtn.onclick = function(){
+    try {
+      var p = JSON.parse(raw);
+      if (!p || !/^[A-Z]{3}$/.test(p.initials) || !Number.isInteger(p.score)){
+        try { localStorage.removeItem('brickfall_pending'); } catch(e){}
+        retryBanner.classList.remove('show');
+        return;
+      }
+      retryBtn.disabled = true;
+      retryBtn.textContent = 'Sending…';
+      doSubmit(p.initials, p.score, function(ok){
+        retryBtn.disabled = false;
+        if (ok){
+          retryBanner.classList.remove('show');
+          fetchLeaderboard();
+        } else {
+          retryBtn.textContent = 'Retry';
+        }
+      });
+    } catch(e){
+      try { localStorage.removeItem('brickfall_pending'); } catch(e2){}
+      retryBanner.classList.remove('show');
+    }
+  };
+}
+
+// ===== Input =====
+var keyHeld = {};
+var moveRepeatTimer = null;
+function startMoveRepeat(action){
+  if (moveRepeatTimer) clearInterval(moveRepeatTimer);
+  moveRepeatTimer = setInterval(function(){
+    if (state !== 'playing') { clearInterval(moveRepeatTimer); moveRepeatTimer = null; return; }
+    if (action === 'left') move(-1);
+    else if (action === 'right') move(1);
+  }, 80);
+}
+function stopMoveRepeat(){
+  if (moveRepeatTimer){ clearInterval(moveRepeatTimer); moveRepeatTimer = null; }
+}
+
+document.addEventListener('keydown', function(e){
+  // Restart from game-over
+  if (state === 'gameover' && (e.key === 'r' || e.key === 'R')){ e.preventDefault(); startNewGame(); return; }
+  // Pause toggle
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape'){
+    if (state === 'playing'){ e.preventDefault(); pauseGame(); return; }
+    if (state === 'paused'){ e.preventDefault(); resumeGame(); return; }
+  }
+  if (state !== 'playing') {
+    // Allow letter input for initials entry only when initials prompt is open
+    if (state === 'gameover' && pendingScore !== null && !initialsSubmitting && /^[a-zA-Z]$/.test(e.key)){
+      var cells = overlay.querySelectorAll('.init-cell');
+      if (cells.length){
+        e.preventDefault();
+        initialsChars[initialsCursor] = e.key.toUpperCase().charCodeAt(0) - 65;
+        if (initialsCursor < 2) initialsCursor++;
+        updateInitialsUI();
+        return;
+      }
+    }
+    // Arrow nav between initial slots
+    if (state === 'gameover' && pendingScore !== null && !initialsSubmitting){
+      if (e.key === 'ArrowLeft'){ e.preventDefault(); initialsCursor = Math.max(0, initialsCursor-1); updateInitialsUI(); return; }
+      if (e.key === 'ArrowRight'){ e.preventDefault(); initialsCursor = Math.min(2, initialsCursor+1); updateInitialsUI(); return; }
+      if (e.key === 'Enter'){ e.preventDefault(); submitInitials(); return; }
+    }
+    return;
+  }
+  if (keyHeld[e.key]) return;
+  keyHeld[e.key] = true;
+  switch(e.key){
+    case 'ArrowLeft': e.preventDefault(); move(-1); startMoveRepeat('left'); break;
+    case 'ArrowRight': e.preventDefault(); move(1); startMoveRepeat('right'); break;
+    case 'ArrowUp': case 'x': case 'X': e.preventDefault(); tryRotate(); break;
+    case 'ArrowDown': e.preventDefault(); softDropping = true; dropTimer = SOFT_DROP_INTERVAL; break;
+    case ' ': e.preventDefault(); hardDrop(); break;
+  }
+});
+document.addEventListener('keyup', function(e){
+  keyHeld[e.key] = false;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){ stopMoveRepeat(); }
+  if (e.key === 'ArrowDown'){ softDropping = false; }
+});
+
+// ===== Touch controls =====
+var touchButtons = document.querySelectorAll('.touch-btn');
+touchButtons.forEach(function(btn){
+  var action = btn.getAttribute('data-action');
+  function press(ev){
+    ev.preventDefault();
+    btn.classList.add('pressed');
+    ensureAudio();
+    if (action === 'pause'){
+      if (state === 'playing') pauseGame();
+      else if (state === 'paused') resumeGame();
+      else if (state === 'menu') startNewGame();
+      else if (state === 'gameover') startNewGame();
+      return;
+    }
+    if (state !== 'playing') return;
+    if (action === 'left'){ move(-1); holdTimers[action] = setInterval(function(){ if(state==='playing') move(-1); }, 110); }
+    else if (action === 'right'){ move(1); holdTimers[action] = setInterval(function(){ if(state==='playing') move(1); }, 110); }
+    else if (action === 'rotate'){ tryRotate(); }
+    else if (action === 'soft'){ softDropping = true; dropTimer = SOFT_DROP_INTERVAL; }
+    else if (action === 'hard'){ hardDrop(); }
+  }
+  function release(ev){
+    if (ev) ev.preventDefault();
+    btn.classList.remove('pressed');
+    if (holdTimers[action]){ clearInterval(holdTimers[action]); delete holdTimers[action]; }
+    if (action === 'soft') softDropping = false;
+  }
+  btn.addEventListener('touchstart', press, { passive: false });
+  btn.addEventListener('touchend', release, { passive: false });
+  btn.addEventListener('touchcancel', release, { passive: false });
+  // Mouse fallback
+  btn.addEventListener('mousedown', press);
+  btn.addEventListener('mouseup', release);
+  btn.addEventListener('mouseleave', release);
+});
+
+// ===== Auto-pause on blur =====
+window.addEventListener('blur', function(){
+  if (state === 'playing') pauseGame();
+});
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden && state === 'playing') pauseGame();
+});
+
+// ===== Init =====
+function init(){
+  loadAudioPrefs();
+  board = newBoard();
+  drawGrid();
+  updateHud();
+  showMenu();
+  fetchLeaderboard();
+  checkPendingSubmission();
+  // start render loop in menu so we have a live canvas
+  lastFrame = performance.now();
+  rafId = requestAnimationFrame(frame);
+}
+init();
+
+// Debug hook (localhost only) — lets a test harness read engine state.
+// Not exposed in production builds.
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+  window.__bfDebug = {
+    getState: function(){ return state; },
+    getCurrent: function(){ return current ? { key: current.key, x: current.x, y: current.y, cells: current.cells } : null; },
+    getBoard: function(){ return board; },
+    getStats: function(){ return { score: score, lines: lines, level: level, dropInterval: dropInterval }; },
+    forceStart: function(){ startNewGame(); },
+    forceLock: function(){ lockPiece(); },
+    fillRow: function(rowIdx, skipCol){
+      for (var x = 0; x < COLS; x++){ if (x !== skipCol) board[rowIdx][x] = '#888'; }
+    },
+    tick: function(now){ frame(now || performance.now()); cancelAnimationFrame(rafId); rafId = 0; }
+  };
+}
+
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>

@@ -64,12 +64,22 @@ function getCorsHeaders(req) {
 }
 
 // Valid game prefixes
-const VALID_GAMES = ['si', 'snake', 'pd'];
+const VALID_GAMES = ['si', 'snake', 'pd', 'brickfall'];
+
+const MAX_LIMIT = 50;
+const DEFAULT_LIMIT = 10;
 
 function getGameId(req) {
   const url = new URL(req.url, `https://${req.headers.host}`);
   const game = url.searchParams.get('game') || 'si';
   return VALID_GAMES.includes(game) ? game : 'si';
+}
+
+function getLimit(req) {
+  const url = new URL(req.url, `https://${req.headers.host}`);
+  const raw = parseInt(url.searchParams.get('limit'), 10);
+  if (!Number.isFinite(raw) || raw < 1) return DEFAULT_LIMIT;
+  return Math.min(raw, MAX_LIMIT);
 }
 
 function getAlltimeKey(game) {
@@ -93,13 +103,14 @@ export default async function handler(req, res) {
 
   try {
     const game = getGameId(req);
+    const limit = getLimit(req);
     const alltimeKey = getAlltimeKey(game);
     const dailyKey = getDailyKey(game);
     if (req.method === 'GET') {
-      return await handleGet(req, res, alltimeKey, dailyKey);
+      return await handleGet(req, res, alltimeKey, dailyKey, limit);
     }
     if (req.method === 'POST') {
-      return await handlePost(req, res, alltimeKey, dailyKey);
+      return await handlePost(req, res, alltimeKey, dailyKey, limit);
     }
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
@@ -108,17 +119,17 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleGet(req, res, alltimeKey, dailyKey) {
+async function handleGet(req, res, alltimeKey, dailyKey, limit) {
   const results = await redisPipeline([
-    ['ZREVRANGE', alltimeKey, 0, 9, 'WITHSCORES'],
-    ['ZREVRANGE', dailyKey, 0, 9, 'WITHSCORES'],
+    ['ZREVRANGE', alltimeKey, 0, limit - 1, 'WITHSCORES'],
+    ['ZREVRANGE', dailyKey, 0, limit - 1, 'WITHSCORES'],
   ]);
   const alltime = parseLeaderboard(results[0]);
   const daily = parseLeaderboard(results[1]);
   return res.status(200).json({ alltime, daily });
 }
 
-async function handlePost(req, res, alltimeKey, dailyKey) {
+async function handlePost(req, res, alltimeKey, dailyKey, limit) {
   const { initials, score } = req.body || {};
 
   // Validate initials
@@ -154,8 +165,8 @@ async function handlePost(req, res, alltimeKey, dailyKey) {
     ['EXPIRE', dailyKey, 86400], // TTL: 24 hours — auto-cleanup
     ['ZREVRANK', alltimeKey, member],
     ['ZREVRANK', dailyKey, member],
-    ['ZREVRANGE', alltimeKey, 0, 9, 'WITHSCORES'],
-    ['ZREVRANGE', dailyKey, 0, 9, 'WITHSCORES'],
+    ['ZREVRANGE', alltimeKey, 0, limit - 1, 'WITHSCORES'],
+    ['ZREVRANGE', dailyKey, 0, limit - 1, 'WITHSCORES'],
   ]);
 
   const alltimeRankRaw = results[3]; // 0-indexed
@@ -166,8 +177,8 @@ async function handlePost(req, res, alltimeKey, dailyKey) {
   const daily = parseLeaderboard(results[6]);
 
   return res.status(200).json({
-    alltimeRank: alltimeRank <= 10 ? alltimeRank : null,
-    dailyRank: dailyRank <= 10 ? dailyRank : null,
+    alltimeRank: alltimeRank !== null && alltimeRank <= limit ? alltimeRank : null,
+    dailyRank: dailyRank !== null && dailyRank <= limit ? dailyRank : null,
     alltime,
     daily,
   });

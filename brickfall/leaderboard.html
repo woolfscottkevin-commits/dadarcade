@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brickfall Leaderboard | DadArcade</title>
+<meta name="description" content="Top 50 Brickfall scores — see who's stacking the highest on Dad Arcade.">
+<link rel="canonical" href="https://dadarcade.com/brickfall/leaderboard">
+<meta property="og:title" content="Brickfall Leaderboard — Top 50">
+<meta property="og:description" content="Top 50 Brickfall scores on Dad Arcade.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/brickfall/leaderboard">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a14;color:#fff;font-family:'Courier New',monospace;min-height:100vh;padding:1rem;display:flex;flex-direction:column;align-items:center}
+a{color:#0ff;text-decoration:none}
+a:hover{color:#9ff}
+
+.breadcrumb{font-size:0.85rem;color:#888;margin-bottom:1.5rem;align-self:flex-start;padding-left:0.5rem}
+.breadcrumb a{color:#0ff}
+.breadcrumb span{margin:0 0.4rem;color:#444}
+
+h1{font-size:clamp(1.6rem,5vw,2.4rem);letter-spacing:0.25em;background:linear-gradient(90deg,#E91E63,#FFB300,#00897B,#7CB342,#3949AB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 18px rgba(233,30,99,0.25));text-align:center;margin:0.5rem 0 0.4rem}
+.subtitle{color:#666;font-size:0.9rem;text-align:center;letter-spacing:0.1em;margin-bottom:1.5rem}
+
+.tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem}
+.tab{background:#10101e;border:2px solid #2a2a44;color:#888;font-family:inherit;font-size:0.85rem;padding:0.5rem 1.2rem;border-radius:8px;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase}
+.tab.active{border-color:#0ff;color:#0ff}
+
+.lb-wrap{width:100%;max-width:680px;background:#10101e;border:2px solid #2a2a44;border-radius:12px;padding:1.2rem;min-height:240px}
+
+.lb-list{display:grid;grid-template-columns:auto 1fr auto;gap:0.55rem 1.2rem;font-size:1rem;align-items:center}
+.lb-rank{color:#666;font-variant-numeric:tabular-nums}
+.lb-rank.top1{color:#FFB300;font-weight:bold}
+.lb-rank.top2{color:#bbb;font-weight:bold}
+.lb-rank.top3{color:#FB8C00;font-weight:bold}
+.lb-init{color:#fff;font-weight:bold;letter-spacing:0.15em;font-size:1.05rem}
+.lb-score{color:#0ff;text-align:right;font-variant-numeric:tabular-nums;font-weight:bold}
+
+.empty{color:#666;text-align:center;padding:2rem 0;font-size:0.95rem}
+.loading{color:#888;text-align:center;padding:2rem 0;font-size:0.9rem}
+.err{color:#ff6666;text-align:center;padding:2rem 0;font-size:0.9rem}
+
+.actions{margin-top:1.5rem;display:flex;gap:0.8rem;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-block;padding:0.7rem 1.4rem;background:linear-gradient(135deg,#E91E63,#FB8C00);color:#fff;border-radius:8px;font-weight:bold;letter-spacing:0.1em;font-size:0.9rem}
+.btn.secondary{background:#1a1a2e;border:2px solid #444;color:#0ff}
+
+footer{margin-top:auto;padding-top:2rem;color:#444;font-size:0.78rem;text-align:center}
+footer a{color:#666}
+</style>
+</head>
+<body>
+
+<nav class="breadcrumb">
+  <a href="/">Dad Arcade</a><span>&gt;</span><a href="/games">Games</a><span>&gt;</span><a href="/brickfall">Brickfall</a><span>&gt;</span> Leaderboard
+</nav>
+
+<h1>BRICKFALL</h1>
+<p class="subtitle">TOP 50 STACKERS</p>
+
+<div class="tabs">
+  <button class="tab active" data-tab="alltime" type="button">All-Time</button>
+  <button class="tab" data-tab="daily" type="button">Today</button>
+</div>
+
+<div class="lb-wrap">
+  <div id="lb-content" class="loading">Loading leaderboard…</div>
+</div>
+
+<div class="actions">
+  <a href="/brickfall" class="btn">PLAY BRICKFALL</a>
+  <a href="/games" class="btn secondary">ALL GAMES</a>
+</div>
+
+<footer>
+  <a href="/">dadarcade.com</a> &middot; Brickfall is an original game. Not affiliated with The Tetris&reg; Company.
+</footer>
+
+<script>
+'use strict';
+(function(){
+var API = 'https://dadarcade.com/api/scores?game=brickfall&limit=50';
+var data = { alltime: [], daily: [] };
+var activeTab = 'alltime';
+var content = document.getElementById('lb-content');
+var tabs = document.querySelectorAll('.tab');
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+function render(){
+  var list = data[activeTab] || [];
+  if (list.length === 0){
+    content.className = 'empty';
+    content.innerHTML = activeTab === 'daily'
+      ? 'No scores today yet — <a href="/brickfall">be the first</a>!'
+      : 'No scores yet — <a href="/brickfall">play Brickfall</a> to start the leaderboard!';
+    return;
+  }
+  var html = '<div class="lb-list">';
+  for (var i = 0; i < list.length; i++){
+    var e = list[i];
+    var cls = e.rank === 1 ? ' top1' : e.rank === 2 ? ' top2' : e.rank === 3 ? ' top3' : '';
+    html += '<div class="lb-rank' + cls + '">' + e.rank + '.</div>' +
+            '<div class="lb-init">' + escapeHtml(e.initials) + '</div>' +
+            '<div class="lb-score">' + e.score.toLocaleString() + '</div>';
+  }
+  html += '</div>';
+  content.className = '';
+  content.innerHTML = html;
+}
+
+function load(){
+  fetch(API)
+    .then(function(r){ if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then(function(d){
+      data.alltime = d.alltime || [];
+      data.daily = d.daily || [];
+      render();
+    })
+    .catch(function(){
+      content.className = 'err';
+      content.innerHTML = 'Couldn\'t load the leaderboard right now. <br><br><a href="/brickfall/leaderboard">Try again</a>';
+    });
+}
+
+tabs.forEach(function(t){
+  t.addEventListener('click', function(){
+    tabs.forEach(function(x){ x.classList.remove('active'); });
+    t.classList.add('active');
+    activeTab = t.getAttribute('data-tab');
+    render();
+  });
+});
+
+load();
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>
