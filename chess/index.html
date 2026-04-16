@@ -152,6 +152,14 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .check-counter .cc-val{color:#ff4444;font-weight:bold;min-width:0.8em;text-align:center}
 .check-counter .cc-val.zero{color:#666}
 
+/* Clocks */
+.clocks{display:flex;justify-content:space-between;gap:0.5rem;width:100%;margin-bottom:0.4rem}
+.clock{flex:1;background:#0a0a1a;border:2px solid #2a2a4a;border-radius:8px;padding:0.4rem 0.65rem;font-family:'Courier New',monospace;font-size:1.1rem;text-align:center;color:#ccc;display:flex;flex-direction:column}
+.clock .clock-label{font-size:0.7rem;letter-spacing:0.08em;color:#888}
+.clock .clock-time{font-size:1.3rem;font-weight:bold;letter-spacing:0.05em}
+.clock.active{border-color:#0ff;box-shadow:0 0 12px rgba(0,255,255,0.3)}
+.clock.urgent .clock-time{color:#ff4444;animation:pulse 0.9s infinite}
+
 .card-box{width:100%;background:#12122a;border:2px solid #2a2a4a;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem}
 .card-box h3{color:#0ff;font-size:1rem;letter-spacing:0.08em}
 .card-box label{color:#aaa;font-size:0.85rem;display:block;margin-bottom:0.3rem}
@@ -390,6 +398,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="v-win">Win: Check opponent 3 times — OR checkmate.</span>
     </button>
   </div>
+  <div class="card-box" id="timecontrol-card" style="margin-top:0.5rem">
+    <h3 style="color:#ffd700">TIME CONTROL</h3>
+    <div class="segment" id="tc-seg">
+      <button data-val="" class="active">Untimed</button>
+      <button data-val="bullet">Bullet 1+0</button>
+      <button data-val="blitz">Blitz 5+0</button>
+      <button data-val="rapid">Rapid 10+5</button>
+    </div>
+    <div id="tc-cpu-note" style="color:#888;font-size:0.75rem;margin-top:0.3rem;display:none">vs Computer is untimed in v1 — time control ignored.</div>
+  </div>
   <button class="menu-btn btn-cyan" onclick="confirmVariant()">Continue →</button>
   <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
 </div>
@@ -486,6 +504,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   <div class="game-wrap">
     <div class="reconnect-banner" id="reconnect-banner" style="display:none">Reconnecting…</div>
     <div class="variant-label" id="variant-label" style="display:none">STANDARD</div>
+    <div class="clocks" id="clocks" style="display:none">
+      <div class="clock" id="clock-top"><span class="clock-label" id="clock-top-label">—</span><span class="clock-time" id="clock-top-time">—</span></div>
+      <div class="clock" id="clock-bot"><span class="clock-label" id="clock-bot-label">—</span><span class="clock-time" id="clock-bot-time">—</span></div>
+    </div>
     <div class="check-counter" id="check-counter" style="display:none">
       <span class="cc-side">Checks — ♔ <span class="cc-val zero" id="cc-white">0</span></span>
       <span class="cc-side">♚ <span class="cc-val zero" id="cc-black">0</span></span>
@@ -940,10 +962,22 @@ const STATE = {
   variant: 'standard',          // 'standard' | 'koth' | 'three_check'
   variantState: null,           // { whiteChecks, blackChecks } for three_check
   pendingVariantFor: null,      // which mode the variant screen is configuring
+  // Time control fields
+  timeControl: null,            // null | 'bullet' | 'blitz' | 'rapid'
+  whiteClockMs: null,
+  blackClockMs: null,
+  lastClockUpdate: null,        // timestamp ms of last clock-tick anchor
+  clockTimer: null,             // interval id for ticking display
+  clockVisibleHidden: false,    // was tab hidden at lastClockUpdate
 };
 
 const KOTH_HILL = new Set(['d4','e4','d5','e5']);
 const VARIANT_LABELS = { standard: 'STANDARD', koth: 'KING OF THE HILL', three_check: 'THREE-CHECK' };
+const TC_CONFIGS = {
+  bullet: { initialMs: 60000,  incrementMs: 0,    label: 'Bullet 1+0' },
+  blitz:  { initialMs: 300000, incrementMs: 0,    label: 'Blitz 5+0'  },
+  rapid:  { initialMs: 600000, incrementMs: 5000, label: 'Rapid 10+5' },
+};
 
 /* ---------- Share a game (PGN URL) + Replay viewer ---------- */
 function toB64Url(str) {
@@ -1834,10 +1868,16 @@ function resetState() {
   STATE.opponentName = null;
   STATE.variant = 'standard';
   STATE.variantState = null;
+  STATE.timeControl = null;
+  STATE.whiteClockMs = null;
+  STATE.blackClockMs = null;
+  STATE.lastClockUpdate = null;
+  stopClocks();
   localStorage.removeItem('dadarcade_chess_active_game');
   document.getElementById('reconnect-banner').style.display = 'none';
   const vl = document.getElementById('variant-label'); if (vl) vl.style.display = 'none';
   const cc = document.getElementById('check-counter'); if (cc) cc.style.display = 'none';
+  const cl = document.getElementById('clocks'); if (cl) cl.style.display = 'none';
 }
 
 /* ---------- Variant flow ---------- */
@@ -1845,9 +1885,15 @@ function pickVariantFor(mode) {
   STATE.pendingVariantFor = mode;
   // Default to standard; clear any prior active highlight
   document.querySelectorAll('#variant-grid .variant-card').forEach(c => c.classList.toggle('active', c.dataset.val === 'standard'));
+  document.querySelectorAll('#tc-seg button').forEach(b => b.classList.toggle('active', b.dataset.val === ''));
   const subtitle = document.getElementById('variant-subtitle');
   const modeName = { cpu: 'VS COMPUTER', local: 'PASS & PLAY', friend: 'VS FRIEND', lobby: 'PUBLIC LOBBY' }[mode] || '';
   subtitle.textContent = modeName + ' — CHOOSE A VARIANT';
+  // Show/hide time-control card and CPU note
+  const tcCard = document.getElementById('timecontrol-card');
+  const cpuNote = document.getElementById('tc-cpu-note');
+  tcCard.style.display = '';
+  cpuNote.style.display = mode === 'cpu' ? '' : 'none';
   goto('variant');
 }
 function confirmVariant() {
@@ -1855,6 +1901,19 @@ function confirmVariant() {
   STATE.variant = active ? active.dataset.val : 'standard';
   if (STATE.variant === 'three_check') STATE.variantState = { whiteChecks: 0, blackChecks: 0 };
   else STATE.variantState = null;
+  // Time control (ignored for CPU mode)
+  const tcEl = document.querySelector('#tc-seg button.active');
+  const tcVal = tcEl ? tcEl.dataset.val : '';
+  if (STATE.pendingVariantFor === 'cpu' || !tcVal) {
+    STATE.timeControl = null;
+    STATE.whiteClockMs = null;
+    STATE.blackClockMs = null;
+  } else {
+    STATE.timeControl = tcVal;
+    const cfg = TC_CONFIGS[tcVal];
+    STATE.whiteClockMs = cfg.initialMs;
+    STATE.blackClockMs = cfg.initialMs;
+  }
   const dest = STATE.pendingVariantFor || 'cpu';
   STATE.pendingVariantFor = null;
   goto(dest);
@@ -1917,6 +1976,101 @@ function checkVariantWin(moveResult) {
     }
   }
   return null;
+}
+
+/* ---------- Timers ---------- */
+function fmtClock(ms) {
+  if (ms == null) return '—';
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (ms < 10000) {
+    const tenths = Math.max(0, Math.floor((ms % 1000) / 100));
+    return m + ':' + String(s).padStart(2, '0') + '.' + tenths;
+  }
+  return m + ':' + String(s).padStart(2, '0');
+}
+function clocksEnabled() { return STATE.timeControl && TC_CONFIGS[STATE.timeControl]; }
+function startClocks() {
+  if (!clocksEnabled()) { document.getElementById('clocks').style.display = 'none'; return; }
+  document.getElementById('clocks').style.display = '';
+  STATE.lastClockUpdate = Date.now();
+  if (STATE.clockTimer) clearInterval(STATE.clockTimer);
+  STATE.clockTimer = setInterval(tickClocks, 100);
+  updateClockLabels();
+  renderClockDisplay();
+}
+function stopClocks() {
+  if (STATE.clockTimer) { clearInterval(STATE.clockTimer); STATE.clockTimer = null; }
+}
+function updateClockLabels() {
+  const top = document.getElementById('clock-top-label');
+  const bot = document.getElementById('clock-bot-label');
+  if (!top || !bot) return;
+  // Bottom = STATE.orientation side; top = opposite
+  const bottomColor = STATE.orientation === 'b' ? 'b' : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  if (STATE.mode === 'local') {
+    const wn = (STATE.localWhiteName || 'White').toUpperCase();
+    const bn = (STATE.localBlackName || 'Black').toUpperCase();
+    top.textContent = topColor === 'w' ? wn : bn;
+    bot.textContent = bottomColor === 'w' ? wn : bn;
+  } else {
+    const myName = (STATE.myName || 'YOU').toUpperCase();
+    const oppName = (STATE.opponentName || 'OPP').toUpperCase();
+    const myColor = STATE.myColor;
+    top.textContent = topColor === myColor ? myName : oppName;
+    bot.textContent = bottomColor === myColor ? myName : oppName;
+  }
+}
+function tickClocks() {
+  if (!clocksEnabled() || !STATE.api || STATE.api.isGameOver()) return;
+  if (document.hidden) { return; } // pause when tab hidden
+  const now = Date.now();
+  const elapsed = now - (STATE.lastClockUpdate || now);
+  STATE.lastClockUpdate = now;
+  const turn = STATE.api.turn();
+  if (turn === 'w') STATE.whiteClockMs = Math.max(0, (STATE.whiteClockMs || 0) - elapsed);
+  else STATE.blackClockMs = Math.max(0, (STATE.blackClockMs || 0) - elapsed);
+  renderClockDisplay();
+  // Flag fall?
+  if (STATE.whiteClockMs === 0) { onClockFlag('white'); }
+  else if (STATE.blackClockMs === 0) { onClockFlag('black'); }
+}
+function renderClockDisplay() {
+  if (!clocksEnabled()) return;
+  const bottomColor = STATE.orientation === 'b' ? 'b' : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  const topMs = topColor === 'w' ? STATE.whiteClockMs : STATE.blackClockMs;
+  const botMs = bottomColor === 'w' ? STATE.whiteClockMs : STATE.blackClockMs;
+  document.getElementById('clock-top-time').textContent = fmtClock(topMs);
+  document.getElementById('clock-bot-time').textContent = fmtClock(botMs);
+  const turn = STATE.api ? STATE.api.turn() : 'w';
+  document.getElementById('clock-top').classList.toggle('active', turn === topColor);
+  document.getElementById('clock-bot').classList.toggle('active', turn === bottomColor);
+  document.getElementById('clock-top').classList.toggle('urgent', topMs != null && topMs < 10000);
+  document.getElementById('clock-bot').classList.toggle('urgent', botMs != null && botMs < 10000);
+}
+function applyIncrementAfterMove(moverColor) {
+  if (!clocksEnabled()) return;
+  const inc = TC_CONFIGS[STATE.timeControl].incrementMs || 0;
+  if (moverColor === 'w') STATE.whiteClockMs = (STATE.whiteClockMs || 0) + inc;
+  else STATE.blackClockMs = (STATE.blackClockMs || 0) + inc;
+}
+function onClockFlag(loserColorName) {
+  stopClocks();
+  const winner = loserColorName === 'white' ? 'black' : 'white';
+  if (STATE.mode === 'friend' || STATE.mode === 'public') {
+    updateGameRow(STATE.gameId, {
+      status: 'completed',
+      winner, end_reason: 'timeout',
+      white_clock_ms: STATE.whiteClockMs,
+      black_clock_ms: STATE.blackClockMs,
+      updated_at: new Date().toISOString(),
+    }).then(() => showGameOver(winner, 'timeout'));
+  } else if (STATE.mode === 'local') {
+    showGameOver(winner, 'timeout');
+  }
 }
 
 function findKingSquare(color) {
@@ -2223,6 +2377,16 @@ function commitMove(m) {
   STATE.selected = null;
   STATE.legalTargets = [];
 
+  // Apply clock increment for the mover (before switching turn / updating last-clock-update)
+  if (clocksEnabled()) {
+    const now = Date.now();
+    const elapsed = now - (STATE.lastClockUpdate || now);
+    if (result.color === 'w') STATE.whiteClockMs = Math.max(0, (STATE.whiteClockMs || 0) - elapsed);
+    else STATE.blackClockMs = Math.max(0, (STATE.blackClockMs || 0) - elapsed);
+    applyIncrementAfterMove(result.color);
+    STATE.lastClockUpdate = now;
+    renderClockDisplay();
+  }
   // Per-move stats (castling, en passant, knight promotion)
   try { trackMove(result); } catch (e) {}
 
@@ -2324,6 +2488,7 @@ function showGameOver(winner, reason, serverOverride) {
   }
   goto('gameover');
   try { updateReviewButtonVisibility(); } catch (e) {}
+  stopClocks();
   // Clear PvP active-game marker
   localStorage.removeItem('dadarcade_chess_active_game');
   // Mark local game as completed (kept in storage until the player chooses Play Again or Home)
@@ -2581,11 +2746,12 @@ function startCpuGame() {
 const LOCAL_STORAGE_KEY = 'dadarcade_chess_local_game';
 
 function startLocalGame(opts) {
-  // opts: optional {whiteName, blackName, autoFlip, startingColor, fen, pgn, variant, variantState}
-  let whiteName, blackName, autoFlip, variant, variantState;
+  // opts: optional {whiteName, blackName, autoFlip, fen, pgn, variant, variantState, timeControl, whiteClockMs, blackClockMs}
+  let whiteName, blackName, autoFlip, variant, variantState, timeControl, whiteClockMs, blackClockMs;
   if (opts) {
     whiteName = opts.whiteName; blackName = opts.blackName; autoFlip = opts.autoFlip;
     variant = opts.variant; variantState = opts.variantState;
+    timeControl = opts.timeControl; whiteClockMs = opts.whiteClockMs; blackClockMs = opts.blackClockMs;
   } else {
     whiteName = (document.getElementById('local-white-name').value || '').trim();
     blackName = (document.getElementById('local-black-name').value || '').trim();
@@ -2593,6 +2759,8 @@ function startLocalGame(opts) {
     autoFlip = tg ? tg.classList.contains('on') : true;
     variant = STATE.variant || 'standard';
     variantState = STATE.variantState;
+    timeControl = STATE.timeControl || null;
+    whiteClockMs = STATE.whiteClockMs; blackClockMs = STATE.blackClockMs;
   }
   whiteName = whiteName || 'White';
   blackName = blackName || 'Black';
@@ -2603,6 +2771,14 @@ function startLocalGame(opts) {
   STATE.localAutoFlip = !!autoFlip;
   STATE.variant = variant || 'standard';
   STATE.variantState = variantState || (STATE.variant === 'three_check' ? { whiteChecks: 0, blackChecks: 0 } : null);
+  STATE.timeControl = timeControl || null;
+  if (STATE.timeControl && TC_CONFIGS[STATE.timeControl]) {
+    const cfg = TC_CONFIGS[STATE.timeControl];
+    STATE.whiteClockMs = whiteClockMs != null ? whiteClockMs : cfg.initialMs;
+    STATE.blackClockMs = blackClockMs != null ? blackClockMs : cfg.initialMs;
+  } else {
+    STATE.whiteClockMs = null; STATE.blackClockMs = null;
+  }
   STATE.chess = new Chess();
   if (opts && opts.pgn) {
     try {
@@ -2627,6 +2803,7 @@ function startLocalGame(opts) {
   goto('game');
   renderBoard();
   saveLocalGame();
+  startClocks();
 }
 
 function autoFlipBoard() {
@@ -2690,6 +2867,10 @@ function saveLocalGame(overrides) {
     autoFlip: STATE.localAutoFlip,
     variant: STATE.variant || 'standard',
     variantState: STATE.variantState || null,
+    timeControl: STATE.timeControl || null,
+    whiteClockMs: STATE.whiteClockMs,
+    blackClockMs: STATE.blackClockMs,
+    lastClockUpdate: STATE.lastClockUpdate || null,
     status: 'active',
     winner: null,
     endReason: null,
@@ -2744,6 +2925,9 @@ function resumeLocalGame() {
     fen: saved.fen,
     variant: saved.variant || 'standard',
     variantState: saved.variantState || null,
+    timeControl: saved.timeControl || null,
+    whiteClockMs: saved.whiteClockMs != null ? saved.whiteClockMs : null,
+    blackClockMs: saved.blackClockMs != null ? saved.blackClockMs : null,
   });
   hideResumeBanner();
 }
@@ -2836,6 +3020,10 @@ async function createGameRow(isPublic, myColor, name) {
       theme: getTheme(),
       variant: STATE.variant || 'standard',
       variant_state: STATE.variantState || null,
+      time_control: STATE.timeControl || null,
+      white_clock_ms: STATE.whiteClockMs != null ? STATE.whiteClockMs : null,
+      black_clock_ms: STATE.blackClockMs != null ? STATE.blackClockMs : null,
+      last_clock_update: STATE.timeControl ? new Date().toISOString() : null,
     };
     if (myColor === 'w') { row.white_player_id = PLAYER_ID; row.white_player_name = name; }
     else { row.black_player_id = PLAYER_ID; row.black_player_name = name; }
@@ -3053,8 +3241,15 @@ function enterGameFromRow(row) {
   // Copy code button is only for friend mode (shown in configureGameControls for non-local but we override specifically)
   document.getElementById('copy-code-btn').style.display = STATE.mode === 'friend' ? '' : 'none';
   STATE.gameOverShown = false;
+  // Timers from server row if present
+  if (row.time_control && TC_CONFIGS[row.time_control]) {
+    STATE.timeControl = row.time_control;
+    STATE.whiteClockMs = (row.white_clock_ms != null) ? row.white_clock_ms : TC_CONFIGS[row.time_control].initialMs;
+    STATE.blackClockMs = (row.black_clock_ms != null) ? row.black_clock_ms : TC_CONFIGS[row.time_control].initialMs;
+  }
   goto('game');
   renderBoard();
+  startClocks();
   subscribeGame(row.id);
   // If server says completed/abandoned, show gameover immediately
   if (row.status === 'completed') showGameOver(row.winner, row.end_reason);
@@ -3110,6 +3305,14 @@ function onGameRowUpdate(row) {
   // Sync variant state for three-check
   if (row.variant) STATE.variant = row.variant;
   if (row.variant_state) STATE.variantState = row.variant_state;
+  // Sync clocks
+  if (row.time_control && TC_CONFIGS[row.time_control]) {
+    STATE.timeControl = row.time_control;
+    if (row.white_clock_ms != null) STATE.whiteClockMs = row.white_clock_ms;
+    if (row.black_clock_ms != null) STATE.blackClockMs = row.black_clock_ms;
+    STATE.lastClockUpdate = Date.now();
+    renderClockDisplay();
+  }
   if (row.fen && STATE.api.fen() !== row.fen) {
     // Reconcile: if opponent made a move, reconstruct by using pgn to preserve history if possible
     try {
@@ -3148,6 +3351,11 @@ async function syncMoveToServer(prevFen, variantWin) {
   };
   if (STATE.variant === 'three_check') {
     fields.variant_state = STATE.variantState;
+  }
+  if (clocksEnabled()) {
+    fields.white_clock_ms = STATE.whiteClockMs;
+    fields.black_clock_ms = STATE.blackClockMs;
+    fields.last_clock_update = now;
   }
   if (variantWin) {
     fields.status = 'completed';
@@ -3443,6 +3651,7 @@ function init() {
     e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   });
   initVariantWirings();
+  wireSegment('tc-seg');
   // Coach mode toggle in settings modal
   const ct = document.getElementById('coach-toggle');
   if (ct) {
@@ -3492,6 +3701,19 @@ window.goto = function (name) {
 
 // Boot
 window.addEventListener('DOMContentLoaded', init);
+
+// Pause/resume clock anchor when tab visibility changes
+document.addEventListener('visibilitychange', () => {
+  if (!clocksEnabled()) return;
+  if (document.hidden) {
+    // Freeze — don't tick while hidden
+    STATE.clockVisibleHidden = true;
+  } else {
+    // Reset anchor so elapsed since now counts from this moment
+    STATE.lastClockUpdate = Date.now();
+    STATE.clockVisibleHidden = false;
+  }
+});
 
 // Cleanup on page hide
 window.addEventListener('beforeunload', () => {
