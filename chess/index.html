@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Chess — Dad Arcade</title>
+<meta name="description" content="Play chess vs the computer, a friend, or find an opponent in the public lobby. Six themes from classic Staunton to fireballs vs water droplets.">
+<meta name="theme-color" content="#0a0a1a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♞</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#0a0a1a;color:#fff;font-family:'Courier New',ui-monospace,monospace;overflow-x:hidden}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:1rem;overscroll-behavior:none}
+
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+.top-nav{width:100%;max-width:520px;display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem}
+.top-nav .home-link{color:#0ff;font-size:0.9rem;opacity:0.85}
+.top-nav .home-link:hover{opacity:1;text-shadow:0 0 8px #0ff}
+.top-nav .theme-link{color:#ff6ec7;font-size:0.9rem;opacity:0.85}
+.top-nav .theme-link:hover{opacity:1;text-shadow:0 0 8px #ff6ec7}
+
+.title{font-size:clamp(2rem,8vw,4rem);font-weight:bold;text-align:center;margin:0.5rem 0;background:linear-gradient(90deg,#0ff,#ff6ec7,#ffff66);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 20px rgba(0,255,255,0.3));letter-spacing:0.08em}
+.subtitle{color:#888;font-size:clamp(0.85rem,2.3vw,1rem);text-align:center;margin-bottom:1.5rem}
+
+.screen{display:none;width:100%;max-width:520px;flex-direction:column;align-items:center;gap:1rem;animation:fadeIn .25s ease}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+.menu-btn{width:100%;padding:1.1rem 1.25rem;border:2px solid;border-radius:12px;background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(255,255,255,0.06));font-size:clamp(1rem,3vw,1.15rem);font-weight:bold;transition:all .2s ease;text-align:center;letter-spacing:0.05em}
+.menu-btn:hover:not(:disabled){transform:translateY(-2px) scale(1.01)}
+.menu-btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-cyan{border-color:#0ff;color:#0ff}
+.btn-cyan:hover:not(:disabled){box-shadow:0 0 28px rgba(0,255,255,0.3);background:rgba(0,255,255,0.08)}
+.btn-magenta{border-color:#ff6ec7;color:#ff6ec7}
+.btn-magenta:hover:not(:disabled){box-shadow:0 0 28px rgba(255,110,199,0.3);background:rgba(255,110,199,0.08)}
+.btn-yellow{border-color:#ffd700;color:#ffd700}
+.btn-yellow:hover:not(:disabled){box-shadow:0 0 28px rgba(255,215,0,0.3);background:rgba(255,215,0,0.08)}
+.btn-green{border-color:#0f0;color:#0f0}
+.btn-green:hover:not(:disabled){box-shadow:0 0 28px rgba(0,255,0,0.3);background:rgba(0,255,0,0.08)}
+.btn-red{border-color:#ff4444;color:#ff4444}
+.btn-red:hover:not(:disabled){box-shadow:0 0 28px rgba(255,68,68,0.3);background:rgba(255,68,68,0.08)}
+.btn-grey{border-color:#666;color:#ccc}
+.btn-grey:hover:not(:disabled){box-shadow:0 0 20px rgba(255,255,255,0.1);background:rgba(255,255,255,0.05)}
+
+.btn-row{display:flex;gap:0.5rem;width:100%;flex-wrap:wrap}
+.btn-row > *{flex:1;min-width:0}
+
+.card-box{width:100%;background:#12122a;border:2px solid #2a2a4a;border-radius:12px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem}
+.card-box h3{color:#0ff;font-size:1rem;letter-spacing:0.08em}
+.card-box label{color:#aaa;font-size:0.85rem;display:block;margin-bottom:0.3rem}
+.card-box input,.card-box select{width:100%;background:#0a0a1a;border:2px solid #2a2a4a;border-radius:8px;padding:0.75rem;color:#fff;font-family:inherit;font-size:1rem}
+.card-box input:focus,.card-box select:focus{outline:none;border-color:#0ff}
+
+.segment{display:flex;gap:0.4rem;flex-wrap:wrap}
+.segment button{flex:1;min-width:90px;padding:0.7rem 0.5rem;border:2px solid #2a2a4a;border-radius:8px;background:#0a0a1a;color:#ccc;font-size:0.9rem;transition:all .15s}
+.segment button:hover{border-color:#555}
+.segment button.active{border-color:#0ff;color:#0ff;background:rgba(0,255,255,0.08);box-shadow:0 0 12px rgba(0,255,255,0.2)}
+
+.code-display{font-family:'Courier New',monospace;font-size:clamp(1.5rem,7vw,2.5rem);letter-spacing:0.4em;text-align:center;color:#ffd700;text-shadow:0 0 14px rgba(255,215,0,0.5);background:#0a0a1a;border:2px dashed #ffd700;border-radius:12px;padding:1rem;margin:0.5rem 0;user-select:all}
+
+.lobby-list{width:100%;display:flex;flex-direction:column;gap:0.5rem;max-height:50vh;overflow-y:auto;scrollbar-width:thin;padding:0.25rem}
+.lobby-item{background:#12122a;border:2px solid #2a2a4a;border-radius:10px;padding:0.9rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem;transition:all .15s}
+.lobby-item:hover{border-color:#ff6ec7;transform:translateX(2px)}
+.lobby-info{display:flex;flex-direction:column;gap:0.15rem;min-width:0;flex:1}
+.lobby-name{font-weight:bold;color:#fff;font-size:0.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lobby-meta{color:#888;font-size:0.75rem}
+.lobby-join{padding:0.5rem 0.9rem;border:1.5px solid #ff6ec7;color:#ff6ec7;border-radius:6px;font-size:0.85rem;font-weight:bold}
+.lobby-join:hover{background:rgba(255,110,199,0.1)}
+.lobby-empty{color:#666;text-align:center;padding:1.5rem;font-size:0.9rem;font-style:italic}
+
+.info-line{text-align:center;color:#aaa;font-size:0.9rem;padding:0.5rem}
+.info-line strong{color:#fff}
+
+.game-wrap{width:100%;max-width:520px;display:flex;flex-direction:column;gap:0.5rem;align-items:center}
+.status-bar{width:100%;background:#12122a;border:1px solid #2a2a4a;border-radius:8px;padding:0.6rem 0.9rem;font-size:0.9rem;display:flex;justify-content:space-between;align-items:center;gap:0.5rem}
+.status-turn{color:#0ff}
+.status-check{color:#ff4444;text-shadow:0 0 8px rgba(255,68,68,0.6);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.status-thinking{color:#ffd700}
+.reconnect-banner{background:rgba(255,68,68,0.15);border:1px solid #ff4444;color:#ff4444;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.8rem;text-align:center;width:100%}
+
+.captures{width:100%;min-height:32px;display:flex;gap:0.15rem;flex-wrap:wrap;font-size:1.2rem;padding:0.2rem 0.3rem;color:#aaa;align-items:center}
+.captures .cap-label{color:#666;font-size:0.7rem;margin-right:0.3rem}
+.captures .cap-score{color:#ffd700;font-size:0.8rem;margin-left:auto;font-weight:bold}
+
+#board-wrap{width:100%;max-width:min(95vw,500px);aspect-ratio:1/1;position:relative;margin:0.25rem 0}
+#board{width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:3px solid #333;border-radius:6px;overflow:hidden;box-shadow:0 0 24px rgba(0,0,0,0.5);position:relative}
+.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s,box-shadow .12s;user-select:none}
+.sq-light{background:var(--sq-light,#f0d9b5)}
+.sq-dark{background:var(--sq-dark,#b58863)}
+.sq .coord{position:absolute;font-size:clamp(0.5rem,1.5vw,0.7rem);font-weight:bold;opacity:0.55;pointer-events:none;font-family:'Courier New',monospace}
+.sq .coord-file{bottom:1px;right:3px}
+.sq .coord-rank{top:1px;left:3px}
+.sq-light .coord{color:var(--sq-dark,#b58863)}
+.sq-dark .coord{color:var(--sq-light,#f0d9b5)}
+.sq.sel{box-shadow:inset 0 0 0 3px #ffd700;background:rgba(255,215,0,0.25)!important}
+.sq.legal::after{content:'';position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(0,255,255,0.5);box-shadow:0 0 10px rgba(0,255,255,0.7);pointer-events:none}
+.sq.legal-capture::after{content:'';position:absolute;width:88%;height:88%;border:3px solid rgba(255,110,199,0.75);border-radius:50%;box-shadow:0 0 12px rgba(255,110,199,0.5);pointer-events:none;box-sizing:border-box}
+.sq.last-move{box-shadow:inset 0 0 0 3px rgba(0,255,255,0.5)}
+.sq.check{background:radial-gradient(circle,rgba(255,68,68,0.65) 0%,rgba(255,68,68,0.2) 70%) !important;animation:checkPulse 0.9s infinite}
+@keyframes checkPulse{0%,100%{box-shadow:inset 0 0 12px rgba(255,68,68,0.8)}50%{box-shadow:inset 0 0 24px rgba(255,68,68,1)}}
+.piece{font-size:clamp(1.5rem,7vw,2.5rem);line-height:1;user-select:none;pointer-events:none;text-align:center;font-family:'Arial Unicode MS','Segoe UI Symbol','Noto Sans Symbols 2',sans-serif;transition:transform .2s}
+
+/* ============= THEMES ============= */
+/* Theme: classic */
+.theme-classic{--sq-light:#f0d9b5;--sq-dark:#b58863;--bg-overlay:transparent}
+.theme-classic .piece.white{color:#fff;text-shadow:0 1px 0 #000,0 -1px 0 #000,1px 0 0 #000,-1px 0 0 #000,2px 2px 3px rgba(0,0,0,0.45)}
+.theme-classic .piece.black{color:#111;text-shadow:0 1px 0 #fff3,1px 1px 2px rgba(0,0,0,0.4)}
+
+/* Theme: firewater (Fire vs Water) */
+.theme-firewater{--sq-light:#7bbf6a;--sq-dark:#3f8b2e;--bg-overlay:grass}
+.theme-firewater #board{background:repeating-linear-gradient(45deg,#5ea84d 0 8px,#4d9a3d 8px 16px);animation:grassSway 6s ease-in-out infinite}
+@keyframes grassSway{0%,100%{filter:hue-rotate(0deg) brightness(1)}50%{filter:hue-rotate(-10deg) brightness(1.05)}}
+.theme-firewater .piece.white{color:#74d1ff;text-shadow:0 0 6px #74d1ff,0 0 14px #0ff,0 0 2px #fff;animation:waterShimmer 3s ease-in-out infinite}
+.theme-firewater .piece.black{color:#ff5522;text-shadow:0 0 6px #ff4400,0 0 14px #ff2200,0 0 2px #ffaa44;animation:fireFlicker 0.9s ease-in-out infinite}
+@keyframes waterShimmer{0%,100%{filter:brightness(1) hue-rotate(0deg)}50%{filter:brightness(1.15) hue-rotate(12deg)}}
+@keyframes fireFlicker{0%,100%{filter:brightness(1) saturate(1.2)}40%{filter:brightness(1.25) saturate(1.6)}60%{filter:brightness(0.9) saturate(1.1)}}
+
+/* Theme: cosmic */
+.theme-cosmic{--sq-light:#2a2a5e;--sq-dark:#1a0f3a;--bg-overlay:cosmic}
+.theme-cosmic #board{background:radial-gradient(circle at 30% 20%,#3f1f6a 0%,#0a0525 70%)}
+.theme-cosmic .piece.white{color:#fff6a0;text-shadow:0 0 8px #ffeb66,0 0 16px #ffcc33,0 0 3px #fff}
+.theme-cosmic .piece.black{color:#b366ff;text-shadow:0 0 8px #a044ff,0 0 16px #5a22cc,0 0 3px #fff}
+.theme-cosmic #board-wrap::before{content:'';position:absolute;inset:0;background-image:radial-gradient(1px 1px at 15% 25%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 75% 40%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 40% 70%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 90% 85%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 25% 90%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 60% 15%,#fff 50%,transparent 100%);animation:twinkle 4s ease-in-out infinite;pointer-events:none;opacity:0.8;z-index:1;border-radius:6px}
+@keyframes twinkle{0%,100%{opacity:0.45}50%{opacity:0.9}}
+
+/* Theme: icelava */
+.theme-icelava{--sq-light:#c5e6ff;--sq-dark:#3a1010;--bg-overlay:icelava}
+.theme-icelava #board{background:linear-gradient(135deg,#e8f6ff 0%,#b0d8f0 100%)}
+.theme-icelava .sq-dark{background:repeating-linear-gradient(45deg,#3a1010 0 6px,#4a1515 6px 12px)}
+.theme-icelava .piece.white{color:#e6f8ff;text-shadow:0 0 6px #a8d8ff,0 0 12px #66bbff,1px 1px 2px #225577}
+.theme-icelava .piece.black{color:#ff4411;text-shadow:0 0 8px #ff2200,0 0 16px #cc1100,0 0 2px #ffcc88;animation:lavaPulse 1.5s ease-in-out infinite}
+@keyframes lavaPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3) saturate(1.4)}}
+
+/* Theme: candyveg (Candy vs Veggies) */
+.theme-candyveg{--sq-light:#e8c48a;--sq-dark:#5a4a55;--bg-overlay:candy}
+.theme-candyveg #board{background:repeating-linear-gradient(90deg,#e8c48a 0 4px,#d8b478 4px 8px)}
+.theme-candyveg .sq-dark{background:radial-gradient(circle at 30% 30%,#6a5a65 0%,#4a3a45 100%)}
+.theme-candyveg .piece.white{color:#ff88cc;text-shadow:0 0 4px #ff66bb,0 2px 2px rgba(0,0,0,0.4),0 0 10px rgba(255,136,204,0.5)}
+.theme-candyveg .piece.black{color:#44aa33;text-shadow:0 0 4px #228822,0 2px 2px rgba(0,0,0,0.5),0 0 10px rgba(68,170,51,0.4)}
+
+/* Theme: robodino (Robots vs Dinos) */
+.theme-robodino{--sq-light:#1a3d2a;--sq-dark:#0a1f14;--bg-overlay:robodino}
+.theme-robodino .sq-light{background:linear-gradient(135deg,#1a4d2a 0%,#0f3a1f 100%);position:relative}
+.theme-robodino .sq-light::before{content:'';position:absolute;inset:0;background-image:linear-gradient(90deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%),linear-gradient(0deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%);pointer-events:none}
+.theme-robodino .sq-dark{background:radial-gradient(circle at 25% 25%,#1a3a22 0%,#0a1f14 100%)}
+.theme-robodino .piece.white{color:#66aaff;text-shadow:0 0 4px #4488ff,0 0 8px #2266cc,1px 1px 0 #113355;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
+.theme-robodino .piece.black{color:#dd3322;text-shadow:0 0 4px #aa2211,0 0 8px #661100,1px 1px 0 #441100;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
+
+/* ============= MODALS ============= */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
+.modal-overlay.active{display:flex}
+.modal-box{background:#0f0f24;border:2px solid #2a2a4a;border-radius:14px;padding:1.5rem;max-width:450px;width:100%;max-height:90vh;overflow-y:auto;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.modal-box h2{font-size:1.3rem;margin-bottom:0.5rem;color:#0ff;letter-spacing:0.05em}
+.modal-box p{color:#aaa;font-size:0.9rem;margin-bottom:1rem;line-height:1.4}
+.modal-actions{display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap}
+.modal-actions button{flex:1;min-width:100px;padding:0.8rem;border:2px solid;border-radius:8px;font-weight:bold;transition:all .15s}
+
+.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0.6rem;margin:1rem 0}
+.theme-card{background:#0a0a1a;border:2px solid #2a2a4a;border-radius:10px;padding:0.8rem;cursor:pointer;transition:all .15s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:0.4rem}
+.theme-card:hover{border-color:#0ff;transform:scale(1.03)}
+.theme-card.active{border-color:#ffd700;box-shadow:0 0 16px rgba(255,215,0,0.4)}
+.theme-card .swatch{display:grid;grid-template-columns:repeat(2,24px);grid-template-rows:repeat(2,24px);border-radius:4px;overflow:hidden;border:1px solid #333}
+.theme-card .swatch>div{width:100%;height:100%}
+.theme-card .tname{font-size:0.85rem;font-weight:bold;color:#fff}
+.theme-card .pieces-preview{font-size:1.4rem;line-height:1;display:flex;gap:2px}
+
+.promo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-top:1rem}
+.promo-btn{background:#0a0a1a;border:2px solid #2a2a4a;border-radius:8px;padding:0.5rem;font-size:2.2rem;line-height:1;aspect-ratio:1/1;transition:all .15s;display:flex;align-items:center;justify-content:center}
+.promo-btn:hover{border-color:#ffd700;box-shadow:0 0 14px rgba(255,215,0,0.4);transform:scale(1.05)}
+
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#12122a;border:2px solid #ff4444;color:#ff4444;padding:0.8rem 1.4rem;border-radius:8px;font-size:0.9rem;z-index:2000;animation:toastIn .2s ease;max-width:92vw;text-align:center}
+.toast.success{border-color:#0f0;color:#0f0}
+.toast.info{border-color:#0ff;color:#0ff}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+.gameover-banner{text-align:center;padding:1rem;margin:0.5rem 0}
+.gameover-banner .go-title{font-size:clamp(1.5rem,6vw,2.2rem);font-weight:bold;background:linear-gradient(90deg,#ffd700,#ff6ec7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.4rem}
+.gameover-banner .go-reason{color:#aaa;font-size:0.95rem}
+
+/* Small screens */
+@media (max-width:420px){
+  body{padding:0.5rem}
+  .top-nav{margin-bottom:0.5rem}
+  #board-wrap{max-width:96vw}
+  .menu-btn{padding:0.9rem 1rem}
+  .captures{font-size:1rem;min-height:26px}
+  .modal-box{padding:1.1rem}
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <a href="/" class="home-link">&larr; Dad Arcade</a>
+  <button class="theme-link" onclick="openThemePicker()">Change Theme ◆</button>
+</div>
+
+<h1 class="title">CHESS</h1>
+<p class="subtitle" id="subtitle">Six themes. Three modes. One board.</p>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <button class="menu-btn btn-cyan" onclick="goto('cpu')">▶ Play vs Computer</button>
+  <button class="menu-btn btn-magenta" onclick="goto('friend')">◉ Play vs Friend</button>
+  <button class="menu-btn btn-yellow" onclick="goto('lobby')">★ Public Lobby</button>
+</div>
+
+<!-- VS CPU SETUP -->
+<div id="screen-cpu" class="screen">
+  <div class="card-box">
+    <h3>▶ VS COMPUTER</h3>
+    <label>Difficulty</label>
+    <div class="segment" id="cpu-diff">
+      <button data-val="easy" class="active">Easy</button>
+      <button data-val="medium">Medium</button>
+      <button data-val="hard">Hard</button>
+    </div>
+    <label>Your color</label>
+    <div class="segment" id="cpu-color">
+      <button data-val="w" class="active">♔ White</button>
+      <button data-val="b">♚ Black</button>
+      <button data-val="random">? Random</button>
+    </div>
+  </div>
+  <button class="menu-btn btn-cyan" onclick="startCpuGame()">Start Game</button>
+  <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
+</div>
+
+<!-- FRIEND -->
+<div id="screen-friend" class="screen">
+  <div class="card-box">
+    <h3>◉ CREATE FRIEND GAME</h3>
+    <label>Your name</label>
+    <input id="friend-name" maxlength="20" placeholder="Player">
+    <label>Your color</label>
+    <div class="segment" id="friend-color">
+      <button data-val="w" class="active">♔ White</button>
+      <button data-val="b">♚ Black</button>
+      <button data-val="random">? Random</button>
+    </div>
+  </div>
+  <button class="menu-btn btn-magenta" onclick="createFriendGame()">Create Game</button>
+  <div class="card-box">
+    <h3>◉ JOIN BY CODE</h3>
+    <label>6-character game code</label>
+    <input id="join-code" maxlength="6" placeholder="ABCDEF" style="text-transform:uppercase;letter-spacing:0.3em;text-align:center;font-size:1.2rem">
+  </div>
+  <button class="menu-btn btn-magenta" onclick="joinByCode()">Join Game</button>
+  <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
+</div>
+
+<!-- WAITING (after create) -->
+<div id="screen-wait" class="screen">
+  <div class="card-box">
+    <h3 style="color:#ffd700">⏳ WAITING FOR OPPONENT</h3>
+    <p style="color:#aaa;font-size:0.9rem">Share this code with a friend — or have them join from the Public Lobby if public:</p>
+    <div class="code-display" id="wait-code">------</div>
+    <button class="menu-btn btn-yellow" onclick="copyCode()">📋 Copy Code</button>
+    <p id="wait-status" style="color:#888;font-size:0.85rem;text-align:center">Waiting for someone to join…</p>
+  </div>
+  <button class="menu-btn btn-red" onclick="cancelWait()">Cancel</button>
+</div>
+
+<!-- LOBBY -->
+<div id="screen-lobby" class="screen">
+  <div class="card-box">
+    <h3>★ PUBLIC LOBBY</h3>
+    <label>Your name</label>
+    <input id="lobby-name" maxlength="20" placeholder="Player">
+    <button class="menu-btn btn-yellow" onclick="createPublicGame()" style="margin-top:0.5rem">+ Create Public Game</button>
+  </div>
+  <div class="card-box">
+    <h3>Open Games</h3>
+    <div class="lobby-list" id="lobby-list">
+      <div class="lobby-empty">Loading…</div>
+    </div>
+  </div>
+  <button class="menu-btn btn-grey" onclick="goto('home')">← Back</button>
+</div>
+
+<!-- GAME -->
+<div id="screen-game" class="screen">
+  <div class="game-wrap">
+    <div class="reconnect-banner" id="reconnect-banner" style="display:none">Reconnecting…</div>
+    <div class="status-bar">
+      <div id="status-turn" class="status-turn">White to move</div>
+      <div id="status-info"></div>
+    </div>
+    <div class="captures" id="cap-top"><span class="cap-label">OPP</span><span id="cap-top-pieces"></span><span class="cap-score" id="cap-top-score"></span></div>
+    <div id="board-wrap"><div id="board"></div></div>
+    <div class="captures" id="cap-bot"><span class="cap-label">YOU</span><span id="cap-bot-pieces"></span><span class="cap-score" id="cap-bot-score"></span></div>
+    <div class="btn-row" id="game-controls">
+      <button class="menu-btn btn-red" onclick="resign()" style="font-size:0.85rem;padding:0.7rem">Resign</button>
+      <button class="menu-btn btn-yellow" onclick="offerDraw()" id="draw-btn" style="font-size:0.85rem;padding:0.7rem">Offer Draw</button>
+      <button class="menu-btn btn-grey" onclick="copyCurrentCode()" id="copy-code-btn" style="font-size:0.85rem;padding:0.7rem;display:none">Copy Code</button>
+    </div>
+    <button class="menu-btn btn-grey" onclick="leaveGame()" style="font-size:0.85rem;padding:0.6rem">← Leave Game</button>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="screen-gameover" class="screen">
+  <div class="gameover-banner">
+    <div class="go-title" id="go-title">Game Over</div>
+    <div class="go-reason" id="go-reason"></div>
+  </div>
+  <div class="btn-row">
+    <button class="menu-btn btn-cyan" onclick="playAgain()">↻ Play Again</button>
+    <button class="menu-btn btn-grey" onclick="goto('home');leaveGame()">Home</button>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-theme">
+  <div class="modal-box">
+    <h2>◆ Choose Theme</h2>
+    <p>Pick how the board and pieces look. Your choice saves locally.</p>
+    <div class="theme-grid" id="theme-grid"></div>
+    <div class="modal-actions">
+      <button class="menu-btn btn-grey" onclick="closeModal('theme')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-promo">
+  <div class="modal-box">
+    <h2>♛ Promote Pawn</h2>
+    <p>Pick a piece for your pawn to become.</p>
+    <div class="promo-grid" id="promo-grid"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-draw">
+  <div class="modal-box">
+    <h2>🤝 Draw Offer</h2>
+    <p id="draw-text">Your opponent has offered a draw.</p>
+    <div class="modal-actions">
+      <button class="menu-btn btn-green" onclick="respondDraw(true)">Accept</button>
+      <button class="menu-btn btn-red" onclick="respondDraw(false)">Decline</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rematch">
+  <div class="modal-box">
+    <h2>↻ Rematch?</h2>
+    <p id="rematch-text">Your opponent wants a rematch.</p>
+    <div class="modal-actions">
+      <button class="menu-btn btn-green" onclick="acceptRematch()">Join</button>
+      <button class="menu-btn btn-red" onclick="closeModal('rematch')">Decline</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal-box">
+    <h2 id="confirm-title">Confirm</h2>
+    <p id="confirm-text"></p>
+    <div class="modal-actions">
+      <button class="menu-btn btn-green" id="confirm-yes">Yes</button>
+      <button class="menu-btn btn-grey" id="confirm-no">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   Dad Arcade Chess
+   Single-file chess: vs Computer, vs Friend, Public Lobby
+   ============================================================ */
+
+const SUPABASE_URL = 'https://momzrpcwlnakargfhexf.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_370jpYcn1WiDOZCVL0i3fg_JgJQCYty';
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+/* ---------- chess.js API shim (works for v0.x snake_case and v1.x camelCase) ---------- */
+function api(chess) {
+  return {
+    move: (m) => chess.move(m),
+    fen: () => chess.fen(),
+    pgn: () => chess.pgn(),
+    turn: () => chess.turn(),
+    board: () => chess.board(),
+    load: (fen) => (chess.load ? chess.load(fen) : null),
+    moves: (o) => chess.moves(o || {}),
+    history: (o) => chess.history(o || {}),
+    undo: () => chess.undo(),
+    get: (sq) => chess.get(sq),
+    isCheck: () => (chess.isCheck ? chess.isCheck() : chess.in_check()),
+    isCheckmate: () => (chess.isCheckmate ? chess.isCheckmate() : chess.in_checkmate()),
+    isStalemate: () => (chess.isStalemate ? chess.isStalemate() : chess.in_stalemate()),
+    isDraw: () => (chess.isDraw ? chess.isDraw() : chess.in_draw()),
+    isThreefoldRepetition: () => (chess.isThreefoldRepetition ? chess.isThreefoldRepetition() : chess.in_threefold_repetition()),
+    isInsufficientMaterial: () => (chess.isInsufficientMaterial ? chess.isInsufficientMaterial() : chess.insufficient_material()),
+    isGameOver: () => (chess.isGameOver ? chess.isGameOver() : chess.game_over()),
+  };
+}
+
+/* ---------- Piece glyphs (Unicode — universal silhouettes, re-themed via CSS) ---------- */
+const PIECE_GLYPH = {
+  w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
+  b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' },
+};
+const PIECE_VAL = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+
+/* ---------- Themes ---------- */
+const THEMES = [
+  { id: 'classic', name: 'Classic', swatch: ['#f0d9b5', '#b58863', '#fff', '#222'] },
+  { id: 'firewater', name: 'Fire vs Water', swatch: ['#74d1ff', '#ff5522', '#4d9a3d', '#5ea84d'] },
+  { id: 'cosmic', name: 'Cosmic', swatch: ['#fff6a0', '#b366ff', '#2a2a5e', '#1a0f3a'] },
+  { id: 'icelava', name: 'Ice vs Lava', swatch: ['#e6f8ff', '#ff4411', '#c5e6ff', '#3a1010'] },
+  { id: 'candyveg', name: 'Candy vs Veggies', swatch: ['#ff88cc', '#44aa33', '#e8c48a', '#5a4a55'] },
+  { id: 'robodino', name: 'Robots vs Dinos', swatch: ['#66aaff', '#dd3322', '#1a4d2a', '#0f3a1f'] },
+];
+
+/* ---------- Player identity (localStorage) ---------- */
+function ensurePlayerId() {
+  let id = localStorage.getItem('dadarcade_player_id');
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) ||
+      ('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      }));
+    localStorage.setItem('dadarcade_player_id', id);
+  }
+  return id;
+}
+function getPlayerName(defaultPrefix) {
+  let name = localStorage.getItem('dadarcade_player_name');
+  if (!name) name = (defaultPrefix || 'Player') + Math.floor(100 + Math.random() * 900);
+  return name;
+}
+function setPlayerName(n) { localStorage.setItem('dadarcade_player_name', n); }
+
+const PLAYER_ID = ensurePlayerId();
+
+/* ---------- Theme storage & application ---------- */
+function getTheme() { return localStorage.getItem('dadarcade_chess_theme') || 'classic'; }
+function setTheme(t) {
+  localStorage.setItem('dadarcade_chess_theme', t);
+  applyTheme();
+  renderBoard();
+  renderThemeGrid();
+}
+function applyTheme() {
+  const t = getTheme();
+  const body = document.body;
+  THEMES.forEach(th => body.classList.remove('theme-' + th.id));
+  body.classList.add('theme-' + t);
+}
+
+/* ---------- Screen router ---------- */
+function goto(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
+}
+
+/* ---------- Supabase lazy init ---------- */
+let sbClient = null;
+function ensureSupabase() {
+  if (sbClient) return sbClient;
+  if (!window.supabase || !window.supabase.createClient) {
+    toast('Online features unavailable — check your connection', 'error');
+    return null;
+  }
+  try {
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      realtime: { params: { eventsPerSecond: 10 } },
+    });
+    return sbClient;
+  } catch (e) {
+    console.error('Supabase init failed', e);
+    toast('Online features unavailable', 'error');
+    return null;
+  }
+}
+
+/* ---------- Toast ---------- */
+let toastTimer = null;
+function toast(msg, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.remove(); }, 3200);
+}
+
+/* ---------- Modals ---------- */
+function openModal(id) { document.getElementById('modal-' + id).classList.add('active'); }
+function closeModal(id) { document.getElementById('modal-' + id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if (e.target === el && el.id !== 'modal-promo') el.classList.remove('active');
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(el => {
+    if (el.id !== 'modal-promo') el.classList.remove('active');
+  });
+});
+
+/* ---------- Theme picker ---------- */
+function openThemePicker() { renderThemeGrid(); openModal('theme'); }
+function renderThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  const cur = getTheme();
+  grid.innerHTML = '';
+  THEMES.forEach(t => {
+    const card = document.createElement('div');
+    card.className = 'theme-card' + (t.id === cur ? ' active' : '');
+    card.onclick = () => setTheme(t.id);
+    const sw = document.createElement('div');
+    sw.className = 'swatch';
+    t.swatch.forEach(c => {
+      const d = document.createElement('div');
+      d.style.background = c;
+      sw.appendChild(d);
+    });
+    const nm = document.createElement('div');
+    nm.className = 'tname';
+    nm.textContent = t.name;
+    const pv = document.createElement('div');
+    pv.className = 'pieces-preview';
+    pv.innerHTML = '<span class="piece white">♔</span><span class="piece black">♚</span>';
+    card.appendChild(sw);
+    card.appendChild(nm);
+    card.appendChild(pv);
+    grid.appendChild(card);
+  });
+}
+
+/* ---------- Segment buttons ---------- */
+function wireSegment(id, onChange) {
+  const el = document.getElementById(id);
+  el.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      el.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      if (onChange) onChange(b.dataset.val);
+    });
+  });
+}
+function segmentValue(id) {
+  const a = document.querySelector('#' + id + ' button.active');
+  return a ? a.dataset.val : null;
+}
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+const STATE = {
+  mode: null,          // 'cpu' | 'friend' | 'public'
+  chess: null,         // chess.js instance
+  api: null,           // shimmed api
+  myColor: 'w',        // 'w' or 'b' — the local player's color
+  orientation: 'w',    // board orientation (bottom rank)
+  gameId: null,        // Supabase id for PvP
+  gameCode: null,      // 6-char code
+  isPublic: false,
+  channel: null,       // realtime channel
+  waitingChannel: null,// channel while on waiting screen
+  lobbyChannel: null,  // channel for lobby updates
+  lobbyRefreshTimer: null,
+  selected: null,      // selected square e.g. 'e2'
+  legalTargets: [],    // legal destination squares for selected piece
+  lastMove: null,      // {from, to}
+  aiBusy: false,       // locks input while AI is computing/animating
+  pendingPromo: null,  // {from, to, resolve}
+  backoff: 1000,
+  captured: { w: [], b: [] }, // pieces captured FROM each color
+  lastStatus: 'waiting',
+  difficulty: 'easy',
+  opponentName: null,
+  myName: null,
+  gameOverShown: false,
+  rematchNewCode: null,
+};
+
+function resetState() {
+  if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} STATE.channel = null; }
+  if (STATE.waitingChannel) { try { STATE.waitingChannel.unsubscribe(); } catch (e) {} STATE.waitingChannel = null; }
+  STATE.mode = null;
+  STATE.chess = null;
+  STATE.api = null;
+  STATE.gameId = null;
+  STATE.gameCode = null;
+  STATE.isPublic = false;
+  STATE.selected = null;
+  STATE.legalTargets = [];
+  STATE.lastMove = null;
+  STATE.aiBusy = false;
+  STATE.pendingPromo = null;
+  STATE.backoff = 1000;
+  STATE.captured = { w: [], b: [] };
+  STATE.gameOverShown = false;
+  STATE.rematchNewCode = null;
+  STATE.opponentName = null;
+  localStorage.removeItem('dadarcade_chess_active_game');
+  document.getElementById('reconnect-banner').style.display = 'none';
+}
+
+/* ============================================================
+   BOARD RENDERING
+   ============================================================ */
+function squareName(file, rank) {
+  // file: 0..7 (a..h), rank: 0..7 (1..8 from white side)
+  return 'abcdefgh'[file] + (rank + 1);
+}
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  if (!board) return;
+  board.innerHTML = '';
+  if (!STATE.chess) {
+    // show empty board
+    for (let r = 7; r >= 0; r--) {
+      for (let f = 0; f < 8; f++) {
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + ((r + f) % 2 === 0 ? 'sq-dark' : 'sq-light');
+        board.appendChild(sq);
+      }
+    }
+    return;
+  }
+  const rows = STATE.api.board(); // [rank8..rank1][fileA..fileH]
+  const flip = STATE.orientation === 'b';
+  // Display rank from top to bottom:
+  for (let dispRow = 0; dispRow < 8; dispRow++) {
+    for (let dispCol = 0; dispCol < 8; dispCol++) {
+      // map display coords to board-array coords
+      const arrRow = flip ? 7 - dispRow : dispRow;
+      const arrCol = flip ? 7 - dispCol : dispCol;
+      const piece = rows[arrRow][arrCol];
+      const file = arrCol; // 0..7 a..h
+      const rank = 7 - arrRow; // board[0] is rank 8 → rank index 7
+      const name = squareName(file, rank);
+      const sq = document.createElement('div');
+      const isLight = (arrRow + arrCol) % 2 === 0;
+      sq.className = 'sq ' + (isLight ? 'sq-light' : 'sq-dark');
+      sq.dataset.sq = name;
+      if (STATE.selected === name) sq.classList.add('sel');
+      if (STATE.legalTargets.includes(name)) {
+        sq.classList.add(piece ? 'legal-capture' : 'legal');
+      }
+      if (STATE.lastMove && (STATE.lastMove.from === name || STATE.lastMove.to === name)) {
+        sq.classList.add('last-move');
+      }
+      if (piece && piece.type === 'k' && STATE.api.isCheck() && piece.color === STATE.api.turn()) {
+        sq.classList.add('check');
+      }
+      if (piece) {
+        const p = document.createElement('div');
+        p.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
+        p.textContent = PIECE_GLYPH[piece.color][piece.type];
+        sq.appendChild(p);
+      }
+      // coordinates on edge squares
+      if (dispCol === 0) {
+        const rc = document.createElement('span');
+        rc.className = 'coord coord-rank';
+        rc.textContent = (rank + 1);
+        sq.appendChild(rc);
+      }
+      if (dispRow === 7) {
+        const fc = document.createElement('span');
+        fc.className = 'coord coord-file';
+        fc.textContent = 'abcdefgh'[file];
+        sq.appendChild(fc);
+      }
+      sq.addEventListener('click', onSquareClick);
+      board.appendChild(sq);
+    }
+  }
+  updateStatusBar();
+  updateCaptures();
+}
+
+function updateStatusBar() {
+  if (!STATE.api) return;
+  const turnEl = document.getElementById('status-turn');
+  const infoEl = document.getElementById('status-info');
+  const turn = STATE.api.turn();
+  const turnName = turn === 'w' ? 'White' : 'Black';
+  let txt = turnName + ' to move';
+  if (STATE.mode === 'cpu') {
+    if (turn === STATE.myColor) txt = 'Your move';
+    else txt = 'Computer thinking…';
+  } else if (STATE.mode === 'friend' || STATE.mode === 'public') {
+    if (turn === STATE.myColor) txt = 'Your move';
+    else txt = (STATE.opponentName || 'Opponent') + '\u2019s move';
+  }
+  turnEl.textContent = txt;
+  turnEl.className = 'status-turn';
+  if (STATE.api.isCheck()) {
+    infoEl.textContent = 'CHECK!';
+    infoEl.className = 'status-check';
+  } else if (STATE.aiBusy && STATE.mode === 'cpu') {
+    infoEl.textContent = 'Thinking…';
+    infoEl.className = 'status-thinking';
+  } else {
+    infoEl.textContent = '';
+    infoEl.className = '';
+  }
+}
+
+function updateCaptures() {
+  // Compute from history
+  const hist = STATE.api.history({ verbose: true });
+  const capByWhite = []; // black pieces captured by white
+  const capByBlack = [];
+  hist.forEach(h => {
+    if (h.captured) {
+      if (h.color === 'w') capByWhite.push(h.captured);
+      else capByBlack.push(h.captured);
+    }
+  });
+  const myCap = STATE.myColor === 'w' ? capByWhite : capByBlack;
+  const oppCap = STATE.myColor === 'w' ? capByBlack : capByWhite;
+  const oppColor = STATE.myColor === 'w' ? 'b' : 'w';
+  const myColor = STATE.myColor;
+
+  const myScore = myCap.reduce((s, p) => s + PIECE_VAL[p], 0);
+  const oppScore = oppCap.reduce((s, p) => s + PIECE_VAL[p], 0);
+  const diff = myScore - oppScore;
+
+  // "YOU" row shows pieces you captured (opponent color glyphs)
+  const youEl = document.getElementById('cap-bot-pieces');
+  youEl.innerHTML = '';
+  myCap.forEach(pt => {
+    const s = document.createElement('span');
+    s.className = 'piece ' + (oppColor === 'w' ? 'white' : 'black');
+    s.textContent = PIECE_GLYPH[oppColor][pt];
+    youEl.appendChild(s);
+  });
+  document.getElementById('cap-bot-score').textContent = diff > 0 ? ('+' + diff) : '';
+
+  const oppEl = document.getElementById('cap-top-pieces');
+  oppEl.innerHTML = '';
+  oppCap.forEach(pt => {
+    const s = document.createElement('span');
+    s.className = 'piece ' + (myColor === 'w' ? 'white' : 'black');
+    s.textContent = PIECE_GLYPH[myColor][pt];
+    oppEl.appendChild(s);
+  });
+  document.getElementById('cap-top-score').textContent = diff < 0 ? ('' + diff) : '';
+}
+
+/* ============================================================
+   MOVE HANDLING
+   ============================================================ */
+function onSquareClick(e) {
+  if (!STATE.chess) return;
+  if (STATE.aiBusy) return;
+  if (STATE.api.isGameOver()) return;
+
+  // In PvP, only allow moves when it's my turn
+  if ((STATE.mode === 'friend' || STATE.mode === 'public') && STATE.api.turn() !== STATE.myColor) {
+    return;
+  }
+  // In CPU, only allow on my turn
+  if (STATE.mode === 'cpu' && STATE.api.turn() !== STATE.myColor) return;
+
+  const sq = e.currentTarget.dataset.sq;
+  const piece = STATE.api.get(sq);
+  const turn = STATE.api.turn();
+
+  // If already have a selection...
+  if (STATE.selected) {
+    if (STATE.selected === sq) {
+      // tap same square to deselect
+      STATE.selected = null;
+      STATE.legalTargets = [];
+      renderBoard();
+      return;
+    }
+    // If the tapped square is a legal destination, attempt move
+    if (STATE.legalTargets.includes(sq)) {
+      attemptMove(STATE.selected, sq);
+      return;
+    }
+    // If tapped another of my pieces, reselect
+    if (piece && piece.color === turn) {
+      selectSquare(sq);
+      return;
+    }
+    // Otherwise, clear
+    STATE.selected = null;
+    STATE.legalTargets = [];
+    renderBoard();
+    return;
+  }
+  // No selection yet
+  if (piece && piece.color === turn) {
+    selectSquare(sq);
+  }
+}
+
+function selectSquare(sq) {
+  const moves = STATE.api.moves({ square: sq, verbose: true });
+  if (!moves.length) return;
+  STATE.selected = sq;
+  STATE.legalTargets = moves.map(m => m.to);
+  renderBoard();
+}
+
+function attemptMove(from, to) {
+  // Detect promotion need
+  const piece = STATE.api.get(from);
+  const isPawn = piece && piece.type === 'p';
+  const promoteRank = piece && piece.color === 'w' ? '8' : '1';
+  const needsPromo = isPawn && to[1] === promoteRank;
+  if (needsPromo) {
+    askPromotion().then(promo => {
+      commitMove({ from, to, promotion: promo });
+    });
+    return;
+  }
+  commitMove({ from, to });
+}
+
+function askPromotion() {
+  return new Promise(resolve => {
+    const grid = document.getElementById('promo-grid');
+    grid.innerHTML = '';
+    const color = STATE.api.turn();
+    const choices = ['q', 'r', 'b', 'n'];
+    let resolved = false;
+    choices.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'promo-btn';
+      const span = document.createElement('span');
+      span.className = 'piece ' + (color === 'w' ? 'white' : 'black');
+      span.textContent = PIECE_GLYPH[color][c];
+      btn.appendChild(span);
+      btn.onclick = () => {
+        if (resolved) return;
+        resolved = true;
+        closeModal('promo');
+        resolve(c);
+      };
+      grid.appendChild(btn);
+    });
+    // Default to queen if modal somehow closed (we prevent bg-click closing for promo)
+    openModal('promo');
+  });
+}
+
+function commitMove(m) {
+  // Save FEN for rollback
+  const prevFen = STATE.api.fen();
+  let result;
+  try {
+    result = STATE.api.move(m);
+  } catch (err) {
+    result = null;
+  }
+  if (!result) { return; }
+
+  STATE.lastMove = { from: result.from, to: result.to };
+  STATE.selected = null;
+  STATE.legalTargets = [];
+  renderBoard();
+
+  // Post-move handling
+  if (STATE.mode === 'cpu') {
+    // If game over, handle
+    if (STATE.api.isGameOver()) {
+      handleLocalGameOver();
+      return;
+    }
+    // If it's now computer's turn, start thinking
+    if (STATE.api.turn() !== STATE.myColor) {
+      triggerAI();
+    }
+  } else if (STATE.mode === 'friend' || STATE.mode === 'public') {
+    // Persist to Supabase
+    syncMoveToServer(prevFen);
+  }
+}
+
+function handleLocalGameOver() {
+  // For CPU mode only; PvP game-over comes via server update
+  const { winner, reason } = computeGameOver();
+  showGameOver(winner, reason);
+}
+
+function computeGameOver() {
+  const a = STATE.api;
+  if (a.isCheckmate()) {
+    // Turn is the side to move (who's been mated)
+    const loser = a.turn();
+    return { winner: loser === 'w' ? 'black' : 'white', reason: 'checkmate' };
+  }
+  if (a.isStalemate()) return { winner: 'draw', reason: 'stalemate' };
+  if (a.isThreefoldRepetition()) return { winner: 'draw', reason: 'threefold' };
+  if (a.isInsufficientMaterial()) return { winner: 'draw', reason: 'insufficient_material' };
+  if (a.isDraw()) return { winner: 'draw', reason: 'fifty_move' };
+  return { winner: null, reason: null };
+}
+
+function showGameOver(winner, reason, serverOverride) {
+  if (STATE.gameOverShown) return;
+  STATE.gameOverShown = true;
+  const title = document.getElementById('go-title');
+  const r = document.getElementById('go-reason');
+  let t;
+  if (winner === 'draw') t = 'Draw';
+  else if (STATE.mode === 'cpu') {
+    t = (winner === (STATE.myColor === 'w' ? 'white' : 'black')) ? 'You Win!' : 'Computer Wins';
+  } else {
+    const myName = winner === (STATE.myColor === 'w' ? 'white' : 'black');
+    t = myName ? 'You Win!' : (STATE.opponentName || 'Opponent') + ' Wins';
+  }
+  title.textContent = t;
+  const reasonTxt = {
+    checkmate: 'Checkmate',
+    stalemate: 'Stalemate',
+    threefold: 'Threefold repetition',
+    fifty_move: '50-move rule',
+    insufficient_material: 'Insufficient material',
+    resignation: 'Resignation',
+    draw_agreement: 'Draw by agreement',
+    timeout: 'Timeout',
+  }[reason] || '';
+  r.textContent = reasonTxt;
+  goto('gameover');
+  // Clear active-game marker
+  localStorage.removeItem('dadarcade_chess_active_game');
+}
+
+/* ============================================================
+   CPU / AI (minimax + alpha-beta, async chunks)
+   ============================================================ */
+const PST = {
+  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10,
+      5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5,
+      5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30,
+      -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30,
+      -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10,
+      -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10,
+      -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5,
+      -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10,
+      -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10,
+      -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+      -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30,
+      -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10,
+      20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
+};
+
+function evaluate(chess) {
+  // Positive = white advantage
+  const a = api(chess);
+  if (a.isCheckmate()) return a.turn() === 'w' ? -99999 : 99999;
+  if (a.isStalemate() || a.isInsufficientMaterial() || a.isDraw()) return 0;
+  const board = a.board();
+  let score = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let f = 0; f < 8; f++) {
+      const p = board[r][f];
+      if (!p) continue;
+      const base = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 }[p.type];
+      // PST index: for white, use (r*8+f); for black, mirror vertically
+      const idx = p.color === 'w' ? r * 8 + f : (7 - r) * 8 + f;
+      const psVal = PST[p.type][idx] || 0;
+      const mult = p.color === 'w' ? 1 : -1;
+      score += mult * (base + psVal);
+    }
+  }
+  return score;
+}
+
+// async minimax — yields to event loop periodically
+let aiAbort = false;
+async function minimax(chess, depth, alpha, beta, maximizingWhite, yieldEvery) {
+  if (aiAbort) return 0;
+  const gameOver = chess.isGameOver ? chess.isGameOver() : (chess.game_over && chess.game_over());
+  if (depth === 0 || gameOver) {
+    return evaluate(chess);
+  }
+  const a = api(chess);
+  const moves = a.moves({ verbose: true });
+  if (!moves.length) return evaluate(chess);
+  // Simple move ordering: captures first
+  moves.sort((x, y) => (y.captured ? 1 : 0) - (x.captured ? 1 : 0));
+  if (maximizingWhite) {
+    let best = -Infinity;
+    for (let i = 0; i < moves.length; i++) {
+      chess.move(moves[i]);
+      // periodic yield
+      yieldEvery.counter++;
+      if (yieldEvery.counter % 350 === 0) await sleep(0);
+      const val = await minimax(chess, depth - 1, alpha, beta, false, yieldEvery);
+      chess.undo();
+      if (val > best) best = val;
+      if (best > alpha) alpha = best;
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (let i = 0; i < moves.length; i++) {
+      chess.move(moves[i]);
+      yieldEvery.counter++;
+      if (yieldEvery.counter % 350 === 0) await sleep(0);
+      const val = await minimax(chess, depth - 1, alpha, beta, true, yieldEvery);
+      chess.undo();
+      if (val < best) best = val;
+      if (best < beta) beta = best;
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function chooseAiMove() {
+  const d = STATE.difficulty;
+  const a = STATE.api;
+  const moves = a.moves({ verbose: true });
+  if (!moves.length) return null;
+
+  if (d === 'easy' && Math.random() < 0.30) {
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
+  const depth = d === 'easy' ? 1 : (d === 'medium' ? 2 : 3);
+  const maxWhite = STATE.chess.turn() === 'w';
+  const counter = { counter: 0 };
+  // Order root moves: captures first + mates
+  moves.sort((x, y) => (y.captured ? 1 : 0) - (x.captured ? 1 : 0));
+  let bestMoves = [];
+  let bestVal = maxWhite ? -Infinity : Infinity;
+  for (let i = 0; i < moves.length; i++) {
+    if (aiAbort) return null;
+    STATE.chess.move(moves[i]);
+    const val = await minimax(STATE.chess, depth - 1, -Infinity, Infinity, !maxWhite, counter);
+    STATE.chess.undo();
+    if (maxWhite) {
+      if (val > bestVal) { bestVal = val; bestMoves = [moves[i]]; }
+      else if (val === bestVal) bestMoves.push(moves[i]);
+    } else {
+      if (val < bestVal) { bestVal = val; bestMoves = [moves[i]]; }
+      else if (val === bestVal) bestMoves.push(moves[i]);
+    }
+  }
+  // Add a little variety by picking randomly among equal-best moves
+  return bestMoves[Math.floor(Math.random() * bestMoves.length)] || moves[0];
+}
+
+async function triggerAI() {
+  if (!STATE.chess || STATE.aiBusy) return;
+  STATE.aiBusy = true;
+  aiAbort = false;
+  updateStatusBar();
+  await sleep(160); // small pause for UX
+  let move;
+  try {
+    move = await chooseAiMove();
+  } catch (e) { console.error(e); }
+  if (!move) { STATE.aiBusy = false; updateStatusBar(); return; }
+  try {
+    const r = STATE.api.move(move);
+    STATE.lastMove = { from: r.from, to: r.to };
+  } catch (e) { console.error('AI move failed', e); }
+  STATE.aiBusy = false;
+  renderBoard();
+  if (STATE.api.isGameOver()) handleLocalGameOver();
+}
+
+/* ============================================================
+   CPU MODE
+   ============================================================ */
+function startCpuGame() {
+  const diff = segmentValue('cpu-diff') || 'easy';
+  let col = segmentValue('cpu-color') || 'w';
+  if (col === 'random') col = Math.random() < 0.5 ? 'w' : 'b';
+  resetState();
+  STATE.mode = 'cpu';
+  STATE.difficulty = diff;
+  STATE.myColor = col;
+  STATE.orientation = col;
+  STATE.chess = new Chess();
+  STATE.api = api(STATE.chess);
+  document.getElementById('copy-code-btn').style.display = 'none';
+  document.getElementById('draw-btn').style.display = 'none'; // no draws vs CPU
+  goto('game');
+  renderBoard();
+  // If player is black, CPU moves first
+  if (STATE.myColor === 'b') setTimeout(() => triggerAI(), 400);
+}
+
+/* ============================================================
+   CODE GENERATION & SUPABASE HELPERS
+   ============================================================ */
+function makeCode() {
+  let s = '';
+  for (let i = 0; i < 6; i++) s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return s;
+}
+
+async function createGameRow(isPublic, myColor, name) {
+  const sb = ensureSupabase();
+  if (!sb) throw new Error('supabase not ready');
+  let attempts = 0;
+  while (attempts < 3) {
+    attempts++;
+    const code = makeCode();
+    const row = {
+      code,
+      is_public: isPublic,
+      status: 'waiting',
+      theme: getTheme(),
+    };
+    if (myColor === 'w') { row.white_player_id = PLAYER_ID; row.white_player_name = name; }
+    else { row.black_player_id = PLAYER_ID; row.black_player_name = name; }
+    const { data, error } = await sb.from('chess_games').insert(row).select().single();
+    if (!error && data) return data;
+    // code collision?
+    if (error && error.code === '23505') continue;
+    if (error) throw error;
+  }
+  throw new Error('Could not create game (code collisions)');
+}
+
+async function fetchGameByCode(code) {
+  const sb = ensureSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.from('chess_games').select('*').eq('code', code).maybeSingle();
+  if (error) { console.error(error); return null; }
+  return data;
+}
+async function fetchGameById(id) {
+  const sb = ensureSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.from('chess_games').select('*').eq('id', id).maybeSingle();
+  if (error) { console.error(error); return null; }
+  return data;
+}
+
+async function updateGameRow(id, fields) {
+  const sb = ensureSupabase();
+  if (!sb) return { error: new Error('offline') };
+  return await sb.from('chess_games').update(fields).eq('id', id);
+}
+
+/* ============================================================
+   FRIEND / PUBLIC MODES
+   ============================================================ */
+async function createFriendGame() {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const name = (document.getElementById('friend-name').value || '').trim() || getPlayerName('Player');
+  setPlayerName(name);
+  STATE.myName = name;
+  let col = segmentValue('friend-color') || 'w';
+  if (col === 'random') col = Math.random() < 0.5 ? 'w' : 'b';
+  try {
+    const row = await createGameRow(false, col, name);
+    enterWaitScreen(row, col, false);
+  } catch (e) {
+    console.error(e);
+    toast('Could not create game', 'error');
+  }
+}
+
+async function createPublicGame() {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const name = (document.getElementById('lobby-name').value || '').trim() || getPlayerName('Player');
+  setPlayerName(name);
+  STATE.myName = name;
+  // creator is white (simple default)
+  const col = 'w';
+  try {
+    const row = await createGameRow(true, col, name);
+    enterWaitScreen(row, col, true);
+  } catch (e) {
+    console.error(e);
+    toast('Could not create game', 'error');
+  }
+}
+
+function enterWaitScreen(row, col, isPublic) {
+  STATE.gameId = row.id;
+  STATE.gameCode = row.code;
+  STATE.isPublic = isPublic;
+  STATE.myColor = col;
+  STATE.mode = isPublic ? 'public' : 'friend';
+  document.getElementById('wait-code').textContent = row.code;
+  goto('wait');
+  subscribeForWaiting(row.id);
+}
+
+function subscribeForWaiting(id) {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  if (STATE.waitingChannel) { try { STATE.waitingChannel.unsubscribe(); } catch (e) {} }
+  const ch = sb.channel('chess_wait_' + id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chess_games', filter: 'id=eq.' + id }, (payload) => {
+      const row = payload.new;
+      if (row.status === 'active') {
+        // Opponent joined
+        const oppName = (STATE.myColor === 'w') ? row.black_player_name : row.white_player_name;
+        STATE.opponentName = oppName || 'Opponent';
+        try { ch.unsubscribe(); } catch (e) {}
+        STATE.waitingChannel = null;
+        enterGameFromRow(row);
+      } else if (row.status === 'abandoned') {
+        toast('Game abandoned', 'error');
+        cancelWait();
+      }
+    })
+    .subscribe();
+  STATE.waitingChannel = ch;
+}
+
+function cancelWait() {
+  if (STATE.waitingChannel) { try { STATE.waitingChannel.unsubscribe(); } catch (e) {} STATE.waitingChannel = null; }
+  if (STATE.gameId) {
+    const sb = ensureSupabase();
+    if (sb) sb.from('chess_games').update({ status: 'abandoned' }).eq('id', STATE.gameId).then(() => {});
+  }
+  resetState();
+  goto('home');
+}
+
+function copyCode() {
+  const code = document.getElementById('wait-code').textContent;
+  if (!code || code === '------') return;
+  try {
+    navigator.clipboard.writeText(code);
+    toast('Code copied: ' + code, 'success');
+  } catch (e) { toast('Copy failed', 'error'); }
+}
+
+async function joinByCode() {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const raw = document.getElementById('join-code').value.trim().toUpperCase();
+  if (raw.length !== 6) { toast('Code must be 6 characters', 'error'); return; }
+  const row = await fetchGameByCode(raw);
+  if (!row) { toast('Code not recognized.', 'error'); return; }
+  if (row.status !== 'waiting') { toast('That game is full or already ended.', 'error'); return; }
+  // Determine open seat
+  const openColor = row.white_player_id ? (row.black_player_id ? null : 'b') : 'w';
+  if (!openColor) { toast('That game is full.', 'error'); return; }
+  // self-join check
+  const creatorId = openColor === 'b' ? row.white_player_id : row.black_player_id;
+  if (creatorId === PLAYER_ID) {
+    toast('That\u2019s your own game. Use a different device to test.', 'error');
+    return;
+  }
+  const name = getPlayerName('Player');
+  STATE.myName = name;
+  const update = { status: 'active', last_move_at: new Date().toISOString() };
+  if (openColor === 'w') { update.white_player_id = PLAYER_ID; update.white_player_name = name; }
+  else { update.black_player_id = PLAYER_ID; update.black_player_name = name; }
+  const { data, error } = await sb.from('chess_games').update(update).eq('id', row.id).eq('status', 'waiting').select().single();
+  if (error || !data) {
+    toast('Could not join — game may have been taken.', 'error');
+    return;
+  }
+  STATE.gameId = data.id;
+  STATE.gameCode = data.code;
+  STATE.isPublic = data.is_public;
+  STATE.myColor = openColor;
+  STATE.mode = data.is_public ? 'public' : 'friend';
+  STATE.opponentName = openColor === 'w' ? data.black_player_name : data.white_player_name;
+  enterGameFromRow(data);
+}
+
+async function joinLobbyGame(id) {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const row = await fetchGameById(id);
+  if (!row) { toast('Game no longer available', 'error'); return refreshLobby(); }
+  if (row.status !== 'waiting') { toast('That game is full or already ended.', 'error'); return refreshLobby(); }
+  const openColor = row.white_player_id ? (row.black_player_id ? null : 'b') : 'w';
+  if (!openColor) { toast('That game is full.', 'error'); return refreshLobby(); }
+  const creatorId = openColor === 'b' ? row.white_player_id : row.black_player_id;
+  if (creatorId === PLAYER_ID) { toast('That\u2019s your own game.', 'error'); return; }
+  const name = (document.getElementById('lobby-name').value || '').trim() || getPlayerName('Player');
+  setPlayerName(name);
+  STATE.myName = name;
+  const update = { status: 'active', last_move_at: new Date().toISOString() };
+  if (openColor === 'w') { update.white_player_id = PLAYER_ID; update.white_player_name = name; }
+  else { update.black_player_id = PLAYER_ID; update.black_player_name = name; }
+  const { data, error } = await sb.from('chess_games').update(update).eq('id', row.id).eq('status', 'waiting').select().single();
+  if (error || !data) { toast('Could not join — game may have been taken.', 'error'); return refreshLobby(); }
+  STATE.gameId = data.id;
+  STATE.gameCode = data.code;
+  STATE.isPublic = data.is_public;
+  STATE.myColor = openColor;
+  STATE.mode = 'public';
+  STATE.opponentName = openColor === 'w' ? data.black_player_name : data.white_player_name;
+  // Stop lobby refresh
+  stopLobby();
+  enterGameFromRow(data);
+}
+
+/* ============================================================
+   ENTERING A PVP GAME
+   ============================================================ */
+function enterGameFromRow(row) {
+  STATE.gameId = row.id;
+  STATE.gameCode = row.code;
+  STATE.isPublic = row.is_public;
+  STATE.mode = row.is_public ? 'public' : 'friend';
+  if (!STATE.myColor) {
+    if (row.white_player_id === PLAYER_ID) STATE.myColor = 'w';
+    else if (row.black_player_id === PLAYER_ID) STATE.myColor = 'b';
+    else STATE.myColor = 'w';
+  }
+  STATE.orientation = STATE.myColor;
+  STATE.opponentName = STATE.myColor === 'w' ? row.black_player_name : row.white_player_name;
+  STATE.chess = new Chess();
+  if (row.fen && row.fen !== STATE.chess.fen()) {
+    try { STATE.chess.load(row.fen); } catch (e) { console.error('FEN load failed', e); }
+  }
+  STATE.api = api(STATE.chess);
+  // Reconstruct captured from history — we don't persist PGN replay; captured computes from chess instance's history.
+  // But chess loaded from FEN has no history, so captures may be empty after refresh. That's OK (cosmetic only).
+  localStorage.setItem('dadarcade_chess_active_game', row.id);
+  document.getElementById('copy-code-btn').style.display = STATE.mode === 'friend' ? '' : 'none';
+  document.getElementById('draw-btn').style.display = '';
+  STATE.gameOverShown = false;
+  goto('game');
+  renderBoard();
+  subscribeGame(row.id);
+  // If server says completed/abandoned, show gameover immediately
+  if (row.status === 'completed') showGameOver(row.winner, row.end_reason);
+}
+
+function subscribeGame(id) {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} }
+  const ch = sb.channel('chess_game_' + id);
+  ch.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chess_games', filter: 'id=eq.' + id }, (payload) => {
+    const row = payload.new;
+    onGameRowUpdate(row);
+  });
+  ch.on('broadcast', { event: 'draw_offer' }, (msg) => {
+    if (msg.payload && msg.payload.from_player === PLAYER_ID) return;
+    document.getElementById('draw-text').textContent = (STATE.opponentName || 'Opponent') + ' has offered a draw.';
+    openModal('draw');
+  });
+  ch.on('broadcast', { event: 'draw_declined' }, (msg) => {
+    if (msg.payload && msg.payload.from_player === PLAYER_ID) return;
+    closeModal('draw');
+    toast('Draw declined', 'info');
+  });
+  ch.on('broadcast', { event: 'play_again' }, (msg) => {
+    if (!msg.payload) return;
+    if (msg.payload.from_player === PLAYER_ID) return;
+    STATE.rematchNewCode = msg.payload.code;
+    document.getElementById('rematch-text').textContent = (STATE.opponentName || 'Opponent') + ' wants a rematch — join?';
+    openModal('rematch');
+  });
+  ch.subscribe((status) => {
+    const banner = document.getElementById('reconnect-banner');
+    if (status === 'SUBSCRIBED') {
+      STATE.backoff = 1000;
+      banner.style.display = 'none';
+    } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+      banner.style.display = '';
+      // Exponential backoff resubscribe
+      setTimeout(() => {
+        if (STATE.gameId === id && (!STATE.channel || STATE.channel.state !== 'joined')) {
+          try { ch.unsubscribe(); } catch (e) {}
+          STATE.backoff = Math.min(STATE.backoff * 2, 30000);
+          subscribeGame(id);
+        }
+      }, STATE.backoff);
+    }
+  });
+  STATE.channel = ch;
+}
+
+function onGameRowUpdate(row) {
+  if (row.fen && STATE.api.fen() !== row.fen) {
+    // Reconcile: if opponent made a move, reconstruct by using pgn to preserve history if possible
+    try {
+      const freshen = new Chess();
+      let loaded = false;
+      if (row.pgn) {
+        try { freshen.loadPgn ? freshen.loadPgn(row.pgn) : freshen.load_pgn(row.pgn); loaded = true; } catch (e) {}
+      }
+      if (!loaded) freshen.load(row.fen);
+      STATE.chess = freshen;
+      STATE.api = api(STATE.chess);
+      // last move:
+      const hist = STATE.api.history({ verbose: true });
+      if (hist.length) {
+        const last = hist[hist.length - 1];
+        STATE.lastMove = { from: last.from, to: last.to };
+      }
+      renderBoard();
+    } catch (e) { console.error(e); }
+  }
+  if (row.status === 'completed' && !STATE.gameOverShown) {
+    showGameOver(row.winner, row.end_reason);
+  } else if (row.status === 'abandoned' && !STATE.gameOverShown) {
+    showGameOver('draw', 'timeout');
+  }
+}
+
+async function syncMoveToServer(prevFen) {
+  if (!STATE.gameId) return;
+  const now = new Date().toISOString();
+  const fields = {
+    fen: STATE.api.fen(),
+    pgn: STATE.api.pgn(),
+    last_move_at: now,
+    updated_at: now,
+  };
+  if (STATE.api.isGameOver()) {
+    const { winner, reason } = computeGameOver();
+    fields.status = 'completed';
+    fields.winner = winner;
+    fields.end_reason = reason;
+  }
+  const { error } = await updateGameRow(STATE.gameId, fields);
+  if (error) {
+    console.error('move sync failed', error);
+    // rollback
+    try { STATE.chess.load(prevFen); STATE.api = api(STATE.chess); STATE.lastMove = null; renderBoard(); } catch (e) {}
+    toast('Move failed — try again', 'error');
+    return;
+  }
+  if (fields.status === 'completed') {
+    showGameOver(fields.winner, fields.end_reason);
+  }
+}
+
+/* ============================================================
+   RESIGN / DRAW
+   ============================================================ */
+async function resign() {
+  const yes = await confirmModal('Resign?', 'Are you sure you want to resign this game?');
+  if (!yes) return;
+  if (STATE.mode === 'cpu') {
+    showGameOver(STATE.myColor === 'w' ? 'black' : 'white', 'resignation');
+    return;
+  }
+  if (!STATE.gameId) return;
+  const winner = STATE.myColor === 'w' ? 'black' : 'white';
+  const now = new Date().toISOString();
+  const { error } = await updateGameRow(STATE.gameId, {
+    status: 'completed',
+    winner,
+    end_reason: 'resignation',
+    updated_at: now,
+  });
+  if (!error) showGameOver(winner, 'resignation');
+  else toast('Could not resign', 'error');
+}
+
+let drawOfferedByMe = false;
+async function offerDraw() {
+  if (STATE.mode === 'cpu') { toast('No draws vs computer', 'info'); return; }
+  if (!STATE.channel) return;
+  drawOfferedByMe = true;
+  await STATE.channel.send({ type: 'broadcast', event: 'draw_offer', payload: { from_player: PLAYER_ID } });
+  toast('Draw offer sent', 'info');
+}
+
+async function respondDraw(accept) {
+  closeModal('draw');
+  if (accept) {
+    if (!STATE.gameId) return;
+    const now = new Date().toISOString();
+    const { error } = await updateGameRow(STATE.gameId, {
+      status: 'completed',
+      winner: 'draw',
+      end_reason: 'draw_agreement',
+      updated_at: now,
+    });
+    if (!error) showGameOver('draw', 'draw_agreement');
+  } else {
+    if (STATE.channel) {
+      await STATE.channel.send({ type: 'broadcast', event: 'draw_declined', payload: { from_player: PLAYER_ID } });
+    }
+  }
+}
+
+function confirmModal(title, text) {
+  return new Promise(resolve => {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-text').textContent = text;
+    const yes = document.getElementById('confirm-yes');
+    const no = document.getElementById('confirm-no');
+    const off = () => { yes.onclick = null; no.onclick = null; closeModal('confirm'); };
+    yes.onclick = () => { off(); resolve(true); };
+    no.onclick = () => { off(); resolve(false); };
+    openModal('confirm');
+  });
+}
+
+function copyCurrentCode() {
+  if (!STATE.gameCode) return;
+  try { navigator.clipboard.writeText(STATE.gameCode); toast('Code: ' + STATE.gameCode, 'success'); } catch (e) {}
+}
+
+/* ============================================================
+   PLAY AGAIN / REMATCH
+   ============================================================ */
+async function playAgain() {
+  closeModal('rematch');
+  if (STATE.mode === 'cpu') {
+    startCpuGame();
+    return;
+  }
+  if (!STATE.gameId) { goto('home'); return; }
+  // Rematch: create new game with opposite colors.
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const myNewColor = STATE.myColor === 'w' ? 'b' : 'w';
+  try {
+    const row = await createGameRow(STATE.isPublic, myNewColor, STATE.myName || getPlayerName('Player'));
+    // Broadcast invite on old channel
+    if (STATE.channel) {
+      try { await STATE.channel.send({ type: 'broadcast', event: 'play_again', payload: { code: row.code, from_player: PLAYER_ID } }); } catch (e) {}
+    }
+    // Unsubscribe old channel
+    if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} STATE.channel = null; }
+    enterWaitScreen(row, myNewColor, STATE.isPublic);
+  } catch (e) {
+    console.error(e);
+    toast('Could not create rematch', 'error');
+  }
+}
+
+async function acceptRematch() {
+  closeModal('rematch');
+  if (!STATE.rematchNewCode) return;
+  const code = STATE.rematchNewCode;
+  STATE.rematchNewCode = null;
+  // Reset state then join by code
+  resetState();
+  document.getElementById('join-code').value = code;
+  await joinByCode();
+}
+
+/* ============================================================
+   LEAVE / RESUME
+   ============================================================ */
+function leaveGame() {
+  if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} STATE.channel = null; }
+  resetState();
+  goto('home');
+}
+
+async function attemptResume() {
+  const id = localStorage.getItem('dadarcade_chess_active_game');
+  if (!id) return false;
+  const sb = ensureSupabase();
+  if (!sb) { localStorage.removeItem('dadarcade_chess_active_game'); return false; }
+  const row = await fetchGameById(id);
+  if (!row) { localStorage.removeItem('dadarcade_chess_active_game'); return false; }
+  if (row.status === 'completed' || row.status === 'abandoned') {
+    localStorage.removeItem('dadarcade_chess_active_game'); return false;
+  }
+  // Determine local color from row
+  let col = null;
+  if (row.white_player_id === PLAYER_ID) col = 'w';
+  else if (row.black_player_id === PLAYER_ID) col = 'b';
+  if (!col) { localStorage.removeItem('dadarcade_chess_active_game'); return false; }
+  STATE.myColor = col;
+  STATE.isPublic = row.is_public;
+  STATE.mode = row.is_public ? 'public' : 'friend';
+  if (row.status === 'waiting') {
+    STATE.gameId = row.id;
+    STATE.gameCode = row.code;
+    document.getElementById('wait-code').textContent = row.code;
+    goto('wait');
+    subscribeForWaiting(row.id);
+  } else {
+    enterGameFromRow(row);
+  }
+  return true;
+}
+
+/* ============================================================
+   PUBLIC LOBBY
+   ============================================================ */
+async function refreshLobby() {
+  const sb = ensureSupabase();
+  if (!sb) return;
+  const list = document.getElementById('lobby-list');
+  const { data, error } = await sb.from('chess_games')
+    .select('*')
+    .eq('status', 'waiting')
+    .eq('is_public', true)
+    .order('updated_at', { ascending: false })
+    .limit(50);
+  if (error) {
+    list.innerHTML = '<div class="lobby-empty">Could not load lobby</div>';
+    return;
+  }
+  // Filter out games where the creator is me (can't self-join) and older than 30min (defensive)
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  const rows = (data || []).filter(r => {
+    const creatorId = r.white_player_id || r.black_player_id;
+    if (creatorId === PLAYER_ID) return false;
+    if (new Date(r.created_at).getTime() < cutoff) return false;
+    return true;
+  });
+  if (!rows.length) {
+    list.innerHTML = '<div class="lobby-empty">No open games — create one above!</div>';
+    return;
+  }
+  list.innerHTML = '';
+  rows.forEach(r => {
+    const creatorName = r.white_player_name || r.black_player_name || 'Player';
+    const themeName = (THEMES.find(t => t.id === r.theme) || THEMES[0]).name;
+    const item = document.createElement('div');
+    item.className = 'lobby-item';
+    const info = document.createElement('div');
+    info.className = 'lobby-info';
+    const nm = document.createElement('div');
+    nm.className = 'lobby-name';
+    nm.textContent = creatorName;
+    const meta = document.createElement('div');
+    meta.className = 'lobby-meta';
+    meta.textContent = themeName + ' · ' + timeAgo(r.created_at);
+    info.appendChild(nm); info.appendChild(meta);
+    const btn = document.createElement('button');
+    btn.className = 'lobby-join';
+    btn.textContent = 'Join';
+    btn.onclick = () => joinLobbyGame(r.id);
+    item.appendChild(info);
+    item.appendChild(btn);
+    list.appendChild(item);
+  });
+}
+
+function timeAgo(iso) {
+  const then = new Date(iso).getTime();
+  const diff = Date.now() - then;
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  return h + 'h ago';
+}
+
+function startLobby() {
+  refreshLobby();
+  if (STATE.lobbyRefreshTimer) clearInterval(STATE.lobbyRefreshTimer);
+  STATE.lobbyRefreshTimer = setInterval(refreshLobby, 10000);
+  const sb = ensureSupabase();
+  if (sb) {
+    if (STATE.lobbyChannel) { try { STATE.lobbyChannel.unsubscribe(); } catch (e) {} }
+    STATE.lobbyChannel = sb.channel('chess_lobby')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chess_games' }, () => refreshLobby())
+      .subscribe();
+  }
+}
+function stopLobby() {
+  if (STATE.lobbyRefreshTimer) { clearInterval(STATE.lobbyRefreshTimer); STATE.lobbyRefreshTimer = null; }
+  if (STATE.lobbyChannel) { try { STATE.lobbyChannel.unsubscribe(); } catch (e) {} STATE.lobbyChannel = null; }
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  applyTheme();
+  renderBoard();
+  wireSegment('cpu-diff');
+  wireSegment('cpu-color');
+  wireSegment('friend-color');
+  // Pre-fill default names
+  document.getElementById('friend-name').value = getPlayerName('Player');
+  document.getElementById('lobby-name').value = getPlayerName('Player');
+  // Uppercase join code as user types
+  document.getElementById('join-code').addEventListener('input', (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  });
+  // Hook goto transitions
+  const originalGoto = window.goto;
+  // Attempt resume
+  attemptResume().catch(e => console.error(e));
+}
+
+// wrap goto to handle lobby lifecycle
+const _goto = goto;
+window.goto = function (name) {
+  const prev = document.querySelector('.screen.active');
+  const prevName = prev ? prev.id.replace('screen-', '') : null;
+  if (prevName === 'lobby' && name !== 'lobby') stopLobby();
+  _goto(name);
+  if (name === 'lobby') startLobby();
+  if (name === 'home') { document.getElementById('subtitle').style.display = ''; }
+};
+
+// Boot
+window.addEventListener('DOMContentLoaded', init);
+
+// Cleanup on page hide
+window.addEventListener('beforeunload', () => {
+  stopLobby();
+  if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} }
+  if (STATE.waitingChannel) { try { STATE.waitingChannel.unsubscribe(); } catch (e) {} }
+});
+</script>
+</body>
+</html>
