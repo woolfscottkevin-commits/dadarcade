@@ -328,6 +328,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
   </div>
 </div>
 
+<!-- DAILY PUZZLE SCREEN -->
+<div id="screen-puzzle" class="screen">
+  <div class="card-box">
+    <h3 style="color:#0ff">🧩 DAILY PUZZLE</h3>
+    <div id="puzzle-meta" style="color:#aaa;font-size:0.85rem">—</div>
+  </div>
+  <div class="variant-label" id="puzzle-prompt" style="color:#0ff">White to play</div>
+  <div id="puzzle-board-wrap" style="width:100%;max-width:min(95vw,500px);aspect-ratio:1/1;position:relative">
+    <div id="puzzle-board" style="width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border:3px solid #333;border-radius:6px;overflow:hidden"></div>
+  </div>
+  <div id="puzzle-status" style="text-align:center;color:#aaa;font-size:0.95rem;min-height:1.4em"></div>
+  <div class="btn-row">
+    <button class="menu-btn btn-grey" onclick="resetDailyPuzzle()" id="puzzle-reset-btn" style="font-size:0.85rem;padding:0.6rem">↺ Reset</button>
+    <button class="menu-btn btn-grey" onclick="goto('home')" style="font-size:0.85rem;padding:0.6rem">← Back</button>
+  </div>
+</div>
+
 <!-- ACHIEVEMENTS SCREEN -->
 <div id="screen-achievements" class="screen">
   <div class="card-box">
@@ -863,6 +880,366 @@ const STATE = {
 
 const KOTH_HILL = new Set(['d4','e4','d5','e5']);
 const VARIANT_LABELS = { standard: 'STANDARD', koth: 'KING OF THE HILL', three_check: 'THREE-CHECK' };
+
+/* ---------- Daily puzzles ---------- */
+// Mix of hand-curated compositions PLUS runtime-generated K+R/K+Q vs K mate-in-1 positions.
+// EVERY puzzle is verified with chess.js before inclusion (see buildVerifiedPuzzleSet below).
+const PUZZLE_HANDCRAFTED = [
+  // Back-rank mates (mate in 1)
+  { fen: '6k1/5ppp/8/8/8/8/8/R6K w - - 0 1', solution: ['Ra8#'], description: 'Back-rank mate.' },
+  { fen: '3R2k1/5ppp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Rd8#'], description: 'Back-rank mate.' },
+  { fen: '1Q4k1/5ppp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qb8#'], description: 'Back-rank mate.' },
+  { fen: '6k1/5pp1/7p/8/8/8/8/R6K w - - 0 1', solution: ['Ra8#'], description: 'Back-rank mate with luft.' },
+  // Queen mates on 7th/8th
+  { fen: '6k1/5Qpp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qe8#'], description: 'Queen mate on the back rank.' },
+  { fen: '6k1/6pp/5Q2/8/8/8/8/6K1 w - - 0 1', solution: ['Qf8#'], description: 'Queen invasion mate.' },
+  { fen: '7k/5Qpp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qf8#'], description: 'Corner mate.' },
+  { fen: '6k1/Q5pp/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qa8#'], description: 'Queen back-rank mate.' },
+  // King + queen box mate
+  { fen: '7k/5K2/6Q1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
+  { fen: '7k/8/5KQ1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
+  { fen: '7k/6K1/5Q2/8/8/8/8/8 w - - 0 1', solution: ['Qf8#'], description: 'King and queen mate.' },
+  // Smothered-style
+  { fen: '5rk1/6pp/8/6N1/8/8/8/6K1 w - - 0 1', solution: ['Nf7#'], description: 'Smothered-style mate.' },
+  // Rook + king
+  { fen: '7k/6R1/5K2/8/8/8/8/8 w - - 0 1', solution: ['Rh7#'], description: 'Rook mate.' },
+  { fen: '7k/8/5K2/8/8/8/8/7R w - - 0 1', solution: ['Rh8#'], description: 'Rook mate on back rank.' },
+  // Two rooks
+  { fen: '7k/7R/8/8/8/8/R7/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Two-rook ladder mate.' },
+  { fen: 'R6k/7R/8/8/8/8/8/6K1 w - - 0 1', solution: ['Rh8#'], description: 'Two-rook corner mate.' },
+  // Queen + bishop battery
+  { fen: '6k1/5p1p/6p1/8/2B5/8/6Q1/6K1 w - - 0 1', solution: ['Qb7#'], description: 'Queen + bishop battery.' },
+  // Pawn-promotion mate? (keep solution as promotion move)
+  { fen: '8/4P1k1/5Q2/8/8/8/8/6K1 w - - 0 1', solution: ['Qg7#'], description: 'Queen close mate.' },
+  { fen: '8/5Qpk/8/8/8/8/8/6K1 w - - 0 1', solution: ['Qg8#'], description: 'Corner trap.' },
+  { fen: '6k1/4Q3/5K2/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'Queen + king mate.' },
+  { fen: '5k2/4Q3/5K2/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'King-and-queen mate.' },
+  { fen: '4k3/4Q3/4K3/8/8/8/8/8 w - - 0 1', solution: ['Qe8#'], description: 'Centered K+Q mate.' },
+  { fen: '3k4/3Q4/3K4/8/8/8/8/8 w - - 0 1', solution: ['Qd8#'], description: 'K+Q mate on d-file.' },
+  { fen: '2k5/2Q5/2K5/8/8/8/8/8 w - - 0 1', solution: ['Qc8#'], description: 'K+Q mate on c-file.' },
+  // Ladder with rooks
+  { fen: '7k/R7/8/1R6/8/8/8/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Rook ladder mate.' },
+  { fen: '7k/1R6/R7/8/8/8/8/6K1 w - - 0 1', solution: ['Ra8#'], description: 'Rook ladder mate.' },
+  // Bishop + rook
+  { fen: '7k/6pp/8/8/8/5B2/8/6RK w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop battery.' },
+  { fen: '5k2/8/5K2/5B2/8/8/8/6R1 w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop mate.' },
+  // Queen close support
+  { fen: '6k1/6Q1/6K1/8/8/8/8/8 w - - 0 1', solution: ['Qg8#'], description: 'King-queen close mate.' },
+  { fen: '8/6k1/6Q1/5K2/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'King and queen mate.' },
+  // Mate-in-2 puzzles (solution includes black's reply + white's final mate)
+  { fen: '6k1/6pp/8/8/8/8/5PPP/R6K w - - 0 1', solution: ['Ra8+','Kxa8'], description: 'This one is not a valid mate — fallback filter will drop.', difficulty: 2 },
+  // More mate-in-1 attempts with pawn shields
+  { fen: '5rk1/5ppp/8/8/8/8/5PPP/6KR w - - 0 1', solution: ['Rh8+','Kxh8'], difficulty: 2, description: 'Rook trade.' },
+  // Anastasia's mate
+  { fen: '4r3/4kppp/8/8/8/8/3N4/3R2K1 w - - 0 1', solution: ['Rd7+','Ke8'], difficulty: 2, description: 'Anastasia\u2019s mate setup.' },
+  // Boden's mate pattern
+  { fen: '2kr3r/pppb1ppp/2n5/3p4/3P4/2N1B3/PPP2PPP/R2QK2R w KQ - 0 1', solution: ['Bxa7'], description: 'Attacking the king.' },
+  // Smothered mates (philidor)
+  { fen: '6rk/6pp/8/8/8/8/6PP/5N1K w - - 0 1', solution: ['Nf2'], description: 'Not mate — placeholder' },
+  // Some simple positions I\u2019m confident about:
+  { fen: '8/8/8/8/8/5K1k/8/5R2 w - - 0 1', solution: ['Rh1#'], description: 'Rook-and-king mate.' },
+  { fen: '8/8/8/8/8/5K1k/5R2/8 w - - 0 1', solution: ['Rh2#'], description: 'Rook-and-king mate.' },
+  { fen: '8/8/8/8/8/5KRk/8/8 w - - 0 1', solution: ['Rg8'], description: 'Not mate (filter)' },
+  { fen: '7k/6R1/8/8/8/8/8/7K w - - 0 1', solution: ['Rh7'], description: 'Not mate (filter)' },
+  { fen: '5K1k/6R1/8/8/8/8/8/8 w - - 0 1', solution: ['Rg8#'], description: 'Two-piece mate.' },
+  { fen: '5k2/5K2/5R2/8/8/8/8/8 w - - 0 1', solution: ['Rf8#'], description: 'Rook mate.' },
+  { fen: '4k3/4K3/4R3/8/8/8/8/8 w - - 0 1', solution: ['Re8#'], description: 'Rook mate.' },
+  { fen: '3k4/3K4/3R4/8/8/8/8/8 w - - 0 1', solution: ['Rd8#'], description: 'Rook mate.' },
+  { fen: '2k5/2K5/2R5/8/8/8/8/8 w - - 0 1', solution: ['Rc8#'], description: 'Rook mate.' },
+  { fen: '1k6/1K6/1R6/8/8/8/8/8 w - - 0 1', solution: ['Rb8#'], description: 'Rook mate.' },
+  { fen: 'k7/K7/R7/8/8/8/8/8 w - - 0 1', solution: ['Ra8#'], description: 'Rook mate on a-file.' },
+  // Q+K corner mates
+  { fen: '6k1/5Q2/6K1/8/8/8/8/8 w - - 0 1', solution: ['Qg7#'], description: 'K+Q mate.' },
+  { fen: '5k2/4Q3/4K3/8/8/8/8/8 w - - 0 1', solution: ['Qe7#'], description: 'K+Q mate.' },
+  { fen: '4k3/3Q4/3K4/8/8/8/8/8 w - - 0 1', solution: ['Qd7#'], description: 'K+Q mate.' },
+  { fen: '3k4/2Q5/2K5/8/8/8/8/8 w - - 0 1', solution: ['Qc7#'], description: 'K+Q mate.' },
+  { fen: '2k5/1Q6/1K6/8/8/8/8/8 w - - 0 1', solution: ['Qb7#'], description: 'K+Q mate.' },
+  { fen: '1k6/Q7/K7/8/8/8/8/8 w - - 0 1', solution: ['Qa7#'], description: 'K+Q mate.' },
+  { fen: 'k7/1Q6/K7/8/8/8/8/8 w - - 0 1', solution: ['Qb7#'], description: 'K+Q mate on b-file.' },
+  { fen: 'k7/2Q5/K7/8/8/8/8/8 w - - 0 1', solution: ['Qc8#'], description: 'K+Q diagonal mate.' },
+  // Queen+king on same file
+  { fen: '8/8/8/8/7k/8/6K1/7Q w - - 0 1', solution: ['Qh3#'], description: 'Queen mate with king support.' },
+  { fen: '8/8/8/8/k7/8/1K6/Q7 w - - 0 1', solution: ['Qa3#'], description: 'Queen mate with king support.' },
+  // Rook supported by king
+  { fen: '8/8/8/8/7k/8/6K1/7R w - - 0 1', solution: ['Rh3'], description: 'Not mate (filter).' },
+  // Straight-forward back-rank with b+r
+  { fen: '6k1/6p1/6Bp/8/8/8/8/6RK w - - 0 1', solution: ['Rg8#'], description: 'Rook + bishop mate.' },
+  { fen: '5rk1/6p1/6Bp/8/8/8/8/5R1K w - - 0 1', solution: ['Rxf8+','Kxf8'], difficulty: 2, description: 'Exchange then mate.' },
+  // Legal queen sacrifice-style mate in 2
+  { fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1', solution: ['Qxf7#'], description: 'Scholar\u2019s mate.' },
+];
+
+function generateKpieceVsKMates(maxCount) {
+  // Fast runtime generator for K+R and K+Q vs K mate-in-1 positions.
+  // Black king constrained to corner/edge squares where K+piece mates concentrate.
+  // White king within 2 squares of black king (supported mates). Piece on any square.
+  // Caps at maxCount for O(few-thousand) work.
+  const files = 'abcdefgh';
+  const allSquares = [];
+  for (let f = 0; f < 8; f++) for (let r = 0; r < 8; r++) allSquares.push({ sq: files[f] + (r + 1), f, r });
+  const buildFen = (p) => {
+    const rows = [];
+    for (let r = 7; r >= 0; r--) {
+      let row = ''; let empty = 0;
+      for (let f = 0; f < 8; f++) {
+        const sq = files[f] + (r + 1);
+        if (p[sq]) { if (empty) { row += empty; empty = 0; } row += p[sq]; }
+        else empty++;
+      }
+      if (empty) row += empty;
+      rows.push(row);
+    }
+    return rows.join('/') + ' w - - 0 1';
+  };
+  // Black king set: corners + edge midpoints
+  const edgeBk = allSquares.filter(s => s.f === 0 || s.f === 7 || s.r === 0 || s.r === 7);
+  const seen = new Set();
+  const out = [];
+  const seenFamily = new Map();
+  // Work queue: for each bk, try each wk within 2 squares (but not adjacent), then each piece square within 4 squares of bk
+  for (const bk of edgeBk) {
+    for (const wk of allSquares) {
+      if (wk.sq === bk.sq) continue;
+      const dx = Math.abs(wk.f - bk.f), dy = Math.abs(wk.r - bk.r);
+      if (dx <= 1 && dy <= 1) continue;
+      if (Math.max(dx, dy) > 2) continue;
+      for (const wp of allSquares) {
+        if (wp.sq === bk.sq || wp.sq === wk.sq) continue;
+        const px = Math.abs(wp.f - bk.f), py = Math.abs(wp.r - bk.r);
+        if (Math.max(px, py) > 4) continue;
+        for (const kind of ['R', 'Q']) {
+          const p = {}; p[bk.sq] = 'k'; p[wk.sq] = 'K'; p[wp.sq] = kind;
+          const fen = buildFen(p);
+          if (seen.has(fen)) continue;
+          const c = new Chess();
+          if (!c.load(fen)) continue;
+          if (c.in_check() || c.game_over()) continue;
+          const moves = c.moves({ verbose: true });
+          let mate = null;
+          for (const m of moves) {
+            c.move(m);
+            if (c.in_checkmate()) { mate = m.san; c.undo(); break; }
+            c.undo();
+          }
+          if (!mate) continue;
+          const familyKey = kind + bk.sq;
+          if ((seenFamily.get(familyKey) || 0) >= 2) continue;
+          seenFamily.set(familyKey, (seenFamily.get(familyKey) || 0) + 1);
+          seen.add(fen);
+          out.push({ fen, solution: [mate], description: (kind === 'R' ? 'Rook + king mate-in-1.' : 'Queen + king mate-in-1.') });
+          if (out.length >= maxCount) return out;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+let _puzzlesValidated = null;
+const PUZZLE_CACHE_KEY = 'dadarcade_chess_puzzles_v1';
+function validatePuzzles() {
+  if (_puzzlesValidated) return _puzzlesValidated;
+  // Try cache first
+  try {
+    const cached = JSON.parse(localStorage.getItem(PUZZLE_CACHE_KEY) || 'null');
+    if (cached && Array.isArray(cached) && cached.length >= 50) {
+      _puzzlesValidated = cached;
+      return cached;
+    }
+  } catch (e) {}
+  // Generate + verify
+  const out = [];
+  const all = PUZZLE_HANDCRAFTED.concat(generateKpieceVsKMates(80));
+  for (const p of all) {
+    try {
+      const c = new Chess();
+      if (!c.load(p.fen)) continue;
+      let ok = true;
+      for (const mv of p.solution) {
+        if (!c.move(mv)) { ok = false; break; }
+      }
+      if (!ok) continue;
+      if (!c.in_checkmate()) continue;
+      out.push(Object.assign({}, p, { id: 'p' + String(out.length + 1).padStart(3, '0') }));
+      if (out.length >= 50) break;
+    } catch (e) { /* skip */ }
+  }
+  _puzzlesValidated = out;
+  try { localStorage.setItem(PUZZLE_CACHE_KEY, JSON.stringify(out)); } catch (e) {}
+  return out;
+}
+
+function getTodayUTC() {
+  const d = new Date();
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function getTodayPuzzle() {
+  const puzzles = validatePuzzles();
+  if (!puzzles.length) return null;
+  const daysSinceEpoch = Math.floor(Date.now() / 86400000);
+  return puzzles[daysSinceEpoch % puzzles.length];
+}
+function loadPuzzleStreak() {
+  try { return JSON.parse(localStorage.getItem('dadarcade_chess_puzzle_streak') || 'null') || { lastSolvedDate: null, currentStreak: 0, longestStreak: 0, totalSolved: 0, solvedIds: [] }; }
+  catch (e) { return { lastSolvedDate: null, currentStreak: 0, longestStreak: 0, totalSolved: 0, solvedIds: [] }; }
+}
+function savePuzzleStreak(s) { try { localStorage.setItem('dadarcade_chess_puzzle_streak', JSON.stringify(s)); } catch (e) {} }
+
+function yesterdayUTC(todayStr) {
+  const [y, m, d] = todayStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0') + '-' + String(dt.getUTCDate()).padStart(2, '0');
+}
+
+function markPuzzleSolved(puzzleId) {
+  const today = getTodayUTC();
+  const s = loadPuzzleStreak();
+  if (s.lastSolvedDate === today) return s; // already counted
+  if (s.lastSolvedDate === yesterdayUTC(today)) s.currentStreak = (s.currentStreak || 0) + 1;
+  else s.currentStreak = 1;
+  s.lastSolvedDate = today;
+  s.longestStreak = Math.max(s.longestStreak || 0, s.currentStreak);
+  s.totalSolved = (s.totalSolved || 0) + 1;
+  if (!s.solvedIds) s.solvedIds = [];
+  if (!s.solvedIds.includes(puzzleId)) s.solvedIds.push(puzzleId);
+  savePuzzleStreak(s);
+  updateStats(st => { st.puzzlesSolved = (st.puzzlesSolved || 0) + 1; st.maxCurrentStreak = Math.max(st.maxCurrentStreak || 0, s.currentStreak); st.longestEverStreak = Math.max(st.longestEverStreak || 0, s.longestStreak); });
+  grantAchievement('puzzle_rookie');
+  if (s.currentStreak >= 7) grantAchievement('puzzle_streak');
+  if (s.totalSolved >= 30) grantAchievement('puzzle_master');
+  return s;
+}
+
+/* Puzzle gameplay state (separate from STATE to avoid crossing wires with main modes) */
+const PUZZLE = { chess: null, api: null, solution: [], step: 0, orientation: 'w', today: null, solvedToday: false };
+
+function startDailyPuzzle() {
+  const puzzle = getTodayPuzzle();
+  if (!puzzle) { toast('No puzzles available', 'error'); return; }
+  PUZZLE.puzzle = puzzle;
+  PUZZLE.chess = new Chess(puzzle.fen);
+  PUZZLE.api = api(PUZZLE.chess);
+  PUZZLE.solution = puzzle.solution.slice();
+  PUZZLE.step = 0;
+  PUZZLE.orientation = PUZZLE.api.turn();
+  const s = loadPuzzleStreak();
+  PUZZLE.solvedToday = s.lastSolvedDate === getTodayUTC();
+  document.getElementById('puzzle-meta').textContent = (PUZZLE.solvedToday ? '✓ Solved today · ' : '→ Play · ') +
+    'Streak ' + (s.currentStreak || 0) + ' · Total ' + (s.totalSolved || 0);
+  document.getElementById('puzzle-prompt').textContent = (PUZZLE.api.turn() === 'w' ? 'White' : 'Black') + ' to play — ' + (puzzle.description || '');
+  document.getElementById('puzzle-status').textContent = PUZZLE.solvedToday ? 'You already solved today — practice freely (streak won\u2019t change).' : '';
+  goto('puzzle');
+  renderPuzzleBoard();
+}
+function resetDailyPuzzle() {
+  if (!PUZZLE.puzzle) return;
+  PUZZLE.chess = new Chess(PUZZLE.puzzle.fen);
+  PUZZLE.api = api(PUZZLE.chess);
+  PUZZLE.step = 0;
+  document.getElementById('puzzle-status').textContent = '';
+  renderPuzzleBoard();
+}
+
+let _puzzleSel = null;
+function renderPuzzleBoard() {
+  const board = document.getElementById('puzzle-board');
+  if (!board || !PUZZLE.chess) return;
+  board.innerHTML = '';
+  const rows = PUZZLE.api.board();
+  const flip = PUZZLE.orientation === 'b';
+  const legalFromSel = _puzzleSel ? PUZZLE.api.moves({ square: _puzzleSel, verbose: true }).map(m => m.to) : [];
+  for (let dispRow = 0; dispRow < 8; dispRow++) {
+    for (let dispCol = 0; dispCol < 8; dispCol++) {
+      const arrRow = flip ? 7 - dispRow : dispRow;
+      const arrCol = flip ? 7 - dispCol : dispCol;
+      const piece = rows[arrRow][arrCol];
+      const file = arrCol;
+      const rank = 7 - arrRow;
+      const name = 'abcdefgh'[file] + (rank + 1);
+      const sq = document.createElement('div');
+      const isLight = (arrRow + arrCol) % 2 === 0;
+      sq.className = 'sq ' + (isLight ? 'sq-light' : 'sq-dark');
+      sq.dataset.sq = name;
+      if (_puzzleSel === name) sq.classList.add('sel');
+      if (legalFromSel.includes(name)) sq.classList.add(piece ? 'legal-capture' : 'legal');
+      if (piece) {
+        const p = document.createElement('div');
+        p.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
+        p.textContent = PIECE_GLYPH[piece.color][piece.type];
+        sq.appendChild(p);
+      }
+      sq.addEventListener('click', onPuzzleSquareClick);
+      board.appendChild(sq);
+    }
+  }
+}
+
+function onPuzzleSquareClick(e) {
+  if (!PUZZLE.chess) return;
+  if (PUZZLE.api.isGameOver()) return;
+  // Only the solver's side (current turn) can move
+  const sq = e.currentTarget.dataset.sq;
+  const piece = PUZZLE.api.get(sq);
+  const turn = PUZZLE.api.turn();
+  if (_puzzleSel) {
+    if (_puzzleSel === sq) { _puzzleSel = null; renderPuzzleBoard(); return; }
+    const legal = PUZZLE.api.moves({ square: _puzzleSel, verbose: true });
+    const match = legal.find(m => m.to === sq);
+    if (match) { attemptPuzzleMove(_puzzleSel, sq); return; }
+    if (piece && piece.color === turn) { _puzzleSel = sq; renderPuzzleBoard(); return; }
+    _puzzleSel = null; renderPuzzleBoard(); return;
+  }
+  if (piece && piece.color === turn) { _puzzleSel = sq; renderPuzzleBoard(); }
+}
+function attemptPuzzleMove(from, to) {
+  const expected = PUZZLE.solution[PUZZLE.step];
+  // Try the move first to get SAN & handle promotion
+  const piece = PUZZLE.api.get(from);
+  const promoteRank = piece && piece.color === 'w' ? '8' : '1';
+  const needsPromo = piece && piece.type === 'p' && to[1] === promoteRank;
+  const mvObj = needsPromo ? { from, to, promotion: 'q' } : { from, to };
+  const result = PUZZLE.chess.move(mvObj);
+  if (!result) return;
+  const actualSan = result.san;
+  // Normalize for comparison (strip annotations)
+  const eq = actualSan === expected || stripSan(actualSan) === stripSan(expected);
+  if (!eq) {
+    // Wrong move — undo and hint
+    PUZZLE.chess.undo();
+    _puzzleSel = null;
+    renderPuzzleBoard();
+    document.getElementById('puzzle-status').textContent = 'Not quite, try again.';
+    return;
+  }
+  _puzzleSel = null;
+  PUZZLE.step++;
+  renderPuzzleBoard();
+  // If more moves, play opponent's reply
+  if (PUZZLE.step < PUZZLE.solution.length) {
+    setTimeout(() => {
+      const reply = PUZZLE.solution[PUZZLE.step];
+      PUZZLE.chess.move(reply);
+      PUZZLE.step++;
+      renderPuzzleBoard();
+      document.getElementById('puzzle-status').textContent = 'Your move!';
+    }, 500);
+  } else {
+    // Solved
+    const wasSolvedToday = PUZZLE.solvedToday;
+    if (!wasSolvedToday) {
+      const s = markPuzzleSolved(PUZZLE.puzzle.id);
+      PUZZLE.solvedToday = true;
+      document.getElementById('puzzle-status').innerHTML = '<span style="color:#0f0">✓ Solved!</span> Streak: <strong>' + s.currentStreak + '</strong> · Total: <strong>' + s.totalSolved + '</strong>';
+    } else {
+      document.getElementById('puzzle-status').innerHTML = '<span style="color:#0f0">✓ Solved (practice)</span> — streak unchanged.';
+    }
+  }
+}
+function stripSan(s) { return (s || '').replace(/[+#!?]/g, ''); }
 
 /* ---------- Achievements & stats ---------- */
 const ACHIEVEMENTS = [
