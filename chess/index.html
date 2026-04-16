@@ -989,6 +989,139 @@ function maybeLoadSharedGame() {
 }
 
 const REPLAY = { chess: null, api: null, moves: [], step: 0, pgn: '' };
+
+/* ---------- Blunder review ---------- */
+const REVIEW = { chess: null, api: null, moves: [], evals: [], step: 0, blunders: new Set() };
+async function openBlunderReview() {
+  // Use STATE's chess instance (the just-completed game)
+  if (!STATE.api) { toast('No game to review', 'error'); return; }
+  const moves = STATE.api.history({ verbose: true });
+  if (moves.length < 10) { // fewer than 5 full moves (10 plies)
+    toast('Game too short to review', 'info');
+    return;
+  }
+  REVIEW.moves = moves;
+  REVIEW.step = 0;
+  REVIEW.blunders = new Set();
+  REVIEW.evals = [];
+  goto('review');
+  // Cache evals for each position (position 0 = start, position N = after move N)
+  const total = moves.length + 1;
+  document.getElementById('review-progress').textContent = 'Analyzing… 0/' + total;
+  const c = new Chess();
+  const evals = [evaluate(c) / 100]; // start position eval in pawns
+  for (let i = 0; i < moves.length; i++) {
+    c.move(moves[i]);
+    // Depth-2 minimax for a balanced position eval
+    const counter = { counter: 0 };
+    const maxWhite = c.turn() === 'w';
+    let best = maxWhite ? -Infinity : Infinity;
+    const mvs = c.moves({ verbose: true });
+    for (let j = 0; j < mvs.length; j++) {
+      c.move(mvs[j]);
+      const v = await minimax(c, 1, -Infinity, Infinity, !maxWhite, counter);
+      c.undo();
+      if (maxWhite) { if (v > best) best = v; } else { if (v < best) best = v; }
+    }
+    if (best === Infinity || best === -Infinity) best = evaluate(c);
+    evals.push(best / 100);
+    document.getElementById('review-progress').textContent = 'Analyzing… ' + (i + 2) + '/' + total;
+    await sleep(0);
+  }
+  REVIEW.evals = evals;
+  // Compute blunders: a move is a blunder if eval swung > 2 pawns against mover
+  for (let i = 0; i < moves.length; i++) {
+    const before = evals[i];
+    const after = evals[i + 1];
+    const moverWhite = moves[i].color === 'w';
+    const delta = after - before;
+    // For white: positive delta is good. Blunder if delta < -2. For black: positive delta is bad. Blunder if delta > 2.
+    if (moverWhite && delta < -2) REVIEW.blunders.add(i);
+    else if (!moverWhite && delta > 2) REVIEW.blunders.add(i);
+  }
+  document.getElementById('review-progress').textContent = 'Analysis complete.';
+  reviewGoTo(moves.length);
+}
+
+function reviewGoTo(step) {
+  if (!REVIEW.moves.length) return;
+  const target = Math.max(0, Math.min(step, REVIEW.moves.length));
+  const c = new Chess();
+  for (let i = 0; i < target; i++) c.move(REVIEW.moves[i]);
+  REVIEW.chess = c;
+  REVIEW.api = api(c);
+  REVIEW.step = target;
+  renderReviewBoard();
+  updateEvalBar();
+  renderReviewList();
+}
+function reviewPrev() { reviewGoTo(REVIEW.step - 1); }
+function reviewNext() { reviewGoTo(REVIEW.step + 1); }
+function updateEvalBar() {
+  const evalV = REVIEW.evals[REVIEW.step];
+  if (typeof evalV !== 'number') return;
+  const clamped = Math.max(-9, Math.min(9, evalV));
+  // Scale: -9 → 0%, 0 → 50%, +9 → 100%
+  const pct = ((clamped + 9) / 18) * 100;
+  document.getElementById('eval-bar-fill').style.width = pct + '%';
+  const label = (evalV > 0 ? '+' : '') + evalV.toFixed(1);
+  document.getElementById('eval-bar-label').textContent = label;
+}
+function renderReviewBoard() {
+  const board = document.getElementById('review-board');
+  if (!board) return;
+  board.innerHTML = '';
+  const rows = REVIEW.api.board();
+  for (let dispRow = 0; dispRow < 8; dispRow++) {
+    for (let dispCol = 0; dispCol < 8; dispCol++) {
+      const piece = rows[dispRow][dispCol];
+      const file = dispCol; const rank = 7 - dispRow;
+      const name = 'abcdefgh'[file] + (rank + 1);
+      const sq = document.createElement('div');
+      const isLight = (dispRow + dispCol) % 2 === 0;
+      sq.className = 'sq ' + (isLight ? 'sq-light' : 'sq-dark');
+      if (REVIEW.step > 0) {
+        const last = REVIEW.moves[REVIEW.step - 1];
+        if (last && (last.from === name || last.to === name)) sq.classList.add('last-move');
+      }
+      if (piece) {
+        const p = document.createElement('div');
+        p.className = 'piece ' + (piece.color === 'w' ? 'white' : 'black');
+        p.textContent = PIECE_GLYPH[piece.color][piece.type];
+        sq.appendChild(p);
+      }
+      board.appendChild(sq);
+    }
+  }
+  const meta = document.getElementById('review-meta');
+  if (meta) meta.textContent = REVIEW.moves.length + ' moves · step ' + REVIEW.step + ' · ' + REVIEW.blunders.size + ' blunder' + (REVIEW.blunders.size === 1 ? '' : 's');
+}
+function renderReviewList() {
+  const list = document.getElementById('review-list');
+  if (!list) return;
+  list.innerHTML = '';
+  REVIEW.moves.forEach((m, i) => {
+    if (i % 2 === 0) {
+      const n = document.createElement('span');
+      n.className = 'replay-move-no';
+      n.textContent = Math.floor(i / 2 + 1) + '.';
+      list.appendChild(n);
+    }
+    const mv = document.createElement('span');
+    mv.className = 'replay-move' + ((i + 1) === REVIEW.step ? ' cur' : '') + (REVIEW.blunders.has(i) ? ' blunder' : '');
+    mv.textContent = m.san;
+    mv.onclick = () => reviewGoTo(i + 1);
+    list.appendChild(mv);
+    list.appendChild(document.createTextNode(' '));
+  });
+}
+// Hide review button if game was too short (<5 full moves = <10 plies)
+function updateReviewButtonVisibility() {
+  const btn = document.getElementById('review-btn');
+  if (!btn) return;
+  const hist = STATE.api ? STATE.api.history() : [];
+  btn.style.display = (hist.length >= 10) ? '' : 'none';
+}
 function replayExit() {
   REPLAY.chess = null;
   // Strip the ?g= param from URL to avoid re-entry
@@ -2190,6 +2323,7 @@ function showGameOver(winner, reason, serverOverride) {
     localActions.style.display = 'none';
   }
   goto('gameover');
+  try { updateReviewButtonVisibility(); } catch (e) {}
   // Clear PvP active-game marker
   localStorage.removeItem('dadarcade_chess_active_game');
   // Mark local game as completed (kept in storage until the player chooses Play Again or Home)
