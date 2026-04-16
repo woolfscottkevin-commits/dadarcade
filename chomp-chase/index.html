@@ -100,16 +100,21 @@ const MAZE_Y = HUD_TOP;
 //   space  empty (walkable, no pellet)
 //   =  chaser door (only chasers can pass)
 // ============================================================
+// Original maze layout — deliberately distinct from the iconic 1980
+// single-screen arcade maze it was previously modeled on. Outer frame,
+// tunnel row, and the central chaser-house interior are kept because
+// they're load-bearing for the movement/lair logic, but every corridor
+// shape in the top and bottom halves has been reworked.
 const RAW_MAZE = [
   '############################',
   '#............##............#',
-  '#.####.#####.##.#####.####.#',
-  '#o####.#####.##.#####.####o#',
-  '#.####.#####.##.#####.####.#',
+  '#.###.######.##.######.###.#',
+  '#o###.######.##.######.###o#',
+  '#.###.######.##.######.###.#',
   '#..........................#',
-  '#.####.##.########.##.####.#',
-  '#.####.##.########.##.####.#',
-  '#......##....##....##......#',
+  '#.####.####.####.####.####.#',
+  '#.####.####.####.####.####.#',
+  '#......####......####......#',
   '######.##### ## #####.######',
   '     #.##### ## #####.#     ',
   '     #.##          ##.#     ',
@@ -122,14 +127,14 @@ const RAW_MAZE = [
   '     #.## ######## ##.#     ',
   '######.## ######## ##.######',
   '#............##............#',
-  '#.####.#####.##.#####.####.#',
-  '#.####.#####.##.#####.####.#',
-  '#o..##................##..o#',
-  '###.##.##.########.##.##.###',
-  '###.##.##.########.##.##.###',
-  '#......##....##....##......#',
-  '#.##########.##.##########.#',
-  '#.##########.##.##########.#',
+  '#.####.####.####.####.####.#',
+  '#.####.####.####.####.####.#',
+  '#o..####...#....#...####..o#',
+  '#....#..#....##....#..#....#',
+  '#....#..#....##....#..#....#',
+  '#......####......####......#',
+  '#.##.##.########.##.##.##.##',
+  '#.##.##.########.##.##.##.##',
   '#..........................#',
   '############################',
 ];
@@ -249,9 +254,10 @@ function resetChomper() {
   chomper.queuedDir = null;
   chomper.speed = 8;
   chomper.stopped = true;
-  chomper.mouthPhase = 0;
+  chomper.mouthPhase = 0; // legacy field, unused by new renderer
   chomper.dying = false;
   chomper.deathPhase = 0;
+  chomper.eatPulse = 0; // scale-pulse timer when a dot is collected
 }
 
 function updateChomper(dt) {
@@ -259,9 +265,10 @@ function updateChomper(dt) {
     chomper.deathPhase += dt;
     return;
   }
-  // animate mouth based on whether moving
-  if (!chomper.stopped) {
-    chomper.mouthPhase += dt * 10;
+  // decay the eat-pulse animation timer
+  if (chomper.eatPulse > 0) {
+    chomper.eatPulse -= dt;
+    if (chomper.eatPulse < 0) chomper.eatPulse = 0;
   }
   // Try queued direction at start of update if currently stopped
   if (chomper.stopped && chomper.queuedDir) {
@@ -339,6 +346,7 @@ function eatPelletAt(c, r) {
     pelletEatenCount++;
     score += 10;
     sound.waka();
+    chomper.eatPulse = 0.15; // trigger scale-pulse animation
     checkBonusLife();
     if (pelletsLeft === 0) onLevelComplete();
   } else if (t === T_POWER) {
@@ -348,6 +356,7 @@ function eatPelletAt(c, r) {
     score += 50;
     sound.power();
     triggerFrightened();
+    chomper.eatPulse = 0.15; // trigger scale-pulse animation
     checkBonusLife();
     if (pelletsLeft === 0) onLevelComplete();
   }
@@ -1068,11 +1077,26 @@ function drawBottomHUD() {
 }
 
 function drawChomperIcon(cx, cy, r) {
-  ctx.fillStyle = '#FFD700';
+  // Mini cyan rounded square — the Chomper silhouette used on the HUD.
+  const size = r * 2;
+  const x = cx - r, y = cy - r;
+  const rad = size * 0.3;
+  ctx.fillStyle = '#00E5FF';
+  ctx.strokeStyle = '#00B8CC';
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0.3, Math.PI * 2 - 0.3);
-  ctx.lineTo(cx, cy);
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + size - rad, y);
+  ctx.quadraticCurveTo(x + size, y, x + size, y + rad);
+  ctx.lineTo(x + size, y + size - rad);
+  ctx.quadraticCurveTo(x + size, y + size, x + size - rad, y + size);
+  ctx.lineTo(x + rad, y + size);
+  ctx.quadraticCurveTo(x, y + size, x, y + size - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
   ctx.fill();
+  ctx.stroke();
 }
 
 // ---------- maze walls ----------
@@ -1176,115 +1200,214 @@ function drawPellets() {
 }
 
 // ---------- chomper ----------
+// Chomper is drawn as a cyan rounded square with a static triangular notch
+// cut into its leading edge that rotates to match the current direction.
+// No circles, no open/close mouth animation — fully custom canvas paths.
 function drawChomper() {
   const pos = entityPixelPos(chomper);
-  const r = TS * 0.45;
+  const r = TS * 0.45; // half-width of bounding box (hitbox unchanged)
 
   if (chomper.dying) {
-    // Death animation: shrinking arc
+    // Death animation: the square splits into 4 corner fragments that fly
+    // outward and fade over ~1.5s.
     const t = Math.min(chomper.deathPhase / 1.5, 1);
     if (t >= 1) return;
-    ctx.fillStyle = '#FFD700';
-    const open = t * Math.PI;
-    ctx.beginPath();
-    ctx.arc(pos.x, pos.y, r, -Math.PI / 2 + open, -Math.PI / 2 - open + Math.PI * 2);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.fill();
+    const alpha = 1 - t;
+    const dist = t * r * 4;
+    const spin = t * Math.PI * 1.5;
+    const fragR = r * 0.55;
+    const fragRad = fragR * 0.3;
+    const corners = [
+      { dx: -1, dy: -1 },
+      { dx:  1, dy: -1 },
+      { dx:  1, dy:  1 },
+      { dx: -1, dy:  1 },
+    ];
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (const c of corners) {
+      const fx = pos.x + c.dx * dist;
+      const fy = pos.y + c.dy * dist;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.rotate(spin * (c.dx * c.dy));
+      ctx.fillStyle = '#00E5FF';
+      ctx.strokeStyle = '#00B8CC';
+      ctx.lineWidth = 1.5;
+      drawRoundedSquarePath(-fragR, -fragR, fragR * 2, fragR * 2, fragRad);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
     return;
   }
 
-  // Mouth animation
-  let mouthOpen = (Math.sin(chomper.mouthPhase) + 1) / 2; // 0..1
-  if (chomper.stopped) mouthOpen = 0.2;
-  const mouthAngle = mouthOpen * 0.7;
+  // Eat-pulse scale (1.0 → 1.25 → 1.0 over 150ms using a sin curve)
+  let scale = 1;
+  if (chomper.eatPulse > 0) {
+    const p = 1 - chomper.eatPulse / 0.15; // 0..1 through the pulse
+    scale = 1 + 0.25 * Math.sin(p * Math.PI);
+  }
 
-  let baseAngle = 0;
-  if (chomper.dir === DIR_RIGHT) baseAngle = 0;
-  else if (chomper.dir === DIR_DOWN) baseAngle = Math.PI / 2;
-  else if (chomper.dir === DIR_LEFT) baseAngle = Math.PI;
-  else if (chomper.dir === DIR_UP) baseAngle = -Math.PI / 2;
+  // Powered-up flash when any chaser is frightened: alternate cyan/white.
+  let fill = '#00E5FF';
+  let stroke = '#00B8CC';
+  if (frightenedTimer > 0) {
+    const flash = Math.floor(performance.now() / 120) % 2 === 0;
+    if (flash) {
+      fill = '#FFFFFF';
+      stroke = '#BFE8F0';
+    }
+  }
 
-  ctx.fillStyle = '#FFD700';
-  ctx.beginPath();
-  ctx.arc(pos.x, pos.y, r, baseAngle + mouthAngle, baseAngle - mouthAngle + Math.PI * 2);
-  ctx.lineTo(pos.x, pos.y);
+  // Rotation angle from direction (for the notch).
+  let angle = 0;
+  if (chomper.dir === DIR_RIGHT) angle = 0;
+  else if (chomper.dir === DIR_DOWN) angle = Math.PI / 2;
+  else if (chomper.dir === DIR_LEFT) angle = Math.PI;
+  else if (chomper.dir === DIR_UP) angle = -Math.PI / 2;
+
+  ctx.save();
+  ctx.translate(pos.x, pos.y);
+  ctx.rotate(angle);
+  ctx.scale(scale, scale);
+
+  // Rounded square body
+  const rad = r * 0.6; // ~30% of full size (size = 2r)
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.5;
+  drawRoundedSquarePath(-r, -r, r * 2, r * 2, rad);
   ctx.fill();
+  ctx.stroke();
+
+  // Triangular notch cut into the leading edge (right-facing in local space).
+  // Draw in black (background color) so it reads as a cut-out.
+  const notchDepth = r * 0.55;
+  const notchHalf = r * 0.45;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.moveTo(r, -notchHalf);
+  ctx.lineTo(r - notchDepth, 0);
+  ctx.lineTo(r, notchHalf);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// Helper: rounded rectangle path (works on any canvas — no dependency on
+// the native ctx.roundRect shortcut, which some older browsers lack).
+function drawRoundedSquarePath(x, y, w, h, rad) {
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
 }
 
 // ---------- chasers ----------
+// A Chaser is drawn as a rotated square (diamond) with a subtle wobble.
+// It has a single centered circular eye that looks in the direction of
+// movement. Frightened state = dark navy diamond with a white "?".
+// Eaten/returning state = a small arrow in the Chaser's original color
+// pointing toward the lair entry. No rounded silhouette, no two-eye motif.
 function drawChaser(g) {
   const pos = entityPixelPos(g);
-  const r = TS * 0.45;
+  const r = TS * 0.45; // half the bounding box (hitbox unchanged)
   const x = pos.x, y = pos.y;
 
-  let bodyColor;
-  if (g.mode === CM_FRIGHTENED) {
-    const flashing = frightenedTimer < 2 && Math.floor(frightenedTimer * 4) % 2 === 0;
-    bodyColor = flashing ? '#FFFFFF' : '#1F1FFF';
-  } else if (g.mode === CM_EATEN) {
-    bodyColor = null; // eyes only
-  } else {
-    bodyColor = g.color;
-  }
+  // Subtle wobble rotation (±5°) driven by the existing bob phase
+  const wobble = Math.sin((g.bobPhase || 0) + performance.now() / 240) * (5 * Math.PI / 180);
 
-  if (bodyColor) {
-    // Body: rounded top + wavy bottom
-    ctx.fillStyle = bodyColor;
+  // ---- Eaten/returning state: chevron only, pointing at the lair entry.
+  if (g.mode === CM_EATEN) {
+    const tx = LAIR_ENTRY.col * TS + TS / 2;
+    const ty = LAIR_ENTRY.row * TS + TS / 2;
+    const ang = Math.atan2(ty - y, tx - x);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+    ctx.fillStyle = g.color;
+    ctx.strokeStyle = g.color;
+    ctx.lineWidth = 1.5;
+    // A filled chevron / arrow-head pointing along +x in local space.
+    const a = r * 0.9;
+    const b = r * 0.6;
     ctx.beginPath();
-    ctx.arc(x, y - 1, r, Math.PI, 0);
-    // Right edge down
-    ctx.lineTo(x + r, y + r);
-    // Wavy bottom: 3 humps
-    const humps = 3;
-    const w = (r * 2) / humps;
-    for (let i = 0; i < humps; i++) {
-      const sx = x + r - i * w;
-      const ex = sx - w;
-      const my = y + r - 3;
-      ctx.lineTo(sx - w / 2, my);
-      ctx.lineTo(ex, y + r);
-    }
-    ctx.lineTo(x - r, y + r);
+    ctx.moveTo(a, 0);
+    ctx.lineTo(0, -b);
+    ctx.lineTo(-a * 0.25, 0);
+    ctx.lineTo(0, b);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+    return;
   }
 
-  // Eyes
-  let eyeDx = 0, eyeDy = 0;
-  if (g.dir === DIR_LEFT) eyeDx = -1;
-  else if (g.dir === DIR_RIGHT) eyeDx = 1;
-  else if (g.dir === DIR_UP) eyeDy = -1;
-  else if (g.dir === DIR_DOWN) eyeDy = 1;
-
-  const eyeY = y - 2;
-  const eyeR = 2.6;
-  const pupilR = 1.4;
-
+  // ---- Frightened state: dark navy diamond + centered "?".
   if (g.mode === CM_FRIGHTENED) {
-    // Two small dot eyes + mouth
-    ctx.fillStyle = '#FFB8DE';
-    ctx.beginPath(); ctx.arc(x - 3, eyeY, 1.6, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 3, eyeY, 1.6, 0, Math.PI * 2); ctx.fill();
-    // Wavy mouth
-    ctx.strokeStyle = '#FFB8DE';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x - 4, y + 3);
-    ctx.lineTo(x - 2, y + 1);
-    ctx.lineTo(x, y + 3);
-    ctx.lineTo(x + 2, y + 1);
-    ctx.lineTo(x + 4, y + 3);
-    ctx.stroke();
-  } else {
-    // Whites
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(x - 3, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 3, eyeY, eyeR, 0, Math.PI * 2); ctx.fill();
-    // Pupils
-    ctx.fillStyle = '#0000C0';
-    ctx.beginPath(); ctx.arc(x - 3 + eyeDx, eyeY + eyeDy, pupilR, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 3 + eyeDx, eyeY + eyeDy, pupilR, 0, Math.PI * 2); ctx.fill();
+    // Flash to white in the final 2 seconds as a warning cue (kept from
+    // before, but now applied to the diamond).
+    const flashing = frightenedTimer < 2 && Math.floor(frightenedTimer * 4) % 2 === 0;
+    const bodyColor = flashing ? '#FFFFFF' : '#1A1A4E';
+    const markColor = flashing ? '#1A1A4E' : '#FFFFFF';
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 4 + wobble);
+    ctx.fillStyle = bodyColor;
+    ctx.strokeStyle = markColor;
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.strokeRect(-r, -r, r * 2, r * 2);
+    ctx.restore();
+
+    // Question mark — drawn upright (not rotated with the diamond) so it
+    // stays readable. Two strokes for the curve + a dot.
+    ctx.fillStyle = markColor;
+    ctx.font = 'bold 11px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', x, y + 0.5);
+    return;
   }
+
+  // ---- Normal state: colored diamond.
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4 + wobble);
+  ctx.fillStyle = g.color;
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.strokeRect(-r, -r, r * 2, r * 2);
+  ctx.restore();
+
+  // Single centered eye looking in the direction of movement.
+  const eyeR = 3.2;
+  const pupilR = 1.5;
+  let eyeDx = 0, eyeDy = 0;
+  if (g.dir === DIR_LEFT) eyeDx = -1.3;
+  else if (g.dir === DIR_RIGHT) eyeDx = 1.3;
+  else if (g.dir === DIR_UP) eyeDy = -1.3;
+  else if (g.dir === DIR_DOWN) eyeDy = 1.3;
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.arc(x, y, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#0A0A2A';
+  ctx.beginPath();
+  ctx.arc(x + eyeDx, y + eyeDy, pupilR, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 // ---------- center text ----------
