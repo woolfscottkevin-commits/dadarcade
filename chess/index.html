@@ -213,6 +213,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .sq.legal::after{content:'';position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(0,255,255,0.5);box-shadow:0 0 10px rgba(0,255,255,0.7);pointer-events:none}
 .sq.legal-capture::after{content:'';position:absolute;width:88%;height:88%;border:3px solid rgba(255,110,199,0.75);border-radius:50%;box-shadow:0 0 12px rgba(255,110,199,0.5);pointer-events:none;box-sizing:border-box}
 .sq.last-move{box-shadow:inset 0 0 0 3px rgba(0,255,255,0.5)}
+.sq.hint-from{box-shadow:inset 0 0 0 3px #ffd700,0 0 10px rgba(255,215,0,0.6)!important;background:rgba(255,215,0,0.15)!important}
+.sq.hint-to{box-shadow:inset 0 0 0 3px #ff6ec7,0 0 10px rgba(255,110,199,0.6)!important;background:rgba(255,110,199,0.15)!important}
 .sq.check{background:radial-gradient(circle,rgba(255,68,68,0.65) 0%,rgba(255,68,68,0.2) 70%) !important;animation:checkPulse 0.9s infinite}
 @keyframes checkPulse{0%,100%{box-shadow:inset 0 0 12px rgba(255,68,68,0.8)}50%{box-shadow:inset 0 0 24px rgba(255,68,68,1)}}
 .piece{font-size:clamp(1.5rem,7vw,2.5rem);line-height:1;user-select:none;pointer-events:none;text-align:center;font-family:'Arial Unicode MS','Segoe UI Symbol','Noto Sans Symbols 2',sans-serif;transition:transform .2s}
@@ -526,6 +528,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <button class="menu-btn btn-red" onclick="resign()" style="font-size:0.85rem;padding:0.7rem">Resign</button>
       <button class="menu-btn btn-yellow" onclick="offerDraw()" id="draw-btn" style="font-size:0.85rem;padding:0.7rem">Offer Draw</button>
       <button class="menu-btn btn-cyan" onclick="undoMove()" id="undo-btn" style="font-size:0.85rem;padding:0.7rem;display:none">↶ Undo</button>
+      <button class="menu-btn btn-yellow" onclick="showHint()" id="hint-btn" style="font-size:0.85rem;padding:0.7rem;display:none">💡 Hint</button>
       <button class="menu-btn btn-grey" onclick="copyCurrentCode()" id="copy-code-btn" style="font-size:0.85rem;padding:0.7rem;display:none">Copy Code</button>
     </div>
     <button class="menu-btn btn-grey" onclick="backToHomeFromGame()" style="font-size:0.85rem;padding:0.6rem">← Back to Home</button>
@@ -1807,7 +1810,66 @@ function openDailyPuzzle() {
 }
 // Coach mode placeholder (Phase 10 will define the real implementation)
 function getCoachMode() { return localStorage.getItem('dadarcade_chess_coach_mode') === '1'; }
-function setCoachMode(on) { localStorage.setItem('dadarcade_chess_coach_mode', on ? '1' : '0'); }
+function setCoachMode(on) {
+  localStorage.setItem('dadarcade_chess_coach_mode', on ? '1' : '0');
+  try { configureGameControls(); } catch (e) {}
+}
+
+/* Coach-mode hint */
+let _cpuHintWarned = false;
+async function showHint() {
+  if (!STATE.api || STATE.api.isGameOver()) return;
+  // One-time warning when using hints vs Computer
+  if (STATE.mode === 'cpu' && !_cpuHintWarned && !sessionStorage.getItem('dadarcade_chess_cpu_hint_ack')) {
+    _cpuHintWarned = true;
+    const yes = await confirmModal('Use a hint?', 'Hints make AI games easier. Still want to use them?');
+    if (!yes) return;
+    sessionStorage.setItem('dadarcade_chess_cpu_hint_ack', '1');
+  }
+  const a = STATE.api;
+  const turn = a.turn();
+  // In PvP/CPU, only show hints on local player's turn
+  if ((STATE.mode === 'cpu' || STATE.mode === 'friend' || STATE.mode === 'public') && turn !== STATE.myColor) {
+    toast('Wait for your turn', 'info');
+    return;
+  }
+  const btn = document.getElementById('hint-btn');
+  if (btn) btn.disabled = true;
+  try {
+    const moves = a.moves({ verbose: true });
+    if (!moves.length) return;
+    const maxWhite = turn === 'w';
+    const scored = [];
+    const counter = { counter: 0 };
+    for (const m of moves) {
+      STATE.chess.move(m);
+      const v = await minimax(STATE.chess, 1, -Infinity, Infinity, !maxWhite, counter);
+      STATE.chess.undo();
+      scored.push({ move: m, val: v });
+    }
+    scored.sort((x, y) => maxWhite ? (y.val - x.val) : (x.val - y.val));
+    // Highlight top 3 moves on board (redraw with hint classes)
+    const top = scored.slice(0, 3);
+    // Clear prior and apply
+    document.querySelectorAll('#board .sq.hint-from,#board .sq.hint-to').forEach(s => {
+      s.classList.remove('hint-from'); s.classList.remove('hint-to');
+    });
+    top.forEach(h => {
+      const fromEl = document.querySelector('#board .sq[data-sq="' + h.move.from + '"]');
+      const toEl = document.querySelector('#board .sq[data-sq="' + h.move.to + '"]');
+      if (fromEl) fromEl.classList.add('hint-from');
+      if (toEl) toEl.classList.add('hint-to');
+    });
+    // Auto-clear after 6 seconds
+    setTimeout(() => {
+      document.querySelectorAll('#board .sq.hint-from,#board .sq.hint-to').forEach(s => {
+        s.classList.remove('hint-from'); s.classList.remove('hint-to');
+      });
+    }, 6000);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 
 /* ---------- AI personalities ---------- */
 const PERSONALITIES = [
@@ -2972,6 +3034,7 @@ function configureGameControls() {
   const undo = document.getElementById('undo-btn');
   const copy = document.getElementById('copy-code-btn');
   const flip = document.getElementById('flip-toggle');
+  const hint = document.getElementById('hint-btn');
   if (STATE.mode === 'cpu') {
     draw.style.display = 'none';
     undo.style.display = 'none';
@@ -2995,6 +3058,8 @@ function configureGameControls() {
     copy.style.display = 'none';
     flip.style.display = 'none';
   }
+  // Hint button visible when coach mode is on and the mode isn't a puzzle (puzzles handled separately)
+  if (hint) hint.style.display = getCoachMode() ? '' : 'none';
 }
 
 /* ============================================================
