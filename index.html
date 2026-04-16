@@ -57,6 +57,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-ch h2{color:#b366ff}
 .card-ch:hover{border-color:#b366ff;box-shadow:0 0 30px rgba(179,102,255,0.25),0 8px 32px rgba(0,0,0,0.4)}
 
+.card-bf h2{color:#E91E63}
+.card-bf:hover{border-color:#E91E63;box-shadow:0 0 30px rgba(233,30,99,0.25),0 8px 32px rgba(0,0,0,0.4)}
+
 
 .feedback-section{display:flex;flex-direction:column;gap:1rem;max-width:700px;width:100%;margin-top:3rem}
 .feedback-btn{display:flex;align-items:center;justify-content:center;gap:1rem;padding:1.5rem 2rem;border-radius:12px;border:2px solid;font-family:'Courier New',monospace;font-size:clamp(1.1rem,3vw,1.5rem);font-weight:bold;background:none;color:#fff;transition:all 0.3s ease;cursor:pointer;text-align:center;width:100%}
@@ -228,7 +231,32 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
       <rect x="10" y="52" width="3" height="3" fill="#ffd700"/>
     </svg>
     <h2>Chess</h2>
-    <p>Play classic chess vs the computer, pass-and-play with a friend on one device, challenge a friend online, or find an opponent in the lobby. Six themes from Staunton to fireballs vs water droplets.</p>
+    <p>Classic chess with King-of-the-Hill and Three-Check variants, 5 AI personalities, daily puzzles, achievements, time controls, shareable replays, and 6 mixable board + piece themes. Play solo, pass-and-play, or online.</p>
+  </a>
+
+  <a href="/brickfall" class="card card-bf">
+    <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Falling shape: an L-piece in amber -->
+      <rect x="44" y="6" width="12" height="12" fill="#FB8C00"/>
+      <rect x="44" y="18" width="12" height="12" fill="#FB8C00"/>
+      <rect x="44" y="30" width="12" height="12" fill="#FB8C00"/>
+      <rect x="32" y="30" width="12" height="12" fill="#FB8C00"/>
+      <!-- Stack at bottom -->
+      <rect x="6" y="54" width="12" height="12" fill="#7CB342"/>
+      <rect x="18" y="54" width="12" height="12" fill="#3949AB"/>
+      <rect x="30" y="54" width="12" height="12" fill="#00897B"/>
+      <rect x="42" y="54" width="12" height="12" fill="#FFB300"/>
+      <rect x="54" y="54" width="12" height="12" fill="#C62828"/>
+      <rect x="66" y="54" width="8" height="12" fill="#E91E63"/>
+      <rect x="6" y="66" width="12" height="10" fill="#7CB342" opacity="0.85"/>
+      <rect x="18" y="66" width="12" height="10" fill="#FB8C00" opacity="0.85"/>
+      <rect x="30" y="66" width="12" height="10" fill="#E91E63" opacity="0.85"/>
+      <rect x="42" y="66" width="12" height="10" fill="#3949AB" opacity="0.85"/>
+      <rect x="54" y="66" width="12" height="10" fill="#FFB300" opacity="0.85"/>
+      <rect x="66" y="66" width="8" height="10" fill="#00897B" opacity="0.85"/>
+    </svg>
+    <h2>Brickfall</h2>
+    <p>Stack falling shapes, clear lines, beat the high score in this original arcade stacker.</p>
   </a>
 
   <a href="/mini-golf" class="card card-mg">
@@ -306,6 +334,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Chomp Chase">Chomp Chase</option>
         <option value="Mini Golf">Mini Golf</option>
         <option value="Chess">Chess</option>
+        <option value="Brickfall">Brickfall</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>
