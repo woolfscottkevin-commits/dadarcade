@@ -105,6 +105,25 @@
       "position": 5,
       "item": {
         "@type": "VideoGame",
+        "name": "Brickfall",
+        "description": "An original falling-blocks arcade stacker. Rotate, slide, and drop seven shapes into a 10-wide pit. Clear lines, level up, beat the high score on the daily and all-time leaderboards.",
+        "url": "https://dadarcade.com/brickfall",
+        "genre": ["Arcade", "Puzzle"],
+        "playMode": "SinglePlayer",
+        "gamePlatform": "Web Browser",
+        "applicationCategory": "Game",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 6,
+      "item": {
+        "@type": "VideoGame",
         "name": "Paddle Duel",
         "description": "A retro paddle-and-ball arcade showdown rebuilt for the browser. Classic paddle vs. CPU gameplay with pixel-crisp visuals and chiptune sound effects.",
         "url": "https://dadarcade.com/paddle-duel",
@@ -161,7 +180,8 @@ h1,h2,h3{color:#fff}
 
 .games-grid{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:2rem}
 
-.game-card{background:#1a1a2e;border:2px solid #333;border-radius:12px;padding:2rem;transition:all 0.3s}
+.game-card{background:#1a1a2e;border:2px solid #333;border-radius:12px;padding:2rem;transition:all 0.3s;position:relative}
+.game-card[data-new]::after{content:"NEW";position:absolute;top:12px;right:12px;background:linear-gradient(135deg,#ff6ec7,#b366ff);color:#fff;font-family:'Courier New',monospace;font-size:0.7rem;font-weight:bold;letter-spacing:0.15em;padding:3px 8px;border-radius:4px;box-shadow:0 0 12px rgba(255,110,199,0.5);z-index:2;pointer-events:none}
 .game-card:hover{border-color:#0ff;box-shadow:0 0 25px rgba(0,255,255,0.15)}
 .game-card.coming-soon{opacity:0.5;pointer-events:none}
 .game-card.coming-soon:hover{border-color:#333;box-shadow:none}
@@ -180,6 +200,7 @@ h1,h2,h3{color:#fff}
 .tag-educational{border-color:#f0c420;color:#f0c420}
 .tag-sports{border-color:#ff8c00;color:#ff8c00}
 .tag-strategy{border-color:#9b59b6;color:#9b59b6}
+.tag-puzzle{border-color:#E91E63;color:#E91E63}
 .tag-age{border-color:#666;color:#999}
 
 .card-desc{line-height:1.7;margin-bottom:1.25rem;font-size:0.95rem}
@@ -391,6 +412,42 @@ footer a{color:#0ff;font-size:0.85rem}
       </div>
     </div>
     <a href="/paddle-duel" class="play-link">PLAY NOW</a>
+  </div>
+
+  <!-- Brickfall -->
+  <div class="game-card" data-genres="arcade puzzle" data-new>
+    <div class="card-header">
+      <h2><a href="/brickfall">Brickfall</a></h2>
+      <div class="tags">
+        <span class="tag tag-arcade">Arcade</span>
+        <span class="tag tag-puzzle">Puzzle</span>
+        <span class="tag tag-age">Ages 6+</span>
+      </div>
+    </div>
+    <p class="card-desc">Brickfall is an original falling-blocks arcade stacker. Seven geometric shapes \u2014 lines, squares, T's, S's, Z's, J's, and L's in a vivid magenta-and-amber palette \u2014 drop into a 10-wide pit. Slide them, rotate them, and pack them in to clear full rows. Pull off a four-line clear for the biggest point payout. The longer you survive, the faster they fall. Daily and all-time leaderboards with classic 3-letter initials. Plays great on phone, tablet, or desktop with on-screen touch buttons or keyboard.</p>
+    <div class="card-details">
+      <div>
+        <h3>Features</h3>
+        <ul>
+          <li>Seven original-palette shapes</li>
+          <li>20 levels of escalating speed</li>
+          <li>Daily &amp; all-time leaderboards</li>
+          <li>On-screen mobile touch controls</li>
+          <li>Optional chiptune music &amp; SFX</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Controls</h3>
+        <ul class="controls-list">
+          <li>Arrow keys to move</li>
+          <li>Up to rotate</li>
+          <li>Down to soft-drop</li>
+          <li>Space to hard-drop</li>
+          <li>P to pause</li>
+        </ul>
+      </div>
+    </div>
+    <a href="/brickfall" class="play-link">PLAY NOW</a>
   </div>
 
   <!-- Coming Soon: Typing Speed Racer -->
