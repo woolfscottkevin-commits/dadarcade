@@ -136,51 +136,45 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 @keyframes checkPulse{0%,100%{box-shadow:inset 0 0 12px rgba(255,68,68,0.8)}50%{box-shadow:inset 0 0 24px rgba(255,68,68,1)}}
 .piece{font-size:clamp(1.5rem,7vw,2.5rem);line-height:1;user-select:none;pointer-events:none;text-align:center;font-family:'Arial Unicode MS','Segoe UI Symbol','Noto Sans Symbols 2',sans-serif;transition:transform .2s}
 
-/* ============= THEMES ============= */
-/* Theme: classic */
-.theme-classic{--sq-light:#f0d9b5;--sq-dark:#b58863;--bg-overlay:transparent}
-.theme-classic .piece.white{color:#fff;text-shadow:0 1px 0 #000,0 -1px 0 #000,1px 0 0 #000,-1px 0 0 #000,2px 2px 3px rgba(0,0,0,0.45)}
-.theme-classic .piece.black{color:#111;text-shadow:0 1px 0 #fff3,1px 1px 2px rgba(0,0,0,0.4)}
-
-/* Theme: firewater (Fire vs Water) */
-.theme-firewater{--sq-light:#7bbf6a;--sq-dark:#3f8b2e;--bg-overlay:grass}
-.theme-firewater #board{background:repeating-linear-gradient(45deg,#5ea84d 0 8px,#4d9a3d 8px 16px);animation:grassSway 6s ease-in-out infinite}
+/* ============= THEMES (split: board-* controls squares/board, piece-* controls glyphs) ============= */
+/* Piece shared animations */
 @keyframes grassSway{0%,100%{filter:hue-rotate(0deg) brightness(1)}50%{filter:hue-rotate(-10deg) brightness(1.05)}}
-.theme-firewater .piece.white{color:#74d1ff;text-shadow:0 0 6px #74d1ff,0 0 14px #0ff,0 0 2px #fff;animation:waterShimmer 3s ease-in-out infinite}
-.theme-firewater .piece.black{color:#ff5522;text-shadow:0 0 6px #ff4400,0 0 14px #ff2200,0 0 2px #ffaa44;animation:fireFlicker 0.9s ease-in-out infinite}
 @keyframes waterShimmer{0%,100%{filter:brightness(1) hue-rotate(0deg)}50%{filter:brightness(1.15) hue-rotate(12deg)}}
 @keyframes fireFlicker{0%,100%{filter:brightness(1) saturate(1.2)}40%{filter:brightness(1.25) saturate(1.6)}60%{filter:brightness(0.9) saturate(1.1)}}
-
-/* Theme: cosmic */
-.theme-cosmic{--sq-light:#2a2a5e;--sq-dark:#1a0f3a;--bg-overlay:cosmic}
-.theme-cosmic #board{background:radial-gradient(circle at 30% 20%,#3f1f6a 0%,#0a0525 70%)}
-.theme-cosmic .piece.white{color:#fff6a0;text-shadow:0 0 8px #ffeb66,0 0 16px #ffcc33,0 0 3px #fff}
-.theme-cosmic .piece.black{color:#b366ff;text-shadow:0 0 8px #a044ff,0 0 16px #5a22cc,0 0 3px #fff}
-.theme-cosmic #board-wrap::before{content:'';position:absolute;inset:0;background-image:radial-gradient(1px 1px at 15% 25%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 75% 40%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 40% 70%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 90% 85%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 25% 90%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 60% 15%,#fff 50%,transparent 100%);animation:twinkle 4s ease-in-out infinite;pointer-events:none;opacity:0.8;z-index:1;border-radius:6px}
 @keyframes twinkle{0%,100%{opacity:0.45}50%{opacity:0.9}}
-
-/* Theme: icelava */
-.theme-icelava{--sq-light:#c5e6ff;--sq-dark:#3a1010;--bg-overlay:icelava}
-.theme-icelava #board{background:linear-gradient(135deg,#e8f6ff 0%,#b0d8f0 100%)}
-.theme-icelava .sq-dark{background:repeating-linear-gradient(45deg,#3a1010 0 6px,#4a1515 6px 12px)}
-.theme-icelava .piece.white{color:#e6f8ff;text-shadow:0 0 6px #a8d8ff,0 0 12px #66bbff,1px 1px 2px #225577}
-.theme-icelava .piece.black{color:#ff4411;text-shadow:0 0 8px #ff2200,0 0 16px #cc1100,0 0 2px #ffcc88;animation:lavaPulse 1.5s ease-in-out infinite}
 @keyframes lavaPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.3) saturate(1.4)}}
 
-/* Theme: candyveg (Candy vs Veggies) */
-.theme-candyveg{--sq-light:#e8c48a;--sq-dark:#5a4a55;--bg-overlay:candy}
-.theme-candyveg #board{background:repeating-linear-gradient(90deg,#e8c48a 0 4px,#d8b478 4px 8px)}
-.theme-candyveg .sq-dark{background:radial-gradient(circle at 30% 30%,#6a5a65 0%,#4a3a45 100%)}
-.theme-candyveg .piece.white{color:#ff88cc;text-shadow:0 0 4px #ff66bb,0 2px 2px rgba(0,0,0,0.4),0 0 10px rgba(255,136,204,0.5)}
-.theme-candyveg .piece.black{color:#44aa33;text-shadow:0 0 4px #228822,0 2px 2px rgba(0,0,0,0.5),0 0 10px rgba(68,170,51,0.4)}
+/* === BOARD THEMES === */
+.board-classic{--sq-light:#f0d9b5;--sq-dark:#b58863}
+.board-firewater{--sq-light:#7bbf6a;--sq-dark:#3f8b2e}
+.board-firewater #board{background:repeating-linear-gradient(45deg,#5ea84d 0 8px,#4d9a3d 8px 16px);animation:grassSway 6s ease-in-out infinite}
+.board-cosmic{--sq-light:#2a2a5e;--sq-dark:#1a0f3a}
+.board-cosmic #board{background:radial-gradient(circle at 30% 20%,#3f1f6a 0%,#0a0525 70%)}
+.board-cosmic #board-wrap::before{content:'';position:absolute;inset:0;background-image:radial-gradient(1px 1px at 15% 25%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 75% 40%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 40% 70%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 90% 85%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 25% 90%,#fff 50%,transparent 100%),radial-gradient(1px 1px at 60% 15%,#fff 50%,transparent 100%);animation:twinkle 4s ease-in-out infinite;pointer-events:none;opacity:0.8;z-index:1;border-radius:6px}
+.board-icelava{--sq-light:#c5e6ff;--sq-dark:#3a1010}
+.board-icelava #board{background:linear-gradient(135deg,#e8f6ff 0%,#b0d8f0 100%)}
+.board-icelava .sq-dark{background:repeating-linear-gradient(45deg,#3a1010 0 6px,#4a1515 6px 12px)}
+.board-candyveg{--sq-light:#e8c48a;--sq-dark:#5a4a55}
+.board-candyveg #board{background:repeating-linear-gradient(90deg,#e8c48a 0 4px,#d8b478 4px 8px)}
+.board-candyveg .sq-dark{background:radial-gradient(circle at 30% 30%,#6a5a65 0%,#4a3a45 100%)}
+.board-robodino{--sq-light:#1a3d2a;--sq-dark:#0a1f14}
+.board-robodino .sq-light{background:linear-gradient(135deg,#1a4d2a 0%,#0f3a1f 100%);position:relative}
+.board-robodino .sq-light::before{content:'';position:absolute;inset:0;background-image:linear-gradient(90deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%),linear-gradient(0deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%);pointer-events:none}
+.board-robodino .sq-dark{background:radial-gradient(circle at 25% 25%,#1a3a22 0%,#0a1f14 100%)}
 
-/* Theme: robodino (Robots vs Dinos) */
-.theme-robodino{--sq-light:#1a3d2a;--sq-dark:#0a1f14;--bg-overlay:robodino}
-.theme-robodino .sq-light{background:linear-gradient(135deg,#1a4d2a 0%,#0f3a1f 100%);position:relative}
-.theme-robodino .sq-light::before{content:'';position:absolute;inset:0;background-image:linear-gradient(90deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%),linear-gradient(0deg,transparent 48%,rgba(0,255,100,0.2) 48% 52%,transparent 52%);pointer-events:none}
-.theme-robodino .sq-dark{background:radial-gradient(circle at 25% 25%,#1a3a22 0%,#0a1f14 100%)}
-.theme-robodino .piece.white{color:#66aaff;text-shadow:0 0 4px #4488ff,0 0 8px #2266cc,1px 1px 0 #113355;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
-.theme-robodino .piece.black{color:#dd3322;text-shadow:0 0 4px #aa2211,0 0 8px #661100,1px 1px 0 #441100;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
+/* === PIECE THEMES === */
+.piece-classic .piece.white{color:#fff;text-shadow:0 1px 0 #000,0 -1px 0 #000,1px 0 0 #000,-1px 0 0 #000,2px 2px 3px rgba(0,0,0,0.45)}
+.piece-classic .piece.black{color:#111;text-shadow:0 1px 0 #fff3,1px 1px 2px rgba(0,0,0,0.4)}
+.piece-firewater .piece.white{color:#74d1ff;text-shadow:0 0 6px #74d1ff,0 0 14px #0ff,0 0 2px #fff;animation:waterShimmer 3s ease-in-out infinite}
+.piece-firewater .piece.black{color:#ff5522;text-shadow:0 0 6px #ff4400,0 0 14px #ff2200,0 0 2px #ffaa44;animation:fireFlicker 0.9s ease-in-out infinite}
+.piece-cosmic .piece.white{color:#fff6a0;text-shadow:0 0 8px #ffeb66,0 0 16px #ffcc33,0 0 3px #fff}
+.piece-cosmic .piece.black{color:#b366ff;text-shadow:0 0 8px #a044ff,0 0 16px #5a22cc,0 0 3px #fff}
+.piece-icelava .piece.white{color:#e6f8ff;text-shadow:0 0 6px #a8d8ff,0 0 12px #66bbff,1px 1px 2px #225577}
+.piece-icelava .piece.black{color:#ff4411;text-shadow:0 0 8px #ff2200,0 0 16px #cc1100,0 0 2px #ffcc88;animation:lavaPulse 1.5s ease-in-out infinite}
+.piece-candyveg .piece.white{color:#ff88cc;text-shadow:0 0 4px #ff66bb,0 2px 2px rgba(0,0,0,0.4),0 0 10px rgba(255,136,204,0.5)}
+.piece-candyveg .piece.black{color:#44aa33;text-shadow:0 0 4px #228822,0 2px 2px rgba(0,0,0,0.5),0 0 10px rgba(68,170,51,0.4)}
+.piece-robodino .piece.white{color:#66aaff;text-shadow:0 0 4px #4488ff,0 0 8px #2266cc,1px 1px 0 #113355;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
+.piece-robodino .piece.black{color:#dd3322;text-shadow:0 0 4px #aa2211,0 0 8px #661100,1px 1px 0 #441100;filter:drop-shadow(0 2px 2px rgba(0,0,0,0.5))}
 
 /* ============= MODALS ============= */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px)}
@@ -200,6 +194,23 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .theme-card .swatch>div{width:100%;height:100%}
 .theme-card .tname{font-size:0.85rem;font-weight:bold;color:#fff}
 .theme-card .pieces-preview{font-size:1.4rem;line-height:1;display:flex;gap:2px}
+
+/* Theme mixer — two-column layout */
+.theme-preview{display:flex;flex-direction:column;align-items:center;gap:0.4rem;margin-bottom:0.5rem;padding:0.6rem;background:#0a0a1a;border:1px solid #2a2a4a;border-radius:10px}
+.theme-preview-board{display:grid;grid-template-columns:40px 40px;grid-template-rows:40px;border:1px solid #333;border-radius:3px;overflow:hidden}
+.theme-preview-board .preview-sq{display:flex;align-items:center;justify-content:center;font-size:1.5rem;line-height:1}
+.theme-preview-board .preview-sq-light{background:var(--sq-light,#f0d9b5)}
+.theme-preview-board .preview-sq-dark{background:var(--sq-dark,#b58863)}
+.theme-preview-label{color:#aaa;font-size:0.8rem;text-align:center}
+.theme-split{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.75rem 0}
+.theme-col-head{font-size:0.75rem;letter-spacing:0.1em;font-weight:bold;text-align:center;margin-bottom:0.3rem}
+.theme-col-list{display:flex;flex-direction:column;gap:0.25rem}
+.theme-opt{padding:0.45rem 0.55rem;border:1.5px solid #2a2a4a;border-radius:6px;background:#0a0a1a;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.4rem;font-size:0.78rem;color:#ccc;text-align:left}
+.theme-opt:hover{border-color:#555}
+.theme-opt.active{border-color:#ffd700;box-shadow:0 0 10px rgba(255,215,0,0.3);color:#fff}
+.theme-opt .swatch-mini{display:grid;grid-template-columns:repeat(2,10px);grid-template-rows:repeat(2,10px);border-radius:2px;overflow:hidden;flex-shrink:0;border:1px solid #333}
+.theme-opt .swatch-mini>div{width:100%;height:100%}
+.theme-opt .piece-mini{font-size:1.05rem;line-height:1;flex-shrink:0}
 
 .promo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin-top:1rem}
 .promo-btn{background:#0a0a1a;border:2px solid #2a2a4a;border-radius:8px;padding:0.5rem;font-size:2.2rem;line-height:1;aspect-ratio:1/1;transition:all .15s;display:flex;align-items:center;justify-content:center}
@@ -391,8 +402,27 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div class="modal-overlay" id="modal-theme">
   <div class="modal-box">
     <h2>◆ Choose Theme</h2>
-    <p>Pick how the board and pieces look. Your choice saves locally.</p>
-    <div class="theme-grid" id="theme-grid"></div>
+    <p>Mix &amp; match — pick a <strong style="color:#0ff">board</strong> and <strong style="color:#ff6ec7">pieces</strong> independently.</p>
+    <div class="theme-preview" id="theme-preview">
+      <div class="theme-preview-board" id="theme-preview-board">
+        <div class="preview-sq preview-sq-light"><span class="piece white">♔</span></div>
+        <div class="preview-sq preview-sq-dark"><span class="piece black">♛</span></div>
+      </div>
+      <div class="theme-preview-label" id="theme-preview-label">Classic board · Classic pieces</div>
+    </div>
+    <div style="display:flex;gap:0.5rem;align-items:center;margin:0.5rem 0">
+      <button class="menu-btn btn-grey" onclick="matchThemes()" style="font-size:0.85rem;padding:0.5rem">⇆ Match Themes</button>
+    </div>
+    <div class="theme-split">
+      <div class="theme-col">
+        <div class="theme-col-head" style="color:#0ff">BOARD</div>
+        <div class="theme-col-list" id="theme-board-list"></div>
+      </div>
+      <div class="theme-col">
+        <div class="theme-col-head" style="color:#ff6ec7">PIECES</div>
+        <div class="theme-col-list" id="theme-piece-list"></div>
+      </div>
+    </div>
     <div class="modal-actions">
       <button class="menu-btn btn-grey" onclick="closeModal('theme')">Close</button>
     </div>
@@ -515,19 +545,48 @@ function setPlayerName(n) { localStorage.setItem('dadarcade_player_name', n); }
 
 const PLAYER_ID = ensurePlayerId();
 
-/* ---------- Theme storage & application ---------- */
-function getTheme() { return localStorage.getItem('dadarcade_chess_theme') || 'classic'; }
-function setTheme(t) {
-  localStorage.setItem('dadarcade_chess_theme', t);
+/* ---------- Theme storage & application (split board + piece) ---------- */
+(function migrateLegacyThemeKey(){
+  const legacy = localStorage.getItem('dadarcade_chess_theme');
+  if (legacy) {
+    if (!localStorage.getItem('dadarcade_chess_board_theme')) localStorage.setItem('dadarcade_chess_board_theme', legacy);
+    if (!localStorage.getItem('dadarcade_chess_piece_theme')) localStorage.setItem('dadarcade_chess_piece_theme', legacy);
+    localStorage.removeItem('dadarcade_chess_theme');
+  }
+})();
+function getBoardTheme() { return localStorage.getItem('dadarcade_chess_board_theme') || 'classic'; }
+function getPieceTheme() { return localStorage.getItem('dadarcade_chess_piece_theme') || 'classic'; }
+// Back-compat alias used by old lobby filter — returns piece theme for labels
+function getTheme() { return getPieceTheme(); }
+let lastChangedKind = 'board'; // 'board' or 'piece' — used by Match Themes
+function setBoardTheme(t) {
+  localStorage.setItem('dadarcade_chess_board_theme', t);
+  lastChangedKind = 'board';
   applyTheme();
   renderBoard();
   renderThemeGrid();
+  try { trackThemePlayed('board', t); } catch(e) {}
+}
+function setPieceTheme(t) {
+  localStorage.setItem('dadarcade_chess_piece_theme', t);
+  lastChangedKind = 'piece';
+  applyTheme();
+  renderBoard();
+  renderThemeGrid();
+  try { trackThemePlayed('piece', t); } catch(e) {}
+}
+function matchThemes() {
+  const src = lastChangedKind === 'piece' ? getPieceTheme() : getBoardTheme();
+  setBoardTheme(src);
+  setPieceTheme(src);
 }
 function applyTheme() {
-  const t = getTheme();
+  const b = getBoardTheme();
+  const p = getPieceTheme();
   const body = document.body;
-  THEMES.forEach(th => body.classList.remove('theme-' + th.id));
-  body.classList.add('theme-' + t);
+  THEMES.forEach(th => { body.classList.remove('board-' + th.id); body.classList.remove('piece-' + th.id); });
+  body.classList.add('board-' + b);
+  body.classList.add('piece-' + p);
 }
 
 /* ---------- Screen router ---------- */
@@ -585,31 +644,52 @@ document.addEventListener('keydown', e => {
 /* ---------- Theme picker ---------- */
 function openThemePicker() { renderThemeGrid(); openModal('theme'); }
 function renderThemeGrid() {
-  const grid = document.getElementById('theme-grid');
-  const cur = getTheme();
-  grid.innerHTML = '';
+  const boardList = document.getElementById('theme-board-list');
+  const pieceList = document.getElementById('theme-piece-list');
+  const previewBoard = document.getElementById('theme-preview-board');
+  const previewLabel = document.getElementById('theme-preview-label');
+  if (!boardList || !pieceList) return;
+  const curBoard = getBoardTheme();
+  const curPiece = getPieceTheme();
+  boardList.innerHTML = '';
+  pieceList.innerHTML = '';
   THEMES.forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'theme-card' + (t.id === cur ? ' active' : '');
-    card.onclick = () => setTheme(t.id);
-    const sw = document.createElement('div');
-    sw.className = 'swatch';
-    t.swatch.forEach(c => {
-      const d = document.createElement('div');
-      d.style.background = c;
-      sw.appendChild(d);
+    // Board option
+    const bopt = document.createElement('button');
+    bopt.className = 'theme-opt' + (t.id === curBoard ? ' active' : '');
+    const bsw = document.createElement('div');
+    bsw.className = 'swatch-mini';
+    [t.swatch[0], t.swatch[1], t.swatch[1], t.swatch[0]].forEach(c => {
+      const d = document.createElement('div'); d.style.background = c; bsw.appendChild(d);
     });
-    const nm = document.createElement('div');
-    nm.className = 'tname';
-    nm.textContent = t.name;
-    const pv = document.createElement('div');
-    pv.className = 'pieces-preview';
-    pv.innerHTML = '<span class="piece white">♔</span><span class="piece black">♚</span>';
-    card.appendChild(sw);
-    card.appendChild(nm);
-    card.appendChild(pv);
-    grid.appendChild(card);
+    const bnm = document.createElement('span'); bnm.textContent = t.name;
+    bopt.appendChild(bsw); bopt.appendChild(bnm);
+    bopt.onclick = () => setBoardTheme(t.id);
+    boardList.appendChild(bopt);
+
+    // Piece option — preview with piece theme colors applied to a classic-board background
+    const popt = document.createElement('button');
+    popt.className = 'theme-opt' + (t.id === curPiece ? ' active' : '');
+    const pmini = document.createElement('span');
+    pmini.className = 'piece-mini';
+    pmini.innerHTML = '<span class="piece white" style="margin-right:2px">♔</span><span class="piece black">♚</span>';
+    const pwrap = document.createElement('span');
+    pwrap.className = 'piece-' + t.id;
+    pwrap.appendChild(pmini);
+    const pnm = document.createElement('span'); pnm.textContent = t.name;
+    popt.appendChild(pwrap); popt.appendChild(pnm);
+    popt.onclick = () => setPieceTheme(t.id);
+    pieceList.appendChild(popt);
   });
+  // Preview swap: apply board theme CSS variables to preview board, piece theme to pieces inside
+  if (previewBoard) {
+    previewBoard.className = 'theme-preview-board board-' + curBoard + ' piece-' + curPiece;
+  }
+  if (previewLabel) {
+    const bn = (THEMES.find(t=>t.id===curBoard)||{}).name || '';
+    const pn = (THEMES.find(t=>t.id===curPiece)||{}).name || '';
+    previewLabel.textContent = bn + ' board · ' + pn + ' pieces';
+  }
 }
 
 /* ---------- Segment buttons ---------- */
