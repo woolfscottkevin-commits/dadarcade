@@ -88,6 +88,17 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .variant-card .v-desc{color:#aaa;font-size:0.82rem}
 .variant-card .v-win{color:#ffd700;font-size:0.75rem;font-style:italic}
 
+/* AI personality cards */
+.personality-grid{display:grid;grid-template-columns:1fr;gap:0.45rem;width:100%}
+.personality-card{background:#12122a;border:2px solid #2a2a4a;border-radius:10px;padding:0.65rem 0.85rem;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;color:inherit;display:flex;gap:0.75rem;align-items:center}
+.personality-card:hover{border-color:#0ff;transform:translateX(2px)}
+.personality-card.active{border-color:#ffd700;box-shadow:0 0 12px rgba(255,215,0,0.3)}
+.personality-card .p-emoji{font-size:1.8rem;line-height:1;flex-shrink:0}
+.personality-card .p-body{display:flex;flex-direction:column;gap:0.1rem;min-width:0;flex:1}
+.personality-card .p-name{font-size:0.95rem;font-weight:bold;color:#0ff}
+.personality-card .p-tag{color:#aaa;font-size:0.78rem;line-height:1.3}
+.personality-card .p-depth{color:#888;font-size:0.7rem;letter-spacing:0.05em}
+
 /* KotH hill-square corner markings */
 .sq.hill::before{content:'';position:absolute;width:18%;height:18%;border:2px solid rgba(255,215,0,0.8);border-radius:2px;top:4%;left:4%;box-shadow:0 0 4px rgba(255,215,0,0.6);pointer-events:none;z-index:2}
 
@@ -311,13 +322,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 <div id="screen-cpu" class="screen">
   <div class="card-box">
     <h3>▶ VS COMPUTER</h3>
-    <label>Difficulty</label>
-    <div class="segment" id="cpu-diff">
-      <button data-val="easy" class="active">Easy</button>
-      <button data-val="medium">Medium</button>
-      <button data-val="hard">Hard</button>
-    </div>
-    <label>Your color</label>
+    <label>Opponent</label>
+    <div class="personality-grid" id="cpu-personality"></div>
+    <label style="margin-top:0.5rem">Your color</label>
     <div class="segment" id="cpu-color">
       <button data-val="w" class="active">♔ White</button>
       <button data-val="b">♚ Black</button>
@@ -799,6 +806,43 @@ const STATE = {
 const KOTH_HILL = new Set(['d4','e4','d5','e5']);
 const VARIANT_LABELS = { standard: 'STANDARD', koth: 'KING OF THE HILL', three_check: 'THREE-CHECK' };
 
+/* ---------- AI personalities ---------- */
+const PERSONALITIES = [
+  { id: 'benny',     name: 'Benny the Beginner',   emoji: '🙃', tag: 'Just learning. Makes lots of blunders.',    depth: 1, delay: 200, randomChance: 0.50 },
+  { id: 'professor', name: 'Professor Pawn',       emoji: '👓', tag: 'Loves pawn structure. Slow but solid.',     depth: 2, delay: 800 },
+  { id: 'gambit',    name: 'Captain Gambit',       emoji: '⚔️', tag: 'Attacks! All the time!',                    depth: 2, delay: 400 },
+  { id: 'prudence',  name: 'Princess Prudence',    emoji: '🛡️', tag: 'Defense wins championships.',               depth: 2, delay: 600 },
+  { id: 'deep',      name: 'Dr. Deep',             emoji: '🧠', tag: 'The real challenge.',                       depth: 3, delay: 1200 },
+];
+function getPersonality() {
+  const id = localStorage.getItem('dadarcade_chess_ai_personality') || 'benny';
+  return PERSONALITIES.find(p => p.id === id) || PERSONALITIES[0];
+}
+function setPersonality(id) { localStorage.setItem('dadarcade_chess_ai_personality', id); }
+function renderPersonalityGrid() {
+  const grid = document.getElementById('cpu-personality');
+  if (!grid) return;
+  const cur = getPersonality().id;
+  grid.innerHTML = '';
+  PERSONALITIES.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'personality-card' + (p.id === cur ? ' active' : '');
+    btn.type = 'button';
+    btn.dataset.val = p.id;
+    btn.innerHTML = '<span class="p-emoji">' + p.emoji + '</span>' +
+      '<span class="p-body">' +
+      '  <span class="p-name">' + p.name + '</span>' +
+      '  <span class="p-tag">' + p.tag + '</span>' +
+      '  <span class="p-depth">Depth ' + p.depth + '</span>' +
+      '</span>';
+    btn.onclick = () => {
+      setPersonality(p.id);
+      renderPersonalityGrid();
+    };
+    grid.appendChild(btn);
+  });
+}
+
 function resetState() {
   if (STATE.channel) { try { STATE.channel.unsubscribe(); } catch (e) {} STATE.channel = null; }
   if (STATE.waitingChannel) { try { STATE.waitingChannel.unsubscribe(); } catch (e) {} STATE.waitingChannel = null; }
@@ -1007,8 +1051,9 @@ function updateStatusBar() {
   const turnName = turn === 'w' ? 'White' : 'Black';
   let txt = turnName + ' to move';
   if (STATE.mode === 'cpu') {
+    const pers = STATE.personality || getPersonality();
     if (turn === STATE.myColor) txt = 'Your move';
-    else txt = 'Computer thinking…';
+    else txt = pers.emoji + ' ' + pers.name.split(' ')[0] + ' is thinking…';
   } else if (STATE.mode === 'friend' || STATE.mode === 'public') {
     if (turn === STATE.myColor) txt = 'Your move';
     else txt = (STATE.opponentName || 'Opponent') + '\u2019s move';
@@ -1271,7 +1316,9 @@ function showGameOver(winner, reason, serverOverride) {
   let t;
   if (winner === 'draw') t = 'Draw';
   else if (STATE.mode === 'cpu') {
-    t = (winner === (STATE.myColor === 'w' ? 'white' : 'black')) ? 'You Win!' : 'Computer Wins';
+    const pers = STATE.personality || getPersonality();
+    const isWin = winner === (STATE.myColor === 'w' ? 'white' : 'black');
+    t = isWin ? 'You beat ' + pers.name + '!' : pers.emoji + ' ' + pers.name.split(' ')[0] + ' wins';
   } else if (STATE.mode === 'local') {
     const winnerName = winner === 'white' ? (STATE.localWhiteName || 'White') : (STATE.localBlackName || 'Black');
     t = winnerName + ' Wins!';
@@ -1336,26 +1383,87 @@ const PST = {
       20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20],
 };
 
-function evaluate(chess) {
+function evaluate(chess, personalityId) {
   // Positive = white advantage
   const a = api(chess);
   if (a.isCheckmate()) return a.turn() === 'w' ? -99999 : 99999;
   if (a.isStalemate() || a.isInsufficientMaterial() || a.isDraw()) return 0;
   const board = a.board();
   let score = 0;
+  let whitePawnFiles = {}, blackPawnFiles = {};
   for (let r = 0; r < 8; r++) {
     for (let f = 0; f < 8; f++) {
       const p = board[r][f];
       if (!p) continue;
       const base = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 }[p.type];
-      // PST index: for white, use (r*8+f); for black, mirror vertically
       const idx = p.color === 'w' ? r * 8 + f : (7 - r) * 8 + f;
       const psVal = PST[p.type][idx] || 0;
       const mult = p.color === 'w' ? 1 : -1;
       score += mult * (base + psVal);
+      if (p.type === 'p') {
+        if (p.color === 'w') whitePawnFiles[f] = (whitePawnFiles[f] || 0) + 1;
+        else blackPawnFiles[f] = (blackPawnFiles[f] || 0) + 1;
+      }
     }
   }
+  // Personality tweaks (measured in centipawns — align with base material ~100 per pawn)
+  const pid = personalityId || (STATE.personality && STATE.personality.id) || 'deep';
+  if (pid === 'professor') {
+    // +30 per pawn rank advanced from home, -20 per doubled pawn
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const p = board[r][f];
+        if (!p || p.type !== 'p') continue;
+        const rankFromHome = p.color === 'w' ? (6 - r) : (r - 1);
+        score += (p.color === 'w' ? 1 : -1) * 30 * Math.max(0, rankFromHome);
+      }
+    }
+    Object.values(whitePawnFiles).forEach(n => { if (n > 1) score -= 20 * (n - 1); });
+    Object.values(blackPawnFiles).forEach(n => { if (n > 1) score += 20 * (n - 1); });
+  } else if (pid === 'gambit') {
+    // +50 for captures on the most recent move (if chess has a last move in its internal history), +40 for giving check, -30 for passive pieces.
+    // Implemented as tempo-like bias: reward side-to-move-captures in movegen ordering rather than eval.
+    // For positional flavor: reward piece activity (distance from home rank).
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const p = board[r][f];
+        if (!p || p.type === 'p' || p.type === 'k') continue;
+        const homeRank = p.color === 'w' ? 7 : 0;
+        const dist = Math.abs(r - homeRank);
+        score += (p.color === 'w' ? 1 : -1) * 8 * dist;
+      }
+    }
+    if (a.isCheck()) {
+      // side NOT to move delivered the check — they get credit
+      score += a.turn() === 'w' ? -40 : 40;
+    }
+  } else if (pid === 'prudence') {
+    // +40 for king safety (pawns in front of king), +30 for defended pieces, -20 for unsupported attacks
+    // Cheap proxy: reward pawn-shield in front of each king
+    for (let color of ['w', 'b']) {
+      const kingSq = findKingInBoard(board, color);
+      if (!kingSq) continue;
+      const dir = color === 'w' ? -1 : 1;
+      let shield = 0;
+      for (let df = -1; df <= 1; df++) {
+        const nf = kingSq.f + df, nr = kingSq.r + dir;
+        if (nf < 0 || nf > 7 || nr < 0 || nr > 7) continue;
+        const sp = board[nr][nf];
+        if (sp && sp.type === 'p' && sp.color === color) shield++;
+      }
+      score += (color === 'w' ? 1 : -1) * 40 * shield;
+    }
+  }
+  // Benny/Deep use base evaluation (Benny's randomness is applied at move choice)
   return score;
+}
+
+function findKingInBoard(board, color) {
+  for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+    const p = board[r][f];
+    if (p && p.type === 'k' && p.color === color) return { r, f };
+  }
+  return null;
 }
 
 // async minimax — yields to event loop periodically
@@ -1403,15 +1511,16 @@ async function minimax(chess, depth, alpha, beta, maximizingWhite, yieldEvery) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function chooseAiMove() {
-  const d = STATE.difficulty;
+  const pers = STATE.personality || getPersonality();
   const a = STATE.api;
   const moves = a.moves({ verbose: true });
   if (!moves.length) return null;
 
-  if (d === 'easy' && Math.random() < 0.30) {
+  // Benny: random-move chance
+  if (pers.randomChance && Math.random() < pers.randomChance) {
     return moves[Math.floor(Math.random() * moves.length)];
   }
-  const depth = d === 'easy' ? 1 : (d === 'medium' ? 2 : 3);
+  const depth = pers.depth || 2;
   const maxWhite = STATE.chess.turn() === 'w';
   const counter = { counter: 0 };
   // Order root moves: captures first + mates
@@ -1439,13 +1548,18 @@ async function triggerAI() {
   if (!STATE.chess || STATE.aiBusy) return;
   STATE.aiBusy = true;
   aiAbort = false;
+  const pers = STATE.personality || getPersonality();
   updateStatusBar();
-  await sleep(160); // small pause for UX
+  const started = Date.now();
   let move;
   try {
     move = await chooseAiMove();
   } catch (e) { console.error(e); }
   if (!move) { STATE.aiBusy = false; updateStatusBar(); return; }
+  // Flavor: ensure at least `pers.delay` ms from start (makes fast bots feel like they're thinking)
+  const elapsed = Date.now() - started;
+  const minDelay = pers.delay || 300;
+  if (elapsed < minDelay) await sleep(minDelay - elapsed);
   try {
     const r = STATE.api.move(move);
     STATE.lastMove = { from: r.from, to: r.to };
@@ -1463,15 +1577,16 @@ async function triggerAI() {
    CPU MODE
    ============================================================ */
 function startCpuGame() {
-  const diff = segmentValue('cpu-diff') || 'easy';
   let col = segmentValue('cpu-color') || 'w';
   if (col === 'random') col = Math.random() < 0.5 ? 'w' : 'b';
+  const pers = getPersonality();
   // Preserve variant chosen on the variant screen
   const variant = STATE.variant || 'standard';
   const variantState = STATE.variantState || (variant === 'three_check' ? { whiteChecks: 0, blackChecks: 0 } : null);
   resetState();
   STATE.mode = 'cpu';
-  STATE.difficulty = diff;
+  STATE.personality = pers;
+  STATE.difficulty = pers.id; // retained for backward-compat logs
   STATE.myColor = col;
   STATE.orientation = col;
   STATE.variant = variant;
@@ -2342,7 +2457,7 @@ function stopLobby() {
 function init() {
   applyTheme();
   renderBoard();
-  wireSegment('cpu-diff');
+  renderPersonalityGrid();
   wireSegment('cpu-color');
   wireSegment('friend-color');
   // Pre-fill default names
