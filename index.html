@@ -60,6 +60,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-bf h2{color:#E91E63}
 .card-bf:hover{border-color:#E91E63;box-shadow:0 0 30px rgba(233,30,99,0.25),0 8px 32px rgba(0,0,0,0.4)}
 
+.card-utt h2{color:#0ff}
+.card-utt:hover{border-color:#0ff;box-shadow:0 0 30px rgba(0,255,255,0.25),0 8px 32px rgba(0,0,0,0.4)}
+
 /* Three-section homepage layout */
 .games-section{width:100%;max-width:1100px;margin-top:2.5rem}
 .games-section.all-games{max-width:700px}
@@ -239,6 +242,47 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
+    <a href="/ultimate-tic-tac-toe" class="card card-utt" data-new>
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 3x3 meta-grid of 3x3 small boards -->
+        <rect x="2" y="2" width="76" height="76" rx="4" fill="#0a0a14" stroke="#0ff" stroke-width="1.5"/>
+        <!-- Outer grid lines (meta) -->
+        <line x1="28" y1="4" x2="28" y2="76" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="52" y1="4" x2="52" y2="76" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="4" y1="28" x2="76" y2="28" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="4" y1="52" x2="76" y2="52" stroke="#0ff" stroke-width="1.5"/>
+        <!-- Inner grid lines (mini boards) -->
+        <g stroke="#334" stroke-width="0.5">
+          <line x1="12" y1="4" x2="12" y2="28"/><line x1="20" y1="4" x2="20" y2="28"/>
+          <line x1="4" y1="12" x2="28" y2="12"/><line x1="4" y1="20" x2="28" y2="20"/>
+          <line x1="36" y1="4" x2="36" y2="28"/><line x1="44" y1="4" x2="44" y2="28"/>
+          <line x1="28" y1="12" x2="52" y2="12"/><line x1="28" y1="20" x2="52" y2="20"/>
+          <line x1="60" y1="4" x2="60" y2="28"/><line x1="68" y1="4" x2="68" y2="28"/>
+          <line x1="52" y1="12" x2="76" y2="12"/><line x1="52" y1="20" x2="76" y2="20"/>
+          <line x1="12" y1="28" x2="12" y2="52"/><line x1="20" y1="28" x2="20" y2="52"/>
+          <line x1="4" y1="36" x2="28" y2="36"/><line x1="4" y1="44" x2="28" y2="44"/>
+          <line x1="36" y1="28" x2="36" y2="52"/><line x1="44" y1="28" x2="44" y2="52"/>
+          <line x1="28" y1="36" x2="52" y2="36"/><line x1="28" y1="44" x2="52" y2="44"/>
+          <line x1="60" y1="28" x2="60" y2="52"/><line x1="68" y1="28" x2="68" y2="52"/>
+          <line x1="52" y1="36" x2="76" y2="36"/><line x1="52" y1="44" x2="76" y2="44"/>
+          <line x1="12" y1="52" x2="12" y2="76"/><line x1="20" y1="52" x2="20" y2="76"/>
+          <line x1="4" y1="60" x2="28" y2="60"/><line x1="4" y1="68" x2="28" y2="68"/>
+          <line x1="36" y1="52" x2="36" y2="76"/><line x1="44" y1="52" x2="44" y2="76"/>
+          <line x1="28" y1="60" x2="52" y2="60"/><line x1="28" y1="68" x2="52" y2="68"/>
+          <line x1="60" y1="52" x2="60" y2="76"/><line x1="68" y1="52" x2="68" y2="76"/>
+          <line x1="52" y1="60" x2="76" y2="60"/><line x1="52" y1="68" x2="76" y2="68"/>
+        </g>
+        <!-- Top-left mini board claimed by X -->
+        <text x="16" y="22" fill="#0ff" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">X</text>
+        <!-- Center mini board claimed by O -->
+        <text x="40" y="46" fill="#ff6ec7" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">O</text>
+        <!-- Bottom-right mini board claimed by X -->
+        <text x="64" y="70" fill="#0ff" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">X</text>
+      </svg>
+      <h2>Ultimate Tic-Tac-Toe</h2>
+      <p>Nine small boards, one huge game. Where you play sends your opponent to the next board. Solo vs AI or 2-player.</p>
+    </a>
+
     <a href="/brickfall" class="card card-bf" data-new>
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="44" y="6" width="12" height="12" fill="#FB8C00"/>
@@ -445,6 +489,41 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
       <p>Stack falling shapes, clear lines, beat the high score in this original arcade stacker.</p>
     </a>
 
+    <a href="/ultimate-tic-tac-toe" class="card card-utt" data-new>
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="76" height="76" rx="4" fill="#0a0a14" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="28" y1="4" x2="28" y2="76" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="52" y1="4" x2="52" y2="76" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="4" y1="28" x2="76" y2="28" stroke="#0ff" stroke-width="1.5"/>
+        <line x1="4" y1="52" x2="76" y2="52" stroke="#0ff" stroke-width="1.5"/>
+        <g stroke="#334" stroke-width="0.5">
+          <line x1="12" y1="4" x2="12" y2="28"/><line x1="20" y1="4" x2="20" y2="28"/>
+          <line x1="4" y1="12" x2="28" y2="12"/><line x1="4" y1="20" x2="28" y2="20"/>
+          <line x1="36" y1="4" x2="36" y2="28"/><line x1="44" y1="4" x2="44" y2="28"/>
+          <line x1="28" y1="12" x2="52" y2="12"/><line x1="28" y1="20" x2="52" y2="20"/>
+          <line x1="60" y1="4" x2="60" y2="28"/><line x1="68" y1="4" x2="68" y2="28"/>
+          <line x1="52" y1="12" x2="76" y2="12"/><line x1="52" y1="20" x2="76" y2="20"/>
+          <line x1="12" y1="28" x2="12" y2="52"/><line x1="20" y1="28" x2="20" y2="52"/>
+          <line x1="4" y1="36" x2="28" y2="36"/><line x1="4" y1="44" x2="28" y2="44"/>
+          <line x1="36" y1="28" x2="36" y2="52"/><line x1="44" y1="28" x2="44" y2="52"/>
+          <line x1="28" y1="36" x2="52" y2="36"/><line x1="28" y1="44" x2="52" y2="44"/>
+          <line x1="60" y1="28" x2="60" y2="52"/><line x1="68" y1="28" x2="68" y2="52"/>
+          <line x1="52" y1="36" x2="76" y2="36"/><line x1="52" y1="44" x2="76" y2="44"/>
+          <line x1="12" y1="52" x2="12" y2="76"/><line x1="20" y1="52" x2="20" y2="76"/>
+          <line x1="4" y1="60" x2="28" y2="60"/><line x1="4" y1="68" x2="28" y2="68"/>
+          <line x1="36" y1="52" x2="36" y2="76"/><line x1="44" y1="52" x2="44" y2="76"/>
+          <line x1="28" y1="60" x2="52" y2="60"/><line x1="28" y1="68" x2="52" y2="68"/>
+          <line x1="60" y1="52" x2="60" y2="76"/><line x1="68" y1="52" x2="68" y2="76"/>
+          <line x1="52" y1="60" x2="76" y2="60"/><line x1="52" y1="68" x2="76" y2="68"/>
+        </g>
+        <text x="16" y="22" fill="#0ff" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">X</text>
+        <text x="40" y="46" fill="#ff6ec7" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">O</text>
+        <text x="64" y="70" fill="#0ff" font-size="22" font-weight="bold" text-anchor="middle" font-family="Courier New">X</text>
+      </svg>
+      <h2>Ultimate Tic-Tac-Toe</h2>
+      <p>Nine small boards, one huge game. Where you play sends your opponent to the next board. Solo vs AI or 2-player.</p>
+    </a>
+
     <a href="/mini-golf" class="card card-mg">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- Green felt -->
@@ -522,6 +601,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Mini Golf">Mini Golf</option>
         <option value="Chess">Chess</option>
         <option value="Brickfall">Brickfall</option>
+        <option value="Ultimate Tic-Tac-Toe">Ultimate Tic-Tac-Toe</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>

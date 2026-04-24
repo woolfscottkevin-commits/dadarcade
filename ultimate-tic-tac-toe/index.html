@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ultimate Tic-Tac-Toe — Free Online Strategy Game | Dad Arcade</title>
+<meta name="description" content="Play Ultimate Tic-Tac-Toe free online. Nine small boards inside one big board — where you play sends your opponent to a specific square. Solo vs AI or 2-player on one device.">
+<meta name="keywords" content="ultimate tic tac toe, ultimate tic tac toe online, strategy tic tac toe, meta tic tac toe, free browser strategy game, tic tac toe kids">
+<link rel="canonical" href="https://dadarcade.com/ultimate-tic-tac-toe">
+<meta property="og:title" content="Ultimate Tic-Tac-Toe — Free Online Strategy Game">
+<meta property="og:description" content="Nine small boards, one huge game. Win three boards in a row to win — but watch out: every move sends your opponent to the next board.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/ultimate-tic-tac-toe">
+<meta property="og:site_name" content="Dad Arcade">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ultimate Tic-Tac-Toe — Free Online Strategy Game">
+<meta name="twitter:description" content="Nine small boards, one huge game. Tap to play free — no download.">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Ultimate Tic-Tac-Toe",
+  "url": "https://dadarcade.com/ultimate-tic-tac-toe",
+  "description": "A nested twist on classic tic-tac-toe: nine small boards arranged in a 3x3 meta-grid. Where you play in a small board determines which small board your opponent must play in next. Win three small boards in a row to win the game.",
+  "genre": ["Strategy", "Puzzle"],
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "inLanguage": "en",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Dad Arcade" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Dad Arcade", "item": "https://dadarcade.com" },
+    { "@type": "ListItem", "position": 2, "name": "Ultimate Tic-Tac-Toe", "item": "https://dadarcade.com/ultimate-tic-tac-toe" }
+  ]
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#0a0a14;color:#fff;font-family:'Courier New',monospace;min-height:100vh;overflow-x:hidden}
+body{display:flex;flex-direction:column;align-items:center;padding:0.5rem 0.5rem 1.5rem;-webkit-tap-highlight-color:transparent}
+a{color:#0ff;text-decoration:none}
+a:hover{color:#9ff}
+button{font-family:inherit}
+
+#back-link{position:fixed;top:0.6rem;left:0.75rem;color:#4af;font-size:0.85rem;z-index:50}
+#back-link:hover{color:#9cf}
+
+h1#title{font-size:clamp(1.2rem,3.8vw,1.8rem);font-weight:bold;letter-spacing:0.18em;margin:1.6rem 0 0.3rem;background:linear-gradient(90deg,#0ff,#ff6ec7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 14px rgba(0,255,255,0.25));text-align:center}
+#tagline{color:#666;font-size:0.75rem;margin-bottom:0.6rem;letter-spacing:0.12em;text-align:center}
+
+/* ===== Mode select ===== */
+#screen-menu{display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:1rem 0.5rem}
+#screen-menu.hidden{display:none}
+#screen-menu h2{font-size:0.95rem;color:#aaa;letter-spacing:0.12em;margin-bottom:1rem;text-transform:uppercase}
+.mode-btn{display:block;width:100%;background:#10101e;border:2px solid #2a2a44;color:#fff;padding:1.1rem 1rem;border-radius:10px;font-size:1rem;letter-spacing:0.06em;margin-bottom:0.6rem;cursor:pointer;transition:all 0.15s;text-align:left}
+.mode-btn:hover,.mode-btn.selected{border-color:#0ff;box-shadow:0 0 18px rgba(0,255,255,0.2);color:#0ff}
+.mode-btn .mode-label{display:block;font-size:1.05rem;font-weight:bold;margin-bottom:0.15rem}
+.mode-btn .mode-sub{display:block;font-size:0.78rem;color:#888;letter-spacing:0.04em}
+.mode-btn.selected .mode-sub{color:#9ff}
+
+.section-subhead{color:#888;font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;margin:1rem 0 0.5rem;align-self:flex-start;padding-left:0.25rem}
+
+.row-choices{display:flex;gap:0.5rem;width:100%;margin-bottom:0.4rem}
+.choice-btn{flex:1;background:#10101e;border:2px solid #2a2a44;color:#888;font-size:0.85rem;padding:0.7rem 0.4rem;border-radius:8px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;transition:all 0.12s;font-family:inherit}
+.choice-btn.active{border-color:#0ff;color:#0ff;background:rgba(0,255,255,0.05);box-shadow:0 0 10px rgba(0,255,255,0.15)}
+.choice-btn[data-symbol="X"].active{border-color:#0ff;color:#0ff}
+.choice-btn[data-symbol="O"].active{border-color:#ff6ec7;color:#ff6ec7;background:rgba(255,110,199,0.05);box-shadow:0 0 10px rgba(255,110,199,0.15)}
+
+#menu-start{width:100%;background:linear-gradient(135deg,#0ff,#ff6ec7);color:#0a0a14;font-weight:bold;font-size:1rem;letter-spacing:0.15em;padding:0.9rem;border:none;border-radius:10px;margin-top:0.8rem;cursor:pointer;transition:transform 0.1s}
+#menu-start:hover{transform:translateY(-2px)}
+#menu-how{margin-top:1rem;background:none;border:none;color:#888;font-size:0.8rem;cursor:pointer;text-decoration:underline;font-family:inherit}
+#menu-how:hover{color:#0ff}
+
+/* ===== Game screen ===== */
+#screen-game{display:flex;flex-direction:column;align-items:center;width:100%;max-width:420px;padding:0.25rem 0}
+#screen-game.hidden{display:none}
+
+#hud{display:flex;justify-content:space-between;align-items:center;width:100%;gap:0.5rem;margin-bottom:0.6rem;flex-wrap:wrap}
+#turn-indicator{flex:1;min-width:140px;background:#10101e;border:2px solid #2a2a44;border-radius:8px;padding:0.55rem 0.8rem;font-size:0.9rem;letter-spacing:0.08em;text-align:center}
+#turn-indicator .t-symbol{display:inline-block;font-weight:bold;font-size:1.1rem;margin-left:0.3rem}
+#turn-indicator.x-turn{border-color:#0ff}
+#turn-indicator.x-turn .t-symbol{color:#0ff}
+#turn-indicator.o-turn{border-color:#ff6ec7}
+#turn-indicator.o-turn .t-symbol{color:#ff6ec7}
+#turn-indicator.thinking{color:#888}
+
+.btn-sm{background:#10101e;border:2px solid #2a2a44;color:#aaa;font-size:0.75rem;padding:0.55rem 0.7rem;border-radius:8px;cursor:pointer;letter-spacing:0.08em;text-transform:uppercase;transition:all 0.12s;font-family:inherit;white-space:nowrap}
+.btn-sm:hover:not(:disabled){border-color:#0ff;color:#0ff}
+.btn-sm:disabled{opacity:0.35;cursor:not-allowed}
+
+/* ===== Board layout ===== */
+#meta-board{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:6px;width:100%;aspect-ratio:1/1;max-width:380px;background:#0a0a14;padding:2px;border-radius:10px;position:relative}
+.mini-board{position:relative;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:2px;background:#1a1a2e;border:2px solid #2a2a44;border-radius:5px;padding:2px;transition:border-color 0.2s,box-shadow 0.2s}
+.mini-board.active{border-color:#0ff;box-shadow:0 0 12px rgba(0,255,255,0.3),inset 0 0 10px rgba(0,255,255,0.06)}
+.mini-board.active.o-turn{border-color:#ff6ec7;box-shadow:0 0 12px rgba(255,110,199,0.3),inset 0 0 10px rgba(255,110,199,0.06)}
+.mini-board.inactive{opacity:0.45}
+.mini-board.won-x{background:rgba(0,255,255,0.12)}
+.mini-board.won-o{background:rgba(255,110,199,0.12)}
+.mini-board.drawn{background:rgba(120,120,120,0.1)}
+
+.cell{background:#06060d;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:clamp(0.9rem,3vw,1.3rem);color:#444;aspect-ratio:1/1;transition:background 0.1s;user-select:none;-webkit-user-select:none;min-height:0;min-width:0}
+.cell:not(.taken):not(.disabled):active{background:#1a1a2e}
+.cell.x{color:#0ff;text-shadow:0 0 6px rgba(0,255,255,0.5)}
+.cell.o{color:#ff6ec7;text-shadow:0 0 6px rgba(255,110,199,0.5)}
+.cell.taken{cursor:default}
+.cell.disabled{cursor:not-allowed;pointer-events:none}
+.mini-board:not(.active) .cell:not(.taken){cursor:not-allowed;pointer-events:none}
+
+.small-win-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:3.5rem;font-weight:bold;pointer-events:none;text-shadow:0 0 12px currentColor;line-height:1}
+.small-win-overlay.x{color:#0ff}
+.small-win-overlay.o{color:#ff6ec7}
+.small-win-overlay.d{color:#555;font-size:2rem;opacity:0.8}
+
+/* ===== Overlay / modal ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:100;display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.show{display:flex}
+.modal{background:#10101e;border:2px solid #2a2a44;border-radius:12px;padding:1.5rem 1.4rem;max-width:420px;width:100%;text-align:center}
+.modal h2{font-size:1.4rem;margin-bottom:0.7rem;letter-spacing:0.08em}
+.modal .stat{color:#aaa;font-size:0.95rem;margin:0.3rem 0}
+.modal .stat b{color:#fff}
+.modal .win-x{color:#0ff}
+.modal .win-o{color:#ff6ec7}
+.modal .actions{display:flex;gap:0.6rem;margin-top:1.1rem;flex-wrap:wrap}
+.modal .actions button{flex:1;min-width:130px}
+.modal .btn-primary{background:linear-gradient(135deg,#0ff,#ff6ec7);color:#0a0a14;border:none;font-weight:bold;letter-spacing:0.1em;padding:0.75rem;border-radius:8px;cursor:pointer;font-size:0.85rem;font-family:inherit;text-transform:uppercase}
+.modal .btn-secondary{background:#1a1a2e;border:2px solid #444;color:#0ff;padding:0.75rem;border-radius:8px;cursor:pointer;font-size:0.8rem;letter-spacing:0.1em;font-family:inherit;text-transform:uppercase}
+.modal .close-x{position:absolute;top:0.8rem;right:1rem;background:none;border:none;color:#888;font-size:1.4rem;cursor:pointer;line-height:1}
+.modal .close-x:hover{color:#fff}
+
+.how-body{text-align:left;color:#bbb;font-size:0.9rem;line-height:1.55;margin:0.5rem 0 0.6rem}
+.how-body ul{margin:0.4rem 0 0.8rem 1.1rem}
+.how-body li{margin-bottom:0.35rem}
+.how-diagram{display:block;margin:0.8rem auto;width:140px;height:140px}
+
+/* ===== About section ===== */
+#info{max-width:640px;margin:1.2rem auto 0;padding:0 0.4rem;color:#777;font-size:0.85rem;line-height:1.6;width:100%}
+#info h1{font-size:0.98rem;color:#999;font-weight:normal;margin-bottom:0.4rem}
+#info details{margin:0.5rem 0}
+#info summary{cursor:pointer;color:#999;padding:0.3rem 0;font-size:0.88rem}
+#info .about-copy{color:#888;font-size:0.85rem;line-height:1.65;margin-top:0.4rem}
+#info .links{font-size:0.78rem;color:#555;margin-top:1.2rem;text-align:center}
+#info .links a{color:#666}
+
+@media(min-width:640px){
+  #screen-game{max-width:500px}
+  #meta-board{max-width:440px;gap:10px}
+  .small-win-overlay{font-size:4.5rem}
+}
+
+@media(max-width:360px){
+  .btn-sm{font-size:0.7rem;padding:0.5rem 0.5rem}
+  #turn-indicator{min-width:100px;font-size:0.82rem;padding:0.5rem 0.6rem}
+  #meta-board{gap:6px}
+  .mini-board{gap:1px;padding:2px}
+}
+</style>
+</head>
+<body>
+<a id="back-link" href="/">&larr; Dad Arcade</a>
+
+<noscript>
+<div style="max-width:700px;margin:2rem auto;padding:1.5rem;color:#ccc;font-family:sans-serif">
+<h1>Ultimate Tic-Tac-Toe</h1>
+<p>This game requires JavaScript. Enable JavaScript and reload the page.</p>
+</div>
+</noscript>
+
+<h1 id="title">ULTIMATE TIC-TAC-TOE</h1>
+<p id="tagline">NINE BOARDS • ONE GAME</p>
+
+<!-- ===== Mode select screen ===== -->
+<section id="screen-menu">
+  <h2>Choose how to play</h2>
+  <button class="mode-btn selected" id="mode-ai" data-mode="ai" type="button">
+    <span class="mode-label">Play vs Computer</span>
+    <span class="mode-sub">Solo — pick your side and difficulty</span>
+  </button>
+  <button class="mode-btn" id="mode-hotseat" data-mode="hotseat" type="button">
+    <span class="mode-label">2-Player (Same Device)</span>
+    <span class="mode-sub">Pass the phone or tablet back and forth</span>
+  </button>
+
+  <div id="ai-options">
+    <div class="section-subhead">Difficulty</div>
+    <div class="row-choices" id="diff-row">
+      <button class="choice-btn" data-diff="easy" type="button">Easy</button>
+      <button class="choice-btn active" data-diff="medium" type="button">Medium</button>
+      <button class="choice-btn" data-diff="hard" type="button">Hard</button>
+    </div>
+
+    <div class="section-subhead">Your symbol</div>
+    <div class="row-choices" id="symbol-row">
+      <button class="choice-btn active" data-symbol="X" type="button">X · Goes first</button>
+      <button class="choice-btn" data-symbol="O" type="button">O · Goes second</button>
+    </div>
+  </div>
+
+  <button id="menu-start" type="button">START GAME</button>
+  <button id="menu-how" type="button">How to play</button>
+</section>
+
+<!-- ===== Game screen ===== -->
+<section id="screen-game" class="hidden">
+  <div id="hud">
+    <div id="turn-indicator" class="x-turn">Your turn<span class="t-symbol"> X</span></div>
+    <button class="btn-sm" id="btn-undo" type="button" title="Undo last round" disabled>Undo</button>
+    <button class="btn-sm" id="btn-new" type="button" title="Restart with same settings">New</button>
+    <button class="btn-sm" id="btn-menu" type="button" title="Back to menu">Menu</button>
+  </div>
+
+  <div id="meta-board" aria-label="Ultimate Tic-Tac-Toe board"></div>
+</section>
+
+<!-- ===== Game over overlay ===== -->
+<div id="overlay-end" class="overlay" role="dialog" aria-label="Game result">
+  <div class="modal" style="position:relative">
+    <h2 id="end-title">You won!</h2>
+    <div id="end-body"></div>
+    <div class="actions">
+      <button class="btn-primary" id="end-again" type="button">Play Again</button>
+      <button class="btn-secondary" id="end-menu" type="button">Change Mode</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== How to play modal ===== -->
+<div id="overlay-how" class="overlay" role="dialog" aria-label="How to play">
+  <div class="modal" style="position:relative">
+    <button class="close-x" id="how-close" type="button" aria-label="Close">&times;</button>
+    <h2 style="font-size:1.15rem">HOW TO PLAY</h2>
+    <svg class="how-diagram" viewBox="0 0 90 90" aria-hidden="true">
+      <rect x="0" y="0" width="90" height="90" fill="#0a0a14" stroke="#2a2a44" stroke-width="1"/>
+      <!-- 3x3 of mini-boards -->
+      <g stroke="#2a2a44" stroke-width="0.5" fill="none">
+        <!-- outer grid lines -->
+        <line x1="30" y1="0" x2="30" y2="90" stroke="#0ff" stroke-width="1.2"/>
+        <line x1="60" y1="0" x2="60" y2="90" stroke="#0ff" stroke-width="1.2"/>
+        <line x1="0" y1="30" x2="90" y2="30" stroke="#0ff" stroke-width="1.2"/>
+        <line x1="0" y1="60" x2="90" y2="60" stroke="#0ff" stroke-width="1.2"/>
+        <!-- inner grid lines in each mini -->
+        <g>
+          <line x1="10" y1="0" x2="10" y2="30"/><line x1="20" y1="0" x2="20" y2="30"/>
+          <line x1="0" y1="10" x2="30" y2="10"/><line x1="0" y1="20" x2="30" y2="20"/>
+          <line x1="40" y1="0" x2="40" y2="30"/><line x1="50" y1="0" x2="50" y2="30"/>
+          <line x1="30" y1="10" x2="60" y2="10"/><line x1="30" y1="20" x2="60" y2="20"/>
+          <line x1="70" y1="0" x2="70" y2="30"/><line x1="80" y1="0" x2="80" y2="30"/>
+          <line x1="60" y1="10" x2="90" y2="10"/><line x1="60" y1="20" x2="90" y2="20"/>
+          <line x1="10" y1="30" x2="10" y2="60"/><line x1="20" y1="30" x2="20" y2="60"/>
+          <line x1="0" y1="40" x2="30" y2="40"/><line x1="0" y1="50" x2="30" y2="50"/>
+          <line x1="40" y1="30" x2="40" y2="60"/><line x1="50" y1="30" x2="50" y2="60"/>
+          <line x1="30" y1="40" x2="60" y2="40"/><line x1="30" y1="50" x2="60" y2="50"/>
+          <line x1="70" y1="30" x2="70" y2="60"/><line x1="80" y1="30" x2="80" y2="60"/>
+          <line x1="60" y1="40" x2="90" y2="40"/><line x1="60" y1="50" x2="90" y2="50"/>
+          <line x1="10" y1="60" x2="10" y2="90"/><line x1="20" y1="60" x2="20" y2="90"/>
+          <line x1="0" y1="70" x2="30" y2="70"/><line x1="0" y1="80" x2="30" y2="80"/>
+          <line x1="40" y1="60" x2="40" y2="90"/><line x1="50" y1="60" x2="50" y2="90"/>
+          <line x1="30" y1="70" x2="60" y2="70"/><line x1="30" y1="80" x2="60" y2="80"/>
+          <line x1="70" y1="60" x2="70" y2="90"/><line x1="80" y1="60" x2="80" y2="90"/>
+          <line x1="60" y1="70" x2="90" y2="70"/><line x1="60" y1="80" x2="90" y2="80"/>
+        </g>
+      </g>
+      <!-- Highlight one mini-board to show "active" concept -->
+      <rect x="30" y="30" width="30" height="30" fill="rgba(0,255,255,0.18)" stroke="#0ff" stroke-width="1.3"/>
+    </svg>
+    <div class="how-body">
+      <ul>
+        <li>The big board is a <b>3 × 3 grid of small boards</b> — 9 small boards in total.</li>
+        <li><b>X goes first.</b> The first move can be any cell on any small board.</li>
+        <li>Where you play <i>inside</i> a small board decides which small board the next player must play in. Play the top-right cell → opponent goes to the top-right small board.</li>
+        <li>If that target small board is already won or full, the next player may play anywhere.</li>
+        <li>Win a small board with 3-in-a-row. It gets claimed with a big X or O.</li>
+        <li>Win the whole game by claiming <b>3 small boards in a row</b> on the big grid.</li>
+      </ul>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="how-ok" type="button">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== About + SEO copy ===== -->
+<div id="info">
+  <h1>Ultimate Tic-Tac-Toe — a bigger, brainier take on the classic</h1>
+  <details>
+    <summary>About this game</summary>
+    <p class="about-copy">Ultimate Tic-Tac-Toe — also called meta tic-tac-toe or super tic-tac-toe — is a paper-and-pencil strategy game that turns the 30-second classic into something you can actually think about. Instead of one 3 × 3 grid, you play on nine of them, arranged into a larger 3 × 3 meta-grid. The twist: the cell you pick inside a small board forces your opponent to play in the small board that lives at that same position on the meta-grid. That single rule changes everything. Suddenly every move has two consequences — what it does to the small board you're playing in, and which board you're sending your opponent to. Good players learn to set traps: win a small board while also sending the opponent into a square where all their options are bad. It's free, it takes a minute to learn, and it can keep a family busy for a whole road trip.</p>
+  </details>
+  <details>
+    <summary>Controls & tips</summary>
+    <ul style="margin:0.4rem 0 0.6rem 1.2rem;color:#777">
+      <li>Tap an allowed cell to play. Active small boards glow; inactive boards are dimmed.</li>
+      <li>Undo (solo only) reverts both the computer's move and your last move.</li>
+      <li>New — restart with the same mode + difficulty. Menu — back to mode select.</li>
+      <li>Tip: the center small board is reachable from 8 other boards, so it gets contested fast.</li>
+      <li>Tip: playing a cell that would force the opponent to a won/drawn board gives them free choice — sometimes that's good (a draw destination), often it's risky.</li>
+    </ul>
+  </details>
+  <p class="links">
+    <a href="/games">All games</a> &middot; <a href="/">Dad Arcade home</a>
+  </p>
+</div>
+
+<script>
+'use strict';
+// Ultimate Tic-Tac-Toe — original implementation for DadArcade.
+// Public-domain rule set; all code, art, and copy are original.
+(function(){
+
+// ===== Constants =====
+var LINES = [
+  [0,1,2],[3,4,5],[6,7,8],   // rows
+  [0,3,6],[1,4,7],[2,5,8],   // columns
+  [0,4,8],[2,4,6]            // diagonals
+];
+var CENTER_META = 4;
+var CORNER_META = [0,2,6,8];
+var EDGE_META = [1,3,5,7];
+
+// Search depth per difficulty (used for Hard's iterative deepening ceiling)
+var HARD_DEPTH = 5;
+var HARD_BUDGET_MS = 900;
+
+// ===== Pure engine =====
+function createState(){
+  var boards = [];
+  for (var i = 0; i < 9; i++){
+    boards.push([null,null,null,null,null,null,null,null,null]);
+  }
+  return {
+    boards: boards,
+    smallWinners: [null,null,null,null,null,null,null,null,null],  // 'X'|'O'|'D'|null
+    nextPlayer: 'X',
+    targetBoard: null,  // null means any
+    metaWinner: null,   // 'X'|'O'|'D'|null
+    history: []         // each move: { boardIdx, cellIdx, player, prevTargetBoard, becameResolved }
+  };
+}
+
+// Given 9 cells, return 'X'|'O'|null for winner
+function checkCellsWinner(cells){
+  for (var i = 0; i < LINES.length; i++){
+    var a = cells[LINES[i][0]], b = cells[LINES[i][1]], c = cells[LINES[i][2]];
+    if (a && a === b && b === c) return a;
+  }
+  return null;
+}
+
+function isBoardFull(cells){
+  for (var i = 0; i < 9; i++) if (!cells[i]) return false;
+  return true;
+}
+
+// Any small board that's not yet won AND not full
+function boardIsActive(state, boardIdx){
+  return state.smallWinners[boardIdx] === null;
+}
+
+function getLegalMoves(state){
+  var moves = [];
+  if (state.metaWinner) return moves;
+  var tb = state.targetBoard;
+  if (tb !== null && boardIsActive(state, tb)){
+    var cells = state.boards[tb];
+    for (var c = 0; c < 9; c++) if (!cells[c]) moves.push({ b: tb, c: c });
+    return moves;
+  }
+  // Target board is null OR resolved: play anywhere active
+  for (var b = 0; b < 9; b++){
+    if (!boardIsActive(state, b)) continue;
+    var cs = state.boards[b];
+    for (var cc = 0; cc < 9; cc++) if (!cs[cc]) moves.push({ b: b, c: cc });
+  }
+  return moves;
+}
+
+// Apply move in place; push to history for undo.
+function applyMove(state, boardIdx, cellIdx){
+  var player = state.nextPlayer;
+  var hist = {
+    boardIdx: boardIdx, cellIdx: cellIdx, player: player,
+    prevTargetBoard: state.targetBoard,
+    prevSmallWinner: state.smallWinners[boardIdx],
+    prevMetaWinner: state.metaWinner
+  };
+  state.boards[boardIdx][cellIdx] = player;
+
+  // Update this small board's resolution
+  if (state.smallWinners[boardIdx] === null){
+    var w = checkCellsWinner(state.boards[boardIdx]);
+    if (w) state.smallWinners[boardIdx] = w;
+    else if (isBoardFull(state.boards[boardIdx])) state.smallWinners[boardIdx] = 'D';
+  }
+
+  // Meta winner?
+  var mw = checkCellsWinner(state.smallWinners.map(function(v){ return v === 'D' ? null : v; }));
+  if (mw) state.metaWinner = mw;
+  else {
+    // Meta draw if all small boards resolved and no meta winner
+    var anyOpen = false;
+    for (var k = 0; k < 9; k++) if (state.smallWinners[k] === null) { anyOpen = true; break; }
+    if (!anyOpen) state.metaWinner = 'D';
+  }
+
+  // Compute new target: cellIdx determines next small board
+  var nextTarget = cellIdx;
+  if (!boardIsActive(state, nextTarget)) nextTarget = null;  // free choice
+  state.targetBoard = nextTarget;
+  state.nextPlayer = player === 'X' ? 'O' : 'X';
+  state.history.push(hist);
+  return state;
+}
+
+// Undo last move (reverse of applyMove)
+function undoMove(state){
+  if (state.history.length === 0) return;
+  var h = state.history.pop();
+  state.boards[h.boardIdx][h.cellIdx] = null;
+  state.smallWinners[h.boardIdx] = h.prevSmallWinner;
+  state.metaWinner = h.prevMetaWinner;
+  state.targetBoard = h.prevTargetBoard;
+  state.nextPlayer = h.player;
+}
+
+// Clone state (for AI search). Shallow clone of top level, deep for arrays we mutate.
+function cloneState(state){
+  var boards = new Array(9);
+  for (var i = 0; i < 9; i++) boards[i] = state.boards[i].slice();
+  return {
+    boards: boards,
+    smallWinners: state.smallWinners.slice(),
+    nextPlayer: state.nextPlayer,
+    targetBoard: state.targetBoard,
+    metaWinner: state.metaWinner,
+    history: []  // AI doesn't need history
+  };
+}
+
+// ===== AI =====
+
+// Eval: positive = good for X, negative = good for O
+function evaluateState(state){
+  if (state.metaWinner === 'X') return 100000;
+  if (state.metaWinner === 'O') return -100000;
+  if (state.metaWinner === 'D') return 0;
+
+  var score = 0;
+
+  // Small board wins
+  for (var i = 0; i < 9; i++){
+    var w = state.smallWinners[i];
+    var bonus = (i === CENTER_META) ? 14 : (CORNER_META.indexOf(i) >= 0 ? 8 : 5);
+    if (w === 'X') score += 10 + bonus;
+    else if (w === 'O') score -= 10 + bonus;
+  }
+
+  // Small-board-line threats at the meta level
+  for (var li = 0; li < LINES.length; li++){
+    var L = LINES[li];
+    var w1 = state.smallWinners[L[0]], w2 = state.smallWinners[L[1]], w3 = state.smallWinners[L[2]];
+    var vals = [w1, w2, w3];
+    var xs = 0, os = 0, ds = 0;
+    for (var vi = 0; vi < 3; vi++){
+      if (vals[vi] === 'X') xs++;
+      else if (vals[vi] === 'O') os++;
+      else if (vals[vi] === 'D') ds++;
+    }
+    // Lines blocked by D or by both players can't score
+    if (ds > 0) continue;
+    if (xs > 0 && os > 0) continue;
+    if (xs === 2) score += 40;
+    else if (xs === 1) score += 6;
+    if (os === 2) score -= 40;
+    else if (os === 1) score -= 6;
+  }
+
+  // Threats inside still-open small boards (2-in-a-row with 3rd cell empty)
+  for (var bi = 0; bi < 9; bi++){
+    if (state.smallWinners[bi] !== null) continue;
+    var cs = state.boards[bi];
+    for (var lj = 0; lj < LINES.length; lj++){
+      var LL = LINES[lj];
+      var a = cs[LL[0]], b = cs[LL[1]], c = cs[LL[2]];
+      var xc = 0, oc = 0, empty = 0;
+      [a,b,c].forEach(function(v){ if (v === 'X') xc++; else if (v === 'O') oc++; else empty++; });
+      if (xc > 0 && oc > 0) continue;
+      if (xc === 2 && empty === 1) score += 2;
+      if (oc === 2 && empty === 1) score -= 2;
+    }
+  }
+
+  return score;
+}
+
+// Can `player` immediately win the small board `b` with one move?
+function hasImmediateWin(state, b, player){
+  if (state.smallWinners[b] !== null) return false;
+  var cs = state.boards[b];
+  for (var i = 0; i < LINES.length; i++){
+    var L = LINES[i];
+    var a = cs[L[0]], bb = cs[L[1]], c = cs[L[2]];
+    var pc = 0, oc = 0, emptyIdx = -1;
+    [a, bb, c].forEach(function(v, idx){
+      if (v === player) pc++;
+      else if (v !== null) oc++;
+      else emptyIdx = L[idx];
+    });
+    if (pc === 2 && oc === 0 && emptyIdx >= 0) return true;
+  }
+  return false;
+}
+
+function moveOrderingScore(state, move){
+  // Higher = try first
+  var s = 0;
+  if (move.b === CENTER_META) s += 3;
+  else if (CORNER_META.indexOf(move.b) >= 0) s += 1;
+  // Would this move win the small board?
+  var cs = state.boards[move.b];
+  var backup = cs[move.c];
+  cs[move.c] = state.nextPlayer;
+  if (checkCellsWinner(cs) === state.nextPlayer) s += 10;
+  cs[move.c] = backup;
+  // Penalize sending opponent to a board where they have immediate win
+  var dest = move.c;
+  if (state.smallWinners[dest] === null && hasImmediateWin(state, dest, state.nextPlayer === 'X' ? 'O' : 'X')){
+    s -= 8;
+  }
+  return s;
+}
+
+function minimax(state, depth, alpha, beta, maximizingX, deadline){
+  if (state.metaWinner || depth === 0) {
+    var e = evaluateState(state);
+    // Depth bonus: prefer faster wins / slower losses
+    if (e >= 90000) e -= (HARD_DEPTH - depth);
+    else if (e <= -90000) e += (HARD_DEPTH - depth);
+    return e;
+  }
+  if (deadline && Date.now() > deadline) return evaluateState(state);
+
+  var moves = getLegalMoves(state);
+  if (moves.length === 0) return evaluateState(state);
+
+  // Move ordering
+  moves.sort(function(a, b){ return moveOrderingScore(state, b) - moveOrderingScore(state, a); });
+
+  if (maximizingX){
+    var best = -Infinity;
+    for (var i = 0; i < moves.length; i++){
+      applyMove(state, moves[i].b, moves[i].c);
+      var v = minimax(state, depth - 1, alpha, beta, false, deadline);
+      undoMove(state);
+      if (v > best) best = v;
+      if (best > alpha) alpha = best;
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    var bestO = Infinity;
+    for (var j = 0; j < moves.length; j++){
+      applyMove(state, moves[j].b, moves[j].c);
+      var v2 = minimax(state, depth - 1, alpha, beta, true, deadline);
+      undoMove(state);
+      if (v2 < bestO) bestO = v2;
+      if (bestO < beta) beta = bestO;
+      if (beta <= alpha) break;
+    }
+    return bestO;
+  }
+}
+
+function chooseMoveEasy(state){
+  var moves = getLegalMoves(state);
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
+function chooseMoveMedium(state){
+  // 1-ply lookahead with simple heuristic + random tiebreak
+  var moves = getLegalMoves(state);
+  var player = state.nextPlayer;
+  var opp = player === 'X' ? 'O' : 'X';
+  var scored = moves.map(function(m){
+    // Did opponent have an immediate win in this small board before our move?
+    var oppHadWinInBoard = hasImmediateWin(state, m.b, opp);
+    applyMove(state, m.b, m.c);
+    var sc = 0;
+    // Immediate small-board claim
+    if (state.smallWinners[m.b] === player) sc += 25;
+    // Meta win
+    if (state.metaWinner === player) sc += 1000;
+    // Blocking an opponent small-board win (we killed their 3-in-a-row threat on this board)
+    if (oppHadWinInBoard && !hasImmediateWin(state, m.b, opp)) sc += 20;
+    // Block opponent immediate win next turn if they would be sent somewhere specific
+    var sent = state.targetBoard;
+    if (sent !== null && hasImmediateWin(state, sent, opp)) sc -= 40;
+    // Don't hand the opponent free choice to win somewhere obvious
+    if (sent === null){
+      for (var i = 0; i < 9; i++){
+        if (state.smallWinners[i] === null && hasImmediateWin(state, i, opp)) { sc -= 15; break; }
+      }
+    }
+    // Positional preference
+    if (m.b === CENTER_META) sc += 3;
+    else if (CORNER_META.indexOf(m.b) >= 0) sc += 1;
+    undoMove(state);
+    // Random tiebreak component
+    sc += Math.random() * 1.5;
+    return { move: m, score: sc };
+  });
+  scored.sort(function(a, b){ return b.score - a.score; });
+  return scored[0].move;
+}
+
+function chooseMoveHard(state){
+  var moves = getLegalMoves(state);
+  if (moves.length === 1) return moves[0];
+  var deadline = Date.now() + HARD_BUDGET_MS;
+  var maximizingX = state.nextPlayer === 'X';
+  // Iterative deepening up to HARD_DEPTH
+  var bestMove = moves[0];
+  var bestVal = maximizingX ? -Infinity : Infinity;
+
+  // Order moves with heuristic before first pass
+  moves.sort(function(a, b){ return moveOrderingScore(state, b) - moveOrderingScore(state, a); });
+
+  for (var d = 2; d <= HARD_DEPTH; d++){
+    if (Date.now() > deadline) break;
+    var currentBestMove = null;
+    var currentBestVal = maximizingX ? -Infinity : Infinity;
+    var cutoff = false;
+    for (var i = 0; i < moves.length; i++){
+      if (Date.now() > deadline){ cutoff = true; break; }
+      applyMove(state, moves[i].b, moves[i].c);
+      var v = minimax(state, d - 1, -Infinity, Infinity, !maximizingX, deadline);
+      undoMove(state);
+      if (maximizingX){
+        if (v > currentBestVal || (v === currentBestVal && Math.random() < 0.2)){
+          currentBestVal = v; currentBestMove = moves[i];
+        }
+      } else {
+        if (v < currentBestVal || (v === currentBestVal && Math.random() < 0.2)){
+          currentBestVal = v; currentBestMove = moves[i];
+        }
+      }
+    }
+    if (!cutoff && currentBestMove){
+      bestMove = currentBestMove;
+      bestVal = currentBestVal;
+      // If we've seen a forced win, stop
+      if (Math.abs(bestVal) > 90000) break;
+    }
+  }
+  return bestMove;
+}
+
+function aiMove(state, difficulty){
+  var stateClone = cloneState(state);
+  if (difficulty === 'easy') return chooseMoveEasy(stateClone);
+  if (difficulty === 'medium') return chooseMoveMedium(stateClone);
+  return chooseMoveHard(stateClone);
+}
+
+// ===== UI state =====
+var game = {
+  state: null,
+  mode: 'ai',           // 'ai' | 'hotseat'
+  difficulty: 'medium', // 'easy' | 'medium' | 'hard'
+  playerSymbol: 'X',    // which symbol the human plays (ai mode only)
+  aiThinking: false,
+  aiTimer: null,
+  startedAt: 0
+};
+
+// Load persisted prefs
+try {
+  var saved = JSON.parse(localStorage.getItem('uttt_prefs') || '{}');
+  if (saved.mode === 'ai' || saved.mode === 'hotseat') game.mode = saved.mode;
+  if (['easy','medium','hard'].indexOf(saved.difficulty) >= 0) game.difficulty = saved.difficulty;
+  if (saved.playerSymbol === 'X' || saved.playerSymbol === 'O') game.playerSymbol = saved.playerSymbol;
+} catch(e){}
+
+function savePrefs(){
+  try {
+    localStorage.setItem('uttt_prefs', JSON.stringify({
+      mode: game.mode, difficulty: game.difficulty, playerSymbol: game.playerSymbol
+    }));
+  } catch(e){}
+}
+
+// ===== DOM refs =====
+var screenMenu = document.getElementById('screen-menu');
+var screenGame = document.getElementById('screen-game');
+var metaBoard = document.getElementById('meta-board');
+var turnIndicator = document.getElementById('turn-indicator');
+var btnUndo = document.getElementById('btn-undo');
+var btnNew = document.getElementById('btn-new');
+var btnMenu = document.getElementById('btn-menu');
+var overlayEnd = document.getElementById('overlay-end');
+var endTitle = document.getElementById('end-title');
+var endBody = document.getElementById('end-body');
+var endAgain = document.getElementById('end-again');
+var endMenu = document.getElementById('end-menu');
+var overlayHow = document.getElementById('overlay-how');
+var aiOptions = document.getElementById('ai-options');
+
+// ===== Menu wiring =====
+function reflectPrefsInMenu(){
+  document.querySelectorAll('.mode-btn').forEach(function(b){
+    b.classList.toggle('selected', b.getAttribute('data-mode') === game.mode);
+  });
+  aiOptions.style.display = (game.mode === 'ai') ? '' : 'none';
+  document.querySelectorAll('[data-diff]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-diff') === game.difficulty);
+  });
+  document.querySelectorAll('[data-symbol]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-symbol') === game.playerSymbol);
+  });
+}
+
+document.querySelectorAll('.mode-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    game.mode = b.getAttribute('data-mode');
+    savePrefs();
+    reflectPrefsInMenu();
+    if (typeof gtag === 'function') gtag('event', 'mode_selected', { mode: game.mode });
+  });
+});
+document.querySelectorAll('[data-diff]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var prev = game.difficulty;
+    game.difficulty = b.getAttribute('data-diff');
+    savePrefs();
+    reflectPrefsInMenu();
+    if (prev !== game.difficulty && typeof gtag === 'function') {
+      gtag('event', 'difficulty_changed', { difficulty: game.difficulty });
+    }
+  });
+});
+document.querySelectorAll('[data-symbol]').forEach(function(b){
+  b.addEventListener('click', function(){
+    game.playerSymbol = b.getAttribute('data-symbol');
+    savePrefs();
+    reflectPrefsInMenu();
+  });
+});
+
+document.getElementById('menu-start').addEventListener('click', startGame);
+document.getElementById('menu-how').addEventListener('click', function(){ overlayHow.classList.add('show'); });
+document.getElementById('how-close').addEventListener('click', function(){ overlayHow.classList.remove('show'); });
+document.getElementById('how-ok').addEventListener('click', function(){ overlayHow.classList.remove('show'); });
+overlayHow.addEventListener('click', function(e){ if (e.target === overlayHow) overlayHow.classList.remove('show'); });
+
+// ===== Board render =====
+function buildBoardDOM(){
+  metaBoard.innerHTML = '';
+  for (var b = 0; b < 9; b++){
+    var mini = document.createElement('div');
+    mini.className = 'mini-board';
+    mini.setAttribute('data-board', String(b));
+    for (var c = 0; c < 9; c++){
+      var cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cell';
+      cell.setAttribute('data-board', String(b));
+      cell.setAttribute('data-cell', String(c));
+      cell.setAttribute('aria-label', 'Board ' + (b+1) + ', cell ' + (c+1));
+      mini.appendChild(cell);
+    }
+    metaBoard.appendChild(mini);
+  }
+}
+
+function isHumanTurn(){
+  if (game.mode === 'hotseat') return true;
+  return game.state.nextPlayer === game.playerSymbol;
+}
+
+function renderBoard(){
+  var s = game.state;
+  var legal = getLegalMoves(s);
+  var activeBoards = new Set();
+  legal.forEach(function(m){ activeBoards.add(m.b); });
+
+  for (var b = 0; b < 9; b++){
+    var mini = metaBoard.children[b];
+    mini.classList.remove('active','inactive','won-x','won-o','drawn','o-turn');
+
+    var winner = s.smallWinners[b];
+    if (winner === 'X') mini.classList.add('won-x');
+    else if (winner === 'O') mini.classList.add('won-o');
+    else if (winner === 'D') mini.classList.add('drawn');
+
+    if (winner === null && activeBoards.has(b) && !s.metaWinner && isHumanTurn()){
+      mini.classList.add('active');
+      if (s.nextPlayer === 'O') mini.classList.add('o-turn');
+    } else if (winner === null && !s.metaWinner) {
+      mini.classList.add('inactive');
+    }
+
+    // Overlay for claimed boards
+    var existing = mini.querySelector('.small-win-overlay');
+    if (winner && !existing){
+      var ov = document.createElement('div');
+      ov.className = 'small-win-overlay ' + (winner === 'X' ? 'x' : winner === 'O' ? 'o' : 'd');
+      ov.textContent = winner === 'D' ? '—' : winner;
+      mini.appendChild(ov);
+    } else if (!winner && existing) {
+      mini.removeChild(existing);
+    }
+
+    for (var c = 0; c < 9; c++){
+      var cellEl = mini.children[c];
+      // Skip overlay child when iterating first 9 children; overlay is always appended last, so children[0..8] are cells.
+      if (!cellEl || !cellEl.classList || !cellEl.classList.contains('cell')) continue;
+      var val = s.boards[b][c];
+      cellEl.classList.remove('x','o','taken','disabled');
+      cellEl.textContent = val || '';
+      if (val === 'X') cellEl.classList.add('x','taken');
+      else if (val === 'O') cellEl.classList.add('o','taken');
+      else {
+        // Empty cell
+        var legalHere = activeBoards.has(b);
+        if (!legalHere || s.metaWinner || !isHumanTurn()) cellEl.classList.add('disabled');
+      }
+    }
+  }
+
+  // Turn indicator
+  turnIndicator.classList.remove('x-turn','o-turn','thinking');
+  if (s.metaWinner){
+    turnIndicator.textContent = 'Game over';
+  } else if (game.aiThinking){
+    turnIndicator.textContent = 'Computer thinking…';
+    turnIndicator.classList.add('thinking');
+  } else {
+    var sym = s.nextPlayer;
+    var label;
+    if (game.mode === 'hotseat') label = 'Turn:';
+    else if (sym === game.playerSymbol) label = 'Your turn';
+    else label = 'Computer turn';
+    turnIndicator.innerHTML = label + '<span class="t-symbol"> ' + sym + '</span>';
+    turnIndicator.classList.add(sym === 'X' ? 'x-turn' : 'o-turn');
+  }
+
+  // Undo availability
+  var canUndo = (game.mode === 'ai') && !s.metaWinner && !game.aiThinking && s.history.length >= 2;
+  btnUndo.disabled = !canUndo;
+}
+
+// ===== Input =====
+metaBoard.addEventListener('click', function(e){
+  var target = e.target;
+  while (target && target !== metaBoard && !target.classList.contains('cell')) target = target.parentNode;
+  if (!target || !target.classList || !target.classList.contains('cell')) return;
+  if (target.classList.contains('disabled') || target.classList.contains('taken')) return;
+  if (game.state.metaWinner) return;
+  if (game.aiThinking) return;
+  if (!isHumanTurn()) return;
+
+  var b = parseInt(target.getAttribute('data-board'), 10);
+  var c = parseInt(target.getAttribute('data-cell'), 10);
+  var legal = getLegalMoves(game.state);
+  var ok = legal.some(function(m){ return m.b === b && m.c === c; });
+  if (!ok) return;
+
+  applyMove(game.state, b, c);
+  renderBoard();
+  afterMove();
+});
+
+function afterMove(){
+  if (game.state.metaWinner){
+    finishGame();
+    return;
+  }
+  if (game.mode === 'ai' && game.state.nextPlayer !== game.playerSymbol){
+    scheduleAiMove();
+  }
+}
+
+function scheduleAiMove(){
+  if (game.aiTimer) { clearTimeout(game.aiTimer); game.aiTimer = null; }
+  game.aiThinking = true;
+  renderBoard();
+  // Give the UI a beat to repaint before we block on minimax
+  game.aiTimer = setTimeout(function(){
+    if (!game.aiThinking) return;
+    var move = aiMove(game.state, game.difficulty);
+    game.aiThinking = false;
+    if (!move) { renderBoard(); return; }
+    applyMove(game.state, move.b, move.c);
+    renderBoard();
+    if (game.state.metaWinner) finishGame();
+  }, game.difficulty === 'easy' ? 220 : 80);
+}
+
+// ===== Undo =====
+btnUndo.addEventListener('click', function(){
+  if (btnUndo.disabled) return;
+  if (game.aiThinking) {
+    clearTimeout(game.aiTimer);
+    game.aiThinking = false;
+    renderBoard();
+    return;
+  }
+  // Undo AI move + player move
+  if (game.state.history.length >= 2){
+    undoMove(game.state);
+    undoMove(game.state);
+    renderBoard();
+  } else if (game.state.history.length === 1){
+    undoMove(game.state);
+    renderBoard();
+  }
+});
+
+// ===== New / Menu =====
+btnNew.addEventListener('click', function(){ startGame(); });
+btnMenu.addEventListener('click', function(){
+  cancelAi();
+  showMenu();
+});
+
+function cancelAi(){
+  if (game.aiTimer) clearTimeout(game.aiTimer);
+  game.aiThinking = false;
+}
+
+function showMenu(){
+  cancelAi();
+  screenGame.classList.add('hidden');
+  screenMenu.classList.remove('hidden');
+  overlayEnd.classList.remove('show');
+  reflectPrefsInMenu();
+}
+
+function showGame(){
+  screenMenu.classList.add('hidden');
+  screenGame.classList.remove('hidden');
+  overlayEnd.classList.remove('show');
+}
+
+// ===== Start / finish =====
+function startGame(){
+  cancelAi();
+  game.state = createState();
+  game.startedAt = Date.now();
+  showGame();
+  renderBoard();
+  if (typeof gtag === 'function'){
+    gtag('event', 'game_started', {
+      mode: game.mode,
+      difficulty: game.mode === 'ai' ? game.difficulty : 'n/a',
+      player_symbol: game.mode === 'ai' ? game.playerSymbol : 'n/a'
+    });
+  }
+  // If AI is X, it moves first
+  if (game.mode === 'ai' && game.playerSymbol === 'O'){
+    scheduleAiMove();
+  }
+}
+
+function finishGame(){
+  var winner = game.state.metaWinner;
+  var duration = Math.round((Date.now() - game.startedAt) / 1000);
+  var title, body;
+  if (winner === 'D'){
+    title = "It's a draw";
+    body = '<p class="stat">All nine boards resolved with no 3-in-a-row on the big grid.</p>';
+  } else if (game.mode === 'hotseat'){
+    title = 'Player ' + winner + ' wins!';
+    body = '<p class="stat">Three small boards in a row. Nicely done.</p>';
+  } else {
+    if (winner === game.playerSymbol){
+      title = 'You won!';
+      body = '<p class="stat">You beat the computer on <b>' + game.difficulty + '</b>.</p>';
+    } else {
+      title = 'Computer wins';
+      body = '<p class="stat">You lost to the <b>' + game.difficulty + '</b> opponent. Try again?</p>';
+    }
+  }
+  endTitle.textContent = title;
+  endTitle.className = winner === 'X' ? 'win-x' : winner === 'O' ? 'win-o' : '';
+  endBody.innerHTML = body + '<p class="stat" style="color:#666;font-size:0.8rem;margin-top:0.6rem">' +
+    'Duration: ' + duration + 's • Moves: ' + game.state.history.length + '</p>';
+  overlayEnd.classList.add('show');
+  if (typeof gtag === 'function'){
+    gtag('event', 'game_completed', {
+      winner: winner === 'D' ? 'draw' : winner,
+      duration_seconds: duration,
+      mode: game.mode,
+      difficulty: game.mode === 'ai' ? game.difficulty : 'n/a'
+    });
+  }
+}
+
+endAgain.addEventListener('click', function(){ startGame(); });
+endMenu.addEventListener('click', function(){ showMenu(); });
+overlayEnd.addEventListener('click', function(e){ if (e.target === overlayEnd) overlayEnd.classList.remove('show'); });
+
+// Auto-pause AI on tab blur (don't burn battery thinking if user leaves)
+document.addEventListener('visibilitychange', function(){
+  if (document.hidden && game.aiThinking){
+    // Let it finish — but won't resume thinking if aborted mid-flight.
+    // (minimax is synchronous; once scheduled the timeout already ran.)
+  }
+});
+
+// ===== Init =====
+buildBoardDOM();
+reflectPrefsInMenu();
+
+// Debug hook (localhost only)
+if (location.hostname === 'localhost' || location.hostname === '127.0.0.1'){
+  window.__utttDebug = {
+    getState: function(){ return game.state; },
+    getGame: function(){ return game; },
+    applyMove: function(b,c){ applyMove(game.state, b, c); renderBoard(); },
+    undo: function(){ undoMove(game.state); renderBoard(); },
+    checkCellsWinner: checkCellsWinner,
+    getLegalMoves: function(){ return getLegalMoves(game.state); },
+    startGame: startGame,
+    setMode: function(m){ game.mode = m; },
+    setDifficulty: function(d){ game.difficulty = d; },
+    setSymbol: function(s){ game.playerSymbol = s; },
+    chooseMoveHard: function(){ return chooseMoveHard(cloneState(game.state)); },
+    chooseMoveMedium: function(){ return chooseMoveMedium(cloneState(game.state)); },
+    evaluateState: evaluateState
+  };
+}
+
+})();
+</script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}</script>
+</body>
+</html>
