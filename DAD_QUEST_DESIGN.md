@@ -290,7 +290,13 @@ Each act = 1 boss + ~15 nodes total = ~5 normal combats + 1–2 elites + 1 rest 
 
 **v1 ships with:** 3 characters, 78 cards, 12 enemies (with the boss reskinned/HP-scaled across 3 acts), 20 relics, 3 acts of map, save/load, mobile-first UI, home-page tile, SEO meta, About copy.
 
-**v1 explicitly does NOT include:** ascension levels, daily challenge, custom seeds, achievements, leaderboards, meta-progression unlocks, character unlocks, card upgrades (cards have no `+` upgraded versions in v1 — Apotheosis temporarily upgrades cards within a single combat as a flavor effect; mechanically it just doubles all numbers on hand cards for that combat).
+**v1 explicitly does NOT include:** ascension levels, daily challenge, custom seeds, achievements, leaderboards, meta-progression unlocks, character unlocks, card upgrades (cards have no `+` upgraded versions in v1 — Apotheosis temporarily upgrades cards within a single combat as a flavor effect; mechanically it just doubles all numbers on hand cards for that combat), **distinct Act 1 and Act 2 bosses** (v1 reskins/scales The Ultimate HOA President across all 3 acts — see § 1.5).
+
+**v2 backlog (deferred — do not implement in v1):**
+- **Act 1 boss + Act 2 boss** as their own enemies with unique art, unique HP, unique intent patterns. Shortlist: an "Aggressive Roomba Hivemind" elite-evolved boss for Act 1; a "Corner Office CEO" boss for Act 2. Filenames reserved: `enemy_act1_boss.png`, `enemy_act2_boss.png`. Add to `enemies.ts` and to the map generator's act-end node so each act terminates on its own boss instead of HP-scaled HOA President clones.
+- Card upgrade system (`+` versions of every card, granted by Rest sites and Campfire upgrades).
+- Ascension levels for replayability.
+- Daily challenge with shared seed.
 
 **Hard timebox:** if Phase 2 stretches past 2 long sessions, cut Brenda first (she has the most complex status interactions). 2 characters + 56 cards + 12 enemies still ships a complete game.
 
@@ -1111,7 +1117,58 @@ UI elements (energy icon, health-heart icon, block-shield icon, status-effect ic
 
 **Phase 1 deliverable:** This document.
 
-**Architecture decision needed before Phase 2:** the original prompt assumed a Next.js project (`/app/games/dad-quest/page.tsx`, `/public/...`). Dad Arcade is actually a static HTML/JS site with each game at `/<slug>/index.html`. This doc uses `/dad-quest/assets/` to match the static-site pattern. Phase 2 will build under that pattern unless directed otherwise.
+**Architecture (confirmed):** Dad Arcade is a static HTML/JS site. Phase 2 will build Dad Quest at `/dad-quest/index.html` using **vanilla ES modules** organized into a proper folder structure — no React, no Next.js, no build step. The architectural goal (separation of concerns, reusable engine modules for the next game) is achieved in vanilla JS via per-concern files and ES module imports. Provisional structure:
+
+```
+/dad-quest/
+  index.html                  (shell + <canvas> + DOM scene container)
+  main.js                     (entry; bootstraps loader + initial scene)
+  engine/
+    gameState.js              (canonical state shape + reducer-style mutations)
+    combat.js                 (pure functions: applyCard, enemyTurn, endTurn, resolveDamage)
+    deck.js                   (shuffle, draw, discard, exhaust)
+    statusEffects.js          (apply / tick / expire)
+    rewards.js                (post-combat reward generation)
+    sceneManager.js           (scene swap + history)
+  ai/
+    enemyAI.js                (intent selection — deterministic / weighted patterns)
+  data/
+    cards.js                  (all card definitions)
+    enemies.js                (all enemy definitions)
+    relics.js                 (all relic definitions)
+    characters.js             (all character definitions)
+    events.js                 (random event definitions)
+  procgen/
+    mapGenerator.js           (branching map graph)
+  saves/
+    saveState.js              (localStorage save/load, single active run)
+  assets/
+    assetManifest.js          (string constants; no hardcoded paths in scenes)
+    assetLoader.js            (preloader with progress bar, image cache)
+  scenes/
+    characterSelect.js
+    map.js
+    combat.js
+    reward.js
+    shop.js
+    event.js
+    rest.js
+    gameOver.js
+    victory.js
+  ui/
+    cardFrame.js              (renders the card frame + text over loaded card art)
+    healthBar.js
+    blockIndicator.js
+    statusIcons.js
+    relicTray.js
+    deckViewer.js
+  styles/
+    dad-quest.css
+  assets/                     (Kevin's generated images — see § 4 manifest)
+    characters/ cards/ enemies/ relics/
+```
+
+Combat scene → `<canvas>` (smooth animations, particle effects). Map / shop / event / character-select scenes → DOM (clickable nodes, easier text rendering, accessible). Scene manager swaps which root element is active.
 
 **Stop instruction:** Phase 2 (code build) starts when art is generated and dropped into `/dad-quest/assets/`. Phase 2 will spot-check 5 random files from the manifest before beginning, and will pause if anything is missing.
 
