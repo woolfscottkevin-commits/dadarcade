@@ -1,0 +1,184 @@
+/* Dad Quest — Phase 1 styles
+   Mobile-first. Vanilla CSS, no Tailwind, no normalize.
+   Palette locked to DESIGN.md § 2.2. */
+
+:root {
+  --sky-blue: #4FC3F7;
+  --lawn-green: #7CB342;
+  --sunset-orange: #FB8C00;
+  --cream: #FFF3E0;
+  --suburb-beige: #D7CCC8;
+  --coffee-brown: #6D4C41;
+  --punchy-red: #E53935;
+  --deep-navy: #1A237E;
+  --skin-warm-peach: #F4C2A1;
+  --skin-light-tan: #E0AC8B;
+  --skin-deep-tan: #B8896C;
+}
+
+/* Minimal reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img { max-width: 100%; display: block; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+html, body { height: 100%; }
+
+body {
+  min-height: 100dvh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(180deg, var(--sky-blue) 0%, var(--cream) 100%);
+  color: var(--coffee-brown);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;       /* kill iOS double-tap zoom */
+  overscroll-behavior-y: none;      /* kill pull-to-refresh */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- Boot screen ---------- */
+#boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--cream);
+  z-index: 10;
+}
+
+.boot-title {
+  font-size: clamp(1.75rem, 6vw, 2.5rem);
+  font-weight: 800;
+  color: var(--sunset-orange);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.boot-subtitle {
+  font-size: 0.95rem;
+  color: var(--coffee-brown);
+  opacity: 0.75;
+  text-align: center;
+}
+
+.progress-shell {
+  width: min(80vw, 480px);
+  height: 18px;
+  background: var(--suburb-beige);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 2px solid var(--coffee-brown);
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--sunset-orange), var(--punchy-red));
+  transition: width 120ms ease-out;
+}
+
+.progress-label {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9rem;
+  color: var(--coffee-brown);
+  opacity: 0.85;
+}
+
+.boot-error {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--punchy-red);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--punchy-red);
+  font-size: 0.9rem;
+  max-width: min(90vw, 520px);
+  text-align: center;
+  word-break: break-word;
+}
+
+/* ---------- App / ready splash ---------- */
+#app {
+  display: none;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  gap: 1.5rem;
+}
+
+.ready-splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  width: 100%;
+  max-width: 1024px;
+}
+
+.ready-splash h1 {
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  color: var(--sunset-orange);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.ready-splash p {
+  font-size: 1rem;
+  color: var(--coffee-brown);
+  opacity: 0.85;
+}
+
+.portrait-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.portrait-card {
+  flex: 1 1 220px;
+  max-width: 280px;
+  background: var(--cream);
+  border: 3px solid var(--coffee-brown);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.12);
+}
+
+.portrait-card img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--suburb-beige);
+}
+
+.portrait-card .name {
+  padding: 0.5rem 0.75rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--deep-navy);
+  background: var(--cream);
+  text-align: center;
+}
+
+.phase-tag {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--coffee-brown);
+  opacity: 0.65;
+}
+
+/* On phones, stack portraits vertically below ~520px */
+@media (max-width: 520px) {
+  .portrait-row { flex-direction: column; align-items: center; }
+  .portrait-card { width: 80%; max-width: 320px; }
+}
