@@ -1,9 +1,7 @@
 // Procedural map generator for Dad Quest.
-// Implements DESIGN.md § 1.7 with one Phase 3 deviation:
-//   PHASE 3 DEVIATION: shop and event nodes are NOT generated this phase.
-//   Distribution becomes 70% combat / 15% elite / 15% rest for rows 2–5.
-//   Row 1 is always combat (per DESIGN.md).
-//   PHASE 4 TODO: restore the original 60/10/10/10/10 split when shops + events ship.
+// Implements DESIGN.md § 1.7.
+//   Distribution is 60% combat / 10% elite / 10% rest / 10% shop / 10% event
+//   for rows 2–5. Row 1 is always combat (per DESIGN.md).
 //
 // Output shape (returned by generateAct(actNumber)):
 //   {
@@ -23,9 +21,11 @@ const NORMAL_ENEMIES = [
 const ELITE_ENEMIES = ["the_mailman", "the_substitute_teacher", "the_personal_trainer"];
 
 const DIST = {
-  combat: 0.70,
-  elite: 0.15,
-  rest: 0.15,
+  combat: 0.60,
+  elite: 0.10,
+  rest: 0.10,
+  shop: 0.10,
+  event: 0.10,
 };
 
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -37,7 +37,9 @@ function pickType(rowIdx) {
   const r = Math.random();
   if (r < DIST.combat) return "combat";
   if (r < DIST.combat + DIST.elite) return "elite";
-  return "rest";
+  if (r < DIST.combat + DIST.elite + DIST.rest) return "rest";
+  if (r < DIST.combat + DIST.elite + DIST.rest + DIST.shop) return "shop";
+  return "event";
 }
 
 function buildLayerEdges(numSrc, numDst) {

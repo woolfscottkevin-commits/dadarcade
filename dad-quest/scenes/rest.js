@@ -2,6 +2,7 @@
 
 import { gameState, markCurrentNodeCompleted } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
+import { saveGame } from "../saves/saveState.js";
 
 const REST_HEAL_PERCENT = 0.30;
 
@@ -42,6 +43,7 @@ export const restScene = {
     btn.addEventListener("click", () => {
       gameState.run.hp = Math.min(gameState.run.maxHp, gameState.run.hp + healAmount);
       markCurrentNodeCompleted();
+      saveGame("map");
       setScene("map");
     });
     wrap.appendChild(btn);

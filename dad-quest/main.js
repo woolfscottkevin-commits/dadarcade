@@ -1,4 +1,4 @@
-// Dad Quest — Phase 3 entry point.
+// Dad Quest — Phase 4 entry point.
 // Boot preload → register all scenes → switch to character select.
 // Run flow: characterSelect → map → combat/rest → reward → map → ... → boss → reward → advanceAct → ...
 // Phase 1 "Ready" splash is reachable at /dad-quest/?phase=1 for debugging.
@@ -11,10 +11,13 @@ import { characterSelectScene } from "./scenes/characterSelect.js";
 import { mapScene } from "./scenes/map.js";
 import { combatScene } from "./scenes/combat.js";
 import { rewardScene } from "./scenes/reward.js";
+import { shopScene } from "./scenes/shop.js";
+import { eventScene } from "./scenes/event.js";
 import { restScene } from "./scenes/rest.js";
 import { victoryScene } from "./scenes/victory.js";
 import { runVictoryScene } from "./scenes/runVictory.js";
 import { gameOverScene } from "./scenes/gameOver.js";
+import { loadSavedGame } from "./saves/saveState.js";
 
 const boot = document.getElementById("boot");
 const app = document.getElementById("app");
@@ -75,7 +78,7 @@ async function bootSequence() {
   updateProgress(0, TOTAL_ASSETS);
   try {
     await preloadAssets(ASSET_MANIFEST, (loaded, total) => updateProgress(loaded, total));
-    console.log(`Dad Quest Phase 3: ${TOTAL_ASSETS} assets loaded.`);
+    console.log(`Dad Quest Phase 4: ${TOTAL_ASSETS} assets loaded.`);
 
     const phase1Mode = new URLSearchParams(location.search).get("phase") === "1";
     if (phase1Mode) {
@@ -87,6 +90,8 @@ async function bootSequence() {
     registerScene("map", mapScene);
     registerScene("combat", combatScene);
     registerScene("reward", rewardScene);
+    registerScene("shop", shopScene);
+    registerScene("event", eventScene);
     registerScene("rest", restScene);
     registerScene("victory", victoryScene);
     registerScene("runVictory", runVictoryScene);
@@ -94,6 +99,7 @@ async function bootSequence() {
 
     boot.style.display = "none";
     app.style.display = "flex";
+    loadSavedGame();
     setScene("characterSelect");
   } catch (err) {
     showError(err && err.message ? err.message : String(err));

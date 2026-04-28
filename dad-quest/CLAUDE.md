@@ -24,7 +24,8 @@ dad-quest/
 │   ├── cards.js            79 card defs (78 player + Burnout curse)
 │   ├── enemies.js          12 enemy defs (8 normal + 3 elite + 1 boss)
 │   ├── relics.js           20 relic defs
-│   └── characters.js       3 character defs
+│   ├── characters.js       3 character defs
+│   └── events.js           5 random events
 ├── assets/
 │   ├── assetManifest.js    canonical 113-asset path list
 │   ├── assetLoader.js      async preloader + image cache
@@ -40,7 +41,8 @@ dad-quest/
 │   ├── deck.js             draw/discard/exhaust + Fisher-Yates shuffle
 │   ├── statusEffects.js    apply/get/tick + canonical damage math (single floor)
 │   ├── effectExecutor.js   parse/execute every effect-string verb
-│   └── combat.js           turn loop matching DESIGN.md § 1.4 tick order
+│   ├── combat.js           turn loop matching DESIGN.md § 1.4 tick order
+│   └── rewards.js          card/gold rewards, relic rewards, shop inventory
 ├── ai/
 │   └── enemyAI.js          cycle vs weighted intent picker
 ├── ui/
@@ -51,13 +53,20 @@ dad-quest/
 │   ├── relicTray.js        small icons + tooltip
 │   └── intentDisplay.js    "Atk 6" / "Block 8" / "Atk 3 ×3" badge above each enemy
 ├── scenes/
-│   ├── characterSelect.js  3 portraits, deck preview, Begin Run
+│   ├── characterSelect.js  3 portraits, deck preview, Continue Run, How to Play
 │   ├── combat.js           DOM combat layout + canvas-free FX overlays
+│   ├── map.js              branching act map, combat/rest/shop/event routing
+│   ├── reward.js           post-combat card/gold/relic rewards
+│   ├── rest.js             30% max-HP heal site
+│   ├── shop.js             card buys, relic buys, one card removal
+│   ├── event.js            random events
+│   ├── runVictory.js       Act-3 boss win summary
 │   ├── victory.js          "Victory!" → endRun → characterSelect
 │   └── gameOver.js         "Defeated" → endRun → characterSelect
 ├── procgen/
-│   └── mapGenerator.js     3-act branching graph generator (planar, 70/15/15)
+│   └── mapGenerator.js     3-act branching graph generator (planar, 60/10/10/10/10)
 └── saves/                  (Phase 4: localStorage save/load)
+    └── saveState.js        single active run persistence
 ```
 
 Phase 3 also added: `engine/rewards.js`, `scenes/{map,reward,rest,runVictory}.js`, `ui/{mapNode,edgeRenderer,runHud,targetingReticle}.js`.
@@ -69,7 +78,7 @@ Phase 3 also added: `engine/rewards.js`, `scenes/{map,reward,rest,runVictory}.js
 | 1 | Foundation, asset pipeline, frozen game data | ✓ 2026-04-27 |
 | 2 | Combat vertical slice: engine, scenes, UI, 3 characters vs Aggressive Roomba | ✓ 2026-04-27 |
 | 3 | Run loop: 3-act maps, rewards, rest, all 12 enemies + multi-enemy combat | ✓ 2026-04-27 |
-| 4 | Shops, random events, remaining 17 relics' bindings, save/load, polish, home-page tile | pending |
+| 4 | Shops, random events, remaining 17 relics' bindings, save/load, polish, home-page tile | ✓ 2026-04-28 |
 
 ## Resolved rulings (carry forward — DESIGN.md is silent or imprecise here)
 
@@ -91,11 +100,11 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - HP, gold, deck, relics, max HP — RUN-scoped (carry).
 - Strength, Yard Work, Caffeine, Citations, Block, Vulnerable, Weak — COMBAT-scoped (reset every combat by `engine/combat.startCombat`).
 
-**Map node distribution (Phase 3 deviation from DESIGN.md):**
+**Map node distribution (Phase 4):**
 - Row 1: 100% combat (per DESIGN.md).
-- Rows 2–5: 70% combat, 15% elite, 15% rest.
+- Rows 2–5: 60% combat, 10% elite, 10% rest, 10% shop, 10% event.
 - Row 6: boss (always Ultimate HOA President in v1).
-- PHASE 4 TODO: restore 60% combat / 10% elite / 10% rest / 10% shop / 10% event when shops + events ship.
+- Shops and events are generated only after row 1.
 
 **Boss HP scaling:** Act 1 = 110, Act 2 = 175, Act 3 = 250. Implemented in `engine/combat.makeEnemyInstance` based on `gameState.run.act`. **Do NOT mutate `data/enemies.js`** — it keeps `hp: 250` as the canonical Act-3 value.
 
@@ -118,8 +127,36 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - Pool: same-character + shared, minus basics (Strike/Defend variants + Burnout) and minus any card the player already owns 4+ copies of.
 - Rarity weights — base: 60/33/7. Elite: 55/33/12. Boss: 50/33/17.
 - Gold per tier: normal 10–25, elite 25–35, boss 50–65.
+- Shops generate 5 character/shared cards, 3 unowned relics, and one card-removal service. Coupon Book applies a 20% price reduction.
+- The Trophy adds a 1-of-3 relic choice after elite rewards. Boss relics are available only where explicitly allowed by reward code.
 
 **Victory/defeat tie resolution:** if a single card play simultaneously kills the last enemy and drops the player to 0 HP (e.g., Weekend Warrior self-damage), **victory wins.** Combat checks `allEnemiesDead()` before checking player HP ≤ 0.
+
+## Phase 4 specifics
+
+**Save/load:**
+- `saves/saveState.js` stores one active local run at `dadQuest.activeRun.v1`.
+- Saves happen after major actions: starting a run, map travel, card play/end turn, reward pick/skip, rest, shop purchases/removal, and event completion.
+- Combat snapshots serialize/hydrate `Set` and `Map` fields (`costZeroThisTurn`, `oncePerCombatFired`, `cardEffectOverrides`) so mid-combat refreshes can resume.
+- Character select shows Continue Run when a save exists. Returning after game over or run victory clears the save.
+
+**Shops:**
+- `scenes/shop.js` supports card purchase, relic purchase, and one card removal per shop.
+- Card pool uses the reward eligibility rules (same character + shared, no basic Strike/Defend/Burnout).
+- Relic purchases skip already-owned relics. One-time max-HP relics apply immediately on pickup.
+
+**Random events:**
+- `data/events.js` defines 5 v1 events. `scenes/event.js` supports heal, percent heal, gold, max-HP changes, random relics by rarity, one-card rewards, and card removal.
+- Event nodes pick and store their event ID on entry so refresh/resume does not reroll the event.
+
+**Relic bindings:**
+- All 20 relics now have executable v1 behavior: starter relics, shop-price passive, max HP pickups, non-combat heal, first-draw bonus, combat-start damage/block/strength/energy/HP loss, end-turn block, 4th-card draw, elite relic choice, debuff damage, max energy, and temporary common-card generation.
+- Relic-granted resources at combat start continue to bypass `on_gain_*` triggers per the resolved Phase 2 ruling.
+
+**Site integration and polish:**
+- Dad Quest is linked from the home page's New This Week and All Games sections, `games/index.html`, and `sitemap.xml`.
+- `dad-quest/index.html` includes page title, description, canonical, Open Graph tags, and an About section below the game.
+- Character select includes a How to Play modal and first-run tutorial flag.
 
 ## Keyboard shortcuts (combat scene)
 
@@ -147,19 +184,9 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 
 **Apotheosis** doubles every numeric payload in each card's effect string for the rest of the combat. Threshold values inside `*_gte:N` conditions are NOT doubled. Implemented via `combatState.cardEffectOverrides: Map<uuid, effectString>` consulted in `playCard` before parsing.
 
-**Three starter relics are wired:** Lawn Flag (Hank, +1 bonus to gained Yard Work), Travel Mug (Doug, +2 Caffeine at combat start; does not fire `on_gain_caffeine` triggers), Pocket Square (Brenda, +5 max HP at run start). The other 17 relics are defined-but-inert in `data/relics.js` until Phase 4.
+**All 20 relics are wired as of Phase 4:** Lawn Flag, Travel Mug, Pocket Square, and the 17 non-starter relics all have executable bindings in combat, reward, map, shop, or event flow as appropriate.
 
 **All 12 enemies are wired as fights in Phase 3.** The map generator assigns normal / elite / boss encounters, and Pyramid Schemer can summon Aggressive Roomba mid-combat.
-
-## Keyboard shortcuts (combat scene)
-
-- `1`–`9` — play the corresponding hand card if affordable
-- `Space` — End Turn
-- `Esc` — reserved for Phase 3 (settings/pause)
-
-## URL flags
-
-- `/dad-quest/?phase=1` — boot all the way through preload then render the Phase 1 "Ready" splash instead of going to character select. Useful for verifying the asset pipeline in isolation.
 
 ## Source of truth
 
@@ -184,7 +211,5 @@ Known shapes:
 - Don't add React, Vue, Next.js, Vite, webpack, esbuild, or any build step.
 - Don't generate, modify, rename, or delete any image file in `assets/{characters,cards,enemies,relics}/`. They are read-only Phase 1 inputs.
 - Don't create files outside the documented structure.
-- Don't bleed Phase 2/3/4 work into the current scope. If a feature seems to require something deferred, **stop** and ask.
-- Don't modify the parent dad-arcade repo's `vercel.json`, `package.json`, root `index.html`, sitemap, robots.txt, or other game directories. Dad Quest is a self-contained subdirectory; static routing is automatic.
-- Don't add a Dad Quest tile or link to dadarcade.com home until Phase 4.
+- Don't modify the parent dad-arcade repo's `vercel.json`, `package.json`, robots.txt, or other game directories. Dad Quest remains static-routed.
 - Don't commit `.DS_Store` if you spot one — add to `.gitignore` if not already covered by the parent repo.

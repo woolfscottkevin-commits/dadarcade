@@ -5,11 +5,13 @@ import { CHARACTERS } from "../data/characters.js";
 import { CARDS } from "../data/cards.js";
 import { RELICS } from "../data/relics.js";
 import { getAsset } from "../assets/assetLoader.js";
-import { startRun } from "../engine/gameState.js";
+import { gameState, startRun } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
+import { clearSavedGame, peekSavedGame, saveGame } from "../saves/saveState.js";
 
 let selectedId = null;
 let beginBtn = null;
+let modalEl = null;
 
 function deckSummary(starterDeck) {
   const counts = new Map();
@@ -94,8 +96,21 @@ export const characterSelectScene = {
 
     const sub = document.createElement("p");
     sub.className = "select-sub";
-    sub.textContent = "Phase 3 — full 3-act run";
+    sub.textContent = "Three acts of suburban deckbuilder chaos";
     wrap.appendChild(sub);
+
+    const saved = peekSavedGame();
+    if (saved) {
+      const continueBtn = document.createElement("button");
+      continueBtn.type = "button";
+      continueBtn.className = "select-continue";
+      continueBtn.textContent = `Continue Run — Act ${saved.run.act}`;
+      continueBtn.addEventListener("click", () => {
+        const scene = saved.scene && saved.scene !== "boot" ? saved.scene : "map";
+        setScene(scene === "characterSelect" ? "map" : scene);
+      });
+      wrap.appendChild(continueBtn);
+    }
 
     const row = document.createElement("div");
     row.className = "select-row";
@@ -109,14 +124,51 @@ export const characterSelectScene = {
     beginBtn.disabled = true;
     beginBtn.addEventListener("click", () => {
       if (!selectedId) return;
+      clearSavedGame();
       startRun(selectedId);
+      saveGame("map");
+      maybeShowTutorial();
       setScene("map");
     });
     wrap.appendChild(beginBtn);
+
+    const howTo = document.createElement("button");
+    howTo.type = "button";
+    howTo.className = "select-howto";
+    howTo.textContent = "How to Play";
+    howTo.addEventListener("click", () => showHowTo(root));
+    wrap.appendChild(howTo);
 
     root.appendChild(wrap);
   },
   unmount() {
     beginBtn = null;
+    modalEl = null;
   },
 };
+
+function maybeShowTutorial() {
+  try {
+    if (localStorage.getItem("dadQuest.tutorialSeen.v1")) return;
+    localStorage.setItem("dadQuest.tutorialSeen.v1", "1");
+    gameState.run.showTutorial = true;
+  } catch {
+    gameState.run.showTutorial = true;
+  }
+}
+
+function showHowTo(root) {
+  if (modalEl) modalEl.remove();
+  modalEl = document.createElement("div");
+  modalEl.className = "howto-modal";
+  modalEl.innerHTML = `
+    <div class="howto-card">
+      <button type="button" class="howto-close" aria-label="Close">×</button>
+      <h2>How to Play</h2>
+      <p>Pick a character, climb the map, and defeat the Act 3 boss. Combat uses 3 energy per turn and a 5-card hand.</p>
+      <p>Enemy intents show what happens next. Block absorbs damage, Vulnerable increases damage taken, Weak reduces outgoing damage, and Strength adds attack damage.</p>
+      <p>After fights, take one card or skip. Shops sell cards and relics, events bend the run, and rest sites heal 30% of max HP.</p>
+    </div>`;
+  modalEl.querySelector(".howto-close").addEventListener("click", () => modalEl.remove());
+  root.appendChild(modalEl);
+}

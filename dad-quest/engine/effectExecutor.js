@@ -284,6 +284,18 @@ function noteDamageDealt(_ctx, _target, _result) {
   // No-op here; combat scene reads HP directly.
 }
 
+function isDebuff(status) {
+  return status === STATUS.VULNERABLE || status === STATUS.WEAK || status === STATUS.CITATION;
+}
+
+function noteDebuffApplied(ctx, target, status) {
+  if (!target || !isDebuff(status)) return;
+  if (ctx.combat.run?.relics?.includes("the_megaphone")) {
+    const result = resolveDamage(null, target, 3);
+    noteDamageDealt(ctx, target, result);
+  }
+}
+
 function gainBlock(amount, ctx) {
   applyStatus(ctx.combat.player, STATUS.BLOCK, amount);
 }
@@ -337,6 +349,7 @@ function applyTarget(status, amount, ctx) {
   const tgt = getTarget(ctx);
   if (!tgt) return;
   applyStatus(tgt, status, amount);
+  noteDebuffApplied(ctx, tgt, status);
   if (status === STATUS.CITATION) {
     ctx.combat.flags.appliedCitationThisTurn = true;
     ctx.combat.flags.citationsAppliedThisCombat += amount;
@@ -347,6 +360,7 @@ function applyAll(status, amount, ctx) {
   for (const e of ctx.combat.enemies) {
     if (e.hp <= 0) continue;
     applyStatus(e, status, amount);
+    noteDebuffApplied(ctx, e, status);
     if (status === STATUS.CITATION) {
       ctx.combat.flags.appliedCitationThisTurn = true;
       ctx.combat.flags.citationsAppliedThisCombat += amount;
@@ -361,6 +375,7 @@ function applyRandom(status, amount, ctx) {
     if (alive.length === 0) return;
     const pick = alive[Math.floor(Math.random() * alive.length)];
     applyStatus(pick, status, 1);
+    noteDebuffApplied(ctx, pick, status);
     if (status === STATUS.CITATION) {
       ctx.combat.flags.appliedCitationThisTurn = true;
       ctx.combat.flags.citationsAppliedThisCombat += 1;
@@ -368,13 +383,15 @@ function applyRandom(status, amount, ctx) {
   }
 }
 
-function addToHand(filter, n, _flag, ctx) {
+function addToHand(filter, n, flag, ctx) {
   // Phase 2: implements only filters used by the codebase: hank_attack and any_skill.
   let pool;
   if (filter === "hank_attack") {
     pool = CARDS.filter((c) => c.character === "hank" && c.type === "attack" && c.id !== "burnout");
   } else if (filter === "any_skill") {
     pool = CARDS.filter((c) => c.type === "skill" && c.id !== "burnout");
+  } else if (filter === "any_common") {
+    pool = CARDS.filter((c) => c.rarity === "common" && c.id !== "burnout");
   } else {
     console.warn(`[effectExecutor] unsupported add_to_hand filter '${filter}'`);
     return;
@@ -386,8 +403,9 @@ function addToHand(filter, n, _flag, ctx) {
       ? crypto.randomUUID()
       : `cardgen_${Math.random().toString(36).slice(2)}`;
     const inst = { uuid, cardId: def.id };
+    if (flag.includes("exhausts")) inst.exhaustOnPlay = true;
     ctx.combat.piles.hand.push(inst);
-    ctx.combat.flags.costZeroThisTurn.add(uuid);
+    if (flag.includes("cost_zero_this_turn")) ctx.combat.flags.costZeroThisTurn.add(uuid);
   }
 }
 

@@ -30,6 +30,7 @@ import { gameState } from "./gameState.js";
 import { CARDS } from "../data/cards.js";
 import { ENEMIES, BOSS_HP_BY_ACT } from "../data/enemies.js";
 import { CHARACTERS } from "../data/characters.js";
+import { saveGame } from "../saves/saveState.js";
 import {
   STATUS,
   applyStatus,
@@ -54,6 +55,17 @@ import { selectIntent } from "../ai/enemyAI.js";
 const HAND_SIZE = 5;
 const MAX_ENERGY = 3;
 let listener = null;
+
+function hasRelic(id) {
+  return gameState.run.relics.includes(id);
+}
+
+function makeGeneratedCard(cardId, extra = {}) {
+  const uuid = (typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `cardgen_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  return { uuid, cardId, ...extra };
+}
 
 export function setCombatListener(fn) {
   listener = fn;
@@ -120,7 +132,7 @@ export function startCombat(enemyIds) {
     enemies,
     piles,
     energy: 0,
-    maxEnergy: MAX_ENERGY,
+    maxEnergy: MAX_ENERGY + (hasRelic("the_master_plan") ? 1 : 0),
     turn: 0,
     targetIndex: 0,
     isBoss,
@@ -140,6 +152,8 @@ export function startCombat(enemyIds) {
       citationsAppliedThisCombat: 0,
       damageTakenThisTurn: 0,
       firstDamagePreventThisTurn: false,
+      firstAttackPlayedThisCombat: false,
+      bonusFirstDraw: 0,
       nextCitationCardCostsZero: false,
       costZeroThisTurn: new Set(),
     },
@@ -184,7 +198,23 @@ function applyCombatStartRelics() {
     // Relic-granted Caffeine bypasses on_gain_caffeine triggers (Phase 2 ruling).
     applyStatus(c.player, STATUS.CAFFEINE, 2);
   }
-  // Other 17 relics defined-but-inert — Phase 4 wires them.
+  if (relicSet.has("lucky_penny")) applyStatus(c.player, STATUS.BLOCK, 1);
+  if (relicSet.has("power_suit")) applyStatus(c.player, STATUS.BLOCK, 4);
+  if (relicSet.has("snake_plant")) applyStatus(c.player, STATUS.STRENGTH, 1);
+  if (relicSet.has("house_keys")) c.flags.bonusFirstDraw += 1;
+  if (relicSet.has("loud_lawn_mower")) {
+    for (const e of c.enemies) applyDamageToTarget(e, 4);
+  }
+  if (relicSet.has("the_master_plan")) {
+    selfDamage(c.player, 6);
+  }
+  if (relicSet.has("endless_inbox")) {
+    const commons = CARDS.filter((card) => card.rarity === "common" && card.id !== "burnout");
+    for (let i = 0; i < 3; i++) {
+      const def = commons[Math.floor(Math.random() * commons.length)];
+      if (def) c.piles.hand.push(makeGeneratedCard(def.id, { exhaustOnPlay: true }));
+    }
+  }
 }
 
 export function startPlayerTurn() {
@@ -209,6 +239,7 @@ export function startPlayerTurn() {
 
   // Compute draw count, then tick modifier durations
   let drawCount = HAND_SIZE;
+  if (c.turn === 1 && c.flags.bonusFirstDraw) drawCount += c.flags.bonusFirstDraw;
   for (const m of c.player.nextTurnModifiers) {
     if (m.type === "draw_minus") drawCount -= m.amount;
   }
@@ -220,6 +251,11 @@ export function startPlayerTurn() {
 
   drawCards(c.piles, drawCount);
   c.energy = c.maxEnergy;
+  if (c.turn === 1) {
+    if (hasRelic("travel_mug") && c.player.character !== "doug") c.energy += 1;
+    if (hasRelic("espresso_machine") && c.player.character !== "doug") c.energy += 1;
+    if (hasRelic("riding_mower_keys")) c.energy += 2;
+  }
 
   // Spawned-this-turn enemies are now allowed to act next enemy turn.
   for (const e of c.enemies) e.spawnedThisTurn = false;
@@ -308,17 +344,27 @@ export function playCard(cardInst, targetIndex) {
 
   const ctx = makeCtx({ sourceCard: cardInst });
 
+  if (def.type === "attack" && !c.flags.firstAttackPlayedThisCombat) {
+    c.flags.firstAttackPlayedThisCombat = true;
+    if (hasRelic("lawn_flag") && c.player.character !== "hank") {
+      applyStatus(c.player, STATUS.STRENGTH, 1);
+    }
+  }
+
   const override = c.cardEffectOverrides.get(cardInst.uuid);
   const effect = override || def.effect;
   executeEffect(effect, ctx);
 
   if (def.type === "skill") fireTriggers("on_play_skill", ctx);
   if (c.flags.cardsPlayedThisTurn === 3) fireTriggers("on_third_card", ctx);
-  if (c.flags.cardsPlayedThisTurn === 4) fireTriggers("on_fourth_card", ctx);
+  if (c.flags.cardsPlayedThisTurn === 4) {
+    fireTriggers("on_fourth_card", ctx);
+    if (hasRelic("the_manual")) drawCards(c.piles, 1);
+  }
 
   if (def.type === "power") {
     exhaustCard(c.piles, cardInst);
-  } else if (def.exhaust) {
+  } else if (def.exhaust || cardInst.exhaustOnPlay) {
     exhaustCard(c.piles, cardInst);
   } else {
     discardCard(c.piles, cardInst);
@@ -335,6 +381,7 @@ export function playCard(cardInst, targetIndex) {
     finalizeOutcome("defeat");
     return { ok: true, defeat: true };
   }
+  saveGame("combat");
   return { ok: true };
 }
 
@@ -348,8 +395,9 @@ export function endPlayerTurn() {
   // Doug's Jitters tax
   if (c.player.character === "doug") {
     const caffeine = getStatus(c.player, STATUS.CAFFEINE);
-    if (caffeine > 5) {
-      const jitters = caffeine - 5;
+    const threshold = hasRelic("espresso_machine") ? 8 : 5;
+    if (caffeine > threshold) {
+      const jitters = caffeine - threshold;
       const before = c.player.hp;
       selfDamage(c.player, jitters);
       c.flags.damageTakenThisTurn += (before - c.player.hp);
@@ -359,6 +407,9 @@ export function endPlayerTurn() {
 
   discardHand(c.piles);
   tickStatuses(c.player, "playerTurnEnd");
+  if (hasRelic("insulated_lunchbox") && getStatus(c.player, STATUS.BLOCK) === 0) {
+    applyStatus(c.player, STATUS.BLOCK, 4);
+  }
 
   // Check victory FIRST in case some end-of-turn power killed an enemy.
   if (allEnemiesDead()) {
@@ -382,6 +433,7 @@ export function endPlayerTurn() {
   }
 
   startPlayerTurn();
+  saveGame("combat");
 }
 
 export function runEnemyTurn() {
@@ -570,6 +622,7 @@ export function endCombat(outcome) {
   returnExhaustToDeck(c.piles, gameState.run.deck);
   if (outcome === "victory") gameState.run.combatsWon += 1;
   notify("combatEnd", { outcome });
+  saveGame(outcome === "victory" ? "reward" : "gameOver");
 }
 
 function makeCtx(extra) {

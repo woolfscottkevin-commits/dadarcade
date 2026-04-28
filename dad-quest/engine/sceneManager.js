@@ -14,6 +14,8 @@ const SCENE_ROOT_IDS = {
   map: "app-map",
   combat: "app-combat",
   reward: "app-reward",
+  shop: "app-shop",
+  event: "app-event",
   rest: "app-rest",
   victory: "app-victory",
   runVictory: "app-run-victory",

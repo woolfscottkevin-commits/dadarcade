@@ -3,6 +3,7 @@
 import { setScene } from "../engine/sceneManager.js";
 import { endRun, gameState } from "../engine/gameState.js";
 import { CHARACTERS } from "../data/characters.js";
+import { clearSavedGame } from "../saves/saveState.js";
 
 export const gameOverScene = {
   mount(root) {
@@ -39,6 +40,7 @@ export const gameOverScene = {
     btn.textContent = "Try Again";
     btn.addEventListener("click", () => {
       endRun();
+      clearSavedGame();
       setScene("characterSelect");
     });
     wrap.appendChild(btn);

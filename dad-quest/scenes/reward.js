@@ -3,9 +3,11 @@
 // Routes back to map (or runVictory after Act 3 boss).
 
 import { CARDS } from "../data/cards.js";
-import { gameState, addCardToDeck, advanceAct, markCurrentNodeCompleted } from "../engine/gameState.js";
+import { RELICS } from "../data/relics.js";
+import { gameState, addCardToDeck, addRelicToRun, advanceAct, markCurrentNodeCompleted } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
-import { generateCardRewards, awardGold } from "../engine/rewards.js";
+import { generateCardRewards, awardGold, generateRelicRewards } from "../engine/rewards.js";
+import { saveGame } from "../saves/saveState.js";
 import { renderCard } from "../ui/cardFrame.js";
 
 let cleanup = null;
@@ -14,13 +16,49 @@ function routeNext(wasBoss) {
   if (wasBoss) {
     const result = advanceAct();
     if (result === "runVictory") {
+      saveGame("runVictory");
       setScene("runVictory");
     } else {
+      saveGame("map");
       setScene("map");
     }
   } else {
+    saveGame("map");
     setScene("map");
   }
+}
+
+function renderRelicChoice(root, wasBoss, choices) {
+  root.innerHTML = "";
+  const wrap = document.createElement("div");
+  wrap.className = "reward-wrap";
+  const title = document.createElement("h1");
+  title.className = "reward-title";
+  title.textContent = "Relic Found!";
+  wrap.appendChild(title);
+  const row = document.createElement("div");
+  row.className = "reward-relics";
+  for (const id of choices) {
+    const relic = RELICS.find((r) => r.id === id);
+    if (!relic) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "reward-relic-choice";
+    btn.innerHTML = `<img src="${relic.art}" alt="${relic.name}"><strong>${relic.name}</strong><span>${relic.description}</span>`;
+    btn.addEventListener("click", () => {
+      addRelicToRun(id);
+      routeNext(wasBoss);
+    });
+    row.appendChild(btn);
+  }
+  wrap.appendChild(row);
+  const skip = document.createElement("button");
+  skip.type = "button";
+  skip.className = "reward-skip-btn";
+  skip.textContent = "Skip Relic";
+  skip.addEventListener("click", () => routeNext(wasBoss));
+  wrap.appendChild(skip);
+  root.appendChild(wrap);
 }
 
 export const rewardScene = {
@@ -29,9 +67,14 @@ export const rewardScene = {
 
     const wasBoss = !!gameState.run.pendingIsBoss;
     const tier = wasBoss ? "boss" : (gameState.run.pendingNodeType === "elite" ? "elite" : "normal");
+    const wasElite = tier === "elite";
 
     // Mark the node we just completed
     markCurrentNodeCompleted();
+    if (tier === "normal" && gameState.run.relics.includes("pocket_square")) {
+      gameState.run.maxHp += 1;
+      gameState.run.hp = Math.min(gameState.run.maxHp, gameState.run.hp + 1);
+    }
 
     // Award gold immediately
     const goldGained = awardGold(tier);
@@ -40,10 +83,16 @@ export const rewardScene = {
     // Generate 3 card offerings
     const offerings = generateCardRewards(tier, gameState.run.character);
 
+    const trophyChoices = wasElite && gameState.run.relics.includes("the_trophy")
+      ? generateRelicRewards(3, false)
+      : [];
+
     // Clear the transient pendingEnemy / pendingIsBoss fields after awards computed
     delete gameState.run.pendingEnemy;
     delete gameState.run.pendingIsBoss;
     delete gameState.run.pendingNodeType;
+    delete gameState.run.pendingFreshCombat;
+    saveGame("reward");
 
     const wrap = document.createElement("div");
     wrap.className = "reward-wrap";
@@ -78,7 +127,9 @@ export const rewardScene = {
       takeBtn.textContent = "Take";
       takeBtn.addEventListener("click", () => {
         addCardToDeck(cid);
-        routeNext(wasBoss);
+        saveGame("reward");
+        if (trophyChoices.length) renderRelicChoice(root, wasBoss, trophyChoices);
+        else routeNext(wasBoss);
       });
       cell.appendChild(takeBtn);
       cardsRow.appendChild(cell);
@@ -89,7 +140,10 @@ export const rewardScene = {
     skip.type = "button";
     skip.className = "reward-skip-btn";
     skip.textContent = "Skip";
-    skip.addEventListener("click", () => routeNext(wasBoss));
+    skip.addEventListener("click", () => {
+      if (trophyChoices.length) renderRelicChoice(root, wasBoss, trophyChoices);
+      else routeNext(wasBoss);
+    });
     wrap.appendChild(skip);
 
     root.appendChild(wrap);

@@ -1,4 +1,4 @@
-/* Dad Quest — Phase 1 + Phase 2 styles
+/* Dad Quest styles
    Mobile-first. Vanilla CSS, no Tailwind, no normalize.
    Palette locked to DESIGN.md § 2.2. */
 
@@ -115,6 +115,32 @@ body {
   box-shadow: 0 4px 0 rgba(0,0,0,0.15);
 }
 .select-begin:disabled { opacity: 0.4; cursor: not-allowed; }
+.select-continue, .select-howto {
+  margin-top: 0.7rem;
+  background: var(--deep-navy); color: #fff;
+  border: 3px solid var(--coffee-brown); border-radius: 12px;
+  padding: 0.65rem 1.3rem; font-weight: 800;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+}
+.select-howto { background: var(--cream); color: var(--coffee-brown); }
+.howto-modal {
+  position: fixed; inset: 0; z-index: 80;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(26,35,126,0.55); padding: 1rem;
+}
+.howto-card {
+  background: var(--cream); color: var(--coffee-brown);
+  border: 3px solid var(--coffee-brown); border-radius: 14px;
+  padding: 1.2rem; max-width: 520px; position: relative;
+  box-shadow: 0 8px 0 rgba(0,0,0,0.25);
+}
+.howto-card h2 { color: var(--sunset-orange); margin-bottom: 0.6rem; }
+.howto-card p { margin: 0.55rem 0; line-height: 1.45; }
+.howto-close {
+  position: absolute; top: 0.45rem; right: 0.55rem;
+  border: 0; background: transparent; font-size: 1.5rem;
+  color: var(--coffee-brown); cursor: pointer;
+}
 
 @media (max-width: 768px) {
   .select-row { flex-direction: column; align-items: stretch; }
@@ -330,6 +356,53 @@ body {
   z-index: 5;
 }
 
+.combat-tutorial {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(23, 31, 42, 0.62);
+}
+
+.combat-tutorial[hidden] {
+  display: none;
+}
+
+.combat-tutorial-card {
+  width: min(420px, 100%);
+  border: 3px solid var(--deep-navy);
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--coffee-brown);
+  padding: 18px;
+  box-shadow: 0 16px 0 rgba(23, 31, 42, 0.28);
+  position: relative;
+}
+
+.combat-tutorial-card h2 {
+  margin: 0 0 10px;
+  color: var(--deep-navy);
+}
+
+.combat-tutorial-card p {
+  margin: 8px 0;
+  line-height: 1.45;
+}
+
+.combat-tutorial-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--deep-navy);
+  background: var(--sunset-orange);
+  font-weight: 900;
+}
+
 /* ---------- Outcome scenes ---------- */
 .outcome-wrap {
   display: flex; flex-direction: column; align-items: center; gap: 1rem;
@@ -425,6 +498,8 @@ body {
 .map-node-rest .map-node-label { color: #fff; }
 .map-node-boss   { background: var(--sunset-orange); color: #fff; width: 72px; height: 72px; }
 .map-node-boss .map-node-label { color: #fff; }
+.map-node-shop   { background: var(--sky-blue); color: var(--deep-navy); }
+.map-node-event  { background: var(--cream); color: var(--deep-navy); border-style: dashed; }
 
 .map-node-locked    { opacity: 0.45; cursor: not-allowed; }
 .map-node-completed { background: var(--suburb-beige); color: var(--coffee-brown); opacity: 0.6; cursor: default; }
@@ -494,6 +569,39 @@ body {
   padding: 0.4rem 1.2rem; font-weight: 800;
   box-shadow: 0 3px 0 rgba(0,0,0,0.15);
 }
+.reward-relics, .shop-relic-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.8rem; width: 100%; max-width: 760px;
+}
+.reward-relic-choice, .shop-relic {
+  background: var(--cream); color: var(--coffee-brown);
+  border: 3px solid var(--coffee-brown); border-radius: 10px;
+  padding: 0.8rem; display: flex; flex-direction: column; align-items: center;
+  gap: 0.45rem; text-align: center; min-height: 170px;
+}
+.reward-relic-choice img, .shop-relic img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 2px solid var(--coffee-brown); }
+.reward-relic-choice span, .shop-relic span { font-size: 0.78rem; line-height: 1.25; }
+
+/* Shop + event scenes */
+.shop-wrap, .event-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.9rem; width: 100%; max-width: 1024px; padding: 1rem; }
+.shop-title, .event-title { color: var(--sunset-orange); font-size: clamp(1.7rem, 6vw, 2.5rem); font-weight: 900; }
+.shop-section { width: 100%; background: rgba(255,243,224,0.55); border: 3px solid var(--coffee-brown); border-radius: 12px; padding: 0.9rem; }
+.shop-section h2 { color: var(--deep-navy); font-size: 1.05rem; margin-bottom: 0.6rem; }
+.shop-card-grid { display: flex; gap: 0.8rem; overflow-x: auto; padding-bottom: 0.4rem; }
+.shop-cell { display: flex; flex-direction: column; gap: 0.5rem; align-items: center; flex: 0 0 auto; }
+.shop-buy-btn, .shop-leave-btn, .event-choice-btn {
+  background: var(--sunset-orange); color: #fff;
+  border: 3px solid var(--coffee-brown); border-radius: 10px;
+  padding: 0.5rem 0.9rem; font-weight: 800;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+}
+.shop-buy-btn:disabled, .event-choice-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.shop-leave-btn { background: var(--deep-navy); }
+.shop-remove-row { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+.shop-remove-select { min-height: 44px; border: 3px solid var(--coffee-brown); border-radius: 8px; padding: 0.35rem; background: var(--cream); color: var(--coffee-brown); font-weight: 700; }
+.event-body { max-width: 620px; color: var(--coffee-brown); line-height: 1.5; text-align: center; }
+.event-choices, .event-remove-list { display: flex; flex-direction: column; gap: 0.65rem; width: 100%; max-width: 420px; }
+.event-continue { background: var(--lawn-green); }
 
 /* Rest scene */
 .rest-wrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; max-width: 480px; padding: 2rem 1rem; text-align: center; }
@@ -546,6 +654,20 @@ body {
 
 /* Outcome stats grid */
 .outcome-stats { font-size: 0.9rem; opacity: 0.85; display: flex; flex-direction: column; gap: 0.2rem; align-items: center; }
+
+.about-dad-quest {
+  width: min(920px, calc(100% - 2rem));
+  margin: 1rem auto 2rem;
+  color: var(--coffee-brown);
+}
+.about-dad-quest details {
+  background: rgba(255,243,224,0.9);
+  border: 3px solid var(--coffee-brown);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+}
+.about-dad-quest summary { cursor: pointer; font-weight: 900; color: var(--deep-navy); }
+.about-dad-quest p { margin-top: 0.65rem; line-height: 1.45; }
 
 /* Mobile tweaks for Phase 3 */
 @media (max-width: 768px) {

@@ -4,6 +4,7 @@
 import { gameState, endRun } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
 import { CHARACTERS } from "../data/characters.js";
+import { clearSavedGame } from "../saves/saveState.js";
 
 export const runVictoryScene = {
   mount(root) {
@@ -53,6 +54,7 @@ export const runVictoryScene = {
     btn.textContent = "Return to Character Select";
     btn.addEventListener("click", () => {
       endRun();
+      clearSavedGame();
       setScene("characterSelect");
     });
     wrap.appendChild(btn);

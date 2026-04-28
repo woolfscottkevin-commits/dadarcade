@@ -27,6 +27,7 @@ import { createStatusRow } from "../ui/statusIcons.js";
 import { createIntentDisplay } from "../ui/intentDisplay.js";
 import { createRunHud } from "../ui/runHud.js";
 import { applyReticleTo } from "../ui/targetingReticle.js";
+import { playSfx } from "../ui/sfx.js";
 
 let layoutEls = null;
 let onKey = null;
@@ -95,11 +96,23 @@ function buildLayout(root) {
   banner.style.opacity = "0";
   stage.appendChild(banner);
 
+  const tutorial = document.createElement("div");
+  tutorial.className = "combat-tutorial";
+  tutorial.hidden = true;
+  tutorial.innerHTML = `
+    <div class="combat-tutorial-card">
+      <button type="button" class="combat-tutorial-close" aria-label="Close">×</button>
+      <h2>Quick Briefing</h2>
+      <p>Spend energy to play cards. Enemy intent badges tell you what will happen after you end the turn.</p>
+      <p>Tap an enemy to target single-target attacks. Block fades at end of turn; HP, deck, gold, and relics carry through the run.</p>
+    </div>`;
+  stage.appendChild(tutorial);
+
   root.appendChild(stage);
 
   return {
     stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
-    energyEl, endBtn, handEl, pilesEl, banner,
+    energyEl, endBtn, handEl, pilesEl, banner, tutorial,
     enemyEls: [],
   };
 }
@@ -267,6 +280,7 @@ function onCardTap(inst, cardEl) {
     }
   }
   playCard(inst, c.targetIndex);
+  playSfx("card");
   refresh();
 }
 
@@ -274,6 +288,7 @@ function onListenerEvent(name, payload) {
   if (!layoutEls) return;
   if (name === "turnStart") refresh();
   if (name === "playerHit") {
+    playSfx("hit");
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
     refresh();
   }
@@ -294,6 +309,7 @@ function onListenerEvent(name, payload) {
     refresh();
   }
   if (name === "combatEnd") {
+    playSfx(payload.outcome === "victory" ? "victory" : "defeat");
     setTimeout(() => {
       if (payload.outcome === "victory") {
         setScene("reward");
@@ -310,13 +326,26 @@ export const combatScene = {
 
     setCombatListener(onListenerEvent);
 
-    // Determine which enemy to fight: from map node's pendingEnemy, or default to roomba (legacy)
-    const enemyId = gameState.run.pendingEnemy || "aggressive_roomba";
-    startCombat([enemyId]);
+    // Start a fresh map-selected fight, or resume a saved mid-combat snapshot.
+    if (gameState.run.pendingFreshCombat || !gameState.combat || gameState.combat.pendingOutcome) {
+      const enemyId = gameState.run.pendingEnemy || "aggressive_roomba";
+      delete gameState.run.pendingFreshCombat;
+      startCombat([enemyId]);
+    }
     renderEnemies();
     refresh();
 
+    if (gameState.run.showTutorial) {
+      layoutEls.tutorial.hidden = false;
+      const close = layoutEls.tutorial.querySelector(".combat-tutorial-close");
+      close.addEventListener("click", () => {
+        layoutEls.tutorial.hidden = true;
+        delete gameState.run.showTutorial;
+      });
+    }
+
     layoutEls.endBtn.addEventListener("click", () => {
+      playSfx("endTurn");
       endPlayerTurn();
       refresh();
     });

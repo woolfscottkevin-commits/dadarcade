@@ -4,8 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#FB8C00">
-  <meta name="description" content="Dad Quest — a deckbuilder roguelike of suburban absurdism. Part of Dad Arcade.">
-  <title>Dad Quest</title>
+  <meta name="description" content="Play Dad Quest, a free browser deckbuilder roguelike card battler about suburban dads, office burnout, and HOA chaos.">
+  <meta property="og:title" content="Dad Quest — Free Card Battler Roguelike | Dad Arcade">
+  <meta property="og:description" content="A free browser deckbuilder roguelike card battler starring suburban dads, coffee-powered office workers, and HOA chaos.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dadarcade.com/dad-quest">
+  <meta property="og:image" content="https://dadarcade.com/dad-quest/assets/characters/char_hank.png">
+  <link rel="canonical" href="https://dadarcade.com/dad-quest">
+  <title>Dad Quest — Free Card Battler Roguelike | Dad Arcade</title>
   <link rel="icon" href="assets/characters/char_hank.png">
   <link rel="stylesheet" href="styles/dad-quest.css">
 </head>
@@ -25,11 +31,21 @@
     <div id="app-map" class="scene"></div>
     <div id="app-combat" class="scene"></div>
     <div id="app-reward" class="scene"></div>
+    <div id="app-shop" class="scene"></div>
+    <div id="app-event" class="scene"></div>
     <div id="app-rest" class="scene"></div>
     <div id="app-victory" class="scene"></div>
     <div id="app-run-victory" class="scene"></div>
     <div id="app-game-over" class="scene"></div>
   </div>
+
+  <section class="about-dad-quest" aria-label="About Dad Quest">
+    <details>
+      <summary>About Dad Quest</summary>
+      <p>Dad Quest is a free browser card battler roguelike where suburban chores become tactical problems. Pick Hank, Doug, or Brenda, climb a branching three-act map, and build a deck from attacks, skills, powers, relics, shop finds, and strange neighborhood events.</p>
+      <p>Each run mixes quick turn-based combat with visible enemy intents, energy management, card rewards, rest sites, and shops. Hank builds Yard Work for lawn-care payoffs, Doug converts Caffeine into explosive office momentum, and Brenda buries enemies under Citations. Defeat the Ultimate HOA President at the end of Act 3 to complete the run.</p>
+    </details>
+  </section>
 
   <script type="module" src="main.js"></script>
 </body>

@@ -2,12 +2,14 @@
 // indicator and reachable-node highlighting. Tap a reachable node → confirm
 // modal → travel to the appropriate scene.
 
-import { gameState } from "../engine/gameState.js";
+import { gameState, healRun } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
 import { reachableNodeIds, findNode } from "../procgen/mapGenerator.js";
 import { ENEMIES } from "../data/enemies.js";
+import { EVENTS } from "../data/events.js";
 import { CHARACTERS } from "../data/characters.js";
 import { getAsset } from "../assets/assetLoader.js";
+import { saveGame } from "../saves/saveState.js";
 import { renderMapNode } from "../ui/mapNode.js";
 import { renderEdges } from "../ui/edgeRenderer.js";
 import { createRunHud } from "../ui/runHud.js";
@@ -35,6 +37,11 @@ function enemyName(id) {
   if (!id) return "";
   const def = ENEMIES.find((e) => e.id === id);
   return def ? def.name : id;
+}
+
+function eventTitle(id) {
+  const ev = EVENTS.find((e) => e.id === id);
+  return ev ? ev.title : "Random Event";
 }
 
 function build(root) {
@@ -139,6 +146,8 @@ function showConfirmModal() {
   t.className = "map-modal-title";
   const node = pending.node;
   if (node.type === "rest") t.textContent = "Rest at the camp?";
+  else if (node.type === "shop") t.textContent = "Visit the shop?";
+  else if (node.type === "event") t.textContent = `Investigate: ${eventTitle(node.event)}?`;
   else if (node.type === "boss") t.textContent = `Face the boss: ${enemyName(node.enemy)}?`;
   else if (node.type === "elite") t.textContent = `Engage the Elite: ${enemyName(node.enemy)}?`;
   else t.textContent = `Travel to: ${enemyName(node.enemy)}?`;
@@ -174,13 +183,27 @@ function confirmTravel() {
   pending = null;
   // Move position BEFORE mounting destination scene
   gameState.run.position = node.id;
+  if (gameState.run.relics.includes("pedometer") && node.type !== "combat" && node.type !== "elite" && node.type !== "boss") {
+    healRun(4);
+  }
   if (node.type === "rest") {
+    saveGame("rest");
     setScene("rest");
+  } else if (node.type === "shop") {
+    saveGame("shop");
+    setScene("shop");
+  } else if (node.type === "event") {
+    if (!node.event) node.event = EVENTS[Math.floor(Math.random() * EVENTS.length)].id;
+    gameState.run.pendingEvent = node.event;
+    saveGame("event");
+    setScene("event");
   } else {
     // combat / elite / boss: stash chosen enemy and isBoss in a transient field
     gameState.run.pendingEnemy = node.enemy;
     gameState.run.pendingIsBoss = node.type === "boss";
     gameState.run.pendingNodeType = node.type; // used by reward weighting
+    gameState.run.pendingFreshCombat = true;
+    saveGame("combat");
     setScene("combat");
   }
 }
