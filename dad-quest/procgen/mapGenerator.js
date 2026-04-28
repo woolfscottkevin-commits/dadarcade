@@ -36,7 +36,9 @@ function pickType(rowIdx) {
   if (rowIdx === 1) return "combat";
   const r = Math.random();
   if (r < DIST.combat) return "combat";
-  if (r < DIST.combat + DIST.elite) return "elite";
+  // Row 2 is too early for elites: players should see at least one reward
+  // before a high-risk branch appears.
+  if (r < DIST.combat + DIST.elite) return rowIdx === 2 ? "combat" : "elite";
   if (r < DIST.combat + DIST.elite + DIST.rest) return "rest";
   if (r < DIST.combat + DIST.elite + DIST.rest + DIST.shop) return "shop";
   return "event";
@@ -161,6 +163,19 @@ function pickEnemy(prevRowEnemies, kind) {
   return pick(pool); // give up after retries; allow duplicate adjacency
 }
 
+function ensureUtilityNode(rows, type, preferredRows) {
+  for (let r = 2; r <= 5; r++) {
+    if (rows[r].some((n) => n.type === type)) return;
+  }
+  for (const r of preferredRows) {
+    const candidates = rows[r].filter((n) => n.type === "combat");
+    if (candidates.length > 0) {
+      pick(candidates).type = type;
+      return;
+    }
+  }
+}
+
 export function generateAct(actNumber) {
   // Row counts: rows 1..5 each have 3 or 4 nodes. Row 6 = boss (1 node).
   const rowCounts = [null]; // 1-indexed
@@ -213,6 +228,13 @@ export function generateAct(actNumber) {
       if (node.type === "elite") node.type = "combat";
     }
   }
+
+  // A fun run needs visible planning texture every act, not just a combat gauntlet.
+  // Keep the 60/10/10/10/10 distribution as the base, then guarantee at least
+  // one rest, one shop, and one event by converting combat nodes when RNG misses.
+  ensureUtilityNode(rows, "rest", [5, 4, 3, 2]);
+  ensureUtilityNode(rows, "shop", [3, 4, 2, 5]);
+  ensureUtilityNode(rows, "event", [2, 3, 4, 5]);
 
   // 3. Build edges between adjacent rows
   for (let r = 1; r <= 5; r++) {

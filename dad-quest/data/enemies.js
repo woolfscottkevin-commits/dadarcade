@@ -181,7 +181,7 @@ export const ENEMIES = [
 
   // ------------------------------------------------------------------
   // FINAL BOSS (1)
-  // HP scales across acts in v1: Act 1 = 110, Act 2 = 175, Act 3 = 250.
+  // HP scales across acts in v1: Act 1 = 70, Act 2 = 110, Act 3 = 160.
   // The boss-combat-start path (engine/combat.js) overrides hp/maxHp based on run.act.
   // ------------------------------------------------------------------
   {
@@ -203,4 +203,4 @@ export const ENEMIES = [
   },
 ];
 
-export const BOSS_HP_BY_ACT = { 1: 110, 2: 175, 3: 250 };
+export const BOSS_HP_BY_ACT = { 1: 70, 2: 110, 3: 160 };

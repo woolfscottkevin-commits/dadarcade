@@ -587,7 +587,7 @@ function runUpgradeHand(ctx) {
 export function upgradeEffectString(effectStr) {
   if (!effectStr) return effectStr;
   // Mark every "_gte:NUMBER" so the doubler doesn't touch the threshold value.
-  const sentinel = " GTE ";
+  const sentinel = "__DQ_GTE_SENTINEL__";
   const masked = effectStr.replace(/(_gte):(\d+)/g, (m, p1, p2) => `${p1}${sentinel}${p2}`);
   const doubled = masked.replace(/(?<![\w])(\d+)/g, (m, n) => String(int(n) * 2));
   return doubled.replace(new RegExp(sentinel, "g"), ":");

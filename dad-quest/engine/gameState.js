@@ -89,6 +89,9 @@ export function advanceAct() {
   if (gameState.run.act >= 3) {
     return "runVictory";
   }
+  // Bosses are major milestones. Preserve HP attrition inside each act, then
+  // reset to full health so the next act feels like a fresh chapter.
+  gameState.run.hp = gameState.run.maxHp;
   gameState.run.act += 1;
   gameState.run.position = null;
   gameState.run.completedNodes = [];

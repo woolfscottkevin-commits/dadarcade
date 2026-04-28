@@ -95,6 +95,7 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - `character`, `hp`, `maxHp`, `gold`, `deck`, `relics` — persist between combats.
 - `act` (1–3), `position` (current node ID or null), `completedNodes` (array), `map` (current act's generated map), `combatsWon`.
 - `pendingEnemy` / `pendingIsBoss` / `pendingNodeType` are transient fields stashed by the map scene before transitioning into combat; the reward scene reads then deletes them.
+- `advanceAct()` heals to full before Act 2/3. HP still persists inside each act.
 
 **Reset rules:**
 - HP, gold, deck, relics, max HP — RUN-scoped (carry).
@@ -106,7 +107,7 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - Row 6: boss (always Ultimate HOA President in v1).
 - Shops and events are generated only after row 1.
 
-**Boss HP scaling:** Act 1 = 110, Act 2 = 175, Act 3 = 250. Implemented in `engine/combat.makeEnemyInstance` based on `gameState.run.act`. **Do NOT mutate `data/enemies.js`** — it keeps `hp: 250` as the canonical Act-3 value.
+**Boss scaling:** HP is Act 1 = 70, Act 2 = 110, Act 3 = 160, with boss intent payloads scaled by act in `engine/combat.scaleBossPatternForAct`. **Do NOT mutate the boss's canonical `hp: 250`** — `BOSS_HP_BY_ACT` and combat-start cloning provide the act values.
 
 **Multi-enemy combat (Phase 3):**
 - Combat now supports 1–2 enemies. Only Pyramid Schemer's once-per-combat Recruit creates a 2-enemy fight.
@@ -128,7 +129,7 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - Rarity weights — base: 60/33/7. Elite: 55/33/12. Boss: 50/33/17.
 - Gold per tier: normal 10–25, elite 25–35, boss 50–65.
 - Shops generate 5 character/shared cards, 3 unowned relics, and one card-removal service. Coupon Book applies a 20% price reduction.
-- The Trophy adds a 1-of-3 relic choice after elite rewards. Boss relics are available only where explicitly allowed by reward code.
+- The Trophy adds a 1-of-3 relic choice after elite rewards. Boss wins also offer a 1-of-3 relic choice, including boss relics.
 
 **Victory/defeat tie resolution:** if a single card play simultaneously kills the last enemy and drops the player to 0 HP (e.g., Weekend Warrior self-damage), **victory wins.** Combat checks `allEnemiesDead()` before checking player HP ≤ 0.
 
@@ -138,6 +139,8 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 - `saves/saveState.js` stores one active local run at `dadQuest.activeRun.v1`.
 - Saves happen after major actions: starting a run, map travel, card play/end turn, reward pick/skip, rest, shop purchases/removal, and event completion.
 - Combat snapshots serialize/hydrate `Set` and `Map` fields (`costZeroThisTurn`, `oncePerCombatFired`, `cardEffectOverrides`) so mid-combat refreshes can resume.
+- Reward snapshots store already-rolled gold/cards/relics so refreshing on the reward screen cannot duplicate rewards.
+- Normal and elite combat rewards include a small breather heal (6% / 10% max HP) to reduce pure attrition.
 - Character select shows Continue Run when a save exists. Returning after game over or run victory clears the save.
 
 **Shops:**

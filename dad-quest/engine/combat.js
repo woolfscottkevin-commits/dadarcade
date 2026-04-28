@@ -5,7 +5,7 @@
 //   - All new intent types (attack_with_status, apply_status, attack_and_disrupt,
 //     attack_with_modifier, block_and_status, summon, aoe_attack, self_buff,
 //     heal_and_buff, apply_status_aoe_to_player, attack_telegraphed)
-//   - Boss HP scales by act (110/175/250)
+//   - Boss HP and payloads scale by act (70/110/160 HP)
 //   - Player-side next-turn modifiers (draw_minus from Pop Quiz)
 //   - Victory/defeat resolution: victory wins ties (e.g., Weekend Warrior kills
 //     last enemy AND drops player to 0 HP → victory).
@@ -82,11 +82,13 @@ function notify(eventName, payload) {
 function makeEnemyInstance(def, options = {}) {
   let hp = def.hp;
   let maxHp = def.hp;
+  let intentPattern = def.intentPattern;
   // Boss HP scaling per act
   if (def.tier === "boss") {
     const scaled = BOSS_HP_BY_ACT[gameState.run.act] || def.hp;
     hp = scaled;
     maxHp = scaled;
+    intentPattern = scaleBossPatternForAct(def.intentPattern, gameState.run.act);
   }
   return {
     id: def.id,
@@ -96,13 +98,39 @@ function makeEnemyInstance(def, options = {}) {
     hp,
     maxHp,
     statuses: {},
-    intentPattern: def.intentPattern,
+    intentPattern,
     intentMode: def.intentMode,
     patternIndex: 0,
     nextIntent: null,
     oncePerCombatFired: new Set(),
     spawnedThisTurn: !!options.spawnedThisTurn,
   };
+}
+
+function scaledNumber(value, multiplier, floor = 1) {
+  if (!value) return value;
+  return Math.max(floor, Math.round(value * multiplier));
+}
+
+function scaleBossPatternForAct(pattern, act) {
+  const damageMult = act === 1 ? 0.35 : act === 2 ? 0.50 : 0.70;
+  const healMult = act === 1 ? 0.20 : act === 2 ? 0.35 : 0.60;
+  const strengthMult = act === 1 ? 0.25 : act === 2 ? 0.50 : 0.75;
+  const statusMult = act === 1 ? 0.50 : 1;
+
+  return pattern.map((intent) => {
+    const copy = { ...intent };
+    if (copy.value) copy.value = scaledNumber(copy.value, damageMult);
+    if (copy.heal) copy.heal = scaledNumber(copy.heal, healMult);
+    if (copy.strength) copy.strength = scaledNumber(copy.strength, strengthMult);
+    if (copy.statuses) {
+      copy.statuses = copy.statuses.map((s) => ({
+        ...s,
+        stacks: scaledNumber(s.stacks, statusMult),
+      }));
+    }
+    return copy;
+  });
 }
 
 export function startCombat(enemyIds) {

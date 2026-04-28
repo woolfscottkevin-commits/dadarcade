@@ -13,6 +13,7 @@ import { renderCard } from "../ui/cardFrame.js";
 let cleanup = null;
 
 function routeNext(wasBoss) {
+  delete gameState.run.pendingReward;
   if (wasBoss) {
     const result = advanceAct();
     if (result === "runVictory") {
@@ -28,17 +29,17 @@ function routeNext(wasBoss) {
   }
 }
 
-function renderRelicChoice(root, wasBoss, choices) {
+function renderRelicChoice(root, reward) {
   root.innerHTML = "";
   const wrap = document.createElement("div");
   wrap.className = "reward-wrap";
   const title = document.createElement("h1");
   title.className = "reward-title";
-  title.textContent = "Relic Found!";
+  title.textContent = reward.wasBoss ? "Boss Relic!" : "Relic Found!";
   wrap.appendChild(title);
   const row = document.createElement("div");
   row.className = "reward-relics";
-  for (const id of choices) {
+  for (const id of reward.relicChoices) {
     const relic = RELICS.find((r) => r.id === id);
     if (!relic) continue;
     const btn = document.createElement("button");
@@ -47,7 +48,9 @@ function renderRelicChoice(root, wasBoss, choices) {
     btn.innerHTML = `<img src="${relic.art}" alt="${relic.name}"><strong>${relic.name}</strong><span>${relic.description}</span>`;
     btn.addEventListener("click", () => {
       addRelicToRun(id);
-      routeNext(wasBoss);
+      reward.phase = "done";
+      saveGame("reward");
+      routeNext(reward.wasBoss);
     });
     row.appendChild(btn);
   }
@@ -56,43 +59,76 @@ function renderRelicChoice(root, wasBoss, choices) {
   skip.type = "button";
   skip.className = "reward-skip-btn";
   skip.textContent = "Skip Relic";
-  skip.addEventListener("click", () => routeNext(wasBoss));
+  skip.addEventListener("click", () => {
+    reward.phase = "done";
+    saveGame("reward");
+    routeNext(reward.wasBoss);
+  });
   wrap.appendChild(skip);
   root.appendChild(wrap);
+}
+
+function ensureReward() {
+  if (gameState.run.pendingReward) return gameState.run.pendingReward;
+
+  const wasBoss = !!gameState.run.pendingIsBoss;
+  const tier = wasBoss ? "boss" : (gameState.run.pendingNodeType === "elite" ? "elite" : "normal");
+  const wasElite = tier === "elite";
+
+  // Mark and award exactly once. This object is saved so refreshing on the
+  // reward screen cannot duplicate gold, Pocket Square HP, or card/relic rolls.
+  markCurrentNodeCompleted();
+  if (tier === "normal" && gameState.run.relics.includes("pocket_square")) {
+    gameState.run.maxHp += 1;
+    gameState.run.hp = Math.min(gameState.run.maxHp, gameState.run.hp + 1);
+  }
+
+  const goldGained = awardGold(tier);
+  gameState.run.gold += goldGained;
+  const breatherHeal = tier === "normal"
+    ? Math.ceil(gameState.run.maxHp * 0.06)
+    : tier === "elite"
+      ? Math.ceil(gameState.run.maxHp * 0.10)
+      : 0;
+  if (breatherHeal > 0) {
+    gameState.run.hp = Math.min(gameState.run.maxHp, gameState.run.hp + breatherHeal);
+  }
+
+  const relicChoices = wasBoss
+    ? generateRelicRewards(3, true)
+    : wasElite && gameState.run.relics.includes("the_trophy")
+      ? generateRelicRewards(3, false)
+      : [];
+
+  const reward = {
+    wasBoss,
+    tier,
+    goldGained,
+    breatherHeal,
+    offerings: generateCardRewards(tier, gameState.run.character),
+    relicChoices,
+    phase: "card",
+  };
+
+  gameState.run.pendingReward = reward;
+
+  delete gameState.run.pendingEnemy;
+  delete gameState.run.pendingIsBoss;
+  delete gameState.run.pendingNodeType;
+  delete gameState.run.pendingFreshCombat;
+  saveGame("reward");
+  return reward;
 }
 
 export const rewardScene = {
   mount(root) {
     root.innerHTML = "";
 
-    const wasBoss = !!gameState.run.pendingIsBoss;
-    const tier = wasBoss ? "boss" : (gameState.run.pendingNodeType === "elite" ? "elite" : "normal");
-    const wasElite = tier === "elite";
-
-    // Mark the node we just completed
-    markCurrentNodeCompleted();
-    if (tier === "normal" && gameState.run.relics.includes("pocket_square")) {
-      gameState.run.maxHp += 1;
-      gameState.run.hp = Math.min(gameState.run.maxHp, gameState.run.hp + 1);
+    const reward = ensureReward();
+    if (reward.phase === "relic") {
+      renderRelicChoice(root, reward);
+      return;
     }
-
-    // Award gold immediately
-    const goldGained = awardGold(tier);
-    gameState.run.gold += goldGained;
-
-    // Generate 3 card offerings
-    const offerings = generateCardRewards(tier, gameState.run.character);
-
-    const trophyChoices = wasElite && gameState.run.relics.includes("the_trophy")
-      ? generateRelicRewards(3, false)
-      : [];
-
-    // Clear the transient pendingEnemy / pendingIsBoss fields after awards computed
-    delete gameState.run.pendingEnemy;
-    delete gameState.run.pendingIsBoss;
-    delete gameState.run.pendingNodeType;
-    delete gameState.run.pendingFreshCombat;
-    saveGame("reward");
 
     const wrap = document.createElement("div");
     wrap.className = "reward-wrap";
@@ -104,17 +140,28 @@ export const rewardScene = {
 
     const goldLine = document.createElement("p");
     goldLine.className = "reward-gold";
-    goldLine.textContent = `+${goldGained} gold (total ${gameState.run.gold})`;
+    goldLine.textContent = `+${reward.goldGained} gold (total ${gameState.run.gold})`;
     wrap.appendChild(goldLine);
+
+    if (reward.breatherHeal > 0) {
+      const healLine = document.createElement("p");
+      healLine.className = "reward-heal";
+      healLine.textContent = `Caught your breath: +${reward.breatherHeal} HP`;
+      wrap.appendChild(healLine);
+    }
 
     const sub = document.createElement("p");
     sub.className = "reward-sub";
-    sub.textContent = offerings.length > 0 ? "Pick a card to add to your deck — or skip." : "No new card rewards available.";
+    sub.textContent = reward.wasBoss
+      ? "Pick a card, then choose a boss relic. You'll heal to full before the next act."
+      : reward.offerings.length > 0
+        ? "Pick a card to add to your deck — or skip."
+        : "No new card rewards available.";
     wrap.appendChild(sub);
 
     const cardsRow = document.createElement("div");
     cardsRow.className = "reward-cards";
-    for (const cid of offerings) {
+    for (const cid of reward.offerings) {
       const def = CARDS.find((c) => c.id === cid);
       if (!def) continue;
       const cell = document.createElement("div");
@@ -127,9 +174,10 @@ export const rewardScene = {
       takeBtn.textContent = "Take";
       takeBtn.addEventListener("click", () => {
         addCardToDeck(cid);
+        reward.phase = reward.relicChoices.length ? "relic" : "done";
         saveGame("reward");
-        if (trophyChoices.length) renderRelicChoice(root, wasBoss, trophyChoices);
-        else routeNext(wasBoss);
+        if (reward.relicChoices.length) renderRelicChoice(root, reward);
+        else routeNext(reward.wasBoss);
       });
       cell.appendChild(takeBtn);
       cardsRow.appendChild(cell);
@@ -141,8 +189,10 @@ export const rewardScene = {
     skip.className = "reward-skip-btn";
     skip.textContent = "Skip";
     skip.addEventListener("click", () => {
-      if (trophyChoices.length) renderRelicChoice(root, wasBoss, trophyChoices);
-      else routeNext(wasBoss);
+      reward.phase = reward.relicChoices.length ? "relic" : "done";
+      saveGame("reward");
+      if (reward.relicChoices.length) renderRelicChoice(root, reward);
+      else routeNext(reward.wasBoss);
     });
     wrap.appendChild(skip);
 
