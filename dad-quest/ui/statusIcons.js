@@ -5,7 +5,7 @@ const META = {
   vulnerable: { glyph: "↓", label: "Vulnerable", color: "var(--deep-navy)", help: "Takes 50% more attack damage." },
   weak:       { glyph: "↘", label: "Weak",       color: "var(--coffee-brown)", help: "Deals 25% less attack damage." },
   strength:   { glyph: "↑", label: "Strength",   color: "var(--punchy-red)", help: "Adds damage to attacks." },
-  yard_work:  { glyph: "⚒", label: "Yard Work",  color: "var(--lawn-green)", help: "Hank's setup counter. Stays this combat; some lawn cards scale with it or spend it." },
+  yard_work:  { glyph: "⚒", label: "Yard Work",  color: "var(--lawn-green)", help: "Hank's combo counter. Does nothing by itself; other Hank cards check it or spend it." },
   caffeine:   { glyph: "☕", label: "Caffeine",   color: "var(--coffee-brown)", help: "Doug's fuel. Some office cards spend or reward caffeine." },
   citation:   { glyph: "✉", label: "Citation",   color: "var(--sunset-orange)", help: "Brenda's paperwork. Some HOA cards scale from citations on enemies." },
 };

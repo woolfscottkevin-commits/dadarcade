@@ -439,6 +439,17 @@ body {
   border-radius: 6px;
 }
 
+.mechanic-coach-example {
+  display: grid;
+  gap: 0.4rem;
+  margin: 12px 0;
+  padding: 0.72rem 0.78rem;
+  border: 2px solid rgba(119, 184, 72, 0.45);
+  border-radius: 8px;
+  background: #FBF8E8;
+  line-height: 1.35;
+}
+
 .mechanic-coach-ok {
   width: 100%;
   margin-top: 8px;

@@ -34,7 +34,7 @@ let onKey = null;
 let lastYardWork = null;
 let yardWorkCoachOpen = false;
 
-const YARD_WORK_COACH_KEY = "dadQuest.coach.yardWork.v1";
+const YARD_WORK_COACH_KEY = "dadQuest.coach.yardWork.v2";
 
 function buildLayout(root) {
   root.innerHTML = "";
@@ -119,14 +119,15 @@ function buildLayout(root) {
     <div class="combat-tutorial-card mechanic-coach-card">
       <button type="button" class="combat-tutorial-close mechanic-coach-close" aria-label="Close">×</button>
       <div class="mechanic-coach-kicker">Hank mechanic</div>
-      <h2>Yard Work is your setup meter</h2>
-      <p><strong>It stays for this combat.</strong> Build it with lawn-care cards, then cash it in or scale off it.</p>
-      <ul>
-        <li><strong>Drought Strike</strong> hits for current Yard Work × 3.</li>
-        <li><strong>Garage Workshop</strong> gets stronger at 3 Yard Work.</li>
-        <li><strong>Weed Whacker</strong> spends all Yard Work for bonus damage.</li>
-      </ul>
-      <p class="mechanic-coach-note">Your Lawn Flag starter relic adds +1 whenever Hank gains Yard Work.</p>
+      <h2>Yard Work is Hank's combo counter</h2>
+      <p><strong>It does nothing by itself.</strong> It is a number Hank builds during this fight, then other cards check or spend that number.</p>
+      <div class="mechanic-coach-example">
+        <div><strong>More Yard Work means:</strong></div>
+        <div><strong>Drought Strike</strong> deals Yard Work × 3 damage.</div>
+        <div><strong>Garage Workshop</strong> blocks more when you have 3+.</div>
+        <div><strong>Weed Whacker</strong> spends it all for bonus damage.</div>
+      </div>
+      <p class="mechanic-coach-note">If a card says "Gain 2 Yard Work" and you see +3, that's your Lawn Flag relic adding +1.</p>
       <button type="button" class="mechanic-coach-ok">Got it</button>
     </div>`;
   stage.appendChild(mechanicCoach);
