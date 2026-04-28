@@ -163,6 +163,316 @@ def paste_shared_portraits(canvas: Image.Image) -> None:
         canvas.alpha_composite(medallion, pos)
 
 
+def paste_hank_badge(canvas: Image.Image, card_type: str) -> None:
+    theme = CLASS_THEMES["hank"]
+    src = Image.open(theme["portrait"]).convert("RGB")
+    portrait = ImageOps.fit(src, (258, 300), Image.Resampling.LANCZOS, centering=(0.5, 0.34))
+    badge = Image.new("RGBA", (306, 348), (0, 0, 0, 0))
+    d = ImageDraw.Draw(badge, "RGBA")
+    d.rounded_rectangle((0, 0, 305, 347), radius=54, fill=(*TYPE_COLORS.get(card_type, TYPE_COLORS["skill"]), 255))
+    d.rounded_rectangle((12, 12, 293, 335), radius=44, fill=(*theme["light"], 255))
+    badge.paste(portrait.convert("RGBA"), (24, 24), rounded_mask((258, 300), 36))
+    canvas.alpha_composite(badge, (658, 90))
+
+
+def generate_hank_card(card: Card) -> Image.Image:
+    theme = CLASS_THEMES["hank"]
+    base = make_gradient((111, 197, 226), (218, 232, 189)).convert("RGBA")
+    draw = ImageDraw.Draw(base, "RGBA")
+    draw_hank_yard_backdrop(draw, theme, card.card_type)
+    draw_type_badge(draw, card.card_type, TYPE_COLORS.get(card.card_type, TYPE_COLORS["skill"]), theme["dark"])
+    paste_hank_badge(base, card.card_type)
+    draw = ImageDraw.Draw(base, "RGBA")
+    draw_hank_feature(draw, card, theme)
+    return final_treatment(base, card, theme)
+
+
+def draw_hank_yard_backdrop(draw: ImageDraw.ImageDraw, theme: dict, card_type: str) -> None:
+    type_color = TYPE_COLORS.get(card_type, TYPE_COLORS["skill"])
+    draw.rectangle((0, 0, SIZE, 372), fill=(118, 202, 229, 255))
+    draw.polygon([(0, 320), (1024, 240), (1024, 440), (0, 450)], fill=(239, 231, 189, 255), outline=theme["dark"])
+    draw.rectangle((0, 365, 1024, 470), fill=(196, 166, 106, 255), outline=theme["dark"])
+    for x in range(-40, 1060, 86):
+        draw.rectangle((x, 368, x + 48, 470), fill=(223, 196, 138, 255), outline=(116, 83, 55, 180))
+    draw.rectangle((0, 470, 1024, 1024), fill=(103, 164, 84, 255))
+    for x in range(-220, 1200, 86):
+        draw.line((x, 1024, x + 660, 458), fill=(69, 132, 67, 135), width=16)
+    draw.ellipse((650, -170, 1190, 370), fill=(*type_color, 54))
+    draw.ellipse((720, -85, 1080, 275), fill=(*type_color, 76))
+
+
+def draw_hank_feature(draw: ImageDraw.ImageDraw, card: Card, theme: dict) -> None:
+    token = f"{card.card_id} {card.name}".lower()
+    color = TYPE_COLORS.get(card.card_type, TYPE_COLORS["skill"])
+    dark = theme["dark"]
+    accent = theme["accent"]
+    cream = theme["light"]
+
+    draw.rounded_rectangle((72, 552, 604, 888), radius=52, fill=(*cream, 230), outline=dark, width=12)
+
+    if "strike_hank" in token:
+        draw_rake_strike(draw, color, dark, accent)
+    elif "mow_down" in token or "riding_mower" in token:
+        draw_big_mower(draw, color, dark, accent, riding="riding" in token)
+    elif "hedge_trim" in token:
+        draw_big_shears(draw, color, dark, accent)
+    elif "leaf_blower" in token:
+        draw_big_blower(draw, color, dark, accent)
+    elif "weed_whacker" in token:
+        draw_string_trimmer(draw, color, dark, accent)
+    elif "lawn_aerator" in token:
+        draw_aerator(draw, color, dark, accent)
+    elif "garden_gnome" in token:
+        draw_big_gnome(draw, color, dark, accent)
+    elif "sprinkler_strike" in token:
+        draw_sprinkler(draw, color, dark, accent)
+    elif "drought_strike" in token:
+        draw_drought(draw, color, dark, accent)
+    elif "defend_hank" in token:
+        draw_fence_shield(draw, color, dark, accent)
+    elif "saturday_routine" in token:
+        draw_saturday_chores(draw, color, dark, accent)
+    elif "weekend_warrior" in token:
+        draw_toolbelt_energy(draw, color, dark, accent)
+    elif "compost_pile" in token:
+        draw_compost(draw, color, dark, accent)
+    elif "power_nap" in token:
+        draw_lawn_chair(draw, color, dark, accent)
+    elif "tool_shed" in token:
+        draw_shed_scene(draw, color, dark, accent)
+    elif "garage_workshop" in token:
+        draw_workbench(draw, color, dark, accent)
+    elif "honey_do_list" in token:
+        draw_checklist(draw, color, dark, accent)
+    elif "green_thumb" in token:
+        draw_green_thumb(draw, color, dark, accent)
+    elif "big_box_membership" in token:
+        draw_membership_card(draw, color, dark, accent)
+    elif "suburbanite" in token:
+        draw_suburban_house(draw, color, dark, accent)
+    elif "tinkerer" in token:
+        draw_tools(draw, color, dark, accent)
+    else:
+        draw_lawn(draw, color, dark, accent)
+
+    draw_yard_work_hint(draw, token, dark, accent)
+
+
+def draw_yard_work_hint(draw, token: str, dark, accent) -> None:
+    gains = any(k in token for k in ["mow_down", "sprinkler", "saturday", "compost", "green_thumb", "suburbanite"])
+    spends = any(k in token for k in ["weed_whacker", "drought", "garage"])
+    if not gains and not spends:
+        return
+    label = "+ Yard Work" if gains else "Uses Yard Work"
+    fill = (220, 237, 200, 248) if gains else (255, 223, 132, 248)
+    draw.rounded_rectangle((96, 900, 528, 970), radius=28, fill=fill, outline=dark, width=7)
+    draw.text((126, 915), label, fill=dark)
+    for i in range(3):
+        x = 380 + i * 34
+        draw.polygon([(x, 954), (x + 13, 914), (x + 29, 954)], fill=(88, 150, 74), outline=dark)
+    if spends:
+        draw.arc((402, 910, 500, 978), start=190, end=350, fill=accent, width=8)
+
+
+def draw_rake_strike(draw, color, dark, accent):
+    # Readable at card size: a big rake head scraping a leaf pile,
+    # not a tiny prop lost in the corner.
+    draw.polygon([(108, 840), (548, 840), (528, 888), (130, 888)], fill=(82, 145, 70), outline=dark)
+    for x, y in [(132, 734), (190, 708), (246, 756), (314, 722), (380, 760)]:
+        draw_leaf(draw, x, y, dark, accent)
+    draw.line((184, 814, 486, 606), fill=dark, width=28)
+    draw.line((198, 804, 474, 614), fill=(176, 116, 57), width=14)
+    draw.line((140, 788, 324, 848), fill=dark, width=20)
+    draw.line((150, 786, 314, 840), fill=color, width=10)
+    for x in range(152, 318, 28):
+        draw.line((x, 792, x - 18, 858), fill=dark, width=8)
+        draw.line((x + 2, 796, x - 12, 848), fill=(239, 231, 189), width=4)
+    draw.arc((124, 650, 520, 916), start=205, end=332, fill=accent, width=10)
+
+
+def draw_big_mower(draw, color, dark, accent, riding=False):
+    if riding:
+        draw.rounded_rectangle((128, 690, 488, 802), radius=32, fill=color, outline=dark, width=12)
+        draw.rectangle((316, 610, 460, 710), fill=accent, outline=dark, width=10)
+        draw.ellipse((154, 778, 258, 882), fill=dark)
+        draw.ellipse((380, 778, 484, 882), fill=dark)
+        draw.rectangle((242, 574, 322, 664), fill=(119, 151, 132), outline=dark, width=8)
+    else:
+        draw.rounded_rectangle((132, 708, 392, 804), radius=28, fill=color, outline=dark, width=12)
+        draw.rectangle((330, 650, 460, 734), fill=accent, outline=dark, width=9)
+        draw.line((405, 666, 528, 548), fill=dark, width=16)
+        draw.ellipse((154, 784, 234, 864), fill=dark)
+        draw.ellipse((330, 784, 410, 864), fill=dark)
+    for x in range(112, 520, 50):
+        draw.polygon([(x, 892), (x + 16, 824), (x + 36, 892)], fill=(83, 144, 74), outline=dark)
+
+
+def draw_big_shears(draw, color, dark, accent):
+    draw.line((150, 812, 518, 610), fill=dark, width=24)
+    draw.line((150, 612, 518, 814), fill=dark, width=24)
+    draw.line((168, 798, 500, 622), fill=color, width=11)
+    draw.line((168, 626, 500, 800), fill=color, width=11)
+    draw.ellipse((104, 760, 210, 866), outline=accent, width=18)
+    draw.ellipse((448, 760, 554, 866), outline=accent, width=18)
+    draw.rounded_rectangle((98, 570, 550, 625), radius=22, fill=(75, 133, 64), outline=dark, width=8)
+
+
+def draw_big_blower(draw, color, dark, accent):
+    draw.rounded_rectangle((126, 695, 340, 820), radius=38, fill=color, outline=dark, width=12)
+    draw.polygon([(322, 718), (542, 628), (566, 714), (342, 786)], fill=accent, outline=dark)
+    draw.arc((60, 612, 220, 820), start=235, end=70, fill=dark, width=10)
+    draw.arc((30, 570, 260, 850), start=235, end=70, fill=(93, 153, 79), width=9)
+    for x, y in [(180, 628), (108, 704), (238, 845)]:
+        draw_leaf(draw, x, y, dark, accent)
+
+
+def draw_string_trimmer(draw, color, dark, accent):
+    draw.line((154, 824, 506, 608), fill=dark, width=22)
+    draw.line((174, 812, 486, 620), fill=accent, width=10)
+    draw.rounded_rectangle((438, 570, 548, 662), radius=32, fill=color, outline=dark, width=9)
+    draw.ellipse((112, 798, 244, 900), outline=color, width=16)
+    draw.arc((92, 778, 264, 920), start=200, end=20, fill=dark, width=9)
+
+
+def draw_aerator(draw, color, dark, accent):
+    draw.rounded_rectangle((126, 632, 512, 768), radius=32, fill=color, outline=dark, width=12)
+    for x in range(160, 500, 60):
+        draw.polygon([(x, 764), (x + 28, 862), (x + 56, 764)], fill=accent, outline=dark)
+    draw.line((446, 638, 540, 560), fill=dark, width=16)
+    draw.line((90, 880, 560, 880), fill=(80, 135, 65), width=14)
+
+
+def draw_big_gnome(draw, color, dark, accent):
+    draw.polygon([(312, 580), (142, 798), (492, 798)], fill=color, outline=dark)
+    draw.ellipse((186, 718, 438, 904), fill=(238, 191, 156), outline=dark, width=11)
+    draw.pieslice((174, 730, 450, 980), start=0, end=180, fill=accent, outline=dark, width=10)
+    draw.ellipse((230, 778, 258, 806), fill=dark)
+    draw.ellipse((360, 778, 388, 806), fill=dark)
+
+
+def draw_sprinkler(draw, color, dark, accent):
+    draw.rectangle((272, 778, 382, 872), fill=color, outline=dark, width=10)
+    draw.rectangle((310, 700, 348, 790), fill=accent, outline=dark, width=8)
+    for w, h in [(420, 280), (330, 220), (250, 170)]:
+        draw.arc((320 - w // 2, 540, 320 + w // 2, 540 + h), start=200, end=340, fill=(50, 135, 198), width=9)
+    for x in [126, 184, 454, 512]:
+        draw.ellipse((x, 776, x + 22, 798), fill=(50, 135, 198))
+
+
+def draw_drought(draw, color, dark, accent):
+    draw.ellipse((118, 585, 286, 753), fill=accent, outline=dark, width=10)
+    for angle in range(0, 360, 30):
+        x = 202 + math.cos(math.radians(angle)) * 126
+        y = 669 + math.sin(math.radians(angle)) * 126
+        draw.line((202, 669, x, y), fill=accent, width=9)
+    draw.rectangle((98, 808, 548, 878), fill=(176, 142, 83), outline=dark, width=8)
+    for x in range(124, 530, 62):
+        draw.line((x, 810, x + 36, 876), fill=dark, width=8)
+        draw.line((x + 44, 812, x + 12, 876), fill=dark, width=6)
+
+
+def draw_fence_shield(draw, color, dark, accent):
+    for x in range(110, 560, 76):
+        draw.rectangle((x, 620, x + 44, 872), fill=(223, 196, 138), outline=dark, width=6)
+        draw.polygon([(x, 620), (x + 22, 574), (x + 44, 620)], fill=(223, 196, 138), outline=dark)
+    draw.rounded_rectangle((98, 690, 580, 740), radius=16, fill=(196, 166, 106), outline=dark, width=7)
+    draw.polygon([(342, 638), (496, 710), (462, 840), (342, 904), (222, 840), (188, 710)], fill=color, outline=dark)
+    draw.polygon([(342, 700), (406, 728), (392, 804), (342, 832), (292, 804), (278, 728)], fill=accent, outline=dark)
+
+
+def draw_saturday_chores(draw, color, dark, accent):
+    draw_checklist(draw, color, dark, accent)
+    draw.line((406, 840, 540, 650), fill=dark, width=18)
+    draw.line((416, 830, 530, 660), fill=accent, width=8)
+    draw.rounded_rectangle((420, 626, 568, 700), radius=20, fill=color, outline=dark, width=8)
+
+
+def draw_toolbelt_energy(draw, color, dark, accent):
+    draw.rounded_rectangle((150, 682, 496, 806), radius=42, fill=(116, 83, 55), outline=dark, width=10)
+    for x in [190, 302, 414]:
+        draw.rounded_rectangle((x, 708, x + 70, 820), radius=18, fill=accent, outline=dark, width=7)
+    draw_burst_at(draw, 326, 636, color, dark, 92)
+
+
+def draw_compost(draw, color, dark, accent):
+    draw.pieslice((130, 650, 530, 960), start=180, end=360, fill=(116, 83, 55), outline=dark, width=10)
+    for x, y in [(194, 716), (288, 662), (398, 724), (456, 802), (230, 832)]:
+        draw_leaf(draw, x, y, dark, accent)
+    draw.arc((146, 610, 300, 730), start=250, end=80, fill=(82, 146, 70), width=10)
+
+
+def draw_lawn_chair(draw, color, dark, accent):
+    draw.line((170, 852, 298, 650), fill=dark, width=16)
+    draw.line((410, 852, 298, 650), fill=dark, width=16)
+    draw.rounded_rectangle((206, 650, 442, 778), radius=22, fill=color, outline=dark, width=10)
+    draw.rectangle((222, 666, 426, 762), fill=(240, 226, 178), outline=dark, width=7)
+    draw.ellipse((470, 586, 560, 676), fill=accent, outline=dark, width=8)
+
+
+def draw_shed_scene(draw, color, dark, accent):
+    draw.rectangle((142, 658, 512, 880), fill=(142, 94, 58), outline=dark, width=10)
+    draw.polygon([(116, 660), (328, 540), (540, 660)], fill=color, outline=dark)
+    draw.rectangle((260, 742, 386, 880), fill=(84, 59, 43), outline=dark, width=8)
+    draw_tools(draw, color, dark, accent)
+
+
+def draw_workbench(draw, color, dark, accent):
+    draw.rectangle((120, 760, 540, 846), fill=(142, 94, 58), outline=dark, width=10)
+    draw.rectangle((150, 612, 506, 760), fill=(223, 196, 138), outline=dark, width=9)
+    for x in [200, 310, 420]:
+        draw.line((x, 640, x, 724), fill=dark, width=9)
+        draw.ellipse((x - 18, 622, x + 18, 658), fill=color, outline=dark, width=5)
+    draw.line((170, 848, 150, 920), fill=dark, width=10)
+    draw.line((492, 848, 522, 920), fill=dark, width=10)
+
+
+def draw_checklist(draw, color, dark, accent):
+    draw.rounded_rectangle((168, 586, 484, 884), radius=28, fill=(248, 238, 205), outline=dark, width=10)
+    draw.rounded_rectangle((238, 560, 414, 626), radius=20, fill=accent, outline=dark, width=8)
+    for y in [674, 746, 818]:
+        draw.rectangle((210, y - 18, 248, y + 20), fill=color, outline=dark, width=5)
+        draw.line((270, y, 430, y), fill=dark, width=7)
+        draw.line((216, y, 228, y + 12), fill=dark, width=5)
+        draw.line((228, y + 12, 250, y - 18), fill=dark, width=5)
+
+
+def draw_green_thumb(draw, color, dark, accent):
+    # Avoid the literal "thumb" gag. This card is about nurturing a lawn engine:
+    # a gloved hand planting a sprout in rich soil.
+    draw.ellipse((128, 728, 534, 910), fill=(101, 77, 46), outline=dark, width=10)
+    draw.ellipse((152, 700, 508, 820), fill=(126, 91, 54), outline=dark, width=7)
+    draw.line((340, 804, 340, 602), fill=(65, 132, 67), width=20)
+    draw.line((340, 804, 286, 646), fill=(65, 132, 67), width=12)
+    draw.line((340, 804, 404, 644), fill=(65, 132, 67), width=12)
+    draw.ellipse((204, 612, 340, 728), fill=color, outline=dark, width=8)
+    draw.ellipse((346, 584, 526, 710), fill=(82, 166, 76), outline=dark, width=8)
+    draw.ellipse((262, 552, 424, 658), fill=(110, 184, 86), outline=dark, width=8)
+
+    glove = (238, 191, 156)
+    draw.rounded_rectangle((132, 752, 314, 846), radius=38, fill=glove, outline=dark, width=9)
+    for x in [164, 204, 244]:
+        draw.rounded_rectangle((x, 688, x + 42, 778), radius=20, fill=glove, outline=dark, width=7)
+    draw.rounded_rectangle((286, 728, 392, 790), radius=26, fill=glove, outline=dark, width=7)
+    draw.line((132, 846, 316, 846), fill=accent, width=12)
+    for x, y in [(430, 760), (462, 812), (206, 840)]:
+        draw_leaf(draw, x, y, dark, accent)
+
+
+def draw_membership_card(draw, color, dark, accent):
+    draw.rounded_rectangle((120, 646, 540, 842), radius=36, fill=color, outline=dark, width=12)
+    draw.rounded_rectangle((158, 700, 306, 754), radius=12, fill=accent, outline=dark, width=6)
+    draw.line((336, 714, 498, 714), fill=(248, 238, 205), width=12)
+    draw.line((158, 794, 502, 794), fill=(248, 238, 205), width=12)
+    draw_star_at(draw, 226, 776, accent, dark, 38)
+
+
+def draw_suburban_house(draw, color, dark, accent):
+    draw.rectangle((142, 688, 504, 874), fill=(239, 231, 189), outline=dark, width=10)
+    draw.polygon([(110, 692), (323, 552), (538, 692)], fill=color, outline=dark)
+    draw.rectangle((198, 754, 288, 874), fill=accent, outline=dark, width=8)
+    draw.rectangle((348, 736, 458, 814), fill=(127, 205, 194), outline=dark, width=8)
+    draw.line((100, 902, 548, 902), fill=(83, 144, 74), width=16)
+
 def draw_icon(draw: ImageDraw.ImageDraw, card: Card, theme: dict) -> None:
     token = f"{card.card_id} {card.name}".lower()
     color = TYPE_COLORS.get(card.card_type, TYPE_COLORS["skill"])
@@ -348,6 +658,20 @@ def draw_burst(draw, color, dark, accent):
     draw.ellipse((190, 690, 298, 798), fill=accent, outline=dark, width=7)
 
 
+def draw_burst_at(draw, cx, cy, color, dark, radius):
+    points = []
+    for i in range(18):
+        r = radius if i % 2 == 0 else radius * 0.45
+        angle = math.radians(i * 20 - 90)
+        points.append((cx + math.cos(angle) * r, cy + math.sin(angle) * r))
+    draw.polygon(points, fill=color, outline=dark)
+
+
+def draw_leaf(draw, x, y, dark, accent):
+    draw.ellipse((x, y, x + 72, y + 36), fill=(102, 157, 74), outline=dark, width=5)
+    draw.line((x + 12, y + 28, x + 64, y + 8), fill=accent, width=5)
+
+
 def draw_star(draw, color, dark, accent):
     draw_star_at(draw, 244, 744, color, dark, 132)
     draw.ellipse((203, 703, 285, 785), fill=accent, outline=dark, width=7)
@@ -375,6 +699,8 @@ def final_treatment(canvas: Image.Image, card: Card, theme: dict) -> Image.Image
 
 def generate_card(card: Card) -> Image.Image:
     character = card.character if card.character in CLASS_THEMES else "shared"
+    if character == "hank":
+        return generate_hank_card(card)
     theme = CLASS_THEMES[character]
     base = make_gradient(theme["sky"], theme["ground"]).convert("RGBA")
     draw = ImageDraw.Draw(base, "RGBA")

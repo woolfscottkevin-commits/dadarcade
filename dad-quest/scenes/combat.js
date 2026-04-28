@@ -31,6 +31,10 @@ import { playSfx } from "../ui/sfx.js";
 
 let layoutEls = null;
 let onKey = null;
+let lastYardWork = null;
+let yardWorkCoachOpen = false;
+
+const YARD_WORK_COACH_KEY = "dadQuest.coach.yardWork.v1";
 
 function buildLayout(root) {
   root.innerHTML = "";
@@ -108,11 +112,30 @@ function buildLayout(root) {
     </div>`;
   stage.appendChild(tutorial);
 
+  const mechanicCoach = document.createElement("div");
+  mechanicCoach.className = "combat-tutorial mechanic-coach";
+  mechanicCoach.hidden = true;
+  mechanicCoach.innerHTML = `
+    <div class="combat-tutorial-card mechanic-coach-card">
+      <button type="button" class="combat-tutorial-close mechanic-coach-close" aria-label="Close">×</button>
+      <div class="mechanic-coach-kicker">Hank mechanic</div>
+      <h2>Yard Work is your setup meter</h2>
+      <p><strong>It stays for this combat.</strong> Build it with lawn-care cards, then cash it in or scale off it.</p>
+      <ul>
+        <li><strong>Drought Strike</strong> hits for current Yard Work × 3.</li>
+        <li><strong>Garage Workshop</strong> gets stronger at 3 Yard Work.</li>
+        <li><strong>Weed Whacker</strong> spends all Yard Work for bonus damage.</li>
+      </ul>
+      <p class="mechanic-coach-note">Your Lawn Flag starter relic adds +1 whenever Hank gains Yard Work.</p>
+      <button type="button" class="mechanic-coach-ok">Got it</button>
+    </div>`;
+  stage.appendChild(mechanicCoach);
+
   root.appendChild(stage);
 
   return {
     stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
-    energyEl, endBtn, handEl, pilesEl, banner, tutorial,
+    energyEl, endBtn, handEl, pilesEl, banner, tutorial, mechanicCoach,
     enemyEls: [],
   };
 }
@@ -125,6 +148,30 @@ function flashBanner(text, color) {
   b.style.opacity = "1";
   clearTimeout(b._t);
   b._t = setTimeout(() => { b.style.opacity = "0"; }, 1100);
+}
+
+function closeYardWorkCoach() {
+  if (!layoutEls) return;
+  layoutEls.mechanicCoach.hidden = true;
+  yardWorkCoachOpen = false;
+  try {
+    localStorage.setItem(YARD_WORK_COACH_KEY, "1");
+  } catch {
+    // localStorage can be unavailable in some browser privacy modes.
+  }
+}
+
+function maybeShowYardWorkCoach(yardWork) {
+  if (!layoutEls || yardWork <= 0 || yardWorkCoachOpen) return;
+  try {
+    if (localStorage.getItem(YARD_WORK_COACH_KEY)) return;
+  } catch {
+    // If storage is blocked, show once per mounted combat scene.
+    if (layoutEls.mechanicCoach.dataset.seenThisMount === "1") return;
+  }
+  layoutEls.mechanicCoach.hidden = false;
+  layoutEls.mechanicCoach.dataset.seenThisMount = "1";
+  yardWorkCoachOpen = true;
 }
 
 function renderEnemies() {
@@ -197,6 +244,15 @@ function refresh() {
   layoutEls.blockInd.update(getStatus(c.player, STATUS.BLOCK));
   layoutEls.statusRow.update(c.player.statuses);
   layoutEls.energyEl.textContent = `${c.energy}/${c.maxEnergy}`;
+
+  const yardWork = getStatus(c.player, STATUS.YARD_WORK);
+  if (c.player.character === "hank" && yardWork > 0) {
+    if (lastYardWork !== null && yardWork > lastYardWork) {
+      flashBanner(`Yard Work ${lastYardWork} → ${yardWork}`, "var(--lawn-green)");
+    }
+    maybeShowYardWorkCoach(yardWork);
+  }
+  lastYardWork = yardWork;
 
   // Re-render enemies if the count changed (e.g., a summon happened)
   if (layoutEls.enemyEls.length !== c.enemies.length) {
@@ -323,6 +379,8 @@ function onListenerEvent(name, payload) {
 export const combatScene = {
   mount(root) {
     layoutEls = buildLayout(root);
+    lastYardWork = null;
+    yardWorkCoachOpen = false;
 
     setCombatListener(onListenerEvent);
 
@@ -343,6 +401,11 @@ export const combatScene = {
         delete gameState.run.showTutorial;
       });
     }
+
+    const coachClose = layoutEls.mechanicCoach.querySelector(".mechanic-coach-close");
+    const coachOk = layoutEls.mechanicCoach.querySelector(".mechanic-coach-ok");
+    coachClose.addEventListener("click", closeYardWorkCoach);
+    coachOk.addEventListener("click", closeYardWorkCoach);
 
     layoutEls.endBtn.addEventListener("click", () => {
       playSfx("endTurn");
@@ -373,5 +436,7 @@ export const combatScene = {
       onKey = null;
     }
     layoutEls = null;
+    lastYardWork = null;
+    yardWorkCoachOpen = false;
   },
 };

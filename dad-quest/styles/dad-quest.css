@@ -391,6 +391,16 @@ body {
   line-height: 1.45;
 }
 
+.combat-tutorial-card ul {
+  margin: 10px 0 8px;
+  padding-left: 1.2rem;
+  line-height: 1.4;
+}
+
+.combat-tutorial-card li {
+  margin: 5px 0;
+}
+
 .combat-tutorial-close {
   position: absolute;
   top: 8px;
@@ -401,6 +411,45 @@ body {
   border: 2px solid var(--deep-navy);
   background: var(--sunset-orange);
   font-weight: 900;
+}
+
+.mechanic-coach-card {
+  border-color: var(--lawn-green);
+  box-shadow: 0 16px 0 rgba(92, 142, 63, 0.28);
+}
+
+.mechanic-coach-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 0.2rem 0.55rem;
+  border: 2px solid var(--lawn-green);
+  border-radius: 999px;
+  background: #DCEDC8;
+  color: var(--deep-navy);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mechanic-coach-note {
+  padding: 0.6rem 0.7rem;
+  border-left: 5px solid var(--lawn-green);
+  background: #F4F8E8;
+  border-radius: 6px;
+}
+
+.mechanic-coach-ok {
+  width: 100%;
+  margin-top: 8px;
+  padding: 0.78rem 1rem;
+  border: 2px solid var(--deep-navy);
+  border-radius: 8px;
+  background: var(--lawn-green);
+  color: var(--deep-navy);
+  font-weight: 900;
+  font-size: 1rem;
+  box-shadow: 0 4px 0 rgba(23, 31, 42, 0.25);
 }
 
 /* ---------- Outcome scenes ---------- */
