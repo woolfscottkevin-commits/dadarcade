@@ -48,18 +48,40 @@ function build(root) {
   root.innerHTML = "";
   const wrap = document.createElement("div");
   wrap.className = "map-wrap";
+  wrap.dataset.act = String(gameState.run.act);
 
   runHud = createRunHud();
   runHud.update(gameState.run);
   wrap.appendChild(runHud.el);
 
+  const header = document.createElement("div");
+  header.className = "map-header";
   const title = document.createElement("h2");
   title.className = "map-title";
-  title.textContent = `Act ${gameState.run.act} of 3`;
-  wrap.appendChild(title);
+  title.textContent = `Act ${gameState.run.act} Route`;
+  header.appendChild(title);
+  const subtitle = document.createElement("p");
+  subtitle.className = "map-subtitle";
+  subtitle.textContent = gameState.run.position ? "Choose the next connected stop." : "Pick any glowing starting stop.";
+  header.appendChild(subtitle);
+  wrap.appendChild(header);
 
   const mapBox = document.createElement("div");
   mapBox.className = "map-box";
+
+  const scenery = document.createElement("div");
+  scenery.className = "map-scenery";
+  scenery.setAttribute("aria-hidden", "true");
+  scenery.innerHTML = `
+    <span class="map-cloud map-cloud-a"></span>
+    <span class="map-cloud map-cloud-b"></span>
+    <span class="map-house map-house-a"></span>
+    <span class="map-house map-house-b"></span>
+    <span class="map-tree map-tree-a"></span>
+    <span class="map-tree map-tree-b"></span>
+    <span class="map-route-sign">Neighborhood Route</span>
+  `;
+  mapBox.appendChild(scenery);
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.classList.add("map-edges");

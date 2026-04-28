@@ -1,5 +1,5 @@
 // SVG edge renderer for the map graph.
-// Computes line positions from node DOM elements relative to the SVG container.
+// Computes soft sidewalk-style paths from node DOM elements relative to the SVG container.
 
 export function renderEdges(svgEl, mapData, options = {}) {
   const { reachableSet, completedSet } = options;
@@ -26,18 +26,22 @@ export function renderEdges(svgEl, mapData, options = {}) {
       for (const targetId of node.outgoing) {
         const end = getCenter(targetId);
         if (!end) continue;
-        const line = document.createElementNS(ns, "line");
-        line.setAttribute("x1", start.x);
-        line.setAttribute("y1", start.y);
-        line.setAttribute("x2", end.x);
-        line.setAttribute("y2", end.y);
         const isCompleted = completedSet?.has(node.id);
         const isReachableFromHere = reachableSet?.has(targetId);
-        line.setAttribute("stroke", isCompleted ? "var(--suburb-beige)" : isReachableFromHere ? "var(--sunset-orange)" : "var(--coffee-brown)");
-        line.setAttribute("stroke-width", isReachableFromHere ? "4" : "3");
-        line.setAttribute("stroke-linecap", "round");
-        line.setAttribute("opacity", isReachableFromHere ? "0.95" : "0.45");
-        svgEl.appendChild(line);
+        const midY = (start.y + end.y) / 2;
+        const bend = Math.max(-90, Math.min(90, (end.x - start.x) * 0.18));
+        const d = `M ${start.x} ${start.y} C ${start.x + bend} ${midY}, ${end.x - bend} ${midY}, ${end.x} ${end.y}`;
+        const state = isCompleted ? "completed" : isReachableFromHere ? "reachable" : "locked";
+
+        const underlay = document.createElementNS(ns, "path");
+        underlay.setAttribute("d", d);
+        underlay.setAttribute("class", `map-route-path map-route-path-underlay map-route-path-${state}`);
+        svgEl.appendChild(underlay);
+
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", d);
+        path.setAttribute("class", `map-route-path map-route-path-center map-route-path-${state}`);
+        svgEl.appendChild(path);
       }
     }
   }
