@@ -291,11 +291,23 @@ export function startPlayerTurn() {
   notify("turnStart", { turn: c.turn });
 }
 
+// True if a card's effect string applies Citation (used by The Bylaws).
+function cardAppliesCitation(def) {
+  if (!def || !def.effect) return false;
+  // Match any of: apply:citation:N, apply_all:citation:N, apply_random:citation:N
+  return /\bapply(?:_all|_random)?:citation:\d+/.test(def.effect);
+}
+
 export function getEffectiveCost(cardInst) {
   const c = gameState.combat;
   const def = CARDS.find((d) => d.id === cardInst.cardId);
   if (!def) return 0;
   if (c.flags.costZeroThisTurn.has(cardInst.uuid)) return 0;
+  // The Bylaws: the first card you play each turn that applies Citation costs 0.
+  // The renderer shows 0 on every eligible citation card, but the flag is only
+  // CONSUMED when you actually play one (in playCard). After that, the next
+  // refresh will show citation cards back at full cost.
+  if (c.flags.nextCitationCardCostsZero && cardAppliesCitation(def)) return 0;
   return def.cost;
 }
 
@@ -367,8 +379,13 @@ export function playCard(cardInst, targetIndex) {
     return { ok: false, reason: "energy" };
   }
 
+  // Consume The Bylaws' free-citation-card flag if this card is the one that
+  // got the discount. We capture cost BEFORE energy is spent so we can also
+  // tell whether the discount was actually applied.
+  const discountedByBylaws = c.flags.nextCitationCardCostsZero && cardAppliesCitation(def);
   c.energy -= cost;
   c.flags.cardsPlayedThisTurn += 1;
+  if (discountedByBylaws) c.flags.nextCitationCardCostsZero = false;
 
   const ctx = makeCtx({ sourceCard: cardInst });
 

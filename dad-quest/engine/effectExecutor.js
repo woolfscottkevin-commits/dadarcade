@@ -124,7 +124,8 @@ export function executeEffect(effectStr, ctx) {
       ctx.combat.flags.nextCitationCardCostsZero = true;
       return;
     case "bonus_damage_per_citation_applied_combat":
-      // Petty Tyrant: registered as a passive elsewhere; safe no-op in case it reaches here.
+      // Petty Tyrant: the bonus is read at damage time via pettyTyrantBonus().
+      // The verb itself is a no-op when fired directly.
       return;
     case "damage_enemies_with_citations_gte":
       return damageEnemiesWithCitationsGte(int(rest[0]), int(rest[1]), ctx);
@@ -252,29 +253,45 @@ function getTarget(ctx) {
   return ctx.combat.enemies[i];
 }
 
+// Petty Tyrant: when registered, cards the player plays gain +1 damage per
+// Citation they've applied this combat (capped at +10). The verb is registered
+// as `passive:bonus_damage_per_citation_applied_combat:1:cap:10` — we look for
+// it in the trigger map at damage time rather than firing a separate hook.
+function pettyTyrantBonus(ctx) {
+  const passives = ctx.combat.triggers && ctx.combat.triggers.passive;
+  if (!passives || passives.length === 0) return 0;
+  const has = passives.some((t) =>
+    t.effect && t.effect.startsWith("bonus_damage_per_citation_applied_combat"));
+  if (!has) return 0;
+  const applied = ctx.combat.flags.citationsAppliedThisCombat || 0;
+  return Math.min(10, applied);
+}
+
 function dealDamage(amount, ctx) {
   const tgt = getTarget(ctx);
-  if (!tgt) return;
+  if (!tgt || tgt.hp <= 0) return;
   const player = ctx.combat.player;
-  // Source-side floor of base+strength*weak then target-side vulnerable*1.5.
-  const result = resolveDamage(player, tgt, amount);
+  const total = amount + pettyTyrantBonus(ctx);
+  const result = resolveDamage(player, tgt, total);
   noteDamageDealt(ctx, tgt, result);
 }
 
 function dealDamageAll(amount, ctx) {
+  const total = amount + pettyTyrantBonus(ctx);
   for (const e of ctx.combat.enemies) {
     if (e.hp <= 0) continue;
-    const result = resolveDamage(ctx.combat.player, e, amount);
+    const result = resolveDamage(ctx.combat.player, e, total);
     noteDamageDealt(ctx, e, result);
   }
 }
 
 function dealDamageRandom(amount, hits, ctx) {
+  const total = amount + pettyTyrantBonus(ctx);
   for (let i = 0; i < hits; i++) {
     const alive = ctx.combat.enemies.filter((e) => e.hp > 0);
     if (alive.length === 0) return;
     const pick = alive[Math.floor(Math.random() * alive.length)];
-    const result = resolveDamage(ctx.combat.player, pick, amount);
+    const result = resolveDamage(ctx.combat.player, pick, total);
     noteDamageDealt(ctx, pick, result);
   }
 }
@@ -306,7 +323,8 @@ function gainResource(name, amount, ctx) {
     return;
   }
   if (name === "gold") {
-    // Phase 2: stub — increment run gold even though we won't use it yet.
+    // Adds gold directly to the run total (used by Bake Sale, HOA Treasury,
+    // Performance Bonus). Persists between combats.
     if (ctx.combat.run) ctx.combat.run.gold = (ctx.combat.run.gold || 0) + amount;
     return;
   }
@@ -347,7 +365,10 @@ function drawN(n, ctx) {
 
 function applyTarget(status, amount, ctx) {
   const tgt = getTarget(ctx);
-  if (!tgt) return;
+  // Skip dead targets — a compound card whose first sub-effect kills the
+  // target should not write status onto the corpse, and (more importantly)
+  // should not bump the citationsAppliedThisCombat counter.
+  if (!tgt || tgt.hp <= 0) return;
   applyStatus(tgt, status, amount);
   noteDebuffApplied(ctx, tgt, status);
   if (status === STATUS.CITATION) {
@@ -425,7 +446,7 @@ function spendYardWorkBonus(perStack, ctx) {
   setStatus(ctx.combat.player, STATUS.YARD_WORK, 0);
   // Apply bonus damage to the current target on top of the base hit.
   const tgt = getTarget(ctx);
-  if (!tgt) return;
+  if (!tgt || tgt.hp <= 0) return;
   const result = resolveDamage(ctx.combat.player, tgt, bonus);
   noteDamageDealt(ctx, tgt, result);
 }
