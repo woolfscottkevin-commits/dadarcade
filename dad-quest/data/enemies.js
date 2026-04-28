@@ -1,15 +1,27 @@
 // All enemy definitions for Dad Quest, transcribed from DESIGN.md § 1.5.
 // 8 normals + 3 elites + 1 boss = 12 enemies.
-// Phase 2 wires intent execution; this file is data only.
 //
-// intent.type values: "attack" | "block" | "buff" | "debuff" | "special"
-// intent.value     : numeric (damage, block, status stacks, etc.)
-// intent.hits      : optional, for multi-hit attacks (defaults to 1)
-// intent.label     : human-readable name shown above the enemy
-// intent.weight    : optional, only for intentMode "weighted" (sums to 100)
-// intent.status    : optional, status name applied (vulnerable | weak | strength)
-// intent.targetSelf: optional bool — buff/block intents that affect the enemy itself
-// intent.special   : optional string identifier for one-off behaviors (Phase 2 dispatches on this)
+// Phase 3 schema (data migration from Phase 1/2):
+//   intent.type values:
+//     "attack"                     simple damage; uses .value, optional .hits
+//     "block"                      gain block on self; .value
+//     "attack_with_status"         damage + apply status to player; .value, .status, .stacks
+//     "apply_status"               apply status to player only; .status, .stacks
+//     "attack_and_disrupt"         attack + disruptive effect; .value, .disrupt (e.g. "discard_random_card")
+//     "attack_with_modifier"       attack + a player-side modifier next turn; .value, .modifier, .amount, .duration
+//                                  (modifier values: "draw_minus")
+//     "block_and_status"           gain block + apply status to player; .value, .status, .stacks
+//     "summon"                     spawn a new enemy mid-combat; .enemy, .oncePerCombat
+//     "aoe_attack"                 attack player AND another enemy; .value, .target ("player_and_other_enemy")
+//     "self_buff"                  gain self-status; .strength, .block (combine as needed)
+//     "heal_and_buff"              heal self + apply self status; .heal, .strength
+//     "apply_status_aoe_to_player" multiple statuses to player at once; .statuses [{status, stacks}, ...]
+//     "attack_telegraphed"         normal attack, but flagged so the prior turn renders a "⚠ NEXT TURN" badge
+//                                  (set telegraphedFromPrevious: true on the intent)
+//   intent.label    human-readable text shown above the enemy
+//   intent.weight   only for intentMode "weighted"; sum across pattern == 100
+//
+// intentMode: "cycle" (deterministic loop) | "weighted" (% chance per item).
 
 export const ENEMIES = [
   // ------------------------------------------------------------------
@@ -36,7 +48,7 @@ export const ENEMIES = [
     acts: [1, 2],
     intentPattern: [
       { type: "attack", value: 3, hits: 3, label: "Spray", weight: 60 },
-      { type: "block", value: 8, label: "Pressurize", weight: 40, targetSelf: true },
+      { type: "block", value: 8, label: "Pressurize", weight: 40 },
     ],
     intentMode: "weighted",
     art: "assets/enemies/enemy_sprinkler_sentry.png",
@@ -48,7 +60,7 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "attack", value: 4, label: "Pitch", status: "weak", statusValue: 2 },
+      { type: "attack_with_status", value: 4, status: "weak", stacks: 2, label: "Pitch" },
       { type: "attack", value: 8, label: "Hard Sell" },
     ],
     intentMode: "cycle",
@@ -61,9 +73,9 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "attack", value: 5, label: "Complain", status: "vulnerable", statusValue: 2, weight: 40 },
+      { type: "attack_with_status", value: 5, status: "vulnerable", stacks: 2, label: "Complain", weight: 40 },
       { type: "attack", value: 10, label: "Escalate", weight: 30 },
-      { type: "block", value: 6, label: "Brandish Phone", weight: 30, targetSelf: true },
+      { type: "block", value: 6, label: "Brandish Phone", weight: 30 },
     ],
     intentMode: "weighted",
     art: "assets/enemies/enemy_karen_manager.png",
@@ -75,7 +87,7 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "debuff", label: "Bark", status: "weak", statusValue: 2 },
+      { type: "apply_status", status: "weak", stacks: 2, label: "Bark" },
       { type: "attack", value: 4, hits: 2, label: "Nip" },
     ],
     intentMode: "cycle",
@@ -88,8 +100,8 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "attack", value: 3, label: "Whisper", special: "discard_random:1" },
-      { type: "debuff", label: "Spread Rumor", status: "vulnerable", statusValue: 3 },
+      { type: "attack_and_disrupt", value: 3, disrupt: "discard_random_card", label: "Whisper" },
+      { type: "apply_status", status: "vulnerable", stacks: 3, label: "Spread Rumor" },
     ],
     intentMode: "cycle",
     art: "assets/enemies/enemy_gossip_neighbor.png",
@@ -101,8 +113,7 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "special", label: "Recruit", special: "summon_once:aggressive_roomba" },
-      { type: "attack", value: 9, label: "Hard Sell" },
+      { type: "summon", enemy: "aggressive_roomba", oncePerCombat: true, label: "Recruit" },
       { type: "attack", value: 9, label: "Hard Sell" },
     ],
     intentMode: "cycle",
@@ -115,8 +126,8 @@ export const ENEMIES = [
     tier: "normal",
     acts: [1, 2],
     intentPattern: [
-      { type: "attack", value: 4, label: "Confused Wander", special: "also_damage_random_enemy:4" },
-      { type: "block", value: 10, label: "Panic", targetSelf: true },
+      { type: "aoe_attack", value: 4, target: "player_and_other_enemy", label: "Confused Wander" },
+      { type: "block", value: 10, label: "Panic" },
     ],
     intentMode: "cycle",
     art: "assets/enemies/enemy_lost_tourist.png",
@@ -133,8 +144,8 @@ export const ENEMIES = [
     acts: [1, 2],
     intentPattern: [
       { type: "attack", value: 14, label: "Package Delivery" },
-      { type: "attack", value: 6, label: "Certified Letter", status: "vulnerable", statusValue: 2 },
-      { type: "block", value: 12, label: "Dog Defense", targetSelf: true },
+      { type: "attack_with_status", value: 6, status: "vulnerable", stacks: 2, label: "Certified Letter" },
+      { type: "block", value: 12, label: "Dog Defense" },
     ],
     intentMode: "cycle",
     art: "assets/enemies/enemy_the_mailman.png",
@@ -146,9 +157,9 @@ export const ENEMIES = [
     tier: "elite",
     acts: [1, 2],
     intentPattern: [
-      { type: "attack", value: 10, label: "Pop Quiz", special: "draw_minus_2_next_turn" },
+      { type: "attack_with_modifier", value: 10, modifier: "draw_minus", amount: 2, duration: 1, label: "Pop Quiz" },
       { type: "attack", value: 18, label: "Detention" },
-      { type: "block", value: 12, label: "Lecture", status: "weak", statusValue: 2, targetSelf: true },
+      { type: "block_and_status", value: 12, status: "weak", stacks: 2, label: "Lecture" },
     ],
     intentMode: "cycle",
     art: "assets/enemies/enemy_the_substitute_teacher.png",
@@ -161,7 +172,7 @@ export const ENEMIES = [
     acts: [1, 2],
     intentPattern: [
       { type: "attack", value: 4, hits: 4, label: "Burpees" },
-      { type: "buff", label: "Power Lift Setup", special: "gain_strength:5,gain_block:6", targetSelf: true },
+      { type: "self_buff", strength: 5, block: 6, label: "Power Lift Setup" },
       { type: "attack", value: 25, label: "Power Lift Release" },
     ],
     intentMode: "cycle",
@@ -171,21 +182,25 @@ export const ENEMIES = [
   // ------------------------------------------------------------------
   // FINAL BOSS (1)
   // HP scales across acts in v1: Act 1 = 110, Act 2 = 175, Act 3 = 250.
-  // Phase 2/3 wires the scaling.
+  // The boss-combat-start path (engine/combat.js) overrides hp/maxHp based on run.act.
   // ------------------------------------------------------------------
   {
     id: "ultimate_hoa_president",
     name: "The Ultimate HOA President",
     hp: 250,
     tier: "boss",
-    acts: [3],
+    acts: [1, 2, 3],
     intentPattern: [
-      { type: "debuff", label: "Pass New Bylaw", special: "apply:vulnerable:2,apply:weak:2" },
+      { type: "apply_status_aoe_to_player",
+        statuses: [{ status: "vulnerable", stacks: 2 }, { status: "weak", stacks: 2 }],
+        label: "Pass New Bylaw" },
       { type: "attack", value: 8, hits: 3, label: "Citation Barrage" },
-      { type: "buff", label: "Call Emergency Meeting", special: "heal:20,gain_strength:4", targetSelf: true },
-      { type: "attack", value: 30, label: "Final Summons", special: "telegraphed_one_turn_ahead" },
+      { type: "heal_and_buff", heal: 20, strength: 4, label: "Call Emergency Meeting" },
+      { type: "attack_telegraphed", value: 30, label: "Final Summons", telegraphedFromPrevious: true },
     ],
     intentMode: "cycle",
     art: "assets/enemies/enemy_ultimate_hoa_president.png",
   },
 ];
+
+export const BOSS_HP_BY_ACT = { 1: 110, 2: 175, 3: 250 };

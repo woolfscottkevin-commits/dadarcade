@@ -1,24 +1,34 @@
 // Combat turn loop for Dad Quest.
-// Implements the canonical tick order from DESIGN.md § 1.4:
+// Implements the canonical tick order from DESIGN.md § 1.4, with Phase 3
+// extensions:
+//   - Multi-enemy combat (Pyramid Schemer + summoned Roomba)
+//   - All new intent types (attack_with_status, apply_status, attack_and_disrupt,
+//     attack_with_modifier, block_and_status, summon, aoe_attack, self_buff,
+//     heal_and_buff, apply_status_aoe_to_player, attack_telegraphed)
+//   - Boss HP scales by act (110/175/250)
+//   - Player-side next-turn modifiers (draw_minus from Pop Quiz)
+//   - Victory/defeat resolution: victory wins ties (e.g., Weekend Warrior kills
+//     last enemy AND drops player to 0 HP → victory).
+//
+// Tick order (matches DESIGN.md § 1.4 exactly):
 //   1. Start of player turn:
-//        a. fire `on_turn_start` triggers
-//        b. apply queued "next turn" effects (e.g., Pep Talk)
+//        a. drain queued "next turn" effects
+//        b. fire `on_turn_start` triggers
 //        c. reset per-turn flags
-//        d. draw 5 cards (+ relic/power bonuses)
-//        e. gain 3 energy (or whatever max)
-//   2. Player plays cards. After each card play, check victory.
-//   3. Player ends turn:
-//        a. fire `on_turn_end` triggers (Performance Bonus, Doug's Jitters tax via combat.js itself)
-//        b. discard hand
-//        c. tick player statuses (Block expires, Vulnerable/Weak decrement)
-//   4. Enemy turn: each enemy resolves its current intent in display order.
-//        Check defeat after every attack.
-//   5. Enemy end-of-turn: tick enemy statuses; roll next intent for each enemy.
+//        d. compute draw count: 5 minus any active draw_minus modifiers (floor at 1)
+//        e. tick down each modifier's duration; remove expired
+//        f. draw N cards
+//        g. gain 3 energy
+//   2. Player plays cards. After each card play, check victory FIRST then defeat.
+//   3. Player ends turn → fire on_turn_end → Doug Jitters (Caffeine > 5 → take excess) → discard hand → tick player statuses
+//   4. Enemy turn → each enemy resolves intent in display order; check defeat after each hit
+//      Summoned-this-turn enemies skip their first turn (so the player has a chance to plan).
+//   5. Enemy end-of-turn → tick enemy statuses → roll next intent
 //   6. Goto 1.
 
 import { gameState } from "./gameState.js";
 import { CARDS } from "../data/cards.js";
-import { ENEMIES } from "../data/enemies.js";
+import { ENEMIES, BOSS_HP_BY_ACT } from "../data/enemies.js";
 import { CHARACTERS } from "../data/characters.js";
 import {
   STATUS,
@@ -40,7 +50,6 @@ import {
 } from "./deck.js";
 import { executeEffect, fireTriggers } from "./effectExecutor.js";
 import { selectIntent } from "../ai/enemyAI.js";
-import { setScene } from "./sceneManager.js";
 
 const HAND_SIZE = 5;
 const MAX_ENERGY = 3;
@@ -58,37 +67,53 @@ function notify(eventName, payload) {
 // Combat lifecycle
 // ------------------------------------------------------------------
 
-export function startCombat(enemyIds) {
-  const ch = CHARACTERS.find((c) => c.id === gameState.run.character);
-  if (!ch) throw new Error("startCombat: no character selected");
-
-  const enemyDefs = enemyIds.map((id) => {
-    const def = ENEMIES.find((e) => e.id === id);
-    if (!def) throw new Error(`Unknown enemy: ${id}`);
-    return def;
-  });
-
-  const enemies = enemyDefs.map((def) => ({
+function makeEnemyInstance(def, options = {}) {
+  let hp = def.hp;
+  let maxHp = def.hp;
+  // Boss HP scaling per act
+  if (def.tier === "boss") {
+    const scaled = BOSS_HP_BY_ACT[gameState.run.act] || def.hp;
+    hp = scaled;
+    maxHp = scaled;
+  }
+  return {
     id: def.id,
     name: def.name,
     art: def.art,
-    hp: def.hp,
-    maxHp: def.hp,
+    tier: def.tier,
+    hp,
+    maxHp,
     statuses: {},
     intentPattern: def.intentPattern,
     intentMode: def.intentMode,
     patternIndex: 0,
     nextIntent: null,
-  }));
+    oncePerCombatFired: new Set(),
+    spawnedThisTurn: !!options.spawnedThisTurn,
+  };
+}
+
+export function startCombat(enemyIds) {
+  const ch = CHARACTERS.find((c) => c.id === gameState.run.character);
+  if (!ch) throw new Error("startCombat: no character selected");
+
+  const enemies = enemyIds.map((id) => {
+    const def = ENEMIES.find((e) => e.id === id);
+    if (!def) throw new Error(`Unknown enemy: ${id}`);
+    return makeEnemyInstance(def);
+  });
 
   const player = {
     character: ch.id,
     hp: gameState.run.hp,
     maxHp: gameState.run.maxHp,
     statuses: {},
+    nextTurnModifiers: [],
   };
 
   const piles = createCombatDeck(gameState.run.deck);
+
+  const isBoss = enemies.some((e) => e.tier === "boss");
 
   gameState.combat = {
     player,
@@ -98,6 +123,7 @@ export function startCombat(enemyIds) {
     maxEnergy: MAX_ENERGY,
     turn: 0,
     targetIndex: 0,
+    isBoss,
     triggers: {
       on_play_skill: [],
       on_gain_caffeine: [],
@@ -120,42 +146,52 @@ export function startCombat(enemyIds) {
     queuedNextTurnEffects: [],
     cardEffectOverrides: new Map(),
     run: gameState.run,
-    pendingOutcome: null, // "victory" | "defeat"
+    pendingOutcome: null,
   };
 
-  // Roll first intent for each enemy
   for (const e of gameState.combat.enemies) {
     e.nextIntent = selectIntent(e);
+    advanceUntilExecutable(e);
   }
 
-  // Apply combat-start relic effects
   applyCombatStartRelics();
-
-  // Begin turn 1
   startPlayerTurn();
+}
+
+// If an enemy's current intent is something like "summon, oncePerCombat" that
+// has already fired this combat, advance to the next valid intent. We do this
+// at start so we don't show a stale "Recruit" intent when the Schemer should
+// be on Hard Sell forever after.
+function advanceUntilExecutable(enemy) {
+  if (enemy.intentMode !== "cycle") return;
+  let safety = 8;
+  while (safety-- > 0) {
+    const intent = enemy.nextIntent;
+    if (!intent) return;
+    if (intent.oncePerCombat && enemy.oncePerCombatFired.has(intent.label)) {
+      enemy.nextIntent = selectIntent(enemy);
+      continue;
+    }
+    return;
+  }
 }
 
 function applyCombatStartRelics() {
   const c = gameState.combat;
   const relicSet = new Set(gameState.run.relics);
 
-  // Travel Mug — Doug only this phase: gain 2 Caffeine.
   if (relicSet.has("travel_mug") && c.player.character === "doug") {
+    // Relic-granted Caffeine bypasses on_gain_caffeine triggers (Phase 2 ruling).
     applyStatus(c.player, STATUS.CAFFEINE, 2);
-    // Note: we deliberately do NOT trigger on_gain_caffeine for the relic-granted
-    // starting Caffeine — Caffeinated triggers only on in-combat gains via cards.
-    // (DESIGN.md is silent; this is the friendlier reading and matches the
-    //  Phase-2 prompt's Scenario B expectations.)
   }
-  // Lucky Penny, Loud Lawn Mower, Snake Plant, Power Suit, Riding Mower Keys,
-  // Master Plan, Endless Inbox: defined-but-inert in Phase 2 per the prompt.
+  // Other 17 relics defined-but-inert — Phase 4 wires them.
 }
 
 export function startPlayerTurn() {
   const c = gameState.combat;
   c.turn += 1;
 
-  // 1a. Reset per-turn flags
+  // Reset per-turn flags
   c.flags.cardsPlayedThisTurn = 0;
   c.flags.gainedCaffeineThisTurn = false;
   c.flags.appliedCitationThisTurn = false;
@@ -163,19 +199,30 @@ export function startPlayerTurn() {
   c.flags.firstDamagePreventThisTurn = false;
   c.flags.costZeroThisTurn = new Set();
 
-  // 1b. Drain queued next-turn effects (e.g., Pep Talk)
+  // Drain queued next-turn effects
   const queued = c.queuedNextTurnEffects.slice();
   c.queuedNextTurnEffects = [];
   for (const eff of queued) executeEffect(eff, makeCtx());
 
-  // 1c. Fire on_turn_start triggers (Powers + relic equivalents)
+  // on_turn_start triggers
   fireTriggers("on_turn_start", makeCtx());
 
-  // 1d. Draw cards — base 5 (Big-Box Membership / House Keys can stretch this in Phase 3+)
-  drawCards(c.piles, HAND_SIZE);
+  // Compute draw count, then tick modifier durations
+  let drawCount = HAND_SIZE;
+  for (const m of c.player.nextTurnModifiers) {
+    if (m.type === "draw_minus") drawCount -= m.amount;
+  }
+  drawCount = Math.max(1, drawCount); // floor at 1
 
-  // 1e. Energy refill
+  // Decrement durations and remove expired
+  for (const m of c.player.nextTurnModifiers) m.duration -= 1;
+  c.player.nextTurnModifiers = c.player.nextTurnModifiers.filter((m) => m.duration > 0);
+
+  drawCards(c.piles, drawCount);
   c.energy = c.maxEnergy;
+
+  // Spawned-this-turn enemies are now allowed to act next enemy turn.
+  for (const e of c.enemies) e.spawnedThisTurn = false;
 
   notify("turnStart", { turn: c.turn });
 }
@@ -185,8 +232,23 @@ export function getEffectiveCost(cardInst) {
   const def = CARDS.find((d) => d.id === cardInst.cardId);
   if (!def) return 0;
   if (c.flags.costZeroThisTurn.has(cardInst.uuid)) return 0;
-  // Bylaws: first card this turn that applies Citation costs 0 — Phase 3 wires the consumption rule.
   return def.cost;
+}
+
+function isTargetingCard(def) {
+  // Single-target attacks need a target. AOE / self / status-all cards don't.
+  if (!def.effect) return false;
+  if (def.effect.startsWith("scaling:")) return true;
+  if (def.effect.startsWith("deal_damage:")) return true;
+  if (def.effect.startsWith("compound:")) {
+    // If any sub-effect is single-target, we need a target. Simple heuristic:
+    return /\bdeal_damage:\d+/.test(def.effect) || /\bapply:[a-z_]+:\d+/.test(def.effect);
+  }
+  if (def.effect.startsWith("conditional:")) {
+    return /\bdeal_damage:\d+/.test(def.effect) || /\bapply:[a-z_]+:\d+/.test(def.effect);
+  }
+  if (def.effect.startsWith("apply:")) return true;
+  return false;
 }
 
 export function canPlayCard(cardInst) {
@@ -197,6 +259,28 @@ export function canPlayCard(cardInst) {
   if (def.effect === "unplayable") return false;
   if (getEffectiveCost(cardInst) > c.energy) return false;
   return true;
+}
+
+export function needsTarget(cardInst) {
+  const def = CARDS.find((d) => d.id === cardInst.cardId);
+  if (!def) return false;
+  return isTargetingCard(def);
+}
+
+export function setTarget(idx) {
+  const c = gameState.combat;
+  if (!c) return;
+  const e = c.enemies[idx];
+  if (e && e.hp > 0) c.targetIndex = idx;
+}
+
+// Auto-fix target if stale (previously targeted enemy is dead).
+function ensureLiveTarget() {
+  const c = gameState.combat;
+  if (!c.enemies[c.targetIndex] || c.enemies[c.targetIndex].hp <= 0) {
+    const idx = c.enemies.findIndex((e) => e.hp > 0);
+    if (idx >= 0) c.targetIndex = idx;
+  }
 }
 
 export function playCard(cardInst, targetIndex) {
@@ -211,6 +295,7 @@ export function playCard(cardInst, targetIndex) {
   }
 
   if (typeof targetIndex === "number") c.targetIndex = targetIndex;
+  ensureLiveTarget();
 
   const cost = getEffectiveCost(cardInst);
   if (cost > c.energy) {
@@ -223,20 +308,14 @@ export function playCard(cardInst, targetIndex) {
 
   const ctx = makeCtx({ sourceCard: cardInst });
 
-  // Resolve effect — if this card has an Apotheosis override, use it.
   const override = c.cardEffectOverrides.get(cardInst.uuid);
   const effect = override || def.effect;
   executeEffect(effect, ctx);
 
-  // Type-based triggers
   if (def.type === "skill") fireTriggers("on_play_skill", ctx);
-
-  // Generic card-count milestones
   if (c.flags.cardsPlayedThisTurn === 3) fireTriggers("on_third_card", ctx);
   if (c.flags.cardsPlayedThisTurn === 4) fireTriggers("on_fourth_card", ctx);
 
-  // Powers go to a "passive" zone (we treat them as exhausted-from-hand).
-  // Their effect already registered triggers; they shouldn't return to hand.
   if (def.type === "power") {
     exhaustCard(c.piles, cardInst);
   } else if (def.exhaust) {
@@ -247,6 +326,7 @@ export function playCard(cardInst, targetIndex) {
 
   notify("cardPlayed", { cardInst, def });
 
+  // Victory/defeat resolution: victory wins ties.
   if (allEnemiesDead()) {
     finalizeOutcome("victory");
     return { ok: true, victory: true };
@@ -263,11 +343,9 @@ export function endPlayerTurn() {
   if (!c) return;
   if (c.pendingOutcome) return;
 
-  // 3a. End-of-turn triggers (Powers like Performance Bonus)
   fireTriggers("on_turn_end", makeCtx());
 
-  // 3a-bis. Doug's Jitters tax — built-in mechanic, not a power. Threshold default 5.
-  // Espresso Machine relic raises to 8 (Phase 3 wires; we use default here).
+  // Doug's Jitters tax
   if (c.player.character === "doug") {
     const caffeine = getStatus(c.player, STATUS.CAFFEINE);
     if (caffeine > 5) {
@@ -279,38 +357,43 @@ export function endPlayerTurn() {
     }
   }
 
-  // 3b. Discard hand
   discardHand(c.piles);
-
-  // 3c. Tick player statuses (Block expires, Vulnerable/Weak decrement)
   tickStatuses(c.player, "playerTurnEnd");
 
+  // Check victory FIRST in case some end-of-turn power killed an enemy.
+  if (allEnemiesDead()) {
+    finalizeOutcome("victory");
+    return;
+  }
   if (c.player.hp <= 0) {
     finalizeOutcome("defeat");
     return;
   }
 
-  // Step 4: Enemy turn
   runEnemyTurn();
 
   if (c.pendingOutcome) return;
 
-  // Step 5: tick enemy statuses, roll next intent
   for (const e of c.enemies) {
     if (e.hp <= 0) continue;
     tickStatuses(e, "enemyTurnEnd");
     e.nextIntent = selectIntent(e);
+    advanceUntilExecutable(e);
   }
 
-  // Step 6: next player turn
   startPlayerTurn();
 }
 
 export function runEnemyTurn() {
   const c = gameState.combat;
-  for (const e of c.enemies) {
-    if (e.hp <= 0) continue;
-    resolveEnemyIntent(e);
+  for (const enemy of c.enemies) {
+    if (enemy.hp <= 0) continue;
+    if (enemy.spawnedThisTurn) continue; // skip first turn after summon
+    resolveEnemyIntent(enemy);
+    if (allEnemiesDead()) {
+      finalizeOutcome("victory");
+      return;
+    }
     if (c.player.hp <= 0) {
       finalizeOutcome("defeat");
       return;
@@ -324,41 +407,149 @@ function resolveEnemyIntent(enemy) {
   if (!intent) return;
   notify("enemyIntent", { enemy, intent });
 
-  const hits = intent.hits || 1;
-  const damageBefore = c.player.hp;
-
-  if (intent.type === "attack") {
-    for (let i = 0; i < hits; i++) {
-      if (c.player.hp <= 0) break;
-      // Burnout Insurance: prevent the first damage of the turn.
-      if (c.flags.firstDamagePreventThisTurn) {
-        c.flags.firstDamagePreventThisTurn = false; // consumed
-        continue;
+  switch (intent.type) {
+    case "attack":
+    case "attack_telegraphed": {
+      const hits = intent.hits || 1;
+      for (let i = 0; i < hits; i++) {
+        if (c.player.hp <= 0) break;
+        if (c.flags.firstDamagePreventThisTurn) {
+          c.flags.firstDamagePreventThisTurn = false;
+          continue;
+        }
+        const result = resolveDamage(enemy, c.player, intent.value || 0);
+        c.flags.damageTakenThisTurn += result.hpLost;
+        notify("playerHit", { enemy, result });
       }
-      const result = resolveDamage(enemy, c.player, intent.value || 0);
-      // (resolveDamage already applied to player; track for Last Stand-style reads.)
-      c.flags.damageTakenThisTurn += result.hpLost;
-      notify("playerHit", { enemy, result });
+      break;
     }
-    // Status rider on attack (e.g., Pitch — apply 2 Weak after damaging)
-    if (intent.status && c.player.hp > 0) {
-      applyStatus(c.player, intent.status, intent.statusValue || 1);
+    case "block": {
+      applyStatus(enemy, STATUS.BLOCK, intent.value || 0);
+      break;
     }
-  } else if (intent.type === "block") {
-    applyStatus(enemy, STATUS.BLOCK, intent.value || 0);
-  } else if (intent.type === "buff") {
-    // Phase 2 doesn't wire the boss/elite buff specials. No-op safely.
-  } else if (intent.type === "debuff") {
-    if (intent.status) {
-      applyStatus(c.player, intent.status, intent.statusValue || 1);
+    case "attack_with_status": {
+      const hits = intent.hits || 1;
+      for (let i = 0; i < hits; i++) {
+        if (c.player.hp <= 0) break;
+        if (c.flags.firstDamagePreventThisTurn) {
+          c.flags.firstDamagePreventThisTurn = false;
+          continue;
+        }
+        const result = resolveDamage(enemy, c.player, intent.value || 0);
+        c.flags.damageTakenThisTurn += result.hpLost;
+        notify("playerHit", { enemy, result });
+      }
+      if (c.player.hp > 0 && intent.status) {
+        applyStatus(c.player, intent.status, intent.stacks || 1);
+      }
+      break;
     }
-  } else if (intent.type === "special") {
-    // Phase 3+ wires special intents (summon, draw-minus, telegraph, etc.).
+    case "apply_status": {
+      if (intent.status) applyStatus(c.player, intent.status, intent.stacks || 1);
+      break;
+    }
+    case "attack_and_disrupt": {
+      if (c.flags.firstDamagePreventThisTurn) {
+        c.flags.firstDamagePreventThisTurn = false;
+      } else {
+        const result = resolveDamage(enemy, c.player, intent.value || 0);
+        c.flags.damageTakenThisTurn += result.hpLost;
+        notify("playerHit", { enemy, result });
+      }
+      if (c.player.hp > 0 && intent.disrupt === "discard_random_card") {
+        const hand = c.piles.hand;
+        if (hand.length > 0) {
+          const idx = Math.floor(Math.random() * hand.length);
+          const [card] = hand.splice(idx, 1);
+          c.piles.discardPile.push(card);
+          notify("playerDiscardForced", { card });
+        }
+      }
+      break;
+    }
+    case "attack_with_modifier": {
+      if (c.flags.firstDamagePreventThisTurn) {
+        c.flags.firstDamagePreventThisTurn = false;
+      } else {
+        const result = resolveDamage(enemy, c.player, intent.value || 0);
+        c.flags.damageTakenThisTurn += result.hpLost;
+        notify("playerHit", { enemy, result });
+      }
+      if (intent.modifier === "draw_minus" && c.player.hp > 0) {
+        c.player.nextTurnModifiers.push({
+          type: "draw_minus",
+          amount: intent.amount || 2,
+          duration: (intent.duration || 1) + 1, // +1 because we tick it down at next turn start
+        });
+      }
+      break;
+    }
+    case "block_and_status": {
+      applyStatus(enemy, STATUS.BLOCK, intent.value || 0);
+      if (intent.status) applyStatus(c.player, intent.status, intent.stacks || 1);
+      break;
+    }
+    case "summon": {
+      const key = intent.label || "summon";
+      if (intent.oncePerCombat && enemy.oncePerCombatFired.has(key)) break;
+      const def = ENEMIES.find((e) => e.id === intent.enemy);
+      if (def) {
+        const inst = makeEnemyInstance(def, { spawnedThisTurn: true });
+        inst.nextIntent = selectIntent(inst);
+        c.enemies.push(inst);
+        notify("enemySpawned", { enemy: inst });
+      }
+      enemy.oncePerCombatFired.add(key);
+      break;
+    }
+    case "aoe_attack": {
+      // Hit player
+      if (c.flags.firstDamagePreventThisTurn) {
+        c.flags.firstDamagePreventThisTurn = false;
+      } else {
+        const result = resolveDamage(enemy, c.player, intent.value || 0);
+        c.flags.damageTakenThisTurn += result.hpLost;
+        notify("playerHit", { enemy, result });
+      }
+      // Hit a random other alive enemy
+      const others = c.enemies.filter((e) => e !== enemy && e.hp > 0);
+      if (others.length > 0) {
+        const target = others[Math.floor(Math.random() * others.length)];
+        // Source-less damage (Lost Tourist isn't really "the attacker" in a strength sense for friendly fire)
+        applyDamageToTarget(target, intent.value || 0);
+        notify("enemyHit", { target, amount: intent.value });
+      }
+      break;
+    }
+    case "self_buff": {
+      if (intent.strength) applyStatus(enemy, STATUS.STRENGTH, intent.strength);
+      if (intent.block) applyStatus(enemy, STATUS.BLOCK, intent.block);
+      break;
+    }
+    case "heal_and_buff": {
+      if (intent.heal) {
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + intent.heal);
+      }
+      if (intent.strength) applyStatus(enemy, STATUS.STRENGTH, intent.strength);
+      break;
+    }
+    case "apply_status_aoe_to_player": {
+      const list = intent.statuses || [];
+      for (const s of list) applyStatus(c.player, s.status, s.stacks || 1);
+      break;
+    }
+    default:
+      // Legacy types from older Phase 1/2 data — keep tolerant.
+      if (intent.type === "buff" || intent.type === "debuff") {
+        if (intent.status) applyStatus(c.player, intent.status, intent.statusValue || 1);
+      }
+      break;
   }
 
-  // Track damage delta for relic/card "damage taken" reads.
-  const dealt = damageBefore - c.player.hp;
-  if (dealt > 0) c.flags.damageTakenThisTurn = (c.flags.damageTakenThisTurn || 0); // already counted per-hit
+  // Mark once-per-combat fired
+  if (intent.oncePerCombat && intent.label) {
+    enemy.oncePerCombatFired.add(intent.label);
+  }
 }
 
 function allEnemiesDead() {
@@ -375,17 +566,11 @@ function finalizeOutcome(outcome) {
 export function endCombat(outcome) {
   const c = gameState.combat;
   if (!c) return;
-  // Persist any HP change back to the run.
   gameState.run.hp = Math.max(0, c.player.hp);
-  // Return all four piles back to the run deck (exhaust included per design).
   returnExhaustToDeck(c.piles, gameState.run.deck);
+  if (outcome === "victory") gameState.run.combatsWon += 1;
   notify("combatEnd", { outcome });
-  // Scene transition handled by combat scene listener so it can play exit FX.
 }
-
-// ------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------
 
 function makeCtx(extra) {
   return Object.assign({
@@ -395,3 +580,24 @@ function makeCtx(extra) {
 }
 
 export function getCombat() { return gameState.combat; }
+
+// Helper for the renderer: returns the next intent in the cycle for telegraph
+// preview. For weighted enemies, returns null since we can't peek deterministically.
+export function peekNextIntent(enemy) {
+  if (enemy.intentMode !== "cycle") return null;
+  const pattern = enemy.intentPattern || [];
+  if (pattern.length === 0) return null;
+  // selectIntent already advanced patternIndex when nextIntent was set, so
+  // patternIndex points at the *next* intent that will be returned.
+  let probeIdx = enemy.patternIndex;
+  let safety = pattern.length + 2;
+  while (safety-- > 0) {
+    const candidate = pattern[probeIdx % pattern.length];
+    if (candidate.oncePerCombat && enemy.oncePerCombatFired.has(candidate.label)) {
+      probeIdx += 1;
+      continue;
+    }
+    return candidate;
+  }
+  return null;
+}

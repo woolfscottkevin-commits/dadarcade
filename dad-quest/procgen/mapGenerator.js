@@ -1,0 +1,264 @@
+// Procedural map generator for Dad Quest.
+// Implements DESIGN.md § 1.7 with one Phase 3 deviation:
+//   PHASE 3 DEVIATION: shop and event nodes are NOT generated this phase.
+//   Distribution becomes 70% combat / 15% elite / 15% rest for rows 2–5.
+//   Row 1 is always combat (per DESIGN.md).
+//   PHASE 4 TODO: restore the original 60/10/10/10/10 split when shops + events ship.
+//
+// Output shape (returned by generateAct(actNumber)):
+//   {
+//     act: 1,
+//     rows: [ /* rows 1..6 */
+//       [ { id: "1-0", row: 1, col: 0, type, enemy?, outgoing: [nodeIds] }, ... ],
+//       ...
+//       [ { id: "6-0", row: 6, col: 0, type: "boss", enemy: "ultimate_hoa_president", outgoing: [] } ]
+//     ]
+//   }
+// Note: rows is 1-indexed for clarity (rows[0] is undefined). Iterate rows.slice(1).
+
+const NORMAL_ENEMIES = [
+  "aggressive_roomba", "sprinkler_sentry", "door_to_door_salesman", "karen_manager",
+  "yappy_dog", "gossip_neighbor", "pyramid_schemer", "lost_tourist",
+];
+const ELITE_ENEMIES = ["the_mailman", "the_substitute_teacher", "the_personal_trainer"];
+
+const DIST = {
+  combat: 0.70,
+  elite: 0.15,
+  rest: 0.15,
+};
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function pickType(rowIdx) {
+  // Row 1 always combat
+  if (rowIdx === 1) return "combat";
+  const r = Math.random();
+  if (r < DIST.combat) return "combat";
+  if (r < DIST.combat + DIST.elite) return "elite";
+  return "rest";
+}
+
+function buildLayerEdges(numSrc, numDst) {
+  // Each source produces 1–2 outgoing edges. Edges must be planar
+  // (non-crossing), which means: when sources are visited in increasing
+  // order, their assigned destination indices are non-decreasing.
+  // Strategy: walk left-to-right with a sliding cursor.
+  const edges = [];
+  let cursor = 0;
+  for (let i = 0; i < numSrc; i++) {
+    const remainingSrc = numSrc - i;
+    if (i === numSrc - 1) {
+      // last source must reach all remaining destinations
+      for (let d = cursor; d < numDst; d++) edges.push([i, d]);
+      continue;
+    }
+    // We need every dst in [cursor, numDst) to be covered by *some* future
+    // source. Future capacity is 2 * (remainingSrc - 1) max — but each
+    // future source can also overlap with previous, so realistic min remaining
+    // dst per future source is 1.
+    const dstLeft = numDst - cursor;
+    const futureSrc = remainingSrc - 1;
+    // Pick how many edges THIS source emits (1 or 2)
+    let k;
+    if (dstLeft - 2 > futureSrc * 2) {
+      // Too many dsts for the rest — this source must take 2
+      k = 2;
+    } else if (dstLeft - 1 < futureSrc) {
+      // Too few dsts to share — this source takes only 1
+      k = 1;
+    } else {
+      k = Math.random() < 0.5 ? 1 : 2;
+    }
+    // Emit edges
+    for (let j = 0; j < k; j++) {
+      const d = cursor + j;
+      if (d <= numDst - 1) edges.push([i, d]);
+    }
+    // Advance cursor: overlap by 1 (Slay-the-Spire-style fork) if k==2,
+    // otherwise step forward by 1.
+    cursor = Math.min(numDst - 1, cursor + (k === 2 ? 1 : 1));
+  }
+  // Defensive: ensure every dst has ≥1 incoming
+  const incoming = new Array(numDst).fill(0);
+  for (const [, d] of edges) incoming[d]++;
+  for (let d = 0; d < numDst; d++) {
+    if (incoming[d] === 0) {
+      // Pick the source whose nearest existing edge is closest to d.
+      let bestSrc = 0;
+      let bestDelta = Infinity;
+      for (let s = 0; s < numSrc; s++) {
+        const myDsts = edges.filter(([sx]) => sx === s).map(([, dx]) => dx);
+        if (myDsts.length === 0) continue;
+        for (const dx of myDsts) {
+          const delta = Math.abs(dx - d);
+          if (delta < bestDelta) { bestDelta = delta; bestSrc = s; }
+        }
+      }
+      // Adding this edge can only break planarity if it would cross with
+      // an edge from src bestSrc to a dst on the wrong side of d, or any
+      // other src's edges. Practical mitigation: if it would cross, fall
+      // back to adding from the source closest in normalized position.
+      edges.push([bestSrc, d]);
+    }
+  }
+  // Sort + dedupe
+  const seen = new Set();
+  const dedup = [];
+  for (const e of edges) {
+    const key = e.join(",");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    dedup.push(e);
+  }
+  return dedup;
+}
+
+// Validate that no two edges cross. Two edges (s1,d1)-(s2,d2) cross iff
+// (s1 < s2 && d1 > d2) || (s1 > s2 && d1 < d2). We allow shared endpoints.
+function edgesAreNonCrossing(edges) {
+  for (let i = 0; i < edges.length; i++) {
+    for (let j = i + 1; j < edges.length; j++) {
+      const [a, b] = edges[i];
+      const [c, d] = edges[j];
+      if (a === c || b === d) continue;
+      if ((a < c && b > d) || (a > c && b < d)) return false;
+    }
+  }
+  return true;
+}
+
+// If the planar attempt fails (rare given the algorithm above), retry up to N times.
+function buildPlanarLayer(numSrc, numDst) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const edges = buildLayerEdges(numSrc, numDst);
+    if (edgesAreNonCrossing(edges)) return edges;
+  }
+  // Fallback: deterministic minimal planar layout.
+  const edges = [];
+  for (let i = 0; i < numSrc; i++) {
+    const d = Math.min(numDst - 1, Math.round(i * (numDst - 1) / Math.max(1, numSrc - 1)));
+    edges.push([i, d]);
+  }
+  for (let d = 0; d < numDst; d++) {
+    if (!edges.some(([, dd]) => dd === d)) {
+      const s = Math.min(numSrc - 1, Math.round(d * (numSrc - 1) / Math.max(1, numDst - 1)));
+      edges.push([s, d]);
+    }
+  }
+  return edges;
+}
+
+function pickEnemy(prevRowEnemies, kind) {
+  const pool = kind === "elite" ? ELITE_ENEMIES : NORMAL_ENEMIES;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const cand = pick(pool);
+    if (!prevRowEnemies.includes(cand)) return cand;
+  }
+  return pick(pool); // give up after retries; allow duplicate adjacency
+}
+
+export function generateAct(actNumber) {
+  // Row counts: rows 1..5 each have 3 or 4 nodes. Row 6 = boss (1 node).
+  const rowCounts = [null]; // 1-indexed
+  for (let r = 1; r <= 5; r++) rowCounts[r] = rand(3, 4);
+  rowCounts[6] = 1;
+
+  // 1. Build node grid (no types yet for rows 2..5)
+  const rows = [null];
+  for (let r = 1; r <= 5; r++) {
+    rows[r] = [];
+    for (let c = 0; c < rowCounts[r]; c++) {
+      rows[r].push({
+        id: `a${actNumber}-${r}-${c}`,
+        row: r, col: c,
+        type: r === 1 ? "combat" : null, // row 1 forced
+        enemy: null,
+        outgoing: [],
+      });
+    }
+  }
+  rows[6] = [{
+    id: `a${actNumber}-6-0`,
+    row: 6, col: 0,
+    type: "boss",
+    enemy: "ultimate_hoa_president",
+    outgoing: [],
+  }];
+
+  // 2. Assign types for rows 2..5 with the elite-not-adjacent constraint
+  for (let r = 2; r <= 5; r++) {
+    const prevHasElite = rows[r - 1].some((n) => n.type === "elite");
+    for (const node of rows[r]) {
+      let t = pickType(r);
+      if (t === "elite" && prevHasElite) {
+        // Re-roll up to 3 times
+        for (let i = 0; i < 3 && t === "elite"; i++) t = pickType(r);
+      }
+      node.type = t;
+    }
+    // After assignment, also enforce: if THIS row has an elite, the next-row
+    // elite roll must skip. We'll handle this on the next iteration via prevHasElite.
+  }
+  // Final pass: defensive scan for any adjacent elite pairs (in case re-roll still landed elite)
+  for (let r = 2; r <= 5; r++) {
+    const prevElites = rows[r - 1].filter((n) => n.type === "elite").length;
+    if (prevElites === 0) continue;
+    for (const node of rows[r]) {
+      if (node.type === "elite") node.type = "combat";
+    }
+  }
+
+  // 3. Build edges between adjacent rows
+  for (let r = 1; r <= 5; r++) {
+    const src = rows[r];
+    const dst = rows[r + 1];
+    const edges = buildPlanarLayer(src.length, dst.length);
+    for (const [s, d] of edges) {
+      src[s].outgoing.push(dst[d].id);
+    }
+  }
+
+  // 4. Assign enemies to combat / elite nodes, avoiding back-to-back same enemy
+  let prevRowEnemies = [];
+  for (let r = 1; r <= 5; r++) {
+    const thisRowEnemies = [];
+    for (const node of rows[r]) {
+      if (node.type === "combat") {
+        node.enemy = pickEnemy(prevRowEnemies, "combat");
+        thisRowEnemies.push(node.enemy);
+      } else if (node.type === "elite") {
+        node.enemy = pickEnemy(prevRowEnemies, "elite");
+        thisRowEnemies.push(node.enemy);
+      }
+    }
+    prevRowEnemies = thisRowEnemies;
+  }
+
+  return { act: actNumber, rows };
+}
+
+// Helper used by the map scene to find a node by id.
+export function findNode(map, id) {
+  if (!map) return null;
+  for (let r = 1; r <= 6; r++) {
+    const row = map.rows[r];
+    if (!row) continue;
+    const n = row.find((nd) => nd.id === id);
+    if (n) return n;
+  }
+  return null;
+}
+
+// Reachable nodes from current position (or all of row 1 if position is null).
+export function reachableNodeIds(map, position, completedNodes) {
+  if (!map) return [];
+  const completed = new Set(completedNodes || []);
+  if (!position) {
+    return map.rows[1].map((n) => n.id).filter((id) => !completed.has(id));
+  }
+  const node = findNode(map, position);
+  if (!node) return [];
+  return node.outgoing.filter((id) => !completed.has(id));
+}

@@ -1,5 +1,5 @@
 // Character select scene.
-// Three portraits, click to highlight, "Begin Run" enables once selected.
+// Phase 3: tapping Begin Run starts a run, generates Act 1 map, jumps to map scene.
 
 import { CHARACTERS } from "../data/characters.js";
 import { CARDS } from "../data/cards.js";
@@ -12,7 +12,6 @@ let selectedId = null;
 let beginBtn = null;
 
 function deckSummary(starterDeck) {
-  // Collapse duplicates — "Strike ×5".
   const counts = new Map();
   for (const id of starterDeck) counts.set(id, (counts.get(id) || 0) + 1);
   const parts = [];
@@ -95,7 +94,7 @@ export const characterSelectScene = {
 
     const sub = document.createElement("p");
     sub.className = "select-sub";
-    sub.textContent = "Phase 2 — single combat vs an Aggressive Roomba";
+    sub.textContent = "Phase 3 — full 3-act run";
     wrap.appendChild(sub);
 
     const row = document.createElement("div");
@@ -111,7 +110,7 @@ export const characterSelectScene = {
     beginBtn.addEventListener("click", () => {
       if (!selectedId) return;
       startRun(selectedId);
-      setScene("combat");
+      setScene("map");
     });
     wrap.appendChild(beginBtn);
 

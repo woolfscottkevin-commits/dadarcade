@@ -55,9 +55,12 @@ dad-quest/
 │   ├── combat.js           DOM combat layout + canvas-free FX overlays
 │   ├── victory.js          "Victory!" → endRun → characterSelect
 │   └── gameOver.js         "Defeated" → endRun → characterSelect
-├── procgen/                (Phase 3: map generator)
+├── procgen/
+│   └── mapGenerator.js     3-act branching graph generator (planar, 70/15/15)
 └── saves/                  (Phase 4: localStorage save/load)
 ```
+
+Phase 3 also added: `engine/rewards.js`, `scenes/{map,reward,rest,runVictory}.js`, `ui/{mapNode,edgeRenderer,runHud,targetingReticle}.js`.
 
 ## Phase status
 
@@ -65,8 +68,68 @@ dad-quest/
 |---|---|---|
 | 1 | Foundation, asset pipeline, frozen game data | ✓ 2026-04-27 |
 | 2 | Combat vertical slice: engine, scenes, UI, 3 characters vs Aggressive Roomba | ✓ 2026-04-27 |
-| 3 | Scenes & economy: map gen, shop, rest, events, multi-combat runs | pending |
-| 4 | Save/load, polish, home-page integration, SEO, About copy | pending |
+| 3 | Run loop: 3-act maps, rewards, rest, all 12 enemies + multi-enemy combat | ✓ 2026-04-27 |
+| 4 | Shops, random events, remaining 17 relics' bindings, save/load, polish, home-page tile | pending |
+
+## Resolved rulings (carry forward — DESIGN.md is silent or imprecise here)
+
+These are settled mechanical decisions made during Phase 2/3. They override any conflicting reading of DESIGN.md and stay valid through Phase 4.
+
+1. **Combat scene is DOM, not `<canvas>`.** A canvas overlay can be added for FX (damage numbers, lunge animations); the layout is DOM. DESIGN.md § 5's "canvas" reference is outdated.
+2. **Caffeinated triggers per stack of Caffeine gained, not per gain event.** Coffee Break (gain 3 Caffeine) → 3 Strength.
+3. **Relic-granted resources at combat-start do NOT fire `on_gain_*` triggers; card-played gains DO.** Travel Mug grants 2 Caffeine without triggering Caffeinated. Phase 4's relic bindings must respect this.
+4. **Powers exhaust on play; their triggers stay registered for the rest of combat.** Powers and the rest of the exhaust pile return to the run deck after combat ends. Mid-combat reshuffles do NOT pull from exhaust.
+
+## Phase 3 specifics
+
+**Run state schema (in `gameState.run`):**
+- `character`, `hp`, `maxHp`, `gold`, `deck`, `relics` — persist between combats.
+- `act` (1–3), `position` (current node ID or null), `completedNodes` (array), `map` (current act's generated map), `combatsWon`.
+- `pendingEnemy` / `pendingIsBoss` / `pendingNodeType` are transient fields stashed by the map scene before transitioning into combat; the reward scene reads then deletes them.
+
+**Reset rules:**
+- HP, gold, deck, relics, max HP — RUN-scoped (carry).
+- Strength, Yard Work, Caffeine, Citations, Block, Vulnerable, Weak — COMBAT-scoped (reset every combat by `engine/combat.startCombat`).
+
+**Map node distribution (Phase 3 deviation from DESIGN.md):**
+- Row 1: 100% combat (per DESIGN.md).
+- Rows 2–5: 70% combat, 15% elite, 15% rest.
+- Row 6: boss (always Ultimate HOA President in v1).
+- PHASE 4 TODO: restore 60% combat / 10% elite / 10% rest / 10% shop / 10% event when shops + events ship.
+
+**Boss HP scaling:** Act 1 = 110, Act 2 = 175, Act 3 = 250. Implemented in `engine/combat.makeEnemyInstance` based on `gameState.run.act`. **Do NOT mutate `data/enemies.js`** — it keeps `hp: 250` as the canonical Act-3 value.
+
+**Multi-enemy combat (Phase 3):**
+- Combat now supports 1–2 enemies. Only Pyramid Schemer's once-per-combat Recruit creates a 2-enemy fight.
+- Single-target attacks need a target (`needsTarget(cardInst)`). Tap an enemy to set `combatState.targetIndex`.
+- Auto-target fallback: if the current target dies, the next single-target play auto-selects the leftmost alive enemy.
+- AOE attacks (`deal_damage_all:N`, `apply_all:status:N`) hit every alive enemy.
+- Summoned enemies skip their first turn (give the player time to plan).
+
+**New intent types (data/enemies.js → engine/combat.js):**
+- `attack_with_status`, `apply_status`, `attack_and_disrupt` (`disrupt: "discard_random_card"`), `attack_with_modifier` (`modifier: "draw_minus"`), `block_and_status`, `summon`, `aoe_attack`, `self_buff`, `heal_and_buff`, `apply_status_aoe_to_player`, `attack_telegraphed`.
+- The boss's Final Summons uses `telegraphedFromPrevious: true` so the renderer peeks ahead and shows a "⚠ NEXT TURN" badge during the prior intent.
+
+**Player next-turn modifiers:**
+- `combatState.player.nextTurnModifiers` is an array of `{ type, amount, duration }`. Pop Quiz pushes `{ type: "draw_minus", amount: 2, duration: 2 }` (duration 2 because the start-of-turn tick will decrement it once).
+- Effective draw count is `max(1, 5 - sum(draw_minus.amount))` — never below 1.
+
+**Reward generation (`engine/rewards.js`):**
+- Pool: same-character + shared, minus basics (Strike/Defend variants + Burnout) and minus any card the player already owns 4+ copies of.
+- Rarity weights — base: 60/33/7. Elite: 55/33/12. Boss: 50/33/17.
+- Gold per tier: normal 10–25, elite 25–35, boss 50–65.
+
+**Victory/defeat tie resolution:** if a single card play simultaneously kills the last enemy and drops the player to 0 HP (e.g., Weekend Warrior self-damage), **victory wins.** Combat checks `allEnemiesDead()` before checking player HP ≤ 0.
+
+## Keyboard shortcuts (combat scene)
+
+- `1`–`9` — play the corresponding hand card if affordable
+- `Space` — End Turn
+- `Esc` — reserved for Phase 4 (settings/pause)
+
+## URL flags
+
+- `/dad-quest/?phase=1` — boot through preload then render the Phase 1 "Ready" splash. Useful for verifying the asset pipeline in isolation.
 
 ## Phase 2 specifics
 
@@ -84,9 +147,9 @@ dad-quest/
 
 **Apotheosis** doubles every numeric payload in each card's effect string for the rest of the combat. Threshold values inside `*_gte:N` conditions are NOT doubled. Implemented via `combatState.cardEffectOverrides: Map<uuid, effectString>` consulted in `playCard` before parsing.
 
-**Three starter relics are wired:** Lawn Flag (Hank, +1 bonus to gained Yard Work), Travel Mug (Doug, +2 Caffeine at combat start; does not fire `on_gain_caffeine` triggers), Pocket Square (Brenda, +5 max HP at run start). The other 17 relics are defined-but-inert in `data/relics.js` — Phase 3 will wire them.
+**Three starter relics are wired:** Lawn Flag (Hank, +1 bonus to gained Yard Work), Travel Mug (Doug, +2 Caffeine at combat start; does not fire `on_gain_caffeine` triggers), Pocket Square (Brenda, +5 max HP at run start). The other 17 relics are defined-but-inert in `data/relics.js` until Phase 4.
 
-**Only Aggressive Roomba is wired as a fight.** All 12 enemy definitions parse and select intents correctly, but only the Roomba is referenced by `combat.js` for the Phase 2 vertical slice.
+**All 12 enemies are wired as fights in Phase 3.** The map generator assigns normal / elite / boss encounters, and Pyramid Schemer can summon Aggressive Roomba mid-combat.
 
 ## Keyboard shortcuts (combat scene)
 

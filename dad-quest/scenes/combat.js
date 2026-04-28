@@ -1,5 +1,7 @@
-// Combat scene. DOM-based layout with optional canvas overlay reserved for FX.
-// Wires the engine into a playable single combat against an Aggressive Roomba.
+// Combat scene. DOM-based layout with floating banner overlay for FX-style messages.
+// Phase 3: multi-enemy support, target selection, intent telegraph badge,
+//          dynamic enemy entry from Pyramid Schemer's Recruit.
+// Boss HP scaling is handled inside engine/combat.js based on gameState.run.act.
 
 import { CARDS } from "../data/cards.js";
 import { CHARACTERS } from "../data/characters.js";
@@ -9,8 +11,11 @@ import {
   endPlayerTurn,
   playCard,
   canPlayCard,
+  needsTarget,
+  setTarget,
   getEffectiveCost,
   setCombatListener,
+  peekNextIntent,
 } from "../engine/combat.js";
 import { setScene } from "../engine/sceneManager.js";
 import { STATUS, getStatus } from "../engine/statusEffects.js";
@@ -19,27 +24,25 @@ import { renderCard } from "../ui/cardFrame.js";
 import { createHealthBar } from "../ui/healthBar.js";
 import { createBlockIndicator } from "../ui/blockIndicator.js";
 import { createStatusRow } from "../ui/statusIcons.js";
-import { createRelicTray } from "../ui/relicTray.js";
 import { createIntentDisplay } from "../ui/intentDisplay.js";
+import { createRunHud } from "../ui/runHud.js";
+import { applyReticleTo } from "../ui/targetingReticle.js";
 
 let layoutEls = null;
 let onKey = null;
 
 function buildLayout(root) {
   root.innerHTML = "";
-
   const stage = document.createElement("div");
   stage.className = "combat-stage";
 
-  // Top bar — relic tray on right
-  const topBar = document.createElement("div");
-  topBar.className = "combat-top";
+  // Run HUD (replaces the standalone relic tray from Phase 2)
+  const runHud = createRunHud();
+  stage.appendChild(runHud.el);
+
   const enemyArea = document.createElement("div");
   enemyArea.className = "combat-enemy-area";
-  const relicTray = createRelicTray();
-  topBar.appendChild(enemyArea);
-  topBar.appendChild(relicTray.el);
-  stage.appendChild(topBar);
+  stage.appendChild(enemyArea);
 
   // Player block
   const playerBlock = document.createElement("div");
@@ -64,7 +67,6 @@ function buildLayout(root) {
   playerInfo.appendChild(statusRow.el);
   playerBlock.appendChild(playerInfo);
 
-  // Energy + end turn
   const ctrls = document.createElement("div");
   ctrls.className = "combat-ctrls";
   const energyEl = document.createElement("div");
@@ -79,18 +81,15 @@ function buildLayout(root) {
 
   stage.appendChild(playerBlock);
 
-  // Hand
   const handEl = document.createElement("div");
   handEl.className = "combat-hand";
   stage.appendChild(handEl);
 
-  // Pile counts
   const pilesEl = document.createElement("div");
   pilesEl.className = "combat-piles";
   pilesEl.innerHTML = `<span class="pile-label">Draw</span><span class="pile-num" data-pile="draw">0</span><span class="pile-label">Discard</span><span class="pile-num" data-pile="discard">0</span><span class="pile-label">Exhaust</span><span class="pile-num" data-pile="exhaust">0</span>`;
   stage.appendChild(pilesEl);
 
-  // Floating message banner (e.g., "Jitters tax!", "Burnout — unplayable")
   const banner = document.createElement("div");
   banner.className = "combat-banner";
   banner.style.opacity = "0";
@@ -99,27 +98,17 @@ function buildLayout(root) {
   root.appendChild(stage);
 
   return {
-    stage,
-    enemyArea,
-    relicTray,
-    portraitImg,
-    playerName,
-    hpBar,
-    blockInd,
-    statusRow,
-    energyEl,
-    endBtn,
-    handEl,
-    pilesEl,
-    banner,
+    stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
+    energyEl, endBtn, handEl, pilesEl, banner,
     enemyEls: [],
   };
 }
 
-function flashBanner(text) {
+function flashBanner(text, color) {
   if (!layoutEls) return;
   const b = layoutEls.banner;
   b.textContent = text;
+  if (color) b.style.borderColor = color;
   b.style.opacity = "1";
   clearTimeout(b._t);
   b._t = setTimeout(() => { b.style.opacity = "0"; }, 1100);
@@ -133,9 +122,20 @@ function renderEnemies() {
     const wrap = document.createElement("div");
     wrap.className = "combat-enemy";
     wrap.dataset.idx = String(i);
+    wrap.addEventListener("click", () => {
+      if (enemy.hp <= 0) return;
+      setTarget(i);
+      refresh();
+    });
 
     const intent = createIntentDisplay();
     wrap.appendChild(intent.el);
+
+    // Telegraph badge — shown when the NEXT intent has telegraphedFromPrevious
+    const tele = document.createElement("div");
+    tele.className = "intent-telegraph";
+    tele.style.display = "none";
+    wrap.appendChild(tele);
 
     const sprite = document.createElement("img");
     sprite.className = "combat-enemy-sprite";
@@ -159,13 +159,19 @@ function renderEnemies() {
     wrap.appendChild(statusRow.el);
 
     layoutEls.enemyArea.appendChild(wrap);
-    layoutEls.enemyEls.push({ wrap, intent, hpBar, blockInd, statusRow });
+    layoutEls.enemyEls.push({ wrap, intent, hpBar, blockInd, statusRow, tele });
   });
 }
 
 function refresh() {
   const c = gameState.combat;
   if (!c || !layoutEls) return;
+
+  layoutEls.runHud.update({
+    ...gameState.run,
+    hp: c.player.hp,
+    maxHp: c.player.maxHp,
+  });
 
   const ch = CHARACTERS.find((x) => x.id === c.player.character);
   if (ch) {
@@ -177,10 +183,13 @@ function refresh() {
   layoutEls.hpBar.update(c.player.hp, c.player.maxHp);
   layoutEls.blockInd.update(getStatus(c.player, STATUS.BLOCK));
   layoutEls.statusRow.update(c.player.statuses);
-  layoutEls.relicTray.update(gameState.run.relics);
   layoutEls.energyEl.textContent = `${c.energy}/${c.maxEnergy}`;
 
-  // Enemies
+  // Re-render enemies if the count changed (e.g., a summon happened)
+  if (layoutEls.enemyEls.length !== c.enemies.length) {
+    renderEnemies();
+  }
+
   c.enemies.forEach((enemy, i) => {
     const els = layoutEls.enemyEls[i];
     if (!els) return;
@@ -189,9 +198,19 @@ function refresh() {
     els.blockInd.update(getStatus(enemy, STATUS.BLOCK));
     els.statusRow.update(enemy.statuses);
     els.wrap.classList.toggle("dead", enemy.hp <= 0);
+    // Telegraph badge: peek next intent. If it's flagged telegraphedFromPrevious, render warning.
+    const nxt = peekNextIntent(enemy);
+    if (nxt && nxt.telegraphedFromPrevious) {
+      els.tele.style.display = "inline-block";
+      els.tele.textContent = `⚠ NEXT TURN: ${prettyIntent(nxt)}`;
+    } else {
+      els.tele.style.display = "none";
+    }
   });
 
-  // Hand
+  // Targeting reticle
+  applyReticleTo(layoutEls.enemyEls, c.targetIndex);
+
   layoutEls.handEl.innerHTML = "";
   c.piles.hand.forEach((inst, idx) => {
     const def = CARDS.find((d) => d.id === inst.cardId);
@@ -209,10 +228,17 @@ function refresh() {
     layoutEls.handEl.appendChild(card);
   });
 
-  // Pile counts
   layoutEls.pilesEl.querySelector('[data-pile="draw"]').textContent = String(c.piles.drawPile.length);
   layoutEls.pilesEl.querySelector('[data-pile="discard"]').textContent = String(c.piles.discardPile.length);
   layoutEls.pilesEl.querySelector('[data-pile="exhaust"]').textContent = String(c.piles.exhaustPile.length);
+}
+
+function prettyIntent(intent) {
+  if (intent.type === "attack" || intent.type === "attack_telegraphed") {
+    return `Atk ${intent.value}${intent.hits && intent.hits > 1 ? ` ×${intent.hits}` : ""}`;
+  }
+  if (intent.type === "block") return `Block ${intent.value}`;
+  return intent.label || intent.type;
 }
 
 function onCardTap(inst, cardEl) {
@@ -232,10 +258,15 @@ function onCardTap(inst, cardEl) {
     flashBanner("Not enough energy");
     return;
   }
-  // Auto-target first alive enemy
   const c = gameState.combat;
-  const aliveIdx = c.enemies.findIndex((e) => e.hp > 0);
-  const result = playCard(inst, aliveIdx >= 0 ? aliveIdx : 0);
+  // If single-target attack and current target is dead or not set, auto-pick leftmost alive.
+  if (needsTarget(inst)) {
+    if (!c.enemies[c.targetIndex] || c.enemies[c.targetIndex].hp <= 0) {
+      const idx = c.enemies.findIndex((e) => e.hp > 0);
+      if (idx >= 0) c.targetIndex = idx;
+    }
+  }
+  playCard(inst, c.targetIndex);
   refresh();
 }
 
@@ -253,10 +284,22 @@ function onListenerEvent(name, payload) {
   }
   if (name === "cardPlayed") refresh();
   if (name === "enemyIntent") refresh();
+  if (name === "enemySpawned") {
+    flashBanner(`${payload.enemy.name} joined the fight!`);
+    renderEnemies();
+    refresh();
+  }
+  if (name === "playerDiscardForced") {
+    flashBanner(`Discarded — ${payload.card.cardId.replace(/_/g, " ")}`);
+    refresh();
+  }
   if (name === "combatEnd") {
     setTimeout(() => {
-      if (payload.outcome === "victory") setScene("victory");
-      else setScene("gameOver");
+      if (payload.outcome === "victory") {
+        setScene("reward");
+      } else {
+        setScene("gameOver");
+      }
     }, 600);
   }
 }
@@ -265,9 +308,11 @@ export const combatScene = {
   mount(root) {
     layoutEls = buildLayout(root);
 
-    // Default v1 fight: one Aggressive Roomba.
     setCombatListener(onListenerEvent);
-    startCombat(["aggressive_roomba"]);
+
+    // Determine which enemy to fight: from map node's pendingEnemy, or default to roomba (legacy)
+    const enemyId = gameState.run.pendingEnemy || "aggressive_roomba";
+    startCombat([enemyId]);
     renderEnemies();
     refresh();
 

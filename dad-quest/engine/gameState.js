@@ -1,21 +1,36 @@
 // Canonical run state for Dad Quest.
-// One global object that scenes and combat read from / write to.
-// Phase 2: minimum needed for character select + a single combat.
-// Phase 3+ will add map/run progress fields here.
+// Phase 3 extends Phase 2 with multi-combat run state: act, position, completedNodes, map, combatsWon.
+//
+// Persistence rules (Phase 3):
+//   - HP carries between combats (not auto-healed).
+//   - Deck carries between combats (exhaust pile returns to deck after each combat).
+//   - Gold carries; spent at shops in Phase 4.
+//   - Relics carry; combat-start effects re-apply each combat.
+//   - Combat-scoped statuses (Strength, Yard Work, Caffeine, Citations, Block, Vulnerable, Weak)
+//     are stored on combatState.player / combatState.enemies and reset every combat.
+//   - HP at 0 = run ends (game over).
+//   - Defeating Act 3 boss = run wins (run-victory scene).
 
 import { CHARACTERS } from "../data/characters.js";
+import { generateAct } from "../procgen/mapGenerator.js";
 
 export const gameState = {
   run: {
-    character: null,        // "hank" | "doug" | "brenda"
+    character: null,
     hp: 0,
     maxHp: 0,
     gold: 0,
-    deck: [],               // array of card instances: { uuid, cardId }
-    relics: [],             // array of relic IDs the player owns
+    deck: [],
+    relics: [],
+    // Phase 3 additions:
+    act: 1,
+    position: null,            // current node ID, or null pre-entry
+    completedNodes: [],        // node IDs cleared
+    map: null,                 // current act's generated map
+    combatsWon: 0,             // total combats won this run
   },
-  combat: null,             // populated when entering combat, nulled on exit
-  scene: "boot",            // "boot" | "characterSelect" | "combat" | "victory" | "gameOver"
+  combat: null,
+  scene: "boot",
 };
 
 function makeCardInstance(cardId) {
@@ -30,14 +45,18 @@ export function startRun(characterId) {
   if (!ch) throw new Error(`Unknown character: ${characterId}`);
   gameState.run.character = ch.id;
   gameState.run.maxHp = ch.startingHP;
-  // Pocket Square: +5 max HP at the start
   if (ch.startingRelic === "pocket_square") {
-    gameState.run.maxHp += 5;
+    gameState.run.maxHp += 5; // Pocket Square +5 max HP at run start
   }
   gameState.run.hp = gameState.run.maxHp;
   gameState.run.gold = 0;
   gameState.run.deck = ch.starterDeck.map(makeCardInstance);
   gameState.run.relics = [ch.startingRelic];
+  gameState.run.act = 1;
+  gameState.run.position = null;
+  gameState.run.completedNodes = [];
+  gameState.run.map = generateAct(1);
+  gameState.run.combatsWon = 0;
   gameState.combat = null;
 }
 
@@ -48,5 +67,40 @@ export function endRun() {
   gameState.run.gold = 0;
   gameState.run.deck = [];
   gameState.run.relics = [];
+  gameState.run.act = 1;
+  gameState.run.position = null;
+  gameState.run.completedNodes = [];
+  gameState.run.map = null;
+  gameState.run.combatsWon = 0;
   gameState.combat = null;
+}
+
+// Called after a boss is defeated. If we just beat the Act 3 boss, the caller
+// should route to runVictory; otherwise we generate the next act's map.
+// Returns "runVictory" | "newAct" so the caller can decide the scene.
+export function advanceAct() {
+  if (gameState.run.act >= 3) {
+    return "runVictory";
+  }
+  gameState.run.act += 1;
+  gameState.run.position = null;
+  gameState.run.completedNodes = [];
+  gameState.run.map = generateAct(gameState.run.act);
+  return "newAct";
+}
+
+// Add a card to the run deck (used by reward scene).
+export function addCardToDeck(cardId) {
+  gameState.run.deck.push(makeCardInstance(cardId));
+}
+
+// Mark the current node completed and clear position so that — for nodes
+// whose travel has already advanced position — the map shows the right state.
+// Called after combat win or rest taken.
+export function markCurrentNodeCompleted() {
+  const id = gameState.run.position;
+  if (!id) return;
+  if (!gameState.run.completedNodes.includes(id)) {
+    gameState.run.completedNodes.push(id);
+  }
 }

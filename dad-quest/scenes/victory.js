@@ -1,6 +1,7 @@
-// Victory scene. Shown after the player wins a combat.
-// Phase 2: just a confirmation + "Return to Character Select" button.
-// Phase 3 will replace this with the pick-1-of-3-card reward flow.
+// Per-combat victory scene — Phase 2 only.
+// Phase 3 routes combat wins through scenes/reward.js instead, then map → next combat.
+// scenes/runVictory.js is the post-Act-3-boss "you won the run" scene.
+// This file stays registered as a fallback in case any code path still calls setScene("victory").
 
 import { setScene } from "../engine/sceneManager.js";
 import { endRun, gameState } from "../engine/gameState.js";

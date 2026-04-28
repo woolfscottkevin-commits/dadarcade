@@ -11,8 +11,12 @@ let currentScene = null;
 const SCENE_ROOT_IDS = {
   boot: "boot",
   characterSelect: "app-character-select",
+  map: "app-map",
   combat: "app-combat",
+  reward: "app-reward",
+  rest: "app-rest",
   victory: "app-victory",
+  runVictory: "app-run-victory",
   gameOver: "app-game-over",
 };
 
