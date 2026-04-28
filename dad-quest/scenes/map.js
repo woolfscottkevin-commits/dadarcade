@@ -6,6 +6,8 @@ import { gameState } from "../engine/gameState.js";
 import { setScene } from "../engine/sceneManager.js";
 import { reachableNodeIds, findNode } from "../procgen/mapGenerator.js";
 import { ENEMIES } from "../data/enemies.js";
+import { CHARACTERS } from "../data/characters.js";
+import { getAsset } from "../assets/assetLoader.js";
 import { renderMapNode } from "../ui/mapNode.js";
 import { renderEdges } from "../ui/edgeRenderer.js";
 import { createRunHud } from "../ui/runHud.js";
@@ -13,6 +15,21 @@ import { createRunHud } from "../ui/runHud.js";
 let pending = null; // { node }
 let runHud = null;
 let resizeListener = null;
+
+function createPlayerMarker() {
+  const ch = CHARACTERS.find((c) => c.id === gameState.run.character);
+  const marker = document.createElement("div");
+  marker.className = "map-player-marker";
+  marker.setAttribute("aria-label", ch ? `${ch.name} position` : "Player position");
+  if (ch) {
+    const img = document.createElement("img");
+    const cached = getAsset(ch.portrait);
+    img.src = cached ? cached.src : ch.portrait;
+    img.alt = "";
+    marker.appendChild(img);
+  }
+  return marker;
+}
 
 function enemyName(id) {
   if (!id) return "";
@@ -58,9 +75,20 @@ function build(root) {
       else if (gameState.run.position === node.id) state = "current";
       else if (reachable.has(node.id)) state = "reachable";
       const el = renderMapNode(node, state, { onTap: onNodeTap });
+      if (gameState.run.position === node.id) {
+        el.classList.add("map-node-has-player");
+        el.appendChild(createPlayerMarker());
+      }
       rowEl.appendChild(el);
     }
     grid.appendChild(rowEl);
+  }
+
+  if (!gameState.run.position) {
+    const entry = document.createElement("div");
+    entry.className = "map-entry-row";
+    entry.appendChild(createPlayerMarker());
+    grid.appendChild(entry);
   }
 
   mapBox.appendChild(grid);

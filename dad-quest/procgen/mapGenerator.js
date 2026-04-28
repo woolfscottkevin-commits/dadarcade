@@ -9,7 +9,7 @@
 //   {
 //     act: 1,
 //     rows: [ /* rows 1..6 */
-//       [ { id: "1-0", row: 1, col: 0, type, enemy?, outgoing: [nodeIds] }, ... ],
+//       [ { id: "1-0", row: 1, col: 0, type, enemy?, outgoing: [nodeIds], visited: false }, ... ],
 //       ...
 //       [ { id: "6-0", row: 6, col: 0, type: "boss", enemy: "ultimate_hoa_president", outgoing: [] } ]
 //     ]
@@ -176,6 +176,7 @@ export function generateAct(actNumber) {
         type: r === 1 ? "combat" : null, // row 1 forced
         enemy: null,
         outgoing: [],
+        visited: false,
       });
     }
   }
@@ -185,6 +186,7 @@ export function generateAct(actNumber) {
     type: "boss",
     enemy: "ultimate_hoa_president",
     outgoing: [],
+    visited: false,
   }];
 
   // 2. Assign types for rows 2..5 with the elite-not-adjacent constraint
