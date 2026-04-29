@@ -755,29 +755,44 @@ function onCardTap(inst, cardEl) {
       if (idx >= 0) c.targetIndex = idx;
     }
   }
-  // Snapshot player self-buff statuses so we can attribute Block / Strength /
-  // resource gains to the card that produced them in the on-screen ledger.
-  const selfBefore = snapshotSelfStatuses(c.player.statuses);
+  // Snapshot player self-buff statuses + every enemy's debuff statuses so we
+  // can attribute Block / Strength / Weak / Vuln / Citation gains to the card
+  // that produced them. The engine doesn't fire per-status notifies, so we
+  // diff the bag before and after the card resolves.
+  const selfBefore = snapshotStatusBag(c.player.statuses, SELF_TRACKED);
+  const enemiesBefore = c.enemies.map((e) => ({
+    name: e.name,
+    statuses: snapshotStatusBag(e.statuses, ENEMY_TRACKED),
+  }));
   playCard(inst, c.targetIndex);
   playSfx("card");
-  const selfAfter = snapshotSelfStatuses(c.player.statuses);
-  for (const { key, delta } of diffSelfStatuses(selfBefore, selfAfter)) {
+  const selfAfter = snapshotStatusBag(c.player.statuses, SELF_TRACKED);
+  for (const { key, delta } of diffStatusBag(selfBefore, selfAfter, SELF_TRACKED)) {
     pushPlayerEvent(`+${delta} ${STATUS_SHORT[key] || key} (from ${def.name})`);
   }
+  c.enemies.forEach((e, i) => {
+    const before = enemiesBefore[i]?.statuses;
+    if (!before) return;
+    const after = snapshotStatusBag(e.statuses, ENEMY_TRACKED);
+    for (const { key, delta } of diffStatusBag(before, after, ENEMY_TRACKED)) {
+      pushEnemyEvent(`+${delta} ${STATUS_SHORT[key] || key} (from your ${def.name})`, e.name);
+    }
+  });
   refresh();
 }
 
 const SELF_TRACKED = ["block", "strength", "yard_work", "caffeine"];
+const ENEMY_TRACKED = ["vulnerable", "weak", "citation", "strength", "block"];
 
-function snapshotSelfStatuses(statuses) {
+function snapshotStatusBag(statuses, keys) {
   const out = {};
-  for (const k of SELF_TRACKED) out[k] = statuses?.[k] || 0;
+  for (const k of keys) out[k] = statuses?.[k] || 0;
   return out;
 }
 
-function diffSelfStatuses(before, after) {
+function diffStatusBag(before, after, keys) {
   const diffs = [];
-  for (const k of SELF_TRACKED) {
+  for (const k of keys) {
     const delta = (after[k] || 0) - (before[k] || 0);
     if (delta > 0) diffs.push({ key: k, delta });
   }
