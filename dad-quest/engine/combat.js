@@ -573,11 +573,13 @@ function resolveEnemyIntent(enemy) {
         notify("playerHit", { enemy, result });
       }
       if (intent.modifier === "draw_minus" && c.player.hp > 0) {
+        const amount = intent.amount || 2;
         c.player.nextTurnModifiers.push({
           type: "draw_minus",
-          amount: intent.amount || 2,
+          amount,
           duration: (intent.duration || 1) + 1, // +1 because we tick it down at next turn start
         });
+        notify("playerDistracted", { amount, label: intent.label || "Pop Quiz" });
       }
       break;
     }

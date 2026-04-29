@@ -243,7 +243,7 @@ function refresh() {
   }
   layoutEls.hpBar.update(c.player.hp, c.player.maxHp);
   layoutEls.blockInd.update(getStatus(c.player, STATUS.BLOCK));
-  layoutEls.statusRow.update(c.player.statuses);
+  layoutEls.statusRow.update(c.player.statuses, c.player.nextTurnModifiers);
   layoutEls.energyEl.textContent = `${c.energy}/${c.maxEnergy}`;
 
   const yardWork = getStatus(c.player, STATUS.YARD_WORK);
@@ -363,6 +363,10 @@ function onListenerEvent(name, payload) {
   }
   if (name === "playerDiscardForced") {
     flashBanner(`Discarded — ${payload.card.cardId.replace(/_/g, " ")}`);
+    refresh();
+  }
+  if (name === "playerDistracted") {
+    flashBanner(`${payload.label}! −${payload.amount} cards next turn`, "var(--punchy-red)");
     refresh();
   }
   if (name === "combatEnd") {
