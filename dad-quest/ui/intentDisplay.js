@@ -30,6 +30,10 @@ function categoryClass(type) {
   return "";
 }
 
+export function describeIntent(intent) {
+  return renderText(intent);
+}
+
 function renderText(intent) {
   switch (intent.type) {
     case "attack":

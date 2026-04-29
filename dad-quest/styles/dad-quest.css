@@ -380,6 +380,70 @@ body {
   min-width: 32px; text-align: center;
 }
 
+.combat-log-btn {
+  margin-left: 0.4rem;
+  background: var(--cream); color: var(--coffee-brown);
+  border: 2px solid var(--coffee-brown); border-radius: 999px;
+  padding: 0.18rem 0.65rem; font-weight: 800; font-size: 0.78rem;
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+}
+.combat-log-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+
+.combat-log-modal {
+  position: fixed; inset: 0; z-index: 70;
+  display: grid; place-items: center;
+  padding: 16px; background: rgba(23, 31, 42, 0.62);
+}
+.combat-log-modal[hidden] { display: none; }
+.combat-log-card {
+  position: relative;
+  background: var(--cream);
+  border: 3px solid var(--coffee-brown);
+  border-radius: 16px;
+  width: min(92vw, 480px);
+  max-height: 80vh;
+  display: flex; flex-direction: column;
+  padding: 1rem 1rem 0.9rem;
+  box-shadow: 0 10px 0 rgba(0,0,0,0.25);
+}
+.combat-log-card h2 {
+  font-size: 1.15rem; color: var(--sunset-orange); font-weight: 900;
+  margin-bottom: 0.6rem; text-align: center;
+}
+.combat-log-close {
+  position: absolute; top: 0.4rem; right: 0.55rem;
+  width: 32px; height: 32px;
+  border-radius: 999px;
+  background: var(--cream); color: var(--coffee-brown);
+  border: 2px solid var(--coffee-brown);
+  font-size: 1.1rem; font-weight: 900; line-height: 1;
+}
+.combat-log-list {
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding-right: 0.2rem;
+  min-height: 60px;
+}
+.combat-log-turn {
+  font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--coffee-brown); opacity: 0.6;
+  text-transform: uppercase;
+  margin-top: 0.45rem;
+}
+.combat-log-turn:first-child { margin-top: 0; }
+.combat-log-row {
+  font-size: 0.88rem; line-height: 1.35;
+  color: var(--coffee-brown);
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+}
+.combat-log-row.combat-log-player { border-left-color: var(--lawn-green); background: rgba(124,179,66,0.08); }
+.combat-log-row.combat-log-enemy  { border-left-color: var(--punchy-red); background: rgba(229,57,53,0.08); }
+.combat-log-row.combat-log-system { border-left-color: var(--deep-navy); background: rgba(26,35,126,0.06); font-style: italic; }
+.combat-log-empty { color: var(--coffee-brown); opacity: 0.7; text-align: center; padding: 0.8rem 0; }
+
 .combat-banner {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);

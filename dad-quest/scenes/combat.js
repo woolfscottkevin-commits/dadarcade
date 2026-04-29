@@ -24,7 +24,7 @@ import { renderCard } from "../ui/cardFrame.js";
 import { createHealthBar } from "../ui/healthBar.js";
 import { createBlockIndicator } from "../ui/blockIndicator.js";
 import { createStatusRow } from "../ui/statusIcons.js";
-import { createIntentDisplay } from "../ui/intentDisplay.js";
+import { createIntentDisplay, describeIntent } from "../ui/intentDisplay.js";
 import { createRunHud } from "../ui/runHud.js";
 import { applyReticleTo } from "../ui/targetingReticle.js";
 import { playSfx } from "../ui/sfx.js";
@@ -33,6 +33,14 @@ let layoutEls = null;
 let onKey = null;
 let lastYardWork = null;
 let yardWorkCoachOpen = false;
+
+// Combat narration: a per-fight log + a paced banner queue so the player can
+// see *who did what* during the enemy turn instead of one silent burst.
+let combatLog = [];
+let bannerQueue = [];
+let bannerTimer = null;
+let pendingFinish = null;
+const BEAT_MS = 700;
 
 const YARD_WORK_COACH_KEY = "dadQuest.coach.yardWork.v2";
 
@@ -93,7 +101,24 @@ function buildLayout(root) {
   const pilesEl = document.createElement("div");
   pilesEl.className = "combat-piles";
   pilesEl.innerHTML = `<span class="pile-label">Draw</span><span class="pile-num" data-pile="draw">0</span><span class="pile-label">Discard</span><span class="pile-num" data-pile="discard">0</span><span class="pile-label">Exhaust</span><span class="pile-num" data-pile="exhaust">0</span>`;
+  const logBtn = document.createElement("button");
+  logBtn.type = "button";
+  logBtn.className = "combat-log-btn";
+  logBtn.setAttribute("aria-label", "Open combat log");
+  logBtn.innerHTML = `<span aria-hidden="true">📜</span> Log`;
+  pilesEl.appendChild(logBtn);
   stage.appendChild(pilesEl);
+
+  const logModal = document.createElement("div");
+  logModal.className = "combat-log-modal";
+  logModal.hidden = true;
+  logModal.innerHTML = `
+    <div class="combat-log-card">
+      <button type="button" class="combat-log-close" aria-label="Close">×</button>
+      <h2>Combat Log</h2>
+      <div class="combat-log-list" role="log"></div>
+    </div>`;
+  stage.appendChild(logModal);
 
   const banner = document.createElement("div");
   banner.className = "combat-banner";
@@ -136,7 +161,7 @@ function buildLayout(root) {
 
   return {
     stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
-    energyEl, endBtn, handEl, pilesEl, banner, tutorial, mechanicCoach,
+    energyEl, endBtn, handEl, pilesEl, logBtn, logModal, banner, tutorial, mechanicCoach,
     enemyEls: [],
   };
 }
@@ -149,6 +174,88 @@ function flashBanner(text, color) {
   b.style.opacity = "1";
   clearTimeout(b._t);
   b._t = setTimeout(() => { b.style.opacity = "0"; }, 1100);
+}
+
+function resetCombatNarration() {
+  combatLog = [];
+  bannerQueue = [];
+  if (bannerTimer) { clearTimeout(bannerTimer); bannerTimer = null; }
+  pendingFinish = null;
+}
+
+function logEntry(side, text) {
+  combatLog.push({ side, text, turn: gameState.combat?.turn ?? 0 });
+  if (combatLog.length > 200) combatLog.shift();
+}
+
+function queueBanner(text, color) {
+  bannerQueue.push({ text, color });
+  if (!bannerTimer) drainBanners();
+}
+
+function drainBanners() {
+  if (!bannerQueue.length) {
+    bannerTimer = null;
+    if (pendingFinish) {
+      const f = pendingFinish;
+      pendingFinish = null;
+      setTimeout(f, 250);
+    }
+    return;
+  }
+  const { text, color } = bannerQueue.shift();
+  flashBanner(text, color);
+  bannerTimer = setTimeout(drainBanners, BEAT_MS);
+}
+
+function intentColor(type) {
+  if (type === "attack" || type === "attack_telegraphed" || type === "attack_with_status" ||
+      type === "attack_and_disrupt" || type === "attack_with_modifier" || type === "aoe_attack") {
+    return "var(--punchy-red)";
+  }
+  if (type === "block" || type === "block_and_status") return "var(--sky-blue)";
+  if (type === "self_buff" || type === "heal_and_buff") return "var(--lawn-green)";
+  if (type === "apply_status" || type === "apply_status_aoe_to_player") return "var(--deep-navy)";
+  return null;
+}
+
+function renderCombatLog() {
+  if (!layoutEls) return;
+  const list = layoutEls.logModal.querySelector(".combat-log-list");
+  list.innerHTML = "";
+  if (!combatLog.length) {
+    const empty = document.createElement("p");
+    empty.className = "combat-log-empty";
+    empty.textContent = "Nothing's happened yet. Play a card or end your turn.";
+    list.appendChild(empty);
+    return;
+  }
+  let lastTurn = null;
+  for (const entry of combatLog) {
+    if (entry.turn !== lastTurn) {
+      const hdr = document.createElement("div");
+      hdr.className = "combat-log-turn";
+      hdr.textContent = `Turn ${entry.turn}`;
+      list.appendChild(hdr);
+      lastTurn = entry.turn;
+    }
+    const row = document.createElement("div");
+    row.className = `combat-log-row combat-log-${entry.side}`;
+    row.textContent = entry.text;
+    list.appendChild(row);
+  }
+  list.scrollTop = list.scrollHeight;
+}
+
+function openCombatLog() {
+  if (!layoutEls) return;
+  renderCombatLog();
+  layoutEls.logModal.hidden = false;
+}
+
+function closeCombatLog() {
+  if (!layoutEls) return;
+  layoutEls.logModal.hidden = true;
 }
 
 function closeYardWorkCoach() {
@@ -343,41 +450,70 @@ function onCardTap(inst, cardEl) {
 
 function onListenerEvent(name, payload) {
   if (!layoutEls) return;
-  if (name === "turnStart") refresh();
+  if (name === "turnStart") {
+    if (payload.turn > 1) logEntry("system", `— Turn ${payload.turn} —`);
+    refresh();
+  }
   if (name === "playerHit") {
     playSfx("hit");
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
+    const r = payload.result || {};
+    const hp = r.hpLost || 0;
+    const blocked = r.blockLost || 0;
+    const detail = blocked > 0 ? ` (blocked ${blocked})` : "";
+    logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${detail}`);
     refresh();
   }
   if (name === "jittersTax") {
-    flashBanner(`Jitters! −${payload.amount}`);
+    queueBanner(`Jitters! −${payload.amount}`);
+    logEntry("system", `Jitters tax: −${payload.amount} HP`);
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
     refresh();
   }
-  if (name === "cardPlayed") refresh();
-  if (name === "enemyIntent") refresh();
+  if (name === "cardPlayed") {
+    const cardName = payload.def?.name || payload.cardInst?.cardId || "card";
+    logEntry("player", `You played ${cardName}`);
+    refresh();
+  }
+  if (name === "enemyIntent") {
+    const summary = `${payload.enemy.name} — ${describeIntent(payload.intent)}`;
+    queueBanner(summary, intentColor(payload.intent.type));
+    logEntry("enemy", summary);
+    refresh();
+  }
   if (name === "enemySpawned") {
-    flashBanner(`${payload.enemy.name} joined the fight!`);
+    queueBanner(`${payload.enemy.name} joined the fight!`);
+    logEntry("system", `${payload.enemy.name} joined the fight`);
     renderEnemies();
     refresh();
   }
+  if (name === "enemyHit") {
+    const tname = payload.target?.name || "enemy";
+    logEntry("enemy", `${tname} took ${payload.amount} (friendly fire)`);
+  }
   if (name === "playerDiscardForced") {
-    flashBanner(`Discarded — ${payload.card.cardId.replace(/_/g, " ")}`);
+    const cardName = payload.card?.cardId ? payload.card.cardId.replace(/_/g, " ") : "a card";
+    queueBanner(`Discarded — ${cardName}`);
+    logEntry("enemy", `Forced you to discard ${cardName}`);
     refresh();
   }
   if (name === "playerDistracted") {
-    flashBanner(`${payload.label}! −${payload.amount} cards next turn`, "var(--punchy-red)");
+    queueBanner(`${payload.label}! −${payload.amount} cards next turn`, "var(--punchy-red)");
+    logEntry("enemy", `${payload.label}: −${payload.amount} cards next turn`);
     refresh();
   }
   if (name === "combatEnd") {
     playSfx(payload.outcome === "victory" ? "victory" : "defeat");
-    setTimeout(() => {
-      if (payload.outcome === "victory") {
-        setScene("reward");
-      } else {
-        setScene("gameOver");
-      }
-    }, 600);
+    logEntry("system", payload.outcome === "victory" ? "Victory" : "Defeat");
+    const finish = () => {
+      if (payload.outcome === "victory") setScene("reward");
+      else setScene("gameOver");
+    };
+    if (bannerQueue.length || bannerTimer) {
+      pendingFinish = finish;
+    } else {
+      setTimeout(finish, 600);
+    }
   }
 }
 
@@ -386,6 +522,7 @@ export const combatScene = {
     layoutEls = buildLayout(root);
     lastYardWork = null;
     yardWorkCoachOpen = false;
+    resetCombatNarration();
 
     setCombatListener(onListenerEvent);
 
@@ -418,6 +555,12 @@ export const combatScene = {
       refresh();
     });
 
+    layoutEls.logBtn.addEventListener("click", openCombatLog);
+    layoutEls.logModal.querySelector(".combat-log-close").addEventListener("click", closeCombatLog);
+    layoutEls.logModal.addEventListener("click", (e) => {
+      if (e.target === layoutEls.logModal) closeCombatLog();
+    });
+
     onKey = (e) => {
       if (gameState.scene !== "combat") return;
       if (e.key >= "1" && e.key <= "9") {
@@ -440,6 +583,8 @@ export const combatScene = {
       window.removeEventListener("keydown", onKey);
       onKey = null;
     }
+    if (bannerTimer) { clearTimeout(bannerTimer); bannerTimer = null; }
+    pendingFinish = null;
     layoutEls = null;
     lastYardWork = null;
     yardWorkCoachOpen = false;
