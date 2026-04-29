@@ -13,24 +13,52 @@ let selectedId = null;
 let beginBtn = null;
 let modalEl = null;
 
-function deckSummary(starterDeck) {
+// Skimmer-friendly per-character copy. The data file holds the canonical
+// vibe/archetype; this map adds the at-a-glance pitch + difficulty + the
+// character-specific short version of their starter relic effect.
+const SELECT_COPY = {
+  hank: {
+    pitch: "Stack Yard Work, then unleash big damage.",
+    vibeShort: "Weekend warrior in cargo shorts; slow-burn power.",
+    difficulty: "Easy",
+    resourceLabel: "Yard Work",
+    relicShort: "+1 Yard Work whenever you'd gain it",
+  },
+  doug: {
+    pitch: "Drink coffee. Get strong. Don't blow up.",
+    vibeShort: "Corporate jargon as combat; fueled by caffeine.",
+    difficulty: "Risk / Reward",
+    resourceLabel: "Caffeine",
+    relicShort: "Start each combat with 2 Caffeine",
+  },
+  brenda: {
+    pitch: "Cite enemies. Damage scales with paperwork.",
+    vibeShort: "Weaponized bureaucracy; status-effect specialist.",
+    difficulty: "Combo",
+    resourceLabel: "Citations",
+    relicShort: "+5 max HP, +1 per non-elite combat won",
+  },
+};
+
+// Split the starter deck into "basic" (Strike, Defend) and "signature"
+// (everything else — the cards that actually define the character).
+function splitDeck(starterDeck) {
   const counts = new Map();
   for (const id of starterDeck) counts.set(id, (counts.get(id) || 0) + 1);
-  const parts = [];
+  const basics = [];
+  const signature = [];
   for (const [id, n] of counts.entries()) {
     const def = CARDS.find((c) => c.id === id);
     if (!def) continue;
-    parts.push(n > 1 ? `${def.name} ×${n}` : def.name);
+    const isBasic = id.startsWith("strike_") || id.startsWith("defend_");
+    const label = n > 1 ? `${n}× ${def.name}` : def.name;
+    (isBasic ? basics : signature).push(label);
   }
-  return parts;
-}
-
-function relicSummary(id) {
-  const r = RELICS.find((x) => x.id === id);
-  return r ? `${r.name} — ${r.description}` : id;
+  return { basics, signature };
 }
 
 function renderCard(c) {
+  const copy = SELECT_COPY[c.id] || {};
   const card = document.createElement("button");
   card.type = "button";
   card.className = "select-card";
@@ -45,30 +73,65 @@ function renderCard(c) {
   const body = document.createElement("div");
   body.className = "select-body";
 
-  const name = document.createElement("div");
-  name.className = "select-name";
-  name.textContent = `${c.name} — ${c.archetype}`;
-  body.appendChild(name);
+  // Name (existing) — also include the archetype as a subline so the bold
+  // playstyle pitch can lead the body without competing with the name.
+  const heading = document.createElement("div");
+  heading.className = "select-heading";
+  heading.innerHTML = `<span class="select-name">${c.name}</span><span class="select-archetype">${c.archetype}</span>`;
+  body.appendChild(heading);
 
-  const stats = document.createElement("div");
-  stats.className = "select-stats";
-  stats.textContent = `HP ${c.startingHP} · ${c.signatureMechanic.replace("_", " ")}`;
-  body.appendChild(stats);
+  // The pitch — top-level skim line. The single most important sentence on the card.
+  if (copy.pitch) {
+    const pitch = document.createElement("div");
+    pitch.className = "select-pitch";
+    pitch.textContent = copy.pitch;
+    body.appendChild(pitch);
+  }
 
-  const vibe = document.createElement("div");
-  vibe.className = "select-vibe";
-  vibe.textContent = c.vibe;
-  body.appendChild(vibe);
+  // Chip row: HP · Resource · Difficulty
+  const chips = document.createElement("div");
+  chips.className = "select-chips";
+  chips.appendChild(makeChip(`${c.startingHP} HP`, "chip-hp"));
+  chips.appendChild(makeChip(copy.resourceLabel || c.signatureMechanic.replace("_", " "), "chip-resource"));
+  if (copy.difficulty) chips.appendChild(makeChip(copy.difficulty, "chip-difficulty"));
+  body.appendChild(chips);
 
-  const relicLine = document.createElement("div");
-  relicLine.className = "select-relic";
-  relicLine.textContent = `Starter relic: ${relicSummary(c.startingRelic)}`;
-  body.appendChild(relicLine);
+  // Trimmed vibe — single short flavor line, de-emphasized.
+  if (copy.vibeShort) {
+    const vibe = document.createElement("div");
+    vibe.className = "select-vibe";
+    vibe.textContent = copy.vibeShort;
+    body.appendChild(vibe);
+  }
 
-  const deckLine = document.createElement("div");
-  deckLine.className = "select-deck";
-  deckLine.textContent = `Starter deck: ${deckSummary(c.starterDeck).join(", ")}`;
-  body.appendChild(deckLine);
+  // Kit divider — visually separates flavor/at-a-glance from mechanical loadout.
+  const divider = document.createElement("div");
+  divider.className = "select-divider";
+  body.appendChild(divider);
+
+  // Relic — icon + name (bold) + short effect (one line).
+  const relicDef = RELICS.find((r) => r.id === c.startingRelic);
+  const relic = document.createElement("div");
+  relic.className = "select-relic";
+  relic.innerHTML = `
+    <span class="select-row-icon" aria-hidden="true">🎁</span>
+    <span class="select-row-text">
+      <strong>${relicDef ? relicDef.name : c.startingRelic}</strong>
+      <span class="select-row-detail">${copy.relicShort || (relicDef ? relicDef.description : "")}</span>
+    </span>`;
+  body.appendChild(relic);
+
+  // Deck — basics dimmed, signature cards highlighted.
+  const { basics, signature } = splitDeck(c.starterDeck);
+  const deck = document.createElement("div");
+  deck.className = "select-deck";
+  deck.innerHTML = `
+    <span class="select-row-icon" aria-hidden="true">🃏</span>
+    <span class="select-row-text">
+      <span class="select-deck-basics">${basics.join(" · ")}</span>
+      ${signature.length ? `<span class="select-deck-signature">${signature.join(" · ")}</span>` : ""}
+    </span>`;
+  body.appendChild(deck);
 
   card.appendChild(body);
 
@@ -79,6 +142,13 @@ function renderCard(c) {
   });
 
   return card;
+}
+
+function makeChip(text, modClass) {
+  const el = document.createElement("span");
+  el.className = `select-chip ${modClass || ""}`.trim();
+  el.textContent = text;
+  return el;
 }
 
 export const characterSelectScene = {
