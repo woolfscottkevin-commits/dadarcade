@@ -397,6 +397,38 @@ body {
   min-width: 32px; text-align: center;
 }
 
+.combat-damage-feed {
+  align-self: stretch;
+  width: min(100%, 720px);
+  margin: 0.35rem auto 0;
+  padding: 0.35rem 0.45rem;
+  background: rgba(255, 243, 224, 0.6);
+  border: 2px solid var(--coffee-brown);
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  gap: 0.18rem;
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 0.78rem;
+  color: var(--coffee-brown);
+  max-height: 7.6rem;
+  overflow-y: auto;
+}
+.combat-damage-feed-empty {
+  opacity: 0.55; font-style: italic; text-align: center;
+}
+.combat-damage-row {
+  padding: 0.16rem 0.5rem;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  background: rgba(255,255,255,0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combat-damage-row--out { border-left-color: var(--lawn-green); color: var(--deep-navy); }
+.combat-damage-row--in  { border-left-color: var(--punchy-red); }
+.combat-damage-row--latest { background: rgba(251, 140, 0, 0.18); font-weight: 700; }
+
 .combat-log-btn {
   margin-left: 0.4rem;
   background: var(--cream); color: var(--coffee-brown);

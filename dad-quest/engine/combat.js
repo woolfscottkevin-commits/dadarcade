@@ -676,6 +676,7 @@ function makeCtx(extra) {
   return Object.assign({
     combat: gameState.combat,
     targetIndex: gameState.combat.targetIndex,
+    notify, // expose engine-level notify so executors can emit damage events
   }, extra || {});
 }
 

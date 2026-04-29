@@ -273,7 +273,7 @@ function dealDamage(amount, ctx) {
   const player = ctx.combat.player;
   const total = amount + pettyTyrantBonus(ctx);
   const result = resolveDamage(player, tgt, total);
-  noteDamageDealt(ctx, tgt, result);
+  noteDamageDealt(ctx, tgt, result, total);
 }
 
 function dealDamageAll(amount, ctx) {
@@ -281,7 +281,7 @@ function dealDamageAll(amount, ctx) {
   for (const e of ctx.combat.enemies) {
     if (e.hp <= 0) continue;
     const result = resolveDamage(ctx.combat.player, e, total);
-    noteDamageDealt(ctx, e, result);
+    noteDamageDealt(ctx, e, result, total);
   }
 }
 
@@ -292,13 +292,14 @@ function dealDamageRandom(amount, hits, ctx) {
     if (alive.length === 0) return;
     const pick = alive[Math.floor(Math.random() * alive.length)];
     const result = resolveDamage(ctx.combat.player, pick, total);
-    noteDamageDealt(ctx, pick, result);
+    noteDamageDealt(ctx, pick, result, total);
   }
 }
 
-function noteDamageDealt(_ctx, _target, _result) {
-  // Phase 2: hook for FX layer / "on damage to enemy" passives.
-  // No-op here; combat scene reads HP directly.
+function noteDamageDealt(ctx, target, result, base) {
+  if (ctx?.notify) {
+    ctx.notify("playerDamageDealt", { target, result, base });
+  }
 }
 
 function isDebuff(status) {

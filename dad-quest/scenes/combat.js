@@ -43,8 +43,10 @@ let currentBanner = null; // the entry currently shown on the banner element
 let actionBuffer = null;  // accumulator while an enemy action is in flight
 let pendingFinish = null;
 let bannerEnabledAt = 0;  // earliest Date.now() at which the current banner accepts taps
+let damageFeedEntries = []; // [{ direction: "out"|"in", text: string }]
 
 const MIN_READ_MS = 1000;
+const DAMAGE_FEED_MAX = 6;
 
 const STATUS_EXPLAIN = {
   vulnerable: "Take 50% more attack damage while active.",
@@ -110,6 +112,12 @@ function buildLayout(root) {
   playerBlock.appendChild(ctrls);
 
   stage.appendChild(playerBlock);
+
+  const damageFeed = document.createElement("div");
+  damageFeed.className = "combat-damage-feed";
+  damageFeed.setAttribute("aria-label", "On-screen damage log");
+  damageFeed.innerHTML = `<div class="combat-damage-feed-empty">No hits yet this fight.</div>`;
+  stage.appendChild(damageFeed);
 
   const handEl = document.createElement("div");
   handEl.className = "combat-hand";
@@ -178,7 +186,7 @@ function buildLayout(root) {
 
   return {
     stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
-    energyEl, endBtn, handEl, pilesEl, logBtn, logModal, banner, tutorial, mechanicCoach,
+    energyEl, endBtn, handEl, pilesEl, logBtn, logModal, damageFeed, banner, tutorial, mechanicCoach,
     enemyEls: [],
   };
 }
@@ -204,10 +212,52 @@ function resetCombatNarration() {
   currentBanner = null;
   actionBuffer = null;
   pendingFinish = null;
+  damageFeedEntries = [];
   if (layoutEls?.banner) {
     layoutEls.banner.style.opacity = "0";
     layoutEls.banner.classList.remove("combat-banner--narration");
   }
+  renderDamageFeed();
+}
+
+function pushDamageFeed(direction, parts) {
+  damageFeedEntries.push({ direction, text: parts });
+  if (damageFeedEntries.length > DAMAGE_FEED_MAX) damageFeedEntries.shift();
+  renderDamageFeed();
+}
+
+function renderDamageFeed() {
+  if (!layoutEls?.damageFeed) return;
+  const el = layoutEls.damageFeed;
+  if (!damageFeedEntries.length) {
+    el.innerHTML = `<div class="combat-damage-feed-empty">No hits yet this fight.</div>`;
+    return;
+  }
+  el.innerHTML = "";
+  for (let i = 0; i < damageFeedEntries.length; i++) {
+    const entry = damageFeedEntries[i];
+    const row = document.createElement("div");
+    row.className = `combat-damage-row combat-damage-row--${entry.direction}`;
+    if (i === damageFeedEntries.length - 1) row.classList.add("combat-damage-row--latest");
+    row.textContent = entry.text;
+    el.appendChild(row);
+  }
+  el.scrollTop = el.scrollHeight;
+}
+
+function damageMathSuffix(base, finalDamage, attacker, defender) {
+  if (base == null) return "";
+  const parts = [];
+  const atkStr = attacker?.statuses?.strength || 0;
+  const atkWeak = attacker?.statuses?.weak || 0;
+  const defVuln = defender?.statuses?.vulnerable || 0;
+  if (atkStr > 0) parts.push(`+${atkStr} Str`);
+  if (atkWeak > 0) parts.push(`Weak −25%`);
+  if (defVuln > 0) parts.push(`Vuln +50%`);
+  if (finalDamage !== base || parts.length) {
+    return ` [${base}→${finalDamage}${parts.length ? ` ${parts.join(", ")}` : ""}]`;
+  }
+  return "";
 }
 
 function logEntry(side, text) {
@@ -604,9 +654,24 @@ function onListenerEvent(name, payload) {
     const r = payload.result || {};
     const hp = r.hpLost || 0;
     const blocked = r.blockLost || 0;
+    const final = r.finalDamage || 0;
     const intentValue = actionBuffer?._intentValue ?? null;
     recordHit(intentValue, r, payload.enemy);
     logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
+    const math = damageMathSuffix(intentValue, final, payload.enemy, gameState.combat?.player);
+    pushDamageFeed("in", `${payload.enemy.name} → You · took ${hp}${blocked > 0 ? `, blocked ${blocked}` : ""}${math}`);
+    refresh();
+  }
+  if (name === "playerDamageDealt") {
+    const r = payload.result || {};
+    const hp = r.hpLost || 0;
+    const blocked = r.blockLost || 0;
+    const final = r.finalDamage || 0;
+    const base = payload.base ?? 0;
+    const tname = payload.target?.name || "enemy";
+    logEntry("player", `You hit ${tname} for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
+    const math = damageMathSuffix(base, final, gameState.combat?.player, payload.target);
+    pushDamageFeed("out", `You → ${tname} · dealt ${hp}${blocked > 0 ? `, blocked ${blocked}` : ""}${math}`);
     refresh();
   }
   if (name === "jittersTax") {
@@ -614,6 +679,7 @@ function onListenerEvent(name, payload) {
     addDetail(`You took ${payload.amount} damage from too much caffeine.`);
     flushAction();
     logEntry("system", `Jitters tax: −${payload.amount} HP`);
+    pushDamageFeed("in", `Jitters → You · took ${payload.amount} (caffeine over threshold)`);
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
     refresh();
   }
@@ -650,6 +716,7 @@ function onListenerEvent(name, payload) {
     const tname = payload.target?.name || "enemy";
     addDetail(`${tname} took ${payload.amount} damage (friendly fire).`);
     logEntry("enemy", `${tname} took ${payload.amount} (friendly fire)`);
+    pushDamageFeed("out", `Friendly fire → ${tname} · took ${payload.amount}`);
   }
   if (name === "playerDiscardForced") {
     const cardName = payload.card?.cardId ? payload.card.cardId.replace(/_/g, " ") : "a card";
