@@ -428,21 +428,32 @@ body {
 .combat-ledger-hp { font-weight: 800; color: var(--coffee-brown); }
 .combat-ledger-start { font-weight: 600; opacity: 0.55; font-size: 0.7rem; }
 .combat-ledger-events {
-  padding: 0.25rem 0.4rem;
+  padding: 0.3rem;
   display: flex; flex-direction: column;
-  gap: 0.12rem;
-  /* ~5 rows visible; rest scroll */
-  max-height: calc(5 * 1.42em + 0.5rem);
+  gap: 0.18rem;
+  /* Exactly 5 rows visible; rest scroll. Each row = line-height (1.5em) +
+     vertical padding (0.16rem × 2). Plus 4 gaps between 5 rows. */
+  max-height: calc((1.5em + 0.32rem) * 5 + 0.18rem * 4 + 0.6rem);
   overflow-y: auto;
   font-size: 0.74rem;
+  line-height: 1.5;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--coffee-brown) rgba(0,0,0,0.05);
 }
+.combat-ledger-events::-webkit-scrollbar { width: 6px; }
+.combat-ledger-events::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 3px; }
+.combat-ledger-events::-webkit-scrollbar-thumb { background: var(--coffee-brown); border-radius: 3px; }
 .combat-ledger-row {
-  padding: 0.08rem 0.3rem;
+  flex-shrink: 0;            /* never compress — force overflow instead */
+  padding: 0.16rem 0.4rem;
   background: rgba(255,255,255,0.6);
   border-radius: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.5;
+  min-height: 1.5em;
 }
 .combat-ledger-empty { opacity: 0.5; font-style: italic; text-align: center; padding: 0.3rem; }
 .combat-ledger-footer {
