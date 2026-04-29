@@ -257,6 +257,11 @@ export function startPlayerTurn() {
   c.flags.firstDamagePreventThisTurn = false;
   c.flags.costZeroThisTurn = new Set();
 
+  // Block from last turn (whatever enemy attacks didn't burn through) is wiped
+  // at the start of this turn, NOT at end of last player turn — so Defend's
+  // block actually defends during the enemy turn it was played in.
+  if (c.player.statuses) c.player.statuses[STATUS.BLOCK] = 0;
+
   // Drain queued next-turn effects
   const queued = c.queuedNextTurnEffects.slice();
   c.queuedNextTurnEffects = [];

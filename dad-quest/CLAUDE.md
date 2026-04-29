@@ -88,6 +88,7 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 2. **Caffeinated triggers per stack of Caffeine gained, not per gain event.** Coffee Break (gain 3 Caffeine) → 3 Strength.
 3. **Relic-granted resources at combat-start do NOT fire `on_gain_*` triggers; card-played gains DO.** Travel Mug grants 2 Caffeine without triggering Caffeinated. Phase 4's relic bindings must respect this.
 4. **Powers exhaust on play; their triggers stay registered for the rest of combat.** Powers and the rest of the exhaust pile return to the run deck after combat ends. Mid-combat reshuffles do NOT pull from exhaust.
+5. **Player Block clears at the START of the next player turn, not at the end of the current one.** This is a deliberate correction of the Phase 2 doc which said "Block expires" at end of player turn — taken literally, that meant Defend's block was wiped before any enemy got to swing, making it useless. Fixed in `engine/statusEffects.js` (no longer zeroes Block in `tickStatuses("playerTurnEnd")`) and `engine/combat.js` (zeroes `c.player.statuses.block` at the top of `startPlayerTurn`). Insulated Lunchbox's "if 0 Block at end of turn" check is now meaningful — it only fires if the player genuinely played no defensive cards.
 
 ## Phase 3 specifics
 
@@ -173,11 +174,11 @@ These are settled mechanical decisions made during Phase 2/3. They override any 
 
 ## Phase 2 specifics
 
-**Tick order (matches DESIGN.md § 1.4 exactly):**
-1. Player turn start → drain queued next-turn effects → fire `on_turn_start` triggers → draw 5 → energy = 3
+**Tick order (matches DESIGN.md § 1.4, except for Block — see Resolved ruling 5):**
+1. Player turn start → reset per-turn flags → **wipe player Block** → drain queued next-turn effects → fire `on_turn_start` triggers → draw 5 → energy = 3
 2. Player plays cards (each play resolves effect, checks victory)
-3. End-turn button → fire `on_turn_end` triggers → Doug's Jitters tax (Caffeine > 5) → discard hand → tick player statuses (Block expires, Vulnerable/Weak −1)
-4. Enemy turn → each enemy resolves intent in display order; check defeat after each hit
+3. End-turn button → fire `on_turn_end` triggers → Doug's Jitters tax (Caffeine > 5) → discard hand → tick player statuses (Vulnerable/Weak −1; Block is NOT cleared here so it can absorb the upcoming enemy turn)
+4. Enemy turn → each enemy resolves intent in display order; player Block absorbs damage as it lands; check defeat after each hit
 5. Enemy end-of-turn → tick enemy statuses (Vulnerable/Weak −1) → roll next intent
 6. Goto 1
 

@@ -50,7 +50,9 @@ export function getStatus(target, status) {
 export function tickStatuses(target, phase) {
   const bag = ensureStatusBag(target);
   if (phase === "playerTurnEnd") {
-    bag[STATUS.BLOCK] = 0;
+    // Block is NOT cleared here — it must persist through the upcoming enemy
+    // turn so cards like Defend actually defend. It's cleared at the start of
+    // the next player turn instead (see startPlayerTurn).
     if (bag[STATUS.VULNERABLE] > 0) bag[STATUS.VULNERABLE] -= 1;
     if (bag[STATUS.WEAK] > 0) bag[STATUS.WEAK] -= 1;
   } else if (phase === "enemyTurnEnd") {
