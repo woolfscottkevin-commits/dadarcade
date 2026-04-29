@@ -283,13 +283,30 @@ body {
 }
 .block-shield { font-size: 0.85rem; }
 
-.status-row { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.status-row { display: flex; gap: 0.3rem; flex-wrap: wrap; position: relative; }
 .status-chip {
   display: inline-flex; align-items: center; gap: 0.2rem;
   background: var(--cream); border: 2px solid var(--coffee-brown);
   border-radius: 999px; padding: 0.05rem 0.4rem;
   font-size: 0.75rem; font-weight: 700; color: var(--deep-navy);
+  cursor: pointer; font-family: inherit;
 }
+.status-chip:active { transform: translateY(1px); }
+.status-popover {
+  position: absolute; z-index: 30;
+  background: var(--cream); color: var(--coffee-brown);
+  border: 2px solid var(--coffee-brown);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+  max-width: min(80vw, 260px);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.18);
+  font-size: 0.78rem; line-height: 1.35;
+  display: flex; flex-direction: column; gap: 0.2rem;
+  pointer-events: none;
+}
+.status-popover[hidden] { display: none; }
+.status-popover-label { color: var(--deep-navy); font-weight: 900; font-size: 0.85rem; }
+.status-popover-help { color: var(--coffee-brown); }
 .status-chip[data-status="vulnerable"] { background: #E1BEE7; }
 .status-chip[data-status="weak"] { background: var(--suburb-beige); }
 .status-chip[data-status="strength"] { background: #FFCDD2; }

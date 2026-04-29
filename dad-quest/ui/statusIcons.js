@@ -1,5 +1,7 @@
 // Status icons — one chip per active status with a stack count.
 // Caller passes the statuses bag; this rebuilds the row each frame.
+// Tapping a chip toggles a popover with the status label + description,
+// since mobile has no hover for the title-attribute tooltip.
 
 const META = {
   vulnerable: { glyph: "↓", label: "Vulnerable", color: "var(--deep-navy)", help: "Takes 50% more attack damage." },
@@ -17,26 +19,91 @@ const DISTRACTED_META = {
   help: "You draw fewer cards each turn while this is active. Caused by the boss's Pop Quiz.",
 };
 
+const POPOVER_AUTO_DISMISS_MS = 4500;
+
 export function createStatusRow() {
   const root = document.createElement("div");
   root.className = "status-row";
+
+  const popover = document.createElement("div");
+  popover.className = "status-popover";
+  popover.hidden = true;
+  popover.innerHTML = `<strong class="status-popover-label"></strong><span class="status-popover-help"></span>`;
+  root.appendChild(popover);
+
+  let activeChip = null;
+  let dismissTimer = null;
+  let docListener = null;
+
+  function hidePopover() {
+    popover.hidden = true;
+    activeChip = null;
+    if (dismissTimer) { clearTimeout(dismissTimer); dismissTimer = null; }
+    if (docListener) {
+      document.removeEventListener("pointerdown", docListener, true);
+      docListener = null;
+    }
+  }
+
+  function showPopoverFor(chip, meta, valueLabel) {
+    if (activeChip === chip) { hidePopover(); return; }
+    activeChip = chip;
+    popover.querySelector(".status-popover-label").textContent = `${meta.label} ${valueLabel}`;
+    popover.querySelector(".status-popover-help").textContent = meta.help;
+    popover.style.borderColor = meta.color;
+    popover.hidden = false;
+    // Position horizontally centered on the chip, clamped within the row.
+    const rowWidth = root.clientWidth || 0;
+    const chipCenter = chip.offsetLeft + chip.offsetWidth / 2;
+    popover.style.left = "0px"; // reset so we can measure
+    const popWidth = popover.offsetWidth;
+    let left = chipCenter - popWidth / 2;
+    if (rowWidth > 0) {
+      left = Math.max(0, Math.min(rowWidth - popWidth, left));
+    }
+    popover.style.left = `${Math.round(left)}px`;
+    popover.style.top = `${chip.offsetTop + chip.offsetHeight + 6}px`;
+
+    if (dismissTimer) clearTimeout(dismissTimer);
+    dismissTimer = setTimeout(hidePopover, POPOVER_AUTO_DISMISS_MS);
+
+    if (docListener) document.removeEventListener("pointerdown", docListener, true);
+    docListener = (e) => {
+      if (!root.contains(e.target)) hidePopover();
+    };
+    document.addEventListener("pointerdown", docListener, true);
+  }
+
+  function buildChip(key, meta, displayValue, valueLabelForPopover) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "status-chip";
+    chip.dataset.status = key;
+    chip.title = `${meta.label} ${valueLabelForPopover}: ${meta.help}`;
+    chip.setAttribute("aria-label", `${meta.label} ${valueLabelForPopover}. ${meta.help}`);
+    chip.style.borderColor = meta.color;
+    chip.innerHTML = `<span class="status-glyph">${meta.glyph}</span><span class="status-num">${displayValue}</span>`;
+    chip.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showPopoverFor(chip, meta, valueLabelForPopover);
+    });
+    return chip;
+  }
+
   return {
     el: root,
     update(statuses, nextTurnModifiers) {
-      root.innerHTML = "";
+      hidePopover();
+      // Clear all chips but keep the popover element.
+      const chips = root.querySelectorAll(".status-chip");
+      chips.forEach((c) => c.remove());
+
       if (statuses) {
         for (const key of Object.keys(META)) {
           const v = statuses[key] || 0;
           if (v <= 0) continue;
-          const m = META[key];
-          const chip = document.createElement("span");
-          chip.className = "status-chip";
-          chip.dataset.status = key;
-          chip.title = `${m.label} ${v}: ${m.help}`;
-          chip.setAttribute("aria-label", `${m.label} ${v}. ${m.help}`);
-          chip.style.borderColor = m.color;
-          chip.innerHTML = `<span class="status-glyph">${m.glyph}</span><span class="status-num">${v}</span>`;
-          root.appendChild(chip);
+          const chip = buildChip(key, META[key], v, String(v));
+          root.insertBefore(chip, popover);
         }
       }
       if (nextTurnModifiers && nextTurnModifiers.length) {
@@ -45,15 +112,8 @@ export function createStatusRow() {
           if (mod.type === "draw_minus") drawMinusTotal += mod.amount || 0;
         }
         if (drawMinusTotal > 0) {
-          const m = DISTRACTED_META;
-          const chip = document.createElement("span");
-          chip.className = "status-chip";
-          chip.dataset.status = "distracted";
-          chip.title = `${m.label} −${drawMinusTotal}: ${m.help}`;
-          chip.setAttribute("aria-label", `${m.label}, draw minus ${drawMinusTotal}. ${m.help}`);
-          chip.style.borderColor = m.color;
-          chip.innerHTML = `<span class="status-glyph">${m.glyph}</span><span class="status-num">−${drawMinusTotal}</span>`;
-          root.appendChild(chip);
+          const chip = buildChip("distracted", DISTRACTED_META, `−${drawMinusTotal}`, `−${drawMinusTotal}`);
+          root.insertBefore(chip, popover);
         }
       }
     },
