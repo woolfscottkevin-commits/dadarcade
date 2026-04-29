@@ -34,6 +34,82 @@ export function describeIntent(intent) {
   return renderText(intent);
 }
 
+const STATUS_NAME = {
+  vulnerable: "Vulnerable",
+  weak: "Weak",
+  strength: "Strength",
+  caffeine: "Caffeine",
+  citation: "Citation",
+  yard_work: "Yard Work",
+};
+
+function statusName(key) {
+  return STATUS_NAME[key] || (key || "").replace(/_/g, " ");
+}
+
+// Plain-English version of an intent for use in narration banners.
+// Always reads as a complete sentence describing what the enemy will do.
+export function describeIntentVerbose(intent) {
+  if (!intent) return "Acts.";
+  const stacks = intent.stacks || 1;
+  switch (intent.type) {
+    case "attack":
+    case "attack_telegraphed": {
+      const v = intent.value || 0;
+      const hits = intent.hits || 1;
+      if (hits > 1) return `Attacks ${hits} times for ${v} damage each (${v * hits} total before block).`;
+      return `Attacks you for ${v} damage.`;
+    }
+    case "attack_with_status": {
+      const v = intent.value || 0;
+      const hits = intent.hits || 1;
+      const atk = hits > 1
+        ? `Attacks ${hits} times for ${v} damage each`
+        : `Attacks you for ${v} damage`;
+      return `${atk} and applies ${statusName(intent.status)} +${stacks}.`;
+    }
+    case "attack_and_disrupt":
+      return `Attacks you for ${intent.value || 0} damage and forces you to discard a random card from your hand.`;
+    case "attack_with_modifier":
+      if (intent.modifier === "draw_minus") {
+        return `Attacks you for ${intent.value || 0} damage and assigns ${intent.label || "Pop Quiz"}: you'll draw ${intent.amount || 2} fewer cards next turn.`;
+      }
+      return `Attacks you for ${intent.value || 0} damage with a side effect.`;
+    case "aoe_attack":
+      return `Hits everyone for ${intent.value || 0} damage — including its own allies.`;
+    case "block":
+      return `Gains ${intent.value || 0} Block.`;
+    case "block_and_status":
+      return `Gains ${intent.value || 0} Block and applies ${statusName(intent.status)} +${stacks}.`;
+    case "apply_status":
+      return `Applies ${statusName(intent.status)} +${stacks} to you.`;
+    case "apply_status_aoe_to_player": {
+      const list = (intent.statuses || [])
+        .map((s) => `${statusName(s.status)} +${s.stacks || 1}`)
+        .join(", ");
+      return list ? `Applies ${list} to you.` : "Applies status effects to you.";
+    }
+    case "self_buff": {
+      const parts = [];
+      if (intent.strength) parts.push(`+${intent.strength} Strength`);
+      if (intent.block) parts.push(`+${intent.block} Block`);
+      return parts.length ? `Buffs itself: ${parts.join(", ")}.` : "Buffs itself.";
+    }
+    case "heal_and_buff": {
+      const parts = [];
+      if (intent.heal) parts.push(`heals ${intent.heal} HP`);
+      if (intent.strength) parts.push(`gains +${intent.strength} Strength`);
+      return parts.length ? `It ${parts.join(" and ")}.` : "It buffs itself.";
+    }
+    case "summon":
+      return intent.label
+        ? `Uses ${intent.label} to call in an ally.`
+        : "Summons an ally to fight alongside it.";
+    default:
+      return intent.label || `Acts (${intent.type}).`;
+  }
+}
+
 function renderText(intent) {
   switch (intent.type) {
     case "attack":

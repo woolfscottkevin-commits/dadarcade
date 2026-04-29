@@ -24,7 +24,7 @@ import { renderCard } from "../ui/cardFrame.js";
 import { createHealthBar } from "../ui/healthBar.js";
 import { createBlockIndicator } from "../ui/blockIndicator.js";
 import { createStatusRow } from "../ui/statusIcons.js";
-import { createIntentDisplay, describeIntent } from "../ui/intentDisplay.js";
+import { createIntentDisplay, describeIntent, describeIntentVerbose } from "../ui/intentDisplay.js";
 import { createRunHud } from "../ui/runHud.js";
 import { applyReticleTo } from "../ui/targetingReticle.js";
 import { playSfx } from "../ui/sfx.js";
@@ -42,6 +42,9 @@ let bannerQueue = [];     // [{ title, details: string[], color }]
 let currentBanner = null; // the entry currently shown on the banner element
 let actionBuffer = null;  // accumulator while an enemy action is in flight
 let pendingFinish = null;
+let bannerEnabledAt = 0;  // earliest Date.now() at which the current banner accepts taps
+
+const MIN_READ_MS = 1000;
 
 const STATUS_EXPLAIN = {
   vulnerable: "Take 50% more attack damage while active.",
@@ -257,21 +260,35 @@ function renderBanner(entry) {
     d.textContent = detail;
     b.appendChild(d);
   }
-  const remaining = bannerQueue.length;
   const hint = document.createElement("div");
   hint.className = "combat-banner-hint";
-  hint.textContent = remaining > 0
-    ? `Tap to continue · ${remaining} more`
-    : "Tap to continue";
+  hint.textContent = "Reading…";
   b.appendChild(hint);
   b.style.borderColor = entry.color || "var(--punchy-red)";
   b.style.opacity = "1";
+
+  bannerEnabledAt = Date.now() + MIN_READ_MS;
+  setTimeout(() => {
+    if (currentBanner !== entry || !layoutEls) return;
+    const h = layoutEls.banner.querySelector(".combat-banner-hint");
+    if (!h) return;
+    const remaining = bannerQueue.length;
+    h.textContent = remaining > 0
+      ? `Tap to continue · ${remaining} more`
+      : "Tap to continue";
+  }, MIN_READ_MS);
+}
+
+function tryAdvanceBanner() {
+  if (!currentBanner) return;
+  if (Date.now() < bannerEnabledAt) return;
+  showNextBanner();
 }
 
 // Aggregator: build one rich banner per enemy action.
 function startAction(title, color) {
   flushAction();
-  actionBuffer = { title, details: [], color: color || null };
+  actionBuffer = { title, details: [], color: color || null, hits: [], reasons: new Set() };
 }
 
 function addDetail(text) {
@@ -279,9 +296,56 @@ function addDetail(text) {
   else pushBanner({ title: text, details: [], color: null });
 }
 
+function recordHit(intentValue, result, enemy) {
+  if (!actionBuffer) return;
+  actionBuffer.hits.push({
+    base: intentValue ?? 0,
+    final: result.finalDamage || 0,
+    blocked: result.blockLost || 0,
+    hp: result.hpLost || 0,
+  });
+  const atkStr = (enemy?.statuses?.strength) || 0;
+  const atkWeak = (enemy?.statuses?.weak) || 0;
+  const playerVuln = (gameState.combat?.player?.statuses?.vulnerable) || 0;
+  if (atkStr > 0) actionBuffer.reasons.add(`+${atkStr} Strength on attacker`);
+  if (atkWeak > 0) actionBuffer.reasons.add("Attacker is Weak (−25% damage)");
+  if (playerVuln > 0) actionBuffer.reasons.add("You are Vulnerable (+50% damage taken)");
+}
+
+function summarizeHits() {
+  if (!actionBuffer || !actionBuffer.hits.length) return;
+  const hits = actionBuffer.hits;
+  const totalHp = hits.reduce((s, h) => s + h.hp, 0);
+  const totalBlocked = hits.reduce((s, h) => s + h.blocked, 0);
+  const totalBase = hits.reduce((s, h) => s + h.base, 0);
+  const totalFinal = hits.reduce((s, h) => s + h.final, 0);
+
+  let line;
+  if (hits.length > 1) {
+    if (totalHp === 0 && totalBlocked > 0) {
+      line = `Hit ${hits.length} times — blocked all ${totalBlocked} damage.`;
+    } else {
+      line = `Hit ${hits.length} times — total ${totalFinal} damage; blocked ${totalBlocked}, you took ${totalHp} HP.`;
+    }
+  } else {
+    if (totalHp === 0 && totalBlocked > 0) line = `Blocked all ${totalBlocked} damage.`;
+    else if (totalBlocked > 0) line = `Blocked ${totalBlocked}, you took ${totalHp} HP.`;
+    else if (totalHp > 0) line = `You took ${totalHp} HP.`;
+    else line = "No damage.";
+  }
+
+  if (totalFinal !== totalBase || actionBuffer.reasons.size > 0) {
+    const reasons = Array.from(actionBuffer.reasons);
+    const why = reasons.length ? ` — ${reasons.join("; ")}` : "";
+    line += ` (Base ${totalBase} → ${totalFinal}${why}.)`;
+  }
+  actionBuffer.details.push(line);
+}
+
 function flushAction() {
   if (actionBuffer) {
-    pushBanner(actionBuffer);
+    summarizeHits();
+    pushBanner({ title: actionBuffer.title, details: actionBuffer.details, color: actionBuffer.color });
     actionBuffer = null;
   }
 }
@@ -540,30 +604,9 @@ function onListenerEvent(name, payload) {
     const r = payload.result || {};
     const hp = r.hpLost || 0;
     const blocked = r.blockLost || 0;
-    const final = r.finalDamage || 0;
-    const enemy = payload.enemy;
     const intentValue = actionBuffer?._intentValue ?? null;
-
-    let line;
-    if (blocked > 0 && hp > 0) line = `Blocked ${blocked}, took ${hp} HP.`;
-    else if (blocked > 0 && hp === 0) line = `Blocked all ${blocked}!`;
-    else if (hp > 0) line = `Took ${hp} HP.`;
-    else line = "No damage.";
-
-    const reasons = [];
-    const atkStr = (enemy?.statuses?.strength) || 0;
-    const atkWeak = (enemy?.statuses?.weak) || 0;
-    const playerVuln = (gameState.combat?.player?.statuses?.vulnerable) || 0;
-    if (atkStr > 0) reasons.push(`+${atkStr} Strength`);
-    if (atkWeak > 0) reasons.push("Weak −25%");
-    if (playerVuln > 0) reasons.push("Vulnerable +50%");
-
-    let math = "";
-    if (intentValue != null && (final !== intentValue || reasons.length)) {
-      math = ` · ${intentValue} → ${final}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
-    }
-    addDetail(`${line}${math}`);
-    logEntry("enemy", `${enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
+    recordHit(intentValue, r, payload.enemy);
+    logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
     refresh();
   }
   if (name === "jittersTax") {
@@ -582,18 +625,19 @@ function onListenerEvent(name, payload) {
   if (name === "enemyIntent") {
     const enemy = payload.enemy;
     const intent = payload.intent;
-    const summary = `${enemy.name} — ${describeIntent(intent)}`;
-    startAction(summary, intentColor(intent.type));
+    const verbose = describeIntentVerbose(intent);
+    const title = `${enemy.name}: ${verbose}`;
+    startAction(title, intentColor(intent.type));
     actionBuffer._intentValue = intent.value || null;
-    if (intent.status) {
-      addDetail(`Applies ${statusLabel(intent.status)} +${intent.stacks || 1} — ${STATUS_EXPLAIN[intent.status] || ""}`.trim());
-    }
+    const explainStatus = (key) => {
+      const meaning = STATUS_EXPLAIN[key];
+      if (meaning) addDetail(`${statusLabel(key)} — ${meaning}`);
+    };
+    if (intent.status) explainStatus(intent.status);
     if (Array.isArray(intent.statuses)) {
-      for (const s of intent.statuses) {
-        addDetail(`Applies ${statusLabel(s.status)} +${s.stacks || 1} — ${STATUS_EXPLAIN[s.status] || ""}`.trim());
-      }
+      for (const s of intent.statuses) explainStatus(s.status);
     }
-    logEntry("enemy", summary);
+    logEntry("enemy", `${enemy.name} — ${describeIntent(intent)}`);
     refresh();
   }
   if (name === "enemySpawned") {
@@ -614,7 +658,8 @@ function onListenerEvent(name, payload) {
     refresh();
   }
   if (name === "playerDistracted") {
-    addDetail(`${payload.label}: you draw ${payload.amount} fewer cards next turn.`);
+    // Pop Quiz is already named in the verbose intent title; no extra banner
+    // line needed. Just log it for the combat-log scrollback.
     logEntry("enemy", `${payload.label}: −${payload.amount} cards next turn`);
     refresh();
   }
@@ -679,16 +724,14 @@ export const combatScene = {
       if (e.target === layoutEls.logModal) closeCombatLog();
     });
 
-    layoutEls.banner.addEventListener("click", () => {
-      if (currentBanner) showNextBanner();
-    });
+    layoutEls.banner.addEventListener("click", tryAdvanceBanner);
 
     onKey = (e) => {
       if (gameState.scene !== "combat") return;
       if (isNarrating()) {
         if (e.key === " " || e.key === "Enter" || e.code === "Space") {
           e.preventDefault();
-          showNextBanner();
+          tryAdvanceBanner();
         }
         return;
       }
