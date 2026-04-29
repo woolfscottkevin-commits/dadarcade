@@ -34,13 +34,27 @@ let onKey = null;
 let lastYardWork = null;
 let yardWorkCoachOpen = false;
 
-// Combat narration: a per-fight log + a paced banner queue so the player can
-// see *who did what* during the enemy turn instead of one silent burst.
+// Combat narration: a per-fight log + a tap-to-advance banner queue so the
+// player can read each enemy action at their own pace, with the effect
+// (damage breakdown, status meanings) spelled out.
 let combatLog = [];
-let bannerQueue = [];
-let bannerTimer = null;
+let bannerQueue = [];     // [{ title, details: string[], color }]
+let currentBanner = null; // the entry currently shown on the banner element
+let actionBuffer = null;  // accumulator while an enemy action is in flight
 let pendingFinish = null;
-const BEAT_MS = 700;
+
+const STATUS_EXPLAIN = {
+  vulnerable: "Take 50% more attack damage while active.",
+  weak: "Deals 25% less attack damage while active.",
+  strength: "Adds bonus damage to every attack.",
+  citation: "Brenda's HOA combos scale with citations on enemies.",
+  caffeine: "Doug's fuel — some office cards spend or reward it.",
+  yard_work: "Hank's combo counter — other yard cards check or spend it.",
+};
+
+function statusLabel(key) {
+  return (key || "").charAt(0).toUpperCase() + (key || "").slice(1).replace(/_/g, " ");
+}
 
 const YARD_WORK_COACH_KEY = "dadQuest.coach.yardWork.v2";
 
@@ -166,11 +180,16 @@ function buildLayout(root) {
   };
 }
 
+// Immediate flash for player-side feedback (yard work changes, "not enough
+// energy", "Burnout — can't play"). Auto-fades. Skipped if a narration banner
+// is currently displayed.
 function flashBanner(text, color) {
   if (!layoutEls) return;
+  if (currentBanner) return;
   const b = layoutEls.banner;
-  b.textContent = text;
-  if (color) b.style.borderColor = color;
+  b.classList.remove("combat-banner--narration");
+  b.innerHTML = `<div class="combat-banner-title">${text}</div>`;
+  b.style.borderColor = color || "var(--punchy-red)";
   b.style.opacity = "1";
   clearTimeout(b._t);
   b._t = setTimeout(() => { b.style.opacity = "0"; }, 1100);
@@ -179,8 +198,13 @@ function flashBanner(text, color) {
 function resetCombatNarration() {
   combatLog = [];
   bannerQueue = [];
-  if (bannerTimer) { clearTimeout(bannerTimer); bannerTimer = null; }
+  currentBanner = null;
+  actionBuffer = null;
   pendingFinish = null;
+  if (layoutEls?.banner) {
+    layoutEls.banner.style.opacity = "0";
+    layoutEls.banner.classList.remove("combat-banner--narration");
+  }
 }
 
 function logEntry(side, text) {
@@ -188,24 +212,78 @@ function logEntry(side, text) {
   if (combatLog.length > 200) combatLog.shift();
 }
 
-function queueBanner(text, color) {
-  bannerQueue.push({ text, color });
-  if (!bannerTimer) drainBanners();
+function isNarrating() {
+  return currentBanner !== null;
 }
 
-function drainBanners() {
+function pushBanner(entry) {
+  bannerQueue.push(entry);
+  if (!currentBanner) showNextBanner();
+}
+
+function showNextBanner() {
+  if (!layoutEls) return;
   if (!bannerQueue.length) {
-    bannerTimer = null;
+    currentBanner = null;
+    const b = layoutEls.banner;
+    b.style.opacity = "0";
+    b.classList.remove("combat-banner--narration");
     if (pendingFinish) {
       const f = pendingFinish;
       pendingFinish = null;
-      setTimeout(f, 250);
+      setTimeout(f, 350);
     }
+    refresh();
     return;
   }
-  const { text, color } = bannerQueue.shift();
-  flashBanner(text, color);
-  bannerTimer = setTimeout(drainBanners, BEAT_MS);
+  currentBanner = bannerQueue.shift();
+  renderBanner(currentBanner);
+  refresh();
+}
+
+function renderBanner(entry) {
+  if (!layoutEls) return;
+  const b = layoutEls.banner;
+  b.classList.add("combat-banner--narration");
+  clearTimeout(b._t);
+  b.innerHTML = "";
+  const titleEl = document.createElement("div");
+  titleEl.className = "combat-banner-title";
+  titleEl.textContent = entry.title;
+  b.appendChild(titleEl);
+  for (const detail of entry.details || []) {
+    const d = document.createElement("div");
+    d.className = "combat-banner-detail";
+    d.textContent = detail;
+    b.appendChild(d);
+  }
+  const remaining = bannerQueue.length;
+  const hint = document.createElement("div");
+  hint.className = "combat-banner-hint";
+  hint.textContent = remaining > 0
+    ? `Tap to continue · ${remaining} more`
+    : "Tap to continue";
+  b.appendChild(hint);
+  b.style.borderColor = entry.color || "var(--punchy-red)";
+  b.style.opacity = "1";
+}
+
+// Aggregator: build one rich banner per enemy action.
+function startAction(title, color) {
+  flushAction();
+  actionBuffer = { title, details: [], color: color || null };
+}
+
+function addDetail(text) {
+  if (actionBuffer) actionBuffer.details.push(text);
+  else pushBanner({ title: text, details: [], color: null });
+}
+
+function flushAction() {
+  if (actionBuffer) {
+    pushBanner(actionBuffer);
+    actionBuffer = null;
+  }
 }
 
 function intentColor(type) {
@@ -419,6 +497,7 @@ function prettyIntent(intent) {
 }
 
 function onCardTap(inst, cardEl) {
+  if (isNarrating()) return;
   const def = CARDS.find((d) => d.id === inst.cardId);
   if (!def) return;
   if (def.effect === "unplayable") {
@@ -451,6 +530,7 @@ function onCardTap(inst, cardEl) {
 function onListenerEvent(name, payload) {
   if (!layoutEls) return;
   if (name === "turnStart") {
+    flushAction();
     if (payload.turn > 1) logEntry("system", `— Turn ${payload.turn} —`);
     refresh();
   }
@@ -460,12 +540,36 @@ function onListenerEvent(name, payload) {
     const r = payload.result || {};
     const hp = r.hpLost || 0;
     const blocked = r.blockLost || 0;
-    const detail = blocked > 0 ? ` (blocked ${blocked})` : "";
-    logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${detail}`);
+    const final = r.finalDamage || 0;
+    const enemy = payload.enemy;
+    const intentValue = actionBuffer?._intentValue ?? null;
+
+    let line;
+    if (blocked > 0 && hp > 0) line = `Blocked ${blocked}, took ${hp} HP.`;
+    else if (blocked > 0 && hp === 0) line = `Blocked all ${blocked}!`;
+    else if (hp > 0) line = `Took ${hp} HP.`;
+    else line = "No damage.";
+
+    const reasons = [];
+    const atkStr = (enemy?.statuses?.strength) || 0;
+    const atkWeak = (enemy?.statuses?.weak) || 0;
+    const playerVuln = (gameState.combat?.player?.statuses?.vulnerable) || 0;
+    if (atkStr > 0) reasons.push(`+${atkStr} Strength`);
+    if (atkWeak > 0) reasons.push("Weak −25%");
+    if (playerVuln > 0) reasons.push("Vulnerable +50%");
+
+    let math = "";
+    if (intentValue != null && (final !== intentValue || reasons.length)) {
+      math = ` · ${intentValue} → ${final}${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
+    }
+    addDetail(`${line}${math}`);
+    logEntry("enemy", `${enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
     refresh();
   }
   if (name === "jittersTax") {
-    queueBanner(`Jitters! −${payload.amount}`);
+    startAction("Jitters!", "var(--punchy-red)");
+    addDetail(`You took ${payload.amount} damage from too much caffeine.`);
+    flushAction();
     logEntry("system", `Jitters tax: −${payload.amount} HP`);
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
     refresh();
@@ -476,40 +580,53 @@ function onListenerEvent(name, payload) {
     refresh();
   }
   if (name === "enemyIntent") {
-    const summary = `${payload.enemy.name} — ${describeIntent(payload.intent)}`;
-    queueBanner(summary, intentColor(payload.intent.type));
+    const enemy = payload.enemy;
+    const intent = payload.intent;
+    const summary = `${enemy.name} — ${describeIntent(intent)}`;
+    startAction(summary, intentColor(intent.type));
+    actionBuffer._intentValue = intent.value || null;
+    if (intent.status) {
+      addDetail(`Applies ${statusLabel(intent.status)} +${intent.stacks || 1} — ${STATUS_EXPLAIN[intent.status] || ""}`.trim());
+    }
+    if (Array.isArray(intent.statuses)) {
+      for (const s of intent.statuses) {
+        addDetail(`Applies ${statusLabel(s.status)} +${s.stacks || 1} — ${STATUS_EXPLAIN[s.status] || ""}`.trim());
+      }
+    }
     logEntry("enemy", summary);
     refresh();
   }
   if (name === "enemySpawned") {
-    queueBanner(`${payload.enemy.name} joined the fight!`);
+    addDetail(`${payload.enemy.name} joined the fight!`);
     logEntry("system", `${payload.enemy.name} joined the fight`);
     renderEnemies();
     refresh();
   }
   if (name === "enemyHit") {
     const tname = payload.target?.name || "enemy";
+    addDetail(`${tname} took ${payload.amount} damage (friendly fire).`);
     logEntry("enemy", `${tname} took ${payload.amount} (friendly fire)`);
   }
   if (name === "playerDiscardForced") {
     const cardName = payload.card?.cardId ? payload.card.cardId.replace(/_/g, " ") : "a card";
-    queueBanner(`Discarded — ${cardName}`);
+    addDetail(`Forced discard: ${cardName}.`);
     logEntry("enemy", `Forced you to discard ${cardName}`);
     refresh();
   }
   if (name === "playerDistracted") {
-    queueBanner(`${payload.label}! −${payload.amount} cards next turn`, "var(--punchy-red)");
+    addDetail(`${payload.label}: you draw ${payload.amount} fewer cards next turn.`);
     logEntry("enemy", `${payload.label}: −${payload.amount} cards next turn`);
     refresh();
   }
   if (name === "combatEnd") {
+    flushAction();
     playSfx(payload.outcome === "victory" ? "victory" : "defeat");
     logEntry("system", payload.outcome === "victory" ? "Victory" : "Defeat");
     const finish = () => {
       if (payload.outcome === "victory") setScene("reward");
       else setScene("gameOver");
     };
-    if (bannerQueue.length || bannerTimer) {
+    if (currentBanner || bannerQueue.length) {
       pendingFinish = finish;
     } else {
       setTimeout(finish, 600);
@@ -550,6 +667,7 @@ export const combatScene = {
     coachOk.addEventListener("click", closeYardWorkCoach);
 
     layoutEls.endBtn.addEventListener("click", () => {
+      if (isNarrating()) return;
       playSfx("endTurn");
       endPlayerTurn();
       refresh();
@@ -561,8 +679,19 @@ export const combatScene = {
       if (e.target === layoutEls.logModal) closeCombatLog();
     });
 
+    layoutEls.banner.addEventListener("click", () => {
+      if (currentBanner) showNextBanner();
+    });
+
     onKey = (e) => {
       if (gameState.scene !== "combat") return;
+      if (isNarrating()) {
+        if (e.key === " " || e.key === "Enter" || e.code === "Space") {
+          e.preventDefault();
+          showNextBanner();
+        }
+        return;
+      }
       if (e.key >= "1" && e.key <= "9") {
         const idx = parseInt(e.key, 10) - 1;
         const inst = gameState.combat?.piles.hand[idx];
@@ -583,8 +712,10 @@ export const combatScene = {
       window.removeEventListener("keydown", onKey);
       onKey = null;
     }
-    if (bannerTimer) { clearTimeout(bannerTimer); bannerTimer = null; }
     pendingFinish = null;
+    bannerQueue = [];
+    currentBanner = null;
+    actionBuffer = null;
     layoutEls = null;
     lastYardWork = null;
     yardWorkCoachOpen = false;
