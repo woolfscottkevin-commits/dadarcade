@@ -161,7 +161,7 @@ export const characterSelectScene = {
 
     const title = document.createElement("h1");
     title.className = "select-title";
-    title.textContent = "Choose Your Dad";
+    title.textContent = "Choose Your Champion";
     wrap.appendChild(title);
 
     const sub = document.createElement("p");
