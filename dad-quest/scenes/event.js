@@ -25,6 +25,34 @@ function currentEvent() {
   return EVENTS.find((e) => e.id === id) || EVENTS[0];
 }
 
+function describeAtomicEffect(effect) {
+  const [kind, value] = effect.split(":");
+  const n = parseInt(value, 10);
+  if (kind === "heal") return `Heal ${n} HP`;
+  if (kind === "heal_percent") return `Heal ${n}% HP`;
+  if (kind === "gold") return n >= 0 ? `+${n} Gold` : `−${Math.abs(n)} Gold`;
+  if (kind === "max_hp") return n >= 0 ? `+${n} Max HP` : `−${Math.abs(n)} Max HP`;
+  if (kind === "relic") return value === "any" ? "Gain a relic" : `Gain a ${value} relic`;
+  if (kind === "card_reward") return "Add a card to your deck";
+  return null;
+}
+
+function describeChoice(choice) {
+  const parts = [];
+  const goldCost = choice.cost || choice.costGold;
+  if (goldCost) parts.push(`−${goldCost} Gold`);
+  if (choice.costHp) parts.push(`−${choice.costHp} HP`);
+  if (choice.effect === "remove_card") {
+    parts.push("Remove a card from your deck");
+  } else if (choice.effect) {
+    for (const eff of choice.effect.split("|")) {
+      const desc = describeAtomicEffect(eff);
+      if (desc) parts.push(desc);
+    }
+  }
+  return parts.join(" · ");
+}
+
 function applyAtomic(effect) {
   const [kind, value] = effect.split(":");
   if (kind === "heal") healRun(parseInt(value, 10));
@@ -133,6 +161,8 @@ export const eventScene = {
     const choices = document.createElement("div");
     choices.className = "event-choices";
     for (const choice of ev.choices) {
+      const group = document.createElement("div");
+      group.className = "event-choice-group";
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "event-choice-btn";
@@ -140,7 +170,15 @@ export const eventScene = {
       const goldCost = choice.cost || choice.costGold || 0;
       btn.disabled = goldCost > gameState.run.gold || (choice.costHp && gameState.run.hp <= choice.costHp);
       btn.addEventListener("click", () => choose(root, choice));
-      choices.appendChild(btn);
+      group.appendChild(btn);
+      const desc = describeChoice(choice);
+      if (desc) {
+        const effectLine = document.createElement("p");
+        effectLine.className = "event-choice-effect";
+        effectLine.textContent = desc;
+        group.appendChild(effectLine);
+      }
+      choices.appendChild(group);
     }
     wrap.appendChild(choices);
     root.appendChild(wrap);
