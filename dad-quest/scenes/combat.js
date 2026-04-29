@@ -293,6 +293,13 @@ function fmtHpDelta(d) {
   return "no HP change";
 }
 
+function formatHitOutcome(hp, blocked) {
+  if (hp > 0 && blocked > 0) return `−${hp} HP (blocked ${blocked})`;
+  if (hp === 0 && blocked > 0) return `Blocked all ${blocked}`;
+  if (hp > 0) return `−${hp} HP`;
+  return "0 damage";
+}
+
 function pickHeadlineEnemy(c) {
   // Prefer the originally captured enemy while it's alive, otherwise the
   // leftmost still-alive enemy (e.g. after the headlined one died).
@@ -748,9 +755,33 @@ function onCardTap(inst, cardEl) {
       if (idx >= 0) c.targetIndex = idx;
     }
   }
+  // Snapshot player self-buff statuses so we can attribute Block / Strength /
+  // resource gains to the card that produced them in the on-screen ledger.
+  const selfBefore = snapshotSelfStatuses(c.player.statuses);
   playCard(inst, c.targetIndex);
   playSfx("card");
+  const selfAfter = snapshotSelfStatuses(c.player.statuses);
+  for (const { key, delta } of diffSelfStatuses(selfBefore, selfAfter)) {
+    pushPlayerEvent(`+${delta} ${STATUS_SHORT[key] || key} (from ${def.name})`);
+  }
   refresh();
+}
+
+const SELF_TRACKED = ["block", "strength", "yard_work", "caffeine"];
+
+function snapshotSelfStatuses(statuses) {
+  const out = {};
+  for (const k of SELF_TRACKED) out[k] = statuses?.[k] || 0;
+  return out;
+}
+
+function diffSelfStatuses(before, after) {
+  const diffs = [];
+  for (const k of SELF_TRACKED) {
+    const delta = (after[k] || 0) - (before[k] || 0);
+    if (delta > 0) diffs.push({ key: k, delta });
+  }
+  return diffs;
 }
 
 function onListenerEvent(name, payload) {
@@ -771,7 +802,7 @@ function onListenerEvent(name, payload) {
     recordHit(intentValue, r, payload.enemy);
     logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
     const math = damageMathSuffix(intentValue, final, payload.enemy, gameState.combat?.player);
-    pushPlayerEvent(`−${hp} HP from ${payload.enemy.name}${blocked > 0 ? ` (blocked ${blocked})` : ""}${math}`);
+    pushPlayerEvent(`${formatHitOutcome(hp, blocked)} from ${payload.enemy.name}${math}`);
     refresh();
   }
   if (name === "playerDamageDealt") {
@@ -783,7 +814,7 @@ function onListenerEvent(name, payload) {
     const tname = payload.target?.name || "enemy";
     logEntry("player", `You hit ${tname} for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
     const math = damageMathSuffix(base, final, gameState.combat?.player, payload.target);
-    pushEnemyEvent(`−${hp} HP from your attack${blocked > 0 ? ` (blocked ${blocked})` : ""}${math}`, tname);
+    pushEnemyEvent(`${formatHitOutcome(hp, blocked)} from your attack${math}`, tname);
     refresh();
   }
   if (name === "jittersTax") {
