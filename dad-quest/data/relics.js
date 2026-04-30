@@ -170,7 +170,7 @@ export const RELICS = [
     id: "the_megaphone",
     name: "The Megaphone",
     rarity: "rare",
-    description: "Whenever you apply a debuff to an enemy, deal 3 damage to that enemy.",
+    description: "Whenever you apply Vulnerable, Weak, or Citation to an enemy, deal 3 damage to that enemy.",
     effect: "on_apply_debuff:deal_damage_to_target:3",
     art: "assets/relics/relic_the_megaphone.png",
     starter: null,

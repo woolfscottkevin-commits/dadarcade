@@ -310,7 +310,7 @@ function noteDebuffApplied(ctx, target, status) {
   if (!target || !isDebuff(status)) return;
   if (ctx.combat.run?.relics?.includes("the_megaphone")) {
     const result = resolveDamage(null, target, 3);
-    noteDamageDealt(ctx, target, result);
+    noteDamageDealt(ctx, target, result, 3);
   }
 }
 
