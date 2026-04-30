@@ -43,16 +43,6 @@ let currentBanner = null; // the entry currently shown on the banner element
 let actionBuffer = null;  // accumulator while an enemy action is in flight
 let pendingFinish = null;
 let bannerEnabledAt = 0;  // earliest Date.now() at which the current banner accepts taps
-// Two-column combat ledger: per-side event lists + start HP + net effect.
-let ledger = createEmptyLedger();
-
-function createEmptyLedger() {
-  return {
-    player: { startHp: 0, startMaxHp: 0, events: [] },
-    enemy:  { name: "—", startHp: 0, startMaxHp: 0, events: [], ref: null },
-  };
-}
-
 const MIN_READ_MS = 1000;
 
 const STATUS_EXPLAIN = {
@@ -119,11 +109,6 @@ function buildLayout(root) {
   playerBlock.appendChild(ctrls);
 
   stage.appendChild(playerBlock);
-
-  const damageFeed = document.createElement("div");
-  damageFeed.className = "combat-ledger";
-  damageFeed.setAttribute("aria-label", "Combat ledger");
-  stage.appendChild(damageFeed);
 
   const handEl = document.createElement("div");
   handEl.className = "combat-hand";
@@ -192,7 +177,7 @@ function buildLayout(root) {
 
   return {
     stage, runHud, enemyArea, portraitImg, playerName, hpBar, blockInd, statusRow,
-    energyEl, endBtn, handEl, pilesEl, logBtn, logModal, damageFeed, banner, tutorial, mechanicCoach,
+    energyEl, endBtn, handEl, pilesEl, logBtn, logModal, banner, tutorial, mechanicCoach,
     enemyEls: [],
   };
 }
@@ -218,163 +203,12 @@ function resetCombatNarration() {
   currentBanner = null;
   actionBuffer = null;
   pendingFinish = null;
-  ledger = createEmptyLedger();
   if (layoutEls?.banner) {
     layoutEls.banner.style.opacity = "0";
     layoutEls.banner.classList.remove("combat-banner--narration");
   }
-  renderLedger();
 }
 
-function resetLedger() {
-  ledger = createEmptyLedger();
-  const c = gameState.combat;
-  if (c) {
-    ledger.player.startHp = c.player.hp;
-    ledger.player.startMaxHp = c.player.maxHp;
-    const head = c.enemies.find((e) => e.hp > 0) || c.enemies[0];
-    if (head) {
-      ledger.enemy.name = head.name;
-      ledger.enemy.startHp = head.hp;
-      ledger.enemy.startMaxHp = head.maxHp;
-      ledger.enemy.ref = head;
-    }
-  }
-  renderLedger();
-}
-
-function pushPlayerEvent(text) {
-  ledger.player.events.push(text);
-  renderLedger();
-}
-
-function pushEnemyEvent(text, enemyName = null) {
-  const c = gameState.combat;
-  const aliveCount = c ? c.enemies.filter((e) => e.maxHp > 0).length : 0;
-  const prefix = (aliveCount > 1 && enemyName) ? `${enemyName}: ` : "";
-  ledger.enemy.events.push(prefix + text);
-  renderLedger();
-}
-
-function damageMathSuffix(base, finalDamage, attacker, defender) {
-  if (base == null) return "";
-  const parts = [];
-  const atkStr = attacker?.statuses?.strength || 0;
-  const atkWeak = attacker?.statuses?.weak || 0;
-  const defVuln = defender?.statuses?.vulnerable || 0;
-  if (atkStr > 0) parts.push(`+${atkStr} Str`);
-  if (atkWeak > 0) parts.push("Weak −25%");
-  if (defVuln > 0) parts.push("Vuln +50%");
-  if (finalDamage !== base || parts.length) {
-    return ` [${base}→${finalDamage}${parts.length ? ` ${parts.join(", ")}` : ""}]`;
-  }
-  return "";
-}
-
-const STATUS_ORDER = ["block", "strength", "vulnerable", "weak", "yard_work", "caffeine", "citation"];
-const STATUS_SHORT = {
-  block: "Block", strength: "Str", vulnerable: "Vuln", weak: "Weak",
-  yard_work: "Yard", caffeine: "Caf", citation: "Cite",
-};
-
-function statusChips(statuses) {
-  if (!statuses) return "";
-  const parts = [];
-  for (const k of STATUS_ORDER) {
-    const v = statuses[k] || 0;
-    if (v > 0) parts.push(`${STATUS_SHORT[k]} ${v}`);
-  }
-  return parts.join(", ");
-}
-
-function fmtHpDelta(d) {
-  if (d > 0) return `+${d} HP`;
-  if (d < 0) return `${d} HP`;
-  return "no HP change";
-}
-
-function formatHitOutcome(hp, blocked) {
-  if (hp > 0 && blocked > 0) return `−${hp} HP (blocked ${blocked})`;
-  if (hp === 0 && blocked > 0) return `Blocked all ${blocked}`;
-  if (hp > 0) return `−${hp} HP`;
-  return "0 damage";
-}
-
-function pickHeadlineEnemy(c) {
-  // Prefer the originally captured enemy while it's alive, otherwise the
-  // leftmost still-alive enemy (e.g. after the headlined one died).
-  const original = ledger.enemy.ref;
-  if (original && original.hp > 0) return original;
-  const alive = c?.enemies?.find((e) => e.hp > 0);
-  return alive || original || c?.enemies?.[0] || null;
-}
-
-function renderLedger() {
-  if (!layoutEls?.damageFeed) return;
-  const el = layoutEls.damageFeed;
-  const c = gameState.combat;
-  const playerHp = c?.player?.hp ?? ledger.player.startHp;
-  const playerMaxHp = c?.player?.maxHp ?? ledger.player.startMaxHp;
-  const head = pickHeadlineEnemy(c);
-  const enemyHp = head?.hp ?? ledger.enemy.startHp;
-  const enemyMaxHp = head?.maxHp ?? ledger.enemy.startMaxHp;
-  const enemyName = head?.name ?? ledger.enemy.name;
-  const playerDelta = playerHp - ledger.player.startHp;
-  const enemyDelta = enemyHp - ledger.enemy.startHp;
-  const playerStatuses = statusChips(c?.player?.statuses);
-  const enemyStatuses = statusChips(head?.statuses);
-
-  el.innerHTML = `
-    <section class="combat-ledger-side combat-ledger-side--player">
-      <header class="combat-ledger-header">
-        <span class="combat-ledger-name">You</span>
-        <span class="combat-ledger-hp">HP ${playerHp}/${playerMaxHp}</span>
-        <span class="combat-ledger-start">start ${ledger.player.startHp}</span>
-      </header>
-      <div class="combat-ledger-events" data-side="player"></div>
-      <footer class="combat-ledger-footer">
-        <span class="combat-ledger-net">${fmtHpDelta(playerDelta)}</span>
-        ${playerStatuses ? `<span class="combat-ledger-statuses">${playerStatuses}</span>` : ""}
-      </footer>
-    </section>
-    <section class="combat-ledger-side combat-ledger-side--enemy">
-      <header class="combat-ledger-header">
-        <span class="combat-ledger-name">${enemyName}</span>
-        <span class="combat-ledger-hp">HP ${enemyHp}/${enemyMaxHp}</span>
-        <span class="combat-ledger-start">start ${ledger.enemy.startHp}</span>
-      </header>
-      <div class="combat-ledger-events" data-side="enemy"></div>
-      <footer class="combat-ledger-footer">
-        <span class="combat-ledger-net">${fmtHpDelta(enemyDelta)}</span>
-        ${enemyStatuses ? `<span class="combat-ledger-statuses">${enemyStatuses}</span>` : ""}
-      </footer>
-    </section>`;
-
-  const playerEventsEl = el.querySelector('[data-side="player"]');
-  const enemyEventsEl = el.querySelector('[data-side="enemy"]');
-  if (!ledger.player.events.length) {
-    playerEventsEl.innerHTML = `<div class="combat-ledger-empty">Nothing yet.</div>`;
-  } else {
-    for (const txt of ledger.player.events) {
-      const row = document.createElement("div");
-      row.className = "combat-ledger-row";
-      row.textContent = txt;
-      playerEventsEl.appendChild(row);
-    }
-  }
-  if (!ledger.enemy.events.length) {
-    enemyEventsEl.innerHTML = `<div class="combat-ledger-empty">Nothing yet.</div>`;
-  } else {
-    for (const txt of ledger.enemy.events) {
-      const row = document.createElement("div");
-      row.className = "combat-ledger-row";
-      row.textContent = txt;
-      enemyEventsEl.appendChild(row);
-    }
-  }
-  playerEventsEl.scrollTop = playerEventsEl.scrollHeight;
-  enemyEventsEl.scrollTop = enemyEventsEl.scrollHeight;
-}
 
 function logEntry(side, text) {
   combatLog.push({ side, text, turn: gameState.combat?.turn ?? 0 });
@@ -716,9 +550,6 @@ function refresh() {
   layoutEls.pilesEl.querySelector('[data-pile="draw"]').textContent = String(c.piles.drawPile.length);
   layoutEls.pilesEl.querySelector('[data-pile="discard"]').textContent = String(c.piles.discardPile.length);
   layoutEls.pilesEl.querySelector('[data-pile="exhaust"]').textContent = String(c.piles.exhaustPile.length);
-
-  // Keep the ledger header HP / net delta / status row live with engine state.
-  renderLedger();
 }
 
 function prettyIntent(intent) {
@@ -755,48 +586,9 @@ function onCardTap(inst, cardEl) {
       if (idx >= 0) c.targetIndex = idx;
     }
   }
-  // Snapshot player self-buff statuses + every enemy's debuff statuses so we
-  // can attribute Block / Strength / Weak / Vuln / Citation gains to the card
-  // that produced them. The engine doesn't fire per-status notifies, so we
-  // diff the bag before and after the card resolves.
-  const selfBefore = snapshotStatusBag(c.player.statuses, SELF_TRACKED);
-  const enemiesBefore = c.enemies.map((e) => ({
-    name: e.name,
-    statuses: snapshotStatusBag(e.statuses, ENEMY_TRACKED),
-  }));
   playCard(inst, c.targetIndex);
   playSfx("card");
-  const selfAfter = snapshotStatusBag(c.player.statuses, SELF_TRACKED);
-  for (const { key, delta } of diffStatusBag(selfBefore, selfAfter, SELF_TRACKED)) {
-    pushPlayerEvent(`+${delta} ${STATUS_SHORT[key] || key} (from ${def.name})`);
-  }
-  c.enemies.forEach((e, i) => {
-    const before = enemiesBefore[i]?.statuses;
-    if (!before) return;
-    const after = snapshotStatusBag(e.statuses, ENEMY_TRACKED);
-    for (const { key, delta } of diffStatusBag(before, after, ENEMY_TRACKED)) {
-      pushEnemyEvent(`+${delta} ${STATUS_SHORT[key] || key} (from your ${def.name})`, e.name);
-    }
-  });
   refresh();
-}
-
-const SELF_TRACKED = ["block", "strength", "yard_work", "caffeine"];
-const ENEMY_TRACKED = ["vulnerable", "weak", "citation", "strength", "block"];
-
-function snapshotStatusBag(statuses, keys) {
-  const out = {};
-  for (const k of keys) out[k] = statuses?.[k] || 0;
-  return out;
-}
-
-function diffStatusBag(before, after, keys) {
-  const diffs = [];
-  for (const k of keys) {
-    const delta = (after[k] || 0) - (before[k] || 0);
-    if (delta > 0) diffs.push({ key: k, delta });
-  }
-  return diffs;
 }
 
 function onListenerEvent(name, payload) {
@@ -812,24 +604,17 @@ function onListenerEvent(name, payload) {
     const r = payload.result || {};
     const hp = r.hpLost || 0;
     const blocked = r.blockLost || 0;
-    const final = r.finalDamage || 0;
     const intentValue = actionBuffer?._intentValue ?? null;
     recordHit(intentValue, r, payload.enemy);
     logEntry("enemy", `${payload.enemy.name} hit you for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
-    const math = damageMathSuffix(intentValue, final, payload.enemy, gameState.combat?.player);
-    pushPlayerEvent(`${formatHitOutcome(hp, blocked)} from ${payload.enemy.name}${math}`);
     refresh();
   }
   if (name === "playerDamageDealt") {
     const r = payload.result || {};
     const hp = r.hpLost || 0;
     const blocked = r.blockLost || 0;
-    const final = r.finalDamage || 0;
-    const base = payload.base ?? 0;
     const tname = payload.target?.name || "enemy";
     logEntry("player", `You hit ${tname} for ${hp}${blocked > 0 ? ` (blocked ${blocked})` : ""}`);
-    const math = damageMathSuffix(base, final, gameState.combat?.player, payload.target);
-    pushEnemyEvent(`${formatHitOutcome(hp, blocked)} from your attack${math}`, tname);
     refresh();
   }
   if (name === "jittersTax") {
@@ -837,7 +622,6 @@ function onListenerEvent(name, payload) {
     addDetail(`You took ${payload.amount} damage from too much caffeine.`);
     flushAction();
     logEntry("system", `Jitters tax: −${payload.amount} HP`);
-    pushPlayerEvent(`−${payload.amount} HP from Jitters (caffeine over threshold)`);
     if (layoutEls.hpBar) layoutEls.hpBar.shake();
     refresh();
   }
@@ -862,46 +646,11 @@ function onListenerEvent(name, payload) {
       for (const s of intent.statuses) explainStatus(s.status);
     }
     logEntry("enemy", `${enemy.name} — ${describeIntent(intent)}`);
-
-    // Ledger entries for non-damage intent effects (engine doesn't notify
-    // per-status, so we read straight from the intent payload).
-    const stacks = intent.stacks || 1;
-    switch (intent.type) {
-      case "block":
-        pushEnemyEvent(`+${intent.value || 0} Block`, enemy.name);
-        break;
-      case "block_and_status":
-        pushEnemyEvent(`+${intent.value || 0} Block`, enemy.name);
-        if (intent.status) pushPlayerEvent(`${statusLabel(intent.status)} +${stacks} applied`);
-        break;
-      case "attack_with_status":
-        if (intent.status) pushPlayerEvent(`${statusLabel(intent.status)} +${stacks} applied`);
-        break;
-      case "apply_status":
-        if (intent.status) pushPlayerEvent(`${statusLabel(intent.status)} +${stacks} applied`);
-        break;
-      case "apply_status_aoe_to_player":
-        for (const s of intent.statuses || []) {
-          pushPlayerEvent(`${statusLabel(s.status)} +${s.stacks || 1} applied`);
-        }
-        break;
-      case "self_buff":
-        if (intent.strength) pushEnemyEvent(`+${intent.strength} Strength`, enemy.name);
-        if (intent.block) pushEnemyEvent(`+${intent.block} Block`, enemy.name);
-        break;
-      case "heal_and_buff":
-        if (intent.heal) pushEnemyEvent(`+${intent.heal} HP (heal)`, enemy.name);
-        if (intent.strength) pushEnemyEvent(`+${intent.strength} Strength`, enemy.name);
-        break;
-      default:
-        break;
-    }
     refresh();
   }
   if (name === "enemySpawned") {
     addDetail(`${payload.enemy.name} joined the fight!`);
     logEntry("system", `${payload.enemy.name} joined the fight`);
-    pushEnemyEvent(`${payload.enemy.name} joined the fight (HP ${payload.enemy.hp}/${payload.enemy.maxHp})`, payload.enemy.name);
     renderEnemies();
     refresh();
   }
@@ -909,20 +658,17 @@ function onListenerEvent(name, payload) {
     const tname = payload.target?.name || "enemy";
     addDetail(`${tname} took ${payload.amount} damage (friendly fire).`);
     logEntry("enemy", `${tname} took ${payload.amount} (friendly fire)`);
-    pushEnemyEvent(`−${payload.amount} HP from friendly fire`, tname);
   }
   if (name === "playerDiscardForced") {
     const cardName = payload.card?.cardId ? payload.card.cardId.replace(/_/g, " ") : "a card";
     addDetail(`Forced discard: ${cardName}.`);
     logEntry("enemy", `Forced you to discard ${cardName}`);
-    pushPlayerEvent(`Forced discard: ${cardName}`);
     refresh();
   }
   if (name === "playerDistracted") {
     // Pop Quiz is already named in the verbose intent title; no extra banner
     // line needed. Just log it for the combat-log scrollback.
     logEntry("enemy", `${payload.label}: −${payload.amount} cards next turn`);
-    pushPlayerEvent(`${payload.label}: −${payload.amount} cards next turn`);
     refresh();
   }
   if (name === "combatEnd") {
@@ -956,7 +702,6 @@ export const combatScene = {
       delete gameState.run.pendingFreshCombat;
       startCombat([enemyId]);
     }
-    resetLedger();
     renderEnemies();
     refresh();
 
