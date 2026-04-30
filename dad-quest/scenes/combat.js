@@ -849,7 +849,7 @@ function onListenerEvent(name, payload) {
   if (name === "enemyIntent") {
     const enemy = payload.enemy;
     const intent = payload.intent;
-    const verbose = describeIntentVerbose(intent);
+    const verbose = describeIntentVerbose(intent, { attacker: enemy, defender: gameState.combat?.player });
     const title = `${enemy.name}: ${verbose}`;
     startAction(title, intentColor(intent.type));
     actionBuffer._intentValue = intent.value || null;
