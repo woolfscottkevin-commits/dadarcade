@@ -163,10 +163,24 @@ function pickEnemy(prevRowEnemies, kind) {
   return pick(pool); // give up after retries; allow duplicate adjacency
 }
 
-function ensureUtilityNode(rows, type, preferredRows) {
+function ensureUtilityNode(rows, type, preferredRows, parentsById) {
   for (let r = 2; r <= 5; r++) {
     if (rows[r].some((n) => n.type === type)) return;
   }
+  // Pick a combat node whose parents don't already have this type, so the
+  // forced-conversion doesn't reintroduce back-to-back-on-a-path clustering.
+  for (const r of preferredRows) {
+    const safe = rows[r].filter((n) => {
+      if (n.type !== "combat") return false;
+      const parents = (parentsById && parentsById.get(n.id)) || [];
+      return !parents.some((p) => p.type === type);
+    });
+    if (safe.length > 0) {
+      pick(safe).type = type;
+      return;
+    }
+  }
+  // Fallback: if every combat node has a same-type parent, place it anyway.
   for (const r of preferredRows) {
     const candidates = rows[r].filter((n) => n.type === "combat");
     if (candidates.length > 0) {
@@ -206,37 +220,8 @@ export function generateAct(actNumber) {
     visited: false,
   }];
 
-  // 2. Assign types for rows 2..5 with the elite-not-adjacent constraint
-  for (let r = 2; r <= 5; r++) {
-    const prevHasElite = rows[r - 1].some((n) => n.type === "elite");
-    for (const node of rows[r]) {
-      let t = pickType(r);
-      if (t === "elite" && prevHasElite) {
-        // Re-roll up to 3 times
-        for (let i = 0; i < 3 && t === "elite"; i++) t = pickType(r);
-      }
-      node.type = t;
-    }
-    // After assignment, also enforce: if THIS row has an elite, the next-row
-    // elite roll must skip. We'll handle this on the next iteration via prevHasElite.
-  }
-  // Final pass: defensive scan for any adjacent elite pairs (in case re-roll still landed elite)
-  for (let r = 2; r <= 5; r++) {
-    const prevElites = rows[r - 1].filter((n) => n.type === "elite").length;
-    if (prevElites === 0) continue;
-    for (const node of rows[r]) {
-      if (node.type === "elite") node.type = "combat";
-    }
-  }
-
-  // A fun run needs visible planning texture every act, not just a combat gauntlet.
-  // Keep the 60/10/10/10/10 distribution as the base, then guarantee at least
-  // one rest, one shop, and one event by converting combat nodes when RNG misses.
-  ensureUtilityNode(rows, "rest", [5, 4, 3, 2]);
-  ensureUtilityNode(rows, "shop", [3, 4, 2, 5]);
-  ensureUtilityNode(rows, "event", [2, 3, 4, 5]);
-
-  // 3. Build edges between adjacent rows
+  // 2. Build edges first so we can use real parent->child paths for the
+  //    "no two specials in a row on the same path" check.
   for (let r = 1; r <= 5; r++) {
     const src = rows[r];
     const dst = rows[r + 1];
@@ -245,6 +230,47 @@ export function generateAct(actNumber) {
       src[s].outgoing.push(dst[d].id);
     }
   }
+
+  // Build a parents lookup keyed by node id so type assignment can ask
+  // "does any node leading TO me have the same type?".
+  const parentsById = new Map();
+  for (let r = 1; r <= 5; r++) {
+    for (const src of rows[r]) {
+      for (const childId of src.outgoing) {
+        if (!parentsById.has(childId)) parentsById.set(childId, []);
+        parentsById.get(childId).push(src);
+      }
+    }
+  }
+
+  // 3. Assign types for rows 2..5 with anti-clustering: a node's type is
+  //    re-rolled (up to 3 attempts) if any of its parents already has the
+  //    same special type (elite/rest/shop/event). Combat is always allowed.
+  const SPECIAL = new Set(["elite", "rest", "shop", "event"]);
+  const conflictsWithParents = (node, type) => {
+    if (!SPECIAL.has(type)) return false;
+    const parents = parentsById.get(node.id) || [];
+    return parents.some((p) => p.type === type);
+  };
+  for (let r = 2; r <= 5; r++) {
+    for (const node of rows[r]) {
+      let t = pickType(r);
+      for (let i = 0; i < 3 && conflictsWithParents(node, t); i++) {
+        t = pickType(r);
+      }
+      // If RNG kept landing on the same special, fall back to combat to
+      // guarantee no back-to-back same-type path.
+      if (conflictsWithParents(node, t)) t = "combat";
+      node.type = t;
+    }
+  }
+
+  // A fun run needs visible planning texture every act, not just a combat gauntlet.
+  // Keep the 60/10/10/10/10 distribution as the base, then guarantee at least
+  // one rest, one shop, and one event by converting combat nodes when RNG misses.
+  ensureUtilityNode(rows, "rest", [5, 4, 3, 2], parentsById);
+  ensureUtilityNode(rows, "shop", [3, 4, 2, 5], parentsById);
+  ensureUtilityNode(rows, "event", [2, 3, 4, 5], parentsById);
 
   // 4. Assign enemies to combat / elite nodes, avoiding back-to-back same enemy
   let prevRowEnemies = [];
