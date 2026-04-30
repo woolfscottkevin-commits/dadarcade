@@ -82,7 +82,7 @@ export function createStatusRow() {
     chip.title = `${meta.label} ${valueLabelForPopover}: ${meta.help}`;
     chip.setAttribute("aria-label", `${meta.label} ${valueLabelForPopover}. ${meta.help}`);
     chip.style.borderColor = meta.color;
-    chip.innerHTML = `<span class="status-glyph">${meta.glyph}</span><span class="status-num">${displayValue}</span>`;
+    chip.innerHTML = `<span class="status-glyph">${meta.glyph}</span><span class="status-name">${meta.label}</span><span class="status-num">${displayValue}</span>`;
     chip.addEventListener("click", (e) => {
       e.stopPropagation();
       showPopoverFor(chip, meta, valueLabelForPopover);

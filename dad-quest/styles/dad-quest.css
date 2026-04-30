@@ -292,6 +292,8 @@ body {
   cursor: pointer; font-family: inherit;
 }
 .status-chip:active { transform: translateY(1px); }
+.status-name { font-weight: 800; letter-spacing: 0.01em; }
+.status-num { font-variant-numeric: tabular-nums; font-weight: 900; }
 .status-popover {
   position: absolute; z-index: 30;
   background: var(--cream); color: var(--coffee-brown);
