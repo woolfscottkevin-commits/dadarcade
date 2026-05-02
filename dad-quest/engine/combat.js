@@ -237,7 +237,14 @@ function applyCombatStartRelics() {
     selfDamage(c.player, 6);
   }
   if (relicSet.has("endless_inbox")) {
-    const commons = CARDS.filter((card) => card.rarity === "common" && card.id !== "burnout");
+    // Pool restricted to the active character + shared so Doug doesn't get
+    // dealt Hank's Mow the Lawn (which only Hank cards can use) or Brenda's
+    // Citation cards (whose payoff requires Brenda's relics/scaling).
+    const commons = CARDS.filter((card) =>
+      card.rarity === "common"
+      && card.id !== "burnout"
+      && (card.character === c.player.character || card.character === "shared")
+    );
     for (let i = 0; i < 3; i++) {
       const def = commons[Math.floor(Math.random() * commons.length)];
       if (def) c.piles.hand.push(makeGeneratedCard(def.id, { exhaustOnPlay: true }));

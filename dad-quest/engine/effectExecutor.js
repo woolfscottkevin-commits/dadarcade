@@ -407,13 +407,18 @@ function applyRandom(status, amount, ctx) {
 
 function addToHand(filter, n, flag, ctx) {
   // Phase 2: implements only filters used by the codebase: hank_attack and any_skill.
+  // any_skill / any_common are restricted to the active character + shared so
+  // a Doug player with The Backup Plan can't be handed Hank's Yard Work cards
+  // (which only Hank cards can spend) or Brenda's Citation cards.
+  const character = ctx.combat.player.character;
+  const ownChar = (c) => c.character === character || c.character === "shared";
   let pool;
   if (filter === "hank_attack") {
     pool = CARDS.filter((c) => c.character === "hank" && c.type === "attack" && c.id !== "burnout");
   } else if (filter === "any_skill") {
-    pool = CARDS.filter((c) => c.type === "skill" && c.id !== "burnout");
+    pool = CARDS.filter((c) => c.type === "skill" && c.id !== "burnout" && ownChar(c));
   } else if (filter === "any_common") {
-    pool = CARDS.filter((c) => c.rarity === "common" && c.id !== "burnout");
+    pool = CARDS.filter((c) => c.rarity === "common" && c.id !== "burnout" && ownChar(c));
   } else {
     console.warn(`[effectExecutor] unsupported add_to_hand filter '${filter}'`);
     return;
