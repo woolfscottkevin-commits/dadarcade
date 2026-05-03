@@ -2,6 +2,7 @@ const STOP_SPEED = 5;
 const STOP_TIME = 0.2;
 const GRAVITY_Z = 980;
 const MAX_POWER_SPEED = 580;
+const PUTT_POWER_SPEED = 620;
 
 export class BallPhysics {
   constructor(scene, x, y, biome) {
@@ -75,7 +76,11 @@ export class BallPhysics {
     this.syncVisuals();
   }
 
-  launch(vector, power) {
+  launch(vector, power, options = {}) {
+    if (options.mode === "putt") {
+      this.putt(vector, power);
+      return;
+    }
     const speed = MAX_POWER_SPEED * power;
     this.flightVelocity.set(vector.x * speed, vector.y * speed);
     this.vz = 420 + 520 * power;
@@ -84,6 +89,21 @@ export class BallPhysics {
     this.rolling = false;
     this.stoppedFor = 0;
     this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+  }
+
+  putt(vector, power) {
+    const speed = puttSpeedForPower(power);
+    this.z = 0;
+    this.vz = 0;
+    this.flight = false;
+    this.rolling = true;
+    this.stoppedFor = 0;
+    this.flightVelocity.set(0, 0);
+    this.scene.matter.body.setVelocity(this.body, {
+      x: (vector.x * speed) / 60,
+      y: (vector.y * speed) / 60,
+    });
+    this.syncVisuals();
   }
 
   update(dt, wind, surfaceAt) {
@@ -154,4 +174,9 @@ export class BallPhysics {
     this.shadow.setAlpha(Phaser.Math.Clamp(0.34 - this.z / 600, 0.14, 0.34));
     this.groundPoint.setPosition(this.x, this.y);
   }
+}
+
+export function puttSpeedForPower(power) {
+  const clamped = Math.max(0, Math.min(1, power));
+  return PUTT_POWER_SPEED * Math.pow(clamped, 0.85);
 }

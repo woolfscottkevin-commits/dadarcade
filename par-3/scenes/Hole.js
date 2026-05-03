@@ -57,11 +57,11 @@ export class Hole extends Phaser.Scene {
       onStart: (shot) => {
         this.audio.unlock();
         this.state = "aiming";
-        this.aimLine.draw(shot, this.wind, this.difficulty);
+        this.aimLine.draw(this.prepareShot(shot), this.wind, this.difficulty, (x, y) => this.generator.surfaceAt(x, y));
         this.powerMeter.draw(shot);
       },
       onChange: (shot) => {
-        this.aimLine.draw(shot, this.wind, this.difficulty);
+        this.aimLine.draw(this.prepareShot(shot), this.wind, this.difficulty, (x, y) => this.generator.surfaceAt(x, y));
         this.powerMeter.draw(shot);
       },
       onCancel: () => {
@@ -69,7 +69,7 @@ export class Hole extends Phaser.Scene {
         this.aimLine.clear();
         this.powerMeter.clear();
       },
-      onRelease: (shot) => this.takeShot(shot),
+      onRelease: (shot) => this.takeShot(this.prepareShot(shot)),
     });
 
     this.input.keyboard?.on("keydown-R", () => this.restartHole());
@@ -77,6 +77,15 @@ export class Hole extends Phaser.Scene {
     this.input.keyboard?.on("keydown-M", () => this.toggleMute());
     this.input.on("pointerdown", () => this.audio.unlock());
     this.updateHud();
+  }
+
+  prepareShot(shot) {
+    const surface = this.generator.surfaceAt(this.ball.x, this.ball.y);
+    return {
+      ...shot,
+      mode: surface.type === "green" && shot.power <= 0.36 ? "putt" : "flight",
+      surface: surface.type,
+    };
   }
 
   createControls() {
@@ -116,13 +125,14 @@ export class Hole extends Phaser.Scene {
     this.strokes += 1;
     this.aimLine.clear();
     this.powerMeter.clear();
-    this.ball.launch(shot.direction, shot.power);
+    this.ball.launch(shot.direction, shot.power, { mode: shot.mode });
     this.audio.hit(shot.power);
-    this.state = "flight";
+    this.state = shot.mode === "putt" ? "rolling" : "flight";
     this.cameraDirector.follow(this.ball);
     window.gtag?.("event", "par3_shot", {
       hole: this.hole.id,
       difficulty: this.difficultyId,
+      mode: shot.mode,
       power: Math.round(shot.power * 100),
       stroke: this.strokes,
     });

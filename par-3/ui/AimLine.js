@@ -1,5 +1,9 @@
+import { puttSpeedForPower } from "../systems/BallPhysics.js";
+
 const PREVIEW_STEPS = 58;
 const STEP_DT = 1 / 24;
+const PUTT_STEP_DT = 1 / 60;
+const PUTT_PREVIEW_STEPS = 240;
 const GRAVITY_Z = 980;
 const MAX_POWER_SPEED = 580;
 
@@ -24,11 +28,13 @@ export class AimLine {
     this.apex.setVisible(false);
   }
 
-  draw(state, wind, difficulty) {
+  draw(state, wind, difficulty, surfaceAt) {
     this.clear();
     if (!state || state.power <= 0.02) return;
 
-    const points = this.predict(state, wind);
+    const points = state.mode === "putt"
+      ? this.predictPutt(state, surfaceAt)
+      : this.predict(state, wind);
     const visibleCount = Math.max(6, Math.floor(points.length * difficulty.aimScale));
     this.graphics.lineStyle(4, 0xffffff, 0.9);
     for (let i = 1; i < visibleCount; i += 1) {
@@ -43,7 +49,6 @@ export class AimLine {
         this.graphics.strokePath();
       }
     }
-    const apex = points.reduce((best, p) => (p.z > best.z ? p : best), points[0]);
     const land = points[points.length - 1];
     this.landing.fillStyle(0x8ae6a2, 0.16);
     this.landing.fillCircle(land.x, land.y, 18);
@@ -56,7 +61,12 @@ export class AimLine {
     this.landing.moveTo(land.x, land.y - 10);
     this.landing.lineTo(land.x, land.y + 10);
     this.landing.strokePath();
-    this.apex.setPosition(apex.x, apex.y - apex.z).setVisible(true);
+    if (state.mode === "putt") {
+      this.apex.setVisible(false);
+    } else {
+      const apex = points.reduce((best, p) => (p.z > best.z ? p : best), points[0]);
+      this.apex.setPosition(apex.x, apex.y - apex.z).setVisible(true);
+    }
   }
 
   predict(state, wind) {
@@ -79,6 +89,31 @@ export class AimLine {
       z = Math.max(0, z + vz * STEP_DT);
       points.push({ x, y, z });
       if (z <= 0 && i > 8) break;
+    }
+    return points;
+  }
+
+  predictPutt(state, surfaceAt) {
+    const points = [{ x: state.launch.x, y: state.launch.y, z: 0 }];
+    const velocity = new Phaser.Math.Vector2(
+      state.direction.x * puttSpeedForPower(state.power),
+      state.direction.y * puttSpeedForPower(state.power),
+    );
+    let x = state.launch.x;
+    let y = state.launch.y;
+
+    for (let i = 0; i < PUTT_PREVIEW_STEPS; i += 1) {
+      const surface = surfaceAt?.(x, y) || { friction: 0.975, slope: { x: 0, y: 0 } };
+      velocity.x *= surface.friction;
+      velocity.y *= surface.friction;
+      if (surface.type === "green") {
+        velocity.x += surface.slope.x * 30 * PUTT_STEP_DT;
+        velocity.y += surface.slope.y * 30 * PUTT_STEP_DT;
+      }
+      x += velocity.x * PUTT_STEP_DT;
+      y += velocity.y * PUTT_STEP_DT;
+      if (i % 3 === 0) points.push({ x, y, z: 0 });
+      if (velocity.length() < 5 && i > 8) break;
     }
     return points;
   }
