@@ -26,12 +26,14 @@ export class Title extends Phaser.Scene {
       color: "#d5f6db",
     }).setOrigin(0.5);
 
-    this.add.text(360, 430, "Difficulty", labelStyle()).setOrigin(0.5);
+    this.drawHowTo();
+
+    this.add.text(360, 488, "Difficulty", labelStyle()).setOrigin(0.5);
     this.buttons = {};
     const ids = ["kid", "normal", "hard"];
     ids.forEach((id, index) => {
       const x = 188 + index * 172;
-      this.buttons[id] = this.addButton(x, 505, DIFFICULTIES[id].label, () => {
+      this.buttons[id] = this.addButton(x, 562, DIFFICULTIES[id].label, () => {
         this.difficulty = id;
         setValue("difficulty", id);
         this.paintButtons();
@@ -39,18 +41,39 @@ export class Title extends Phaser.Scene {
     });
     this.paintButtons();
 
-    this.addButton(360, 690, "Play Hole 1", () => {
+    this.addButton(360, 730, "Play Hole 1", () => {
       window.gtag?.("event", "par3_start", { difficulty: this.difficulty });
       this.scene.start("Course", { difficulty: this.difficulty });
     }, 280, 72);
 
-    this.add.text(360, 825, "Phase 1 prototype: one grass par 3, wind, arc, roll, cup.", {
+    this.add.text(360, 850, "Pull back, release, and trust the green landing mark.", {
       fontFamily: "Inter, Arial, sans-serif",
       fontSize: "22px",
       color: "#bde6c6",
       align: "center",
       wordWrap: { width: 560 },
     }).setOrigin(0.5);
+  }
+
+  drawHowTo() {
+    const y = 395;
+    this.add.circle(270, y, 9, 0xffffff);
+    this.add.ellipse(270, y + 11, 32, 10, 0x000000, 0.22);
+    const g = this.add.graphics();
+    g.lineStyle(3, 0xffffff, 0.9);
+    g.beginPath();
+    g.moveTo(270, y);
+    g.lineTo(202, y + 62);
+    g.strokePath();
+    g.lineStyle(3, 0x8ae6a2, 0.9);
+    g.beginPath();
+    g.moveTo(270, y);
+    g.lineTo(395, y - 80);
+    g.strokePath();
+    for (let i = 0; i < 5; i += 1) {
+      this.add.circle(310 + i * 22, y - 24 - i * 10, 3, 0xffffff, 0.85 - i * 0.12);
+    }
+    this.add.circle(404, y - 86, 12, 0x8ae6a2, 0.18).setStrokeStyle(3, 0x8ae6a2, 0.92);
   }
 
   drawBackground() {

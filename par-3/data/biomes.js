@@ -15,7 +15,7 @@ export const BIOMES = {
       fairway: 0.985,
       rough: 0.95,
       sand: 0.85,
-      green: 0.99,
+      green: 0.975,
     },
     rollout: 0.72,
     bounce: 0.42,

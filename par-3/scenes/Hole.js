@@ -25,6 +25,8 @@ export class Hole extends Phaser.Scene {
     this.strokes = 0;
     this.state = "ready";
     this.lipCooldown = 0;
+    this.scorecardQueued = false;
+    this.scorecardFallback = null;
   }
 
   create() {
@@ -50,6 +52,7 @@ export class Hole extends Phaser.Scene {
 
     this.drag = new DragController(this, this.ball, {
       isLocked: () => this.state === "holed",
+      shouldIgnorePointer: (pointer) => this.isPointerOverHud(pointer),
       onStart: (shot) => {
         this.audio.unlock();
         this.state = "aiming";
@@ -95,10 +98,17 @@ export class Hole extends Phaser.Scene {
       color: "#ffffff",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
     const zone = this.add.zone(x, y, 124, 48).setScrollFactor(0).setDepth(1004).setInteractive({ useHandCursor: true });
-    zone.on("pointerdown", onClick);
+    zone.on("pointerdown", (pointer, localX, localY, event) => {
+      event?.stopPropagation();
+      onClick();
+    });
     zone.on("pointerover", () => bg.setFillStyle(0xffffff, 0.26));
     zone.on("pointerout", () => bg.setFillStyle(0xffffff, 0.16));
     return [bg, text, zone];
+  }
+
+  isPointerOverHud(pointer) {
+    return pointer.y < 86 || pointer.y > 1168;
   }
 
   takeShot(shot) {
@@ -157,12 +167,23 @@ export class Hole extends Phaser.Scene {
     this.audio.cup();
     if (this.strokes === 1) this.audio.fanfare();
     this.celebrate();
-    this.time.delayedCall(1450, () => {
+    this.queueScorecard();
+  }
+
+  queueScorecard() {
+    const transition = () => {
+      if (this.scorecardQueued || !this.sys.settings.active) return;
+      this.scorecardQueued = true;
       this.scene.start("Scorecard", {
         difficulty: this.difficultyId,
         hole: this.hole,
         strokes: this.strokes,
       });
+    };
+    this.time.delayedCall(1450, transition);
+    this.scorecardFallback = window.setTimeout(transition, 1850);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.scorecardFallback) window.clearTimeout(this.scorecardFallback);
     });
   }
 

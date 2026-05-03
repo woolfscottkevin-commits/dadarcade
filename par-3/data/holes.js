@@ -8,10 +8,10 @@ export const HOLES = [
     world: { width: 720, height: 1840 },
     tee: { x: 360, y: 1620 },
     pin: { x: 360, y: 300 },
-    green: { x: 360, y: 300, rx: 128, ry: 96, slope: { x: 0.05, y: 0.02 } },
+    green: { x: 360, y: 300, rx: 142, ry: 108, slope: { x: 0.035, y: 0.018 } },
     fairway: [
-      { x: 360, y: 965, rx: 205, ry: 700, rotation: 0 },
-      { x: 360, y: 390, rx: 155, ry: 180, rotation: 0 },
+      { x: 360, y: 965, rx: 218, ry: 710, rotation: 0 },
+      { x: 360, y: 390, rx: 172, ry: 196, rotation: 0 },
     ],
     rough: [],
     hazards: [],

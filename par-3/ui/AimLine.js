@@ -1,7 +1,7 @@
 const PREVIEW_STEPS = 58;
 const STEP_DT = 1 / 24;
 const GRAVITY_Z = 980;
-const MAX_POWER_SPEED = 1040;
+const MAX_POWER_SPEED = 580;
 
 export class AimLine {
   constructor(scene) {
@@ -15,10 +15,12 @@ export class AimLine {
       stroke: "#173622",
       strokeThickness: 5,
     }).setOrigin(0.5).setDepth(46).setVisible(false);
+    this.landing = scene.add.graphics().setDepth(44);
   }
 
   clear() {
     this.graphics.clear();
+    this.landing.clear();
     this.apex.setVisible(false);
   }
 
@@ -42,6 +44,18 @@ export class AimLine {
       }
     }
     const apex = points.reduce((best, p) => (p.z > best.z ? p : best), points[0]);
+    const land = points[points.length - 1];
+    this.landing.fillStyle(0x8ae6a2, 0.16);
+    this.landing.fillCircle(land.x, land.y, 18);
+    this.landing.lineStyle(4, 0x8ae6a2, 0.92);
+    this.landing.strokeCircle(land.x, land.y, 18);
+    this.landing.lineStyle(2, 0xffffff, 0.78);
+    this.landing.beginPath();
+    this.landing.moveTo(land.x - 10, land.y);
+    this.landing.lineTo(land.x + 10, land.y);
+    this.landing.moveTo(land.x, land.y - 10);
+    this.landing.lineTo(land.x, land.y + 10);
+    this.landing.strokePath();
     this.apex.setPosition(apex.x, apex.y - apex.z).setVisible(true);
   }
 

@@ -1,7 +1,7 @@
 const STOP_SPEED = 5;
 const STOP_TIME = 0.2;
 const GRAVITY_Z = 980;
-const MAX_POWER_SPEED = 1040;
+const MAX_POWER_SPEED = 580;
 
 export class BallPhysics {
   constructor(scene, x, y, biome) {
@@ -98,7 +98,7 @@ export class BallPhysics {
         y: this.velocity.y * friction,
       });
       if (surface.type === "green") {
-        this.scene.matter.body.applyForce(this.body.position, {
+        Phaser.Physics.Matter.Matter.Body.applyForce(this.body, this.body.position, {
           x: surface.slope.x * 0.000045,
           y: surface.slope.y * 0.000045,
         });

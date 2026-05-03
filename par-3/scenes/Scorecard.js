@@ -13,7 +13,7 @@ export class Scorecard extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#102516");
     this.add.rectangle(360, 640, 720, 1280, 0x102516);
     const relative = this.strokes - this.hole.par;
-    const label = relative <= -2 ? "Eagle" : relative === -1 ? "Birdie" : relative === 0 ? "Par" : relative === 1 ? "Bogey" : `+${relative}`;
+    const label = this.strokes === 1 ? "Ace!" : relative <= -2 ? "Eagle" : relative === -1 ? "Birdie" : relative === 0 ? "Par" : relative === 1 ? "Bogey" : `+${relative}`;
 
     this.add.text(360, 220, label, {
       fontFamily: "Inter, Arial, sans-serif",
@@ -25,7 +25,7 @@ export class Scorecard extends Phaser.Scene {
     }).setOrigin(0.5);
     this.add.text(360, 330, `${this.hole.name} complete`, bodyStyle(28, "#d5f6db")).setOrigin(0.5);
     this.add.text(360, 445, `${this.strokes} stroke${this.strokes === 1 ? "" : "s"} on a par ${this.hole.par}`, bodyStyle(34, "#ffffff")).setOrigin(0.5);
-    this.add.text(360, 530, `Difficulty: ${this.difficulty}`, bodyStyle(22, "#bde6c6")).setOrigin(0.5);
+    this.add.text(360, 530, `Difficulty: ${toTitleCase(this.difficulty)}`, bodyStyle(22, "#bde6c6")).setOrigin(0.5);
 
     this.addButton(360, 720, "Retry Hole", () => this.scene.start("Course", { difficulty: this.difficulty }));
     this.addButton(360, 820, "Title", () => this.scene.start("Title"));
@@ -50,4 +50,8 @@ function bodyStyle(size, color) {
     color,
     align: "center",
   };
+}
+
+function toTitleCase(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

@@ -1,5 +1,7 @@
 const MAX_DRAG = 250;
 const CANCEL_DRAG = 30;
+const TOP_UI_SAFE = 86;
+const BOTTOM_UI_SAFE = 1168;
 
 export class DragController {
   constructor(scene, ball, callbacks) {
@@ -25,6 +27,8 @@ export class DragController {
 
   onDown(pointer) {
     if (this.ball.isMoving || this.callbacks.isLocked()) return;
+    if (pointer.y < TOP_UI_SAFE || pointer.y > BOTTOM_UI_SAFE) return;
+    if (this.callbacks.shouldIgnorePointer?.(pointer)) return;
     this.active = true;
     this.start.set(pointer.worldX, pointer.worldY);
     this.current.copy(this.start);
@@ -33,6 +37,10 @@ export class DragController {
 
   onMove(pointer) {
     if (!this.active) return;
+    if (pointer.y < 0 || pointer.y > 1280) {
+      this.cancel();
+      return;
+    }
     this.current.set(pointer.worldX, pointer.worldY);
     this.callbacks.onChange(this.state());
   }
