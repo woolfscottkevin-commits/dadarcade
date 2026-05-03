@@ -77,7 +77,7 @@ export class HoleGenerator {
         friction: this.biome.surfaceFriction.green,
         slope: green.slope,
         safe: true,
-        rollout: this.biome.rollout,
+        rollout: 0.42,
       };
     }
     for (const fairway of this.hole.fairway) {
