@@ -260,7 +260,9 @@ export function startPlayerTurn() {
   c.flags.cardsPlayedThisTurn = 0;
   c.flags.gainedCaffeineThisTurn = false;
   c.flags.appliedCitationThisTurn = false;
-  c.flags.damageTakenThisTurn = 0;
+  // damageTakenThisTurn is intentionally NOT reset here — it carries the
+  // damage from the just-ended enemy turn so cards like Last Stand can heal
+  // it on the player's next turn. Reset happens at the top of endPlayerTurn.
   c.flags.firstDamagePreventThisTurn = false;
   c.flags.costZeroThisTurn = new Set();
 
@@ -446,6 +448,14 @@ export function endPlayerTurn() {
   const c = gameState.combat;
   if (!c) return;
   if (c.pendingOutcome) return;
+
+  // Reset the "damage taken" counter at the END of the player's active play,
+  // not the start. The enemy turn that follows accumulates fresh damage which
+  // then carries through to the next player turn — so Last Stand played at
+  // the start of next turn heals what the enemies just did to you. Self-damage
+  // and jitters from THIS turn that happen below also count toward the next
+  // turn's Last Stand.
+  c.flags.damageTakenThisTurn = 0;
 
   fireTriggers("on_turn_end", makeCtx());
 
