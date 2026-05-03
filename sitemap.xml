@@ -67,6 +67,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://dadarcade.com/par-3</loc>
+    <lastmod>2026-05-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://dadarcade.com/brickfall/leaderboard</loc>
     <lastmod>2026-04-16</lastmod>
     <changefreq>daily</changefreq>

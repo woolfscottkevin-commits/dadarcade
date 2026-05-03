@@ -1,0 +1,46 @@
+export class HUD {
+  constructor(scene) {
+    this.scene = scene;
+    this.root = scene.add.container(0, 0).setScrollFactor(0).setDepth(1000);
+    this.top = scene.add.rectangle(360, 30, 720, 60, 0x000000, 0.42);
+    this.bottom = scene.add.rectangle(360, 1236, 720, 88, 0x000000, 0.28);
+    this.title = scene.add.text(24, 16, "", textStyle(22, "700")).setOrigin(0, 0);
+    this.strokes = scene.add.text(360, 12, "", textStyle(26, "800")).setOrigin(0.5, 0);
+    this.wind = scene.add.text(696, 14, "", textStyle(18, "700")).setOrigin(1, 0);
+    this.hint = scene.add.text(360, 1182, "Drag back anywhere, release to swing", textStyle(20, "700")).setOrigin(0.5, 0);
+    this.surface = scene.add.text(24, 1184, "", textStyle(16, "700")).setOrigin(0, 0);
+    this.root.add([this.top, this.bottom, this.title, this.strokes, this.wind, this.hint, this.surface]);
+  }
+
+  objects() {
+    return [this.root];
+  }
+
+  update({ hole, strokes, wind, surface, state }) {
+    this.title.setText(`Hole ${hole.number}  Par ${hole.par}`);
+    this.strokes.setText(`Stroke ${Math.max(1, strokes + 1)}`);
+    this.wind.setText(`${windArrow(wind.angle())} ${"▮".repeat(wind.bars())}`);
+    this.surface.setText(surface ? surface.toUpperCase() : "");
+    if (state === "ready") this.hint.setText("Drag back anywhere, release to swing");
+    if (state === "flight") this.hint.setText("Hold the line...");
+    if (state === "rolling") this.hint.setText("Roll, roll, roll");
+    if (state === "holed") this.hint.setText("In the cup");
+  }
+}
+
+function textStyle(size, weight) {
+  return {
+    fontFamily: "Inter, Arial, sans-serif",
+    fontSize: `${size}px`,
+    fontStyle: weight,
+    color: "#ffffff",
+    stroke: "#07110a",
+    strokeThickness: 4,
+  };
+}
+
+function windArrow(angle) {
+  const arrows = ["→", "↘", "↓", "↙", "←", "↖", "↑", "↗"];
+  const index = Math.round((((angle + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2)) * 8) % 8;
+  return arrows[index];
+}
