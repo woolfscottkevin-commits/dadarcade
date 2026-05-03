@@ -14,12 +14,20 @@ export class HoleGenerator {
     scene.add.rectangle(360, hole.world.height / 2, hole.world.width + 560, hole.world.height, biome.colors.rough).setDepth(0);
     this.drawMownTexture();
     for (const fairway of hole.fairway) {
-      scene.add.ellipse(fairway.x, fairway.y, fairway.rx * 2, fairway.ry * 2, biome.colors.fairway).setDepth(2);
+      this.drawEllipse(fairway, biome.colors.fairway, 2);
     }
-    scene.add.ellipse(hole.green.x, hole.green.y, hole.green.rx * 2, hole.green.ry * 2, biome.colors.green).setDepth(3);
+    this.drawDecorations("ground");
+    this.drawEllipse(hole.green, biome.colors.green, 3);
     this.drawGreenSlope();
     this.drawTee();
     this.drawPin();
+    this.drawDecorations("obstacle");
+  }
+
+  drawEllipse(shape, color, depth, alpha = 1) {
+    return this.scene.add.ellipse(shape.x, shape.y, shape.rx * 2, shape.ry * 2, color, alpha)
+      .setRotation(shape.rotation || 0)
+      .setDepth(depth);
   }
 
   drawMownTexture() {
@@ -29,6 +37,54 @@ export class HoleGenerator {
       g.fillStyle(y % 112 === 0 ? 0xffffff : 0x000000, 0.035);
       g.fillRect(-280, y, 1280, 28);
     }
+  }
+
+  drawDecorations(layer) {
+    for (const item of this.hole.decorations || []) {
+      const isGround = ["sand", "water", "ice", "snowdrift"].includes(item.type);
+      if ((layer === "ground") !== isGround) continue;
+      if (item.type === "sand") this.drawEllipse(item, this.biome.colors.sand, 2.35, 0.95);
+      if (item.type === "water") this.drawEllipse(item, this.biome.colors.water, 2.32, 0.9);
+      if (item.type === "ice") this.drawEllipse(item, this.biome.colors.water, 2.34, 0.55);
+      if (item.type === "snowdrift") this.drawEllipse(item, 0xffffff, 2.36, 0.58);
+      if (item.type === "tree") this.drawTree(item.x, item.y, item.size);
+      if (item.type === "cactus") this.drawCactus(item.x, item.y, item.size);
+      if (item.type === "pine") this.drawPine(item.x, item.y, item.size);
+      if (item.type === "rock") this.drawRock(item.x, item.y, item.size);
+    }
+  }
+
+  drawTree(x, y, size) {
+    this.scene.add.circle(x, y, size * 0.52, 0x234c26, 0.95).setDepth(10);
+    this.scene.add.circle(x - size * 0.18, y - size * 0.1, size * 0.34, 0x2f6a31, 0.95).setDepth(11);
+    this.scene.add.circle(x + size * 0.18, y + size * 0.08, size * 0.32, 0x1f4322, 0.95).setDepth(11);
+  }
+
+  drawCactus(x, y, size) {
+    const color = 0x2f7d3a;
+    this.scene.add.rectangle(x, y, size * 0.34, size * 1.15, color, 1).setDepth(10);
+    this.scene.add.circle(x, y - size * 0.58, size * 0.17, color, 1).setDepth(10);
+    this.scene.add.rectangle(x - size * 0.32, y + size * 0.02, size * 0.18, size * 0.52, color, 1).setDepth(10);
+    this.scene.add.rectangle(x + size * 0.32, y - size * 0.16, size * 0.18, size * 0.5, color, 1).setDepth(10);
+  }
+
+  drawPine(x, y, size) {
+    this.scene.add.triangle(x, y - size * 0.38, 0, size, size, size, size / 2, 0, 0x123f37, 1).setDepth(10);
+    this.scene.add.triangle(x, y, 0, size, size, size, size / 2, 0, 0x1e5a49, 1).setDepth(11);
+    this.scene.add.rectangle(x, y + size * 0.44, size * 0.16, size * 0.28, 0x6a4b2d, 1).setDepth(9);
+  }
+
+  drawRock(x, y, size) {
+    const g = this.scene.add.graphics().setDepth(10);
+    g.fillStyle(0x7b7f86, 0.96);
+    g.beginPath();
+    g.moveTo(x - size * 0.48, y + size * 0.08);
+    g.lineTo(x - size * 0.18, y - size * 0.38);
+    g.lineTo(x + size * 0.32, y - size * 0.28);
+    g.lineTo(x + size * 0.5, y + size * 0.18);
+    g.lineTo(x + size * 0.08, y + size * 0.42);
+    g.closePath();
+    g.fillPath();
   }
 
   drawGreenSlope() {
@@ -80,6 +136,11 @@ export class HoleGenerator {
         rollout: 0.42,
       };
     }
+    for (const item of this.hole.decorations || []) {
+      if (["sand", "water", "ice", "snowdrift"].includes(item.type) && inEllipse(x, y, item)) {
+        return surfaceForDecoration(item.type, this.biome, this.difficulty);
+      }
+    }
     for (const fairway of this.hole.fairway) {
       if (inEllipse(x, y, fairway)) {
         return {
@@ -101,8 +162,51 @@ export class HoleGenerator {
   }
 }
 
+function surfaceForDecoration(type, biome, difficulty) {
+  if (type === "sand") {
+    return {
+      type: "sand",
+      friction: difficulty.bunkerFriction,
+      slope: { x: 0, y: 0 },
+      safe: true,
+      rollout: 0.3,
+    };
+  }
+  if (type === "water") {
+    return {
+      type: "water",
+      friction: 0.8,
+      slope: { x: 0, y: 0 },
+      safe: false,
+      penalty: true,
+      rollout: 0.08,
+    };
+  }
+  if (type === "ice") {
+    return {
+      type: "ice",
+      friction: 0.998,
+      slope: { x: 0, y: 0 },
+      safe: true,
+      rollout: 0.92,
+    };
+  }
+  return {
+    type: "snowdrift",
+    friction: biome.surfaceFriction.rough,
+    slope: { x: 0, y: 0 },
+    safe: true,
+    rollout: 0.34,
+  };
+}
+
 function inEllipse(x, y, e) {
-  const dx = (x - e.x) / e.rx;
-  const dy = (y - e.y) / e.ry;
+  const angle = -(e.rotation || 0);
+  const rawX = x - e.x;
+  const rawY = y - e.y;
+  const localX = rawX * Math.cos(angle) - rawY * Math.sin(angle);
+  const localY = rawX * Math.sin(angle) + rawY * Math.cos(angle);
+  const dx = localX / e.rx;
+  const dy = localY / e.ry;
   return dx * dx + dy * dy <= 1;
 }

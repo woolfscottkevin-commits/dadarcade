@@ -27,6 +27,7 @@ export class Hole extends Phaser.Scene {
     this.lipCooldown = 0;
     this.scorecardQueued = false;
     this.scorecardFallback = null;
+    this.penaltyQueued = false;
   }
 
   create() {
@@ -132,9 +133,15 @@ export class Hole extends Phaser.Scene {
     if (this.lipCooldown > 0) this.lipCooldown -= dt;
 
     if (this.state === "flight" || this.state === "rolling") {
-      this.ball.update(dt, this.wind, (x, y) => this.generator.surfaceAt(x, y));
+      const surfaceAt = (x, y) => this.generator.surfaceAt(x, y);
+      this.ball.update(dt, this.wind, surfaceAt);
       this.state = this.ball.flight ? "flight" : "rolling";
-      this.checkCup();
+      const surface = surfaceAt(this.ball.x, this.ball.y);
+      if (this.state === "rolling" && surface.penalty) {
+        this.applyPenalty(surface);
+      } else {
+        this.checkCup();
+      }
       if (this.state === "rolling" && !this.ball.isMoving) {
         this.ball.stop();
         this.state = "ready";
@@ -158,6 +165,49 @@ export class Hole extends Phaser.Scene {
     }
   }
 
+  applyPenalty(surface) {
+    if (this.penaltyQueued || this.state === "holed") return;
+    this.penaltyQueued = true;
+    this.strokes += 1;
+    this.ball.stop();
+    const drop = this.difficulty.dropAtTee ? this.hole.tee : this.ball.lastSafe;
+    this.ball.reset(drop.x, drop.y);
+    this.state = "ready";
+    this.cameraDirector.stopFollow();
+    this.cameraDirector.address(this.ball, this.hole.pin);
+    this.showPenalty(surface.type);
+    window.gtag?.("event", "par3_penalty", {
+      hole: this.hole.id,
+      difficulty: this.difficultyId,
+      surface: surface.type,
+      stroke: this.strokes,
+    });
+    this.time.delayedCall(300, () => {
+      this.penaltyQueued = false;
+    });
+  }
+
+  showPenalty(surfaceType) {
+    const text = this.add.text(360, 610, surfaceType === "water" ? "Water penalty" : "Penalty", {
+      fontFamily: "Inter, Arial, sans-serif",
+      fontSize: "34px",
+      fontStyle: "900",
+      color: "#ffffff",
+      stroke: "#07110a",
+      strokeThickness: 6,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1006);
+    this.cameras.main.ignore(text);
+    this.tweens.add({
+      targets: text,
+      y: 570,
+      alpha: 0,
+      delay: 450,
+      duration: 480,
+      ease: "Cubic.easeIn",
+      onComplete: () => text.destroy(),
+    });
+  }
+
   holeOut() {
     if (this.state === "holed") return;
     this.state = "holed";
@@ -172,12 +222,17 @@ export class Hole extends Phaser.Scene {
   }
 
   queueScorecard() {
+    const scores = [...this.scores];
+    scores[this.holeIndex] = this.strokes;
     const transition = () => {
       if (this.scorecardQueued || !this.sys.settings.active) return;
       this.scorecardQueued = true;
       this.scene.start("Scorecard", {
         difficulty: this.difficultyId,
         hole: this.hole,
+        holeIndex: this.holeIndex,
+        holes: this.holes,
+        scores,
         strokes: this.strokes,
       });
     };

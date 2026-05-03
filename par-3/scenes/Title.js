@@ -28,12 +28,12 @@ export class Title extends Phaser.Scene {
 
     this.drawHowTo();
 
-    this.add.text(360, 488, "Difficulty", labelStyle()).setOrigin(0.5);
+    this.add.text(360, 528, "Difficulty", labelStyle()).setOrigin(0.5);
     this.buttons = {};
     const ids = ["kid", "normal", "hard"];
     ids.forEach((id, index) => {
       const x = 188 + index * 172;
-      this.buttons[id] = this.addButton(x, 562, DIFFICULTIES[id].label, () => {
+      this.buttons[id] = this.addButton(x, 602, DIFFICULTIES[id].label, () => {
         this.difficulty = id;
         setValue("difficulty", id);
         this.paintButtons();
@@ -41,12 +41,12 @@ export class Title extends Phaser.Scene {
     });
     this.paintButtons();
 
-    this.addButton(360, 730, "Play Hole 1", () => {
+    this.addButton(360, 775, "Start Round", () => {
       window.gtag?.("event", "par3_start", { difficulty: this.difficulty });
       this.scene.start("Course", { difficulty: this.difficulty });
     }, 280, 72);
 
-    this.add.text(360, 850, "Pull back, release, and trust the green landing mark.", {
+    this.add.text(360, 900, "Pull back, release, and trust the green landing mark.", {
       fontFamily: "Inter, Arial, sans-serif",
       fontSize: "22px",
       color: "#bde6c6",
@@ -56,7 +56,7 @@ export class Title extends Phaser.Scene {
   }
 
   drawHowTo() {
-    const y = 395;
+    const y = 430;
     this.add.circle(270, y, 9, 0xffffff);
     this.add.ellipse(270, y + 11, 32, 10, 0x000000, 0.22);
     const g = this.add.graphics();

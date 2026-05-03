@@ -20,6 +20,48 @@ export const BIOMES = {
     rollout: 0.72,
     bounce: 0.42,
   },
+  desert: {
+    id: "desert",
+    label: "Desert",
+    colors: {
+      rough: 0x8b6f3f,
+      fairway: 0xc9a66b,
+      green: 0x79a95c,
+      sand: 0xd4b17a,
+      water: 0x4a90e2,
+      border: 0x5d4828,
+      stripe: 0xd9bb83,
+    },
+    surfaceFriction: {
+      fairway: 0.988,
+      rough: 0.955,
+      sand: 0.85,
+      green: 0.978,
+    },
+    rollout: 0.78,
+    bounce: 0.38,
+  },
+  snow: {
+    id: "snow",
+    label: "Snow",
+    colors: {
+      rough: 0xb8c9d6,
+      fairway: 0xe8f4f8,
+      green: 0xc9ebdf,
+      sand: 0xf0e4c4,
+      water: 0x6ba3d6,
+      border: 0x5b7b9a,
+      stripe: 0xf7fbfd,
+    },
+    surfaceFriction: {
+      fairway: 0.982,
+      rough: 0.93,
+      sand: 0.82,
+      green: 0.981,
+    },
+    rollout: 0.66,
+    bounce: 0.34,
+  },
 };
 
 export const DIFFICULTIES = {
