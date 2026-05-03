@@ -34,7 +34,7 @@ export class Scorecard extends Phaser.Scene {
 
     this.addButton(360, 700, "Next Hole", () => this.startHole(this.holeIndex + 1, this.scores));
     this.addButton(360, 800, "Retry Hole", () => this.startHole(this.holeIndex, this.previousScores()));
-    this.addButton(360, 900, "Title", () => this.scene.start("Title"));
+    this.addButton(360, 900, "Main Menu", () => this.scene.start("Title"));
   }
 
   createRoundSummary() {
@@ -57,7 +57,7 @@ export class Scorecard extends Phaser.Scene {
     });
 
     this.addButton(360, 950, "Play Again", () => this.scene.start("Course", { difficulty: this.difficulty }));
-    this.addButton(360, 1050, "Title", () => this.scene.start("Title"));
+    this.addButton(360, 1050, "Main Menu", () => this.scene.start("Title"));
   }
 
   addButton(x, y, label, onClick) {
