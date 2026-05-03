@@ -90,9 +90,9 @@ export class Hole extends Phaser.Scene {
 
   createControls() {
     return [
-      ...this.addHudButton(86, 1242, "Mute", () => this.toggleMute()),
-      ...this.addHudButton(360, 1242, "Scope", () => this.scopePin()),
-      ...this.addHudButton(630, 1242, "Retry", () => this.restartHole()),
+      ...this.addHudButton(86, 126, "Mute", () => this.toggleMute()),
+      ...this.addHudButton(360, 126, "Scope", () => this.scopePin()),
+      ...this.addHudButton(630, 126, "Retry", () => this.restartHole()),
     ];
   }
 
@@ -118,7 +118,7 @@ export class Hole extends Phaser.Scene {
   }
 
   isPointerOverHud(pointer) {
-    return pointer.y > 1168;
+    return pointer.y < 62;
   }
 
   takeShot(shot) {
