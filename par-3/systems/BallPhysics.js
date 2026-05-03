@@ -66,6 +66,15 @@ export class BallPhysics {
     this.syncVisuals();
   }
 
+  stop() {
+    this.flight = false;
+    this.rolling = false;
+    this.stoppedFor = STOP_TIME;
+    this.flightVelocity.set(0, 0);
+    this.scene.matter.body.setVelocity(this.body, { x: 0, y: 0 });
+    this.syncVisuals();
+  }
+
   launch(vector, power) {
     const speed = MAX_POWER_SPEED * power;
     this.flightVelocity.set(vector.x * speed, vector.y * speed);

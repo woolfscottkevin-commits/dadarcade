@@ -108,7 +108,7 @@ export class Hole extends Phaser.Scene {
   }
 
   isPointerOverHud(pointer) {
-    return pointer.y < 86 || pointer.y > 1168;
+    return pointer.y > 1168;
   }
 
   takeShot(shot) {
@@ -136,6 +136,7 @@ export class Hole extends Phaser.Scene {
       this.state = this.ball.flight ? "flight" : "rolling";
       this.checkCup();
       if (this.state === "rolling" && !this.ball.isMoving) {
+        this.ball.stop();
         this.state = "ready";
         this.cameraDirector.stopFollow();
         this.cameraDirector.address(this.ball, this.hole.pin);

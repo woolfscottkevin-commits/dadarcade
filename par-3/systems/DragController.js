@@ -1,6 +1,6 @@
 const MAX_DRAG = 150;
 const CANCEL_DRAG = 30;
-const TOP_UI_SAFE = 86;
+const TOP_UI_SAFE = 0;
 const BOTTOM_UI_SAFE = 1168;
 
 export class DragController {
@@ -30,7 +30,7 @@ export class DragController {
     if (pointer.y < TOP_UI_SAFE || pointer.y > BOTTOM_UI_SAFE) return;
     if (this.callbacks.shouldIgnorePointer?.(pointer)) return;
     this.active = true;
-    this.start.set(pointer.worldX, pointer.worldY);
+    this.start.copy(this.worldPoint(pointer));
     this.current.copy(this.start);
     this.callbacks.onStart(this.state());
   }
@@ -41,7 +41,7 @@ export class DragController {
       this.cancel();
       return;
     }
-    this.current.set(pointer.worldX, pointer.worldY);
+    this.current.copy(this.worldPoint(pointer));
     this.callbacks.onChange(this.state());
   }
 
@@ -77,5 +77,9 @@ export class DragController {
       pointer: this.current.clone(),
       launch: new Phaser.Math.Vector2(this.ball.x, this.ball.y),
     };
+  }
+
+  worldPoint(pointer) {
+    return this.scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
   }
 }
