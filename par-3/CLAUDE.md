@@ -20,6 +20,7 @@ Only Hole 1 (`grass-1`, "Tutorial Open") exists right now. Course flow intention
 - Open `/par-3/` from a static server. Direct `file://` may break ES modules because of browser CORS rules.
 - Keyboard: `R` retries, `Space` scopes to the pin, `M` toggles mute.
 - Touch/mouse: drag anywhere, pull away from target, release.
+- Shot power caps at 150 px of pullback. This is intentionally shorter than the original design-doc 250 px so a player can touch the ball on the tee and still reach full swing before hitting the bottom HUD on mobile.
 - localStorage keys use the `par3_` prefix. Current Phase 1 keys: `par3_difficulty`, `par3_muted`.
 
 ## Phase 1 Notes

@@ -65,7 +65,7 @@ Reference feel: Wonder Putt juice, Desert Golfing minimalism, Golf Story faked b
 - `z > 0` means the ball is airborne and ignores ground hazards.
 - `z = 0` means Matter rollout, surface friction, slope, and cup checks apply.
 - Drag anywhere on screen to start a shot. Pull away from the intended target and release.
-- Drag distance from 0-250 px maps to 0-100% power.
+- Drag distance from 0-150 px maps to 0-100% power so full swings are reachable from the tee on portrait phones.
 - Aim line predicts wind-adjusted flight path.
 - Power meter ring fills green to yellow to red.
 - Cup capture requires distance within difficulty cup radius, `z < 4`, and speed below 200 px/s.

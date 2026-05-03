@@ -1,4 +1,4 @@
-const MAX_DRAG = 250;
+const MAX_DRAG = 150;
 const CANCEL_DRAG = 30;
 const TOP_UI_SAFE = 86;
 const BOTTOM_UI_SAFE = 1168;
