@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Granddad's Attic - Floorboard Pick</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <p class="eyebrow">Phase 2 art lock</p>
+          <h1>Floorboard Reveal</h1>
+        </div>
+        <a class="job-link" href="https://www.midjourney.com/jobs/4d9cc803-9d44-4fe1-8561-d5043b2d4ba3?index=3">Open MidJourney</a>
+      </header>
+
+      <section class="selection" aria-live="polite">
+        <div>
+          <p class="label">Current selection</p>
+          <strong id="selected-label">None yet</strong>
+        </div>
+        <code id="export-line">Click one image to generate the import line.</code>
+      </section>
+
+      <section class="grid" id="choices" aria-label="Floorboard options"></section>
+    </main>
+
+    <template id="choice-template">
+      <article class="choice">
+        <button type="button" class="image-button">
+          <span class="badge"></span>
+          <img alt="">
+        </button>
+        <div class="meta">
+          <span class="source"></span>
+          <a href="">open</a>
+        </div>
+      </article>
+    </template>
+
+    <script src="picker.js"></script>
+  </body>
+</html>

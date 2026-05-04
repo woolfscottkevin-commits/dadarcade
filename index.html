@@ -68,6 +68,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-dq h2{color:#FB8C00}
 .card-dq:hover{border-color:#FB8C00;box-shadow:0 0 30px rgba(251,140,0,0.25),0 8px 32px rgba(0,0,0,0.4)}
 .card-dq .card-icon{border-radius:12px;object-fit:cover;border:2px solid #6D4C41;background:#FFF3E0}
+.card-ga h2{color:#ebcb8b}
+.card-ga:hover{border-color:#ebcb8b;box-shadow:0 0 30px rgba(235,203,139,0.25),0 8px 32px rgba(0,0,0,0.4)}
+.card-ga .card-icon{border-radius:12px;object-fit:cover;border:2px solid #7a4f32;background:#211a16}
 
 /* Three-section homepage layout */
 .games-section{width:100%;max-width:1100px;margin-top:2.5rem}
@@ -137,6 +140,12 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
+    <a href="/granddads-attic" class="card card-ga" data-new>
+      <img class="card-icon" src="/Granddad's%20Attic/assets/scenes/end.webp" alt="Granddad's Attic scene">
+      <h2>Granddad's Attic</h2>
+      <p>A warm, story-driven attic puzzle adventure about family secrets, old clues, and one final letter.</p>
+    </a>
+
     <a href="/par-3" class="card card-p3" data-new>
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="8" y="6" width="64" height="68" rx="8" fill="#143f24" stroke="#8ae6a2" stroke-width="2"/>
@@ -358,6 +367,12 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section all-games">
   <h2 class="section-title">All Games</h2>
   <div class="grid">
+    <a href="/granddads-attic" class="card card-ga" data-new>
+      <img class="card-icon" src="/Granddad's%20Attic/assets/scenes/end.webp" alt="Granddad's Attic scene">
+      <h2>Granddad's Attic</h2>
+      <p>Cozy Myst-style puzzle story with a footlocker, diary cipher, radio clue, music box, badge, safe, and final letter.</p>
+    </a>
+
     <a href="/par-3" class="card card-p3" data-new>
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="8" y="6" width="64" height="68" rx="8" fill="#143f24" stroke="#8ae6a2" stroke-width="2"/>
@@ -652,6 +667,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Ultimate Tic-Tac-Toe">Ultimate Tic-Tac-Toe</option>
         <option value="Dad Quest">Dad Quest</option>
         <option value="Par 3">Par 3</option>
+        <option value="Granddad's Attic">Granddad's Attic</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>
