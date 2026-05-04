@@ -236,6 +236,7 @@ export class SceneManager {
         <p class="inscription artifact-note">Sworn to silence. So I shifted three to the right. - H.W.</p>
       `,
       tryLabel: "Unlock Diary",
+      autoCheck: (value) => DiaryPuzzle.check(value),
       onTry: (value, modal) => {
         if (!DiaryPuzzle.check(value)) {
           this.audio.wrong();
@@ -494,6 +495,7 @@ export class SceneManager {
       image: "assets/closeups/safe-lock.webp",
       intro: "<p class=\"artifact-note\">Five letter dials. The badge and the diary agree on one word.</p>",
       tryLabel: "Open Safe",
+      autoCheck: (value) => SafePuzzle.check(value),
       onTry: (value, modal) => {
         if (!SafePuzzle.check(value)) {
           this.audio.wrong();
@@ -606,7 +608,7 @@ export class SceneManager {
     `;
   }
 
-  showLetterDialModal({ title, image, intro, tryLabel, onTry }) {
+  showLetterDialModal({ title, image, intro, tryLabel, onTry, autoCheck }) {
     const letters = Array.from("AAAAA");
     this.showModal({
       title,
@@ -621,6 +623,14 @@ export class SceneManager {
       actions: [{ label: tryLabel, onClick: () => {} }],
       onMount: (modal) => {
         const current = [...letters];
+        let unlocked = false;
+        const currentValue = () => current.join("");
+        const tryAutoUnlock = () => {
+          if (unlocked || !autoCheck?.(currentValue())) return;
+          unlocked = true;
+          this.setModalStatus(modal, "Unlocked.");
+          onTry(currentValue(), modal);
+        };
         modal.querySelectorAll("[data-letter-dial]").forEach((dial) => {
           const index = Number(dial.dataset.letterDial);
           const input = dial.querySelector("input");
@@ -629,19 +639,25 @@ export class SceneManager {
             input.value = next;
             current[index] = next;
             dial.querySelector("[data-value]").textContent = next;
+            tryAutoUnlock();
           });
           dial.querySelector("[data-up]").addEventListener("click", () => {
             current[index] = this.shiftLetter(current[index], 1);
             dial.querySelector("[data-value]").textContent = current[index];
             input.value = current[index];
+            tryAutoUnlock();
           });
           dial.querySelector("[data-down]").addEventListener("click", () => {
             current[index] = this.shiftLetter(current[index], -1);
             dial.querySelector("[data-value]").textContent = current[index];
             input.value = current[index];
+            tryAutoUnlock();
           });
         });
-        modal.querySelector(".modal-actions button").addEventListener("click", () => onTry(current.join(""), modal));
+        modal.querySelector(".modal-actions button").addEventListener("click", () => {
+          if (unlocked) return;
+          unlocked = Boolean(onTry(currentValue(), modal));
+        });
       }
     });
   }

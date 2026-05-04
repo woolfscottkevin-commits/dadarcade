@@ -1,4 +1,4 @@
-import { SceneManager } from "./scenes/SceneManager.js?v=phase5a";
+import { SceneManager } from "./scenes/SceneManager.js?v=phase5c";
 import { sceneData } from "./scenes/sceneData.js?v=phase4a";
 import { GameState } from "./systems/GameState.js?v=phase3";
 import { Persistence } from "./systems/Persistence.js";
