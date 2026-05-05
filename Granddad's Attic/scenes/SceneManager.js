@@ -47,7 +47,7 @@ export class SceneManager {
 
     const topbar = document.createElement("div");
     topbar.className = "topbar";
-    topbar.append(this.renderInventory(), this.renderHintButton());
+    topbar.append(this.renderInventory());
 
     const frame = document.createElement("div");
     frame.className = "scene-frame";
@@ -89,13 +89,9 @@ export class SceneManager {
   renderInventory() {
     const inventory = document.createElement("div");
     inventory.className = "inventory";
+    inventory.setAttribute("aria-label", "Inventory");
 
     const items = this.gameState.snapshot().inventory;
-    if (items.length === 0) {
-      inventory.textContent = "Inventory empty";
-      return inventory;
-    }
-
     for (const item of items) {
       const button = document.createElement("button");
       button.type = "button";
@@ -105,16 +101,14 @@ export class SceneManager {
       inventory.append(button);
     }
 
-    return inventory;
-  }
-
-  renderHintButton() {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "photo-hint";
+    button.className = "inventory-item photo-hint";
     button.textContent = "Photo";
-    button.addEventListener("click", () => this.showHint());
-    return button;
+    button.addEventListener("click", () => this.showMemoryPhoto());
+    inventory.append(button);
+
+    return inventory;
   }
 
   activateHotspot(hotspot) {
@@ -156,8 +150,25 @@ export class SceneManager {
     }
 
     if (item === "BRASS_KEY") {
-      this.toast("The key looks like it belongs to something small and mechanical.");
+      this.showBrassKey();
     }
+  }
+
+  showBrassKey() {
+    this.showModal({
+      title: "Brass Key",
+      art: `
+        <div class="item-illustration" aria-hidden="true">
+          <div class="brass-key-art">
+            <span class="key-bow"></span>
+            <span class="key-shaft"></span>
+            <span class="key-bit"></span>
+          </div>
+        </div>
+      `,
+      body: "<p>The key looks like it belongs to something small and mechanical.</p>",
+      actions: [{ label: "Close", onClick: () => this.closeModal() }]
+    });
   }
 
   showFootlocker() {
@@ -541,11 +552,16 @@ export class SceneManager {
     });
   }
 
-  showHint() {
+  showMemoryPhoto() {
     const hint = this.currentHint();
     this.gameState.addHint(hint.id);
     this.commit();
-    this.toast(hint.text, "Memory Photo");
+    this.showModal({
+      title: "Memory Photo",
+      image: "assets/closeups/wedding-photo-front.webp",
+      body: `<p>${hint.text}</p>`,
+      actions: [{ label: "Close", onClick: () => this.closeModal() }]
+    });
   }
 
   currentHint() {
@@ -680,13 +696,14 @@ export class SceneManager {
     return alphabet[(index + delta + alphabet.length) % alphabet.length];
   }
 
-  showModal({ title, image, body, actions = [], onMount }) {
+  showModal({ title, image, art, body, actions = [], onMount }) {
     this.closeModal();
     const overlay = document.createElement("div");
+    const hasArt = Boolean(image || art);
     overlay.className = "modal-overlay";
     overlay.innerHTML = `
-      <section class="attic-modal" role="dialog" aria-modal="true" aria-label="${title}">
-        <div class="modal-art">${image ? `<img src="${image}" alt="">` : ""}</div>
+      <section class="attic-modal${hasArt ? "" : " no-art"}" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="modal-art">${image ? `<img src="${image}" alt="">` : art ?? ""}</div>
         <div class="modal-copy">
           <h2>${title}</h2>
           <div class="modal-body">${body}</div>
