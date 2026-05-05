@@ -255,6 +255,23 @@ input[type="range"] {
   font-size: 1.05rem;
 }
 
+.scene-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.scene-actions:empty {
+  display: none;
+}
+
+.scene-actions .primary-button,
+.scene-actions .secondary-button {
+  min-height: 40px;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.95rem;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

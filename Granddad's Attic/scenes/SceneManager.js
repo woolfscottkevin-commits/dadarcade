@@ -75,7 +75,7 @@ export class SceneManager {
     caption.className = "scene-caption";
     caption.textContent = scene.caption ?? "";
 
-    shell.append(topbar, frame, caption);
+    shell.append(topbar, frame, caption, this.renderSceneActions(scene));
     this.root.append(shell);
   }
 
@@ -109,6 +109,32 @@ export class SceneManager {
     inventory.append(button);
 
     return inventory;
+  }
+
+  renderSceneActions(scene) {
+    const actions = document.createElement("div");
+    actions.className = "scene-actions";
+
+    for (const hotspot of scene.hotspots ?? []) {
+      if (!this.shouldShowSceneAction(hotspot)) continue;
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = hotspot.action === "goToScene" ? "secondary-button" : "primary-button";
+      button.textContent = hotspot.label;
+      button.addEventListener("click", () => this.activateHotspot(hotspot));
+      actions.append(button);
+    }
+
+    return actions;
+  }
+
+  shouldShowSceneAction(hotspot) {
+    if (!this.hotspots.isEnabled(hotspot)) return false;
+    if (hotspot.id === "take-rewards" && this.gameState.hasItem("BRASS_KEY") && this.gameState.hasItem("DIARY")) {
+      return false;
+    }
+    return true;
   }
 
   activateHotspot(hotspot) {
