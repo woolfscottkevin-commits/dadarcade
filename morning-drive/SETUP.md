@@ -30,16 +30,10 @@ three environments unless noted):
 | `SUPABASE_SERVICE_ROLE_KEY`   | (from **woolfsatprep** Supabase Studio → Project Settings → API → service_role secret) | server |
 | `CRON_SECRET`                 | any random 32+ char string                                                     | server |
 
-Already wired (this session):
-- `SUPABASE_URL` set for Production + Development.
-- `CRON_SECRET` set for Production + Development.
-
-Still to set manually: `SUPABASE_SERVICE_ROLE_KEY` — grab from the
-**woolfsatprep** Supabase Studio (not chess) and add via:
-```bash
-printf 'YOUR_KEY_HERE\n' | vercel env add SUPABASE_SERVICE_ROLE_KEY production
-printf 'YOUR_KEY_HERE\n' | vercel env add SUPABASE_SERVICE_ROLE_KEY development
-```
+All three env vars (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+`CRON_SECRET`) are set for Production + Development as of 2026-05-13.
+Preview env vars are intentionally not set (Preview branches don't run
+the cron); upgrade the Vercel CLI and re-add if you ever want them.
 
 The AI SDK's Vercel AI Gateway authentication is wired automatically via OIDC
 when the function runs on Vercel — no manual token to configure. For
