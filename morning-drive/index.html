@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+  <meta charset="utf-8">
+  <base href="/morning-drive/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#8b5cf6">
+  <meta name="description" content="Morning Drive — daily math, vocab, news, trivia, jokes, and Would-You-Rather questions for Claire and Connor on the way to school.">
+  <link rel="canonical" href="https://dadarcade.com/morning-drive">
+  <meta property="og:title" content="Morning Drive — Dad Arcade">
+  <meta property="og:description" content="Daily kid-quiz built for the car ride to school. Math, vocab, news, history trivia, jokes, and would-you-rather.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dadarcade.com/morning-drive">
+  <meta property="og:site_name" content="Dad Arcade">
+  <meta name="twitter:card" content="summary">
+  <title>Morning Drive — Dad Arcade</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌅</text></svg>">
+  <link rel="manifest" href="/manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
+
+  <main id="app" aria-live="polite">
+    <header class="app-header">
+      <h1>Morning Drive</h1>
+      <p class="app-sub" id="app-date"></p>
+      <div class="score-row">
+        <span class="score-badge score-claire">Claire <strong id="score-claire">0</strong> / 5 ⭐</span>
+        <span class="score-badge score-connor">Connor <strong id="score-connor">0</strong> / 5 ⭐</span>
+      </div>
+      <div id="read-only-banner" class="read-only-banner" hidden>
+        <span>Reviewing <strong id="ro-date"></strong></span>
+        <button type="button" id="back-to-today">Back to today</button>
+      </div>
+    </header>
+
+    <div id="status" class="status">Loading today's questions…</div>
+    <div id="error" class="error" hidden></div>
+
+    <div id="sections" class="sections" hidden></div>
+  </main>
+
+  <button type="button" id="past-days-btn" class="past-pill">📅 Past Days</button>
+
+  <div id="past-sheet" class="past-sheet" hidden role="dialog" aria-modal="true" aria-label="Past Days">
+    <div class="past-card">
+      <button type="button" class="past-close" aria-label="Close">×</button>
+      <h2>Past Days</h2>
+      <div id="past-list" class="past-list"></div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

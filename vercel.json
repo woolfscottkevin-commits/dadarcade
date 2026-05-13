@@ -1,6 +1,9 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "crons": [
+    { "path": "/api/morning-drive-cron", "schedule": "30 8 * * *" }
+  ],
   "redirects": [
     { "source": "/pac-man", "destination": "/chomp-chase", "permanent": true },
     { "source": "/pac-man/(.*)", "destination": "/chomp-chase/$1", "permanent": true },
