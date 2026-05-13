@@ -55,6 +55,15 @@ function wireUI() {
 // Data fetch + render
 // ----------------------------------------------------------------------------
 
+function todayInET() {
+  // Same formatter the API uses, kept here so the UI can decide whether a
+  // selected past date is actually today (and therefore live, not read-only).
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+}
+
 async function loadDay({ date, readOnly }) {
   resetState();
   showStatus(readOnly ? `Loading ${date}…` : "Loading today's questions…");
@@ -70,7 +79,10 @@ async function loadDay({ date, readOnly }) {
   if (!data.payload) throw new Error("No payload returned");
   activePayload = data.payload;
   activeDate = data.date;
-  isReadOnly = !!readOnly;
+  // If the user picked today's date from the Past Days picker, treat it as
+  // live (no Reviewing banner, attempts logged) — they're back to today,
+  // just got there a long way around.
+  isReadOnly = !!readOnly && data.date !== todayInET();
   renderHeader();
   renderSections();
   // Analytics ping
