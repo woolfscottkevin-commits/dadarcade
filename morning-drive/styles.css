@@ -1,5 +1,10 @@
 /* Morning Drive — mobile-first */
 
+/* Respect the global [hidden] attribute even when an element-class rule
+   sets display: flex/block — otherwise the Past Days sheet and the
+   "Reviewing" banner stay visible despite JS toggling hidden=true. */
+[hidden] { display: none !important; }
+
 :root {
   --claire: #8b5cf6;        /* purple */
   --claire-2: #a78bfa;
