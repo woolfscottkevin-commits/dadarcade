@@ -5,13 +5,19 @@ produce content, three one-time setup steps:
 
 ## 1. Apply the Supabase migration
 
-The page reuses the existing dadarcade Supabase project that Chess uses
-(`https://momzrpcwlnakargfhexf.supabase.co`). Paste
-[`migrations/001_init.sql`](./migrations/001_init.sql) into
-**Supabase Studio → SQL Editor** and run it. Idempotent, safe to re-run.
+Morning Drive lives in the **woolfsatprep** Supabase project
+(`https://sonzonoitvcfiyjxzdbo.supabase.co`) — same account the MCP
+already has access to, and the `morning_drive_*` tables can't collide
+with the SAT app's own tables.
 
-Creates three tables: `morning_drive_days`, `morning_drive_seen`,
-`morning_drive_attempts`.
+The migration in [`migrations/001_init.sql`](./migrations/001_init.sql)
+has already been applied via the MCP. If you ever need to re-run it
+(idempotent): paste into **Supabase Studio → SQL Editor → Run**.
+
+Three tables: `morning_drive_days`, `morning_drive_seen`,
+`morning_drive_attempts`. All with RLS enabled; service-role bypasses
+RLS so the API can write freely; `anon` can only SELECT from
+`morning_drive_days`.
 
 ## 2. Set env vars on Vercel
 
@@ -20,9 +26,20 @@ three environments unless noted):
 
 | Name                          | Value                                                                          | Where  |
 | ----------------------------- | ------------------------------------------------------------------------------ | ------ |
-| `SUPABASE_URL`                | `https://momzrpcwlnakargfhexf.supabase.co`                                     | server |
-| `SUPABASE_SERVICE_ROLE_KEY`   | (from Supabase Studio → Project Settings → API → service_role secret)          | server |
+| `SUPABASE_URL`                | `https://sonzonoitvcfiyjxzdbo.supabase.co`                                     | server |
+| `SUPABASE_SERVICE_ROLE_KEY`   | (from **woolfsatprep** Supabase Studio → Project Settings → API → service_role secret) | server |
 | `CRON_SECRET`                 | any random 32+ char string                                                     | server |
+
+Already wired (this session):
+- `SUPABASE_URL` set for Production + Development.
+- `CRON_SECRET` set for Production + Development.
+
+Still to set manually: `SUPABASE_SERVICE_ROLE_KEY` — grab from the
+**woolfsatprep** Supabase Studio (not chess) and add via:
+```bash
+printf 'YOUR_KEY_HERE\n' | vercel env add SUPABASE_SERVICE_ROLE_KEY production
+printf 'YOUR_KEY_HERE\n' | vercel env add SUPABASE_SERVICE_ROLE_KEY development
+```
 
 The AI SDK's Vercel AI Gateway authentication is wired automatically via OIDC
 when the function runs on Vercel — no manual token to configure. For
