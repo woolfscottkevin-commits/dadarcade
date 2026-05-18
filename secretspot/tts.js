@@ -47,17 +47,49 @@ export function getActiveLocale() {
   return LOCALES[(s.voiceIndex || 0) % LOCALES.length];
 }
 
+// Normalize a BCP-47 locale tag for comparison. macOS reports voice langs as
+// `en_GB`, Chrome/Edge as `en-GB`, and some engines append region or script
+// suffixes (`en-GB-oxendict`). Lowercase, swap underscores for hyphens.
+function normLang(s) {
+  return typeof s === "string" ? s.toLowerCase().replace(/_/g, "-") : "";
+}
+function matchesLocale(voice, locale) {
+  return normLang(voice && voice.lang).startsWith(normLang(locale));
+}
+
+// Filter out the bottom-tier "compact" macOS voices when richer voices are
+// available — those are the robotic-sounding fallbacks.
+function preferNatural(voices) {
+  const isCompact = (v) => /compact/i.test(v.name || "") || /compact/i.test(v.voiceURI || "");
+  const natural = voices.filter((v) => !isCompact(v));
+  return natural.length > 0 ? natural : voices;
+}
+
 function pickVoice(voices, primaryLocale) {
   if (!voices || voices.length === 0) return null;
-  let v = voices.find((vc) => typeof vc.lang === "string" && vc.lang.toLowerCase().startsWith(primaryLocale.toLowerCase()));
-  if (v) return v;
+  const matching = preferNatural(voices.filter((vc) => matchesLocale(vc, primaryLocale)));
+  if (matching.length > 0) return matching[0];
   for (const fallback of LOCALES) {
     if (fallback === primaryLocale) continue;
-    v = voices.find((vc) => typeof vc.lang === "string" && vc.lang.toLowerCase().startsWith(fallback.toLowerCase()));
-    if (v) return v;
+    const m = preferNatural(voices.filter((vc) => matchesLocale(vc, fallback)));
+    if (m.length > 0) return m[0];
   }
-  v = voices.find((vc) => typeof vc.lang === "string" && vc.lang.toLowerCase().startsWith("en"));
-  return v || null;
+  const en = preferNatural(voices.filter((vc) => normLang(vc.lang).startsWith("en")));
+  return en[0] || null;
+}
+
+// Lets a UI badge show which accent the kid is actually hearing. Useful when
+// the system has no matching voice and we silently fall through.
+export async function getActiveVoiceInfo() {
+  const requested = getActiveLocale();
+  const voices = await getVoicesReady();
+  const voice = pickVoice(voices, requested);
+  return {
+    requested,
+    found: voice ? voice.lang : null,
+    name: voice ? voice.name : null,
+    matched: voice ? matchesLocale(voice, requested) : false
+  };
 }
 
 function isMutedForActive() {

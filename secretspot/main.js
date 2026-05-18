@@ -1,7 +1,7 @@
 // Spelling Trainer — multi-user router + every screen renderer.
 //
 // Local dev: from the repo root run `npx serve` (or `python3 -m http.server`)
-// and open http://localhost:3000/spelling/  (or :8000 etc).
+// and open http://localhost:3000/secretspot/  (or :8000 etc).
 //
 // The app keeps no in-memory "current screen" state machine — instead each
 // render function clears #app and rebuilds the DOM for the next view. Only
@@ -16,7 +16,40 @@ import {
   advanceDay, savePreTest, savePostTestAndAdvance,
   toggleMuted, currentWeekData, fridayWordEntries, resetUser
 } from "./state.js";
-import { speak, cancelSpeech } from "./tts.js";
+import { speak, cancelSpeech, getActiveVoiceInfo } from "./tts.js";
+
+// Locale → friendly accent label + flag for the badge on test/drill screens.
+const ACCENT_LABELS = {
+  "en-GB": { flag: "🇬🇧", name: "British" },
+  "en-AU": { flag: "🇦🇺", name: "Australian" },
+  "en-IE": { flag: "🇮🇪", name: "Irish" },
+  "en-IN": { flag: "🇮🇳", name: "Indian English" }
+};
+
+function accentBadgeHTML() {
+  // Synchronously render with a placeholder, then async swap in the resolved
+  // info once getVoicesReady settles. Keeps the screen render non-blocking.
+  return `<span class="accent-badge" id="accent-badge">🎙 Loading voice…</span>`;
+}
+
+function wireAccentBadge(root) {
+  const el = root.querySelector("#accent-badge");
+  if (!el) return;
+  getActiveVoiceInfo().then((info) => {
+    if (!el.isConnected) return;
+    const label = ACCENT_LABELS[info.requested] || { flag: "🌐", name: info.requested };
+    if (info.matched) {
+      el.textContent = `${label.flag} ${label.name} voice`;
+      el.classList.remove("accent-badge-fallback");
+    } else if (info.name) {
+      el.textContent = `🌐 Using ${info.name} (no ${label.name})`;
+      el.classList.add("accent-badge-fallback");
+    } else {
+      el.textContent = `🌐 No voice available`;
+      el.classList.add("accent-badge-fallback");
+    }
+  });
+}
 import { ding, thunk, primeAudio } from "./audio.js";
 
 const appEl = document.getElementById("app");
@@ -411,6 +444,7 @@ function renderTestRunner(userId, session) {
   screen(`
     <section class="screen runner">
       <div class="counter">Word ${current} of ${total}</div>
+      ${accentBadgeHTML()}
       <div class="speaker" aria-hidden="true">🔊</div>
       <div class="runner-buttons">
         <button class="btn btn-primary btn-big" data-act="play">🔊 Play word</button>
@@ -420,6 +454,7 @@ function renderTestRunner(userId, session) {
       <button class="early-done" data-act="done">I'm done early</button>
     </section>
   `, (root) => {
+    wireAccentBadge(root);
     // Auto-speak the word on entry to the screen.
     speak(entry.speak, { rate: 0.85 });
 

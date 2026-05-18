@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
+<meta charset="utf-8">
+<base href="/secretspot/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#42a5f5">
+<meta name="description" content="Private spelling practice for Connor and Claire.">
+<meta name="robots" content="noindex,nofollow">
+<title>Secret Spot</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔤</text></svg>">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=20260518d">
+</head>
+<body>
+  <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
+
+  <button type="button" id="switch-user-pill" class="switch-user-pill" aria-label="Switch user" hidden>
+    <span class="su-emoji">👤</span><span class="su-name">User</span>
+  </button>
+
+  <button type="button" id="mute-toggle" class="mute-toggle" aria-label="Mute sound" title="Mute / unmute">🔊</button>
+
+  <main id="app" aria-live="polite">
+    <div class="boot-status">Loading…</div>
+  </main>
+
+  <div id="persistence-banner" class="persistence-banner" hidden>
+    Progress won't save in this browser mode.
+  </div>
+
+  <script type="module" src="main.js?v=20260518d"></script>
+</body>
+</html>
