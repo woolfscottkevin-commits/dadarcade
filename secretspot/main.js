@@ -171,6 +171,37 @@ function trackEvent(name, params = {}) {
   } catch (err) { /* ignore */ }
 }
 
+// Classic teacher dictation pattern: say the word, use it in a short
+// sentence, then say the word again. Disambiguates words that sound alike
+// (e.g., "wait" vs "weight"). When a curriculum sentence for this week
+// already contains the word, we reuse it; otherwise we just say the word
+// twice with a natural pause.
+//
+// Entries with an audioOverride (e.g. Claire's M7W1 abbreviations) keep
+// their explicit prompt — those are already clear by design.
+function buildWordPrompt(entry, week) {
+  const norm = normalizeWord(entry);
+  if (norm.speak !== norm.display) return norm.speak;
+  const display = norm.display;
+  if (!display) return "";
+  const sentence = findContextSentence(display, week);
+  if (sentence) return `${display}.  ${sentence}  ${display}.`;
+  // No context — just say it twice with a pause so the kid catches it.
+  return `${display}.  ${display}.`;
+}
+
+function findContextSentence(word, week) {
+  if (!week || !Array.isArray(week.sentences)) return null;
+  const safe = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Word-boundary match, case-insensitive. Apostrophes inside word
+  // must match (so contractions like "I'd" don't false-match on "id").
+  const pattern = new RegExp(`(^|[^A-Za-z'])${safe}([^A-Za-z']|$)`, "i");
+  for (const s of week.sentences) {
+    if (pattern.test(s)) return s;
+  }
+  return null;
+}
+
 // ------------------------------------------------------------------
 // Picker
 // ------------------------------------------------------------------
@@ -386,6 +417,7 @@ function startTestRunner(userId, phase, entries) {
   const normalized = entries.map(normalizeWord);
   const session = {
     userId, phase, entries: normalized,
+    week: currentWeekData(userId),
     index: 0,
     jokesPool: shuffle(JOKES),
     jokesUsed: 0,
@@ -455,10 +487,12 @@ function renderTestRunner(userId, session) {
     </section>
   `, (root) => {
     wireAccentBadge(root);
-    // Auto-speak the word on entry to the screen.
-    speak(entry.speak, { rate: 0.85 });
+    // Auto-speak the word on entry to the screen. Use the teacher-style
+    // prompt: "word. sentence using word. word." for clarity.
+    const prompt = buildWordPrompt(entry, session.week);
+    speak(prompt, { rate: 0.8 });
 
-    const playOrRepeat = () => speak(entry.speak, { rate: 0.85 });
+    const playOrRepeat = () => speak(prompt, { rate: 0.8 });
     root.querySelector('[data-act="play"]').addEventListener("click", playOrRepeat);
     root.querySelector('[data-act="repeat"]').addEventListener("click", playOrRepeat);
 
@@ -711,12 +745,13 @@ function renderDrillLoop(userId) {
     `, (root) => {
       const nextBtn = root.querySelector('[data-act="next"]');
       const enableNext = () => { session.played.add(session.index); nextBtn.disabled = false; };
+      const prompt = buildWordPrompt(entry, week);
       root.querySelector('[data-act="play"]').addEventListener("click", () => {
-        speak(entry.speak, { rate: 0.85 });
+        speak(prompt, { rate: 0.8 });
         enableNext();
       });
       root.querySelector('[data-act="repeat"]').addEventListener("click", () => {
-        speak(entry.speak, { rate: 0.85 });
+        speak(prompt, { rate: 0.8 });
         enableNext();
       });
       nextBtn.addEventListener("click", () => {
@@ -1340,8 +1375,9 @@ function renderFreestyleListen(userId, weekN) {
         <button class="early-done" data-act="back">Pick another week</button>
       </section>
     `, (root) => {
-      speak(entry.speak, { rate: 0.85 });
-      root.querySelector('[data-act="play"]').addEventListener("click", () => speak(entry.speak, { rate: 0.85 }));
+      const prompt = buildWordPrompt(entry, week);
+      speak(prompt, { rate: 0.8 });
+      root.querySelector('[data-act="play"]').addEventListener("click", () => speak(prompt, { rate: 0.8 }));
       root.querySelector('[data-act="next"]').addEventListener("click", () => { session.index += 1; show(); });
       root.querySelector('[data-act="back"]').addEventListener("click", () => renderFreestyleWeekPicker(userId));
     });
@@ -1395,9 +1431,10 @@ function renderFreestyleQuiz(userId, weekN) {
       const checkBtn = root.querySelector('[data-act="check"]');
       let checked = false;
       setTimeout(() => { try { input.focus(); } catch (e) {/*ignore*/} }, 60);
-      speak(entry.speak, { rate: 0.85 });
-      root.querySelector('[data-act="play"]').addEventListener("click", () => speak(entry.speak, { rate: 0.85 }));
-      root.querySelector('[data-act="repeat"]').addEventListener("click", () => speak(entry.speak, { rate: 0.85 }));
+      const prompt = buildWordPrompt(entry, week);
+      speak(prompt, { rate: 0.8 });
+      root.querySelector('[data-act="play"]').addEventListener("click", () => speak(prompt, { rate: 0.8 }));
+      root.querySelector('[data-act="repeat"]').addEventListener("click", () => speak(prompt, { rate: 0.8 }));
       checkBtn.addEventListener("click", () => {
         if (checked) { session.index += 1; show(); return; }
         const typed = (input.value || "").trim();

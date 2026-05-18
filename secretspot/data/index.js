@@ -23,12 +23,19 @@ export const USERS = {
 // Word entries come as either a bare string ("cat") or as
 // { word: "Mr.", audioOverride: "Spell the abbreviation: Mister…" }.
 // Anywhere we display or speak a word we route through this helper so the
-// rest of the codebase doesn't have to branch on shape.
+// rest of the codebase doesn't have to branch on shape. Idempotent —
+// passing an already-normalized { display, speak } returns it unchanged.
 export function normalizeWord(entry) {
   if (typeof entry === "string") {
     return { display: entry, speak: entry };
   }
   if (entry && typeof entry === "object") {
+    if (typeof entry.display === "string") {
+      return {
+        display: entry.display,
+        speak: typeof entry.speak === "string" && entry.speak.length > 0 ? entry.speak : entry.display
+      };
+    }
     const display = typeof entry.word === "string" ? entry.word : "";
     const speak = typeof entry.audioOverride === "string" && entry.audioOverride.length > 0
       ? entry.audioOverride
