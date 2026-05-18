@@ -1,0 +1,823 @@
+/* Spelling Trainer — multi-user. Mobile-first kid app.
+   Visual tone matches Morning Drive. Brand accent: #42a5f5 (clear blue).
+   Per-user accents are applied via a data-user attribute on <body>. */
+
+[hidden] { display: none !important; }
+
+:root {
+  --brand: #42a5f5;
+  --brand-2: #1e88e5;
+  --brand-soft: #e3f2fd;
+  --ink: #1f2937;
+  --muted: #6b7280;
+  --green: #22c55e;
+  --green-bg: #f0fdf4;
+  --red: #ef4444;
+  --red-bg: #fef2f2;
+  --amber: #f59e0b;
+  --purple: #8b5cf6;
+  --card-bg: #ffffff;
+  --shadow: 0 8px 32px rgba(0,0,0,0.08);
+  --shadow-lg: 0 16px 48px rgba(31,41,55,0.18);
+  --radius: 18px;
+  --tap-min: 48px;
+
+  /* User-tinted accents — overridden by [data-user] on <body> */
+  --user: #42a5f5;
+  --user-soft: #e3f2fd;
+  --user-ink: #1565c0;
+}
+
+body[data-user="connor"] {
+  --user: #FFB347;
+  --user-soft: #fff4e0;
+  --user-ink: #b35900;
+}
+body[data-user="claire"] {
+  --user: #C77DFF;
+  --user-soft: #f3e5ff;
+  --user-ink: #6a1b9a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #eff6ff 0%, #f5f3ff 55%, #f0fdf4 100%);
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           calc(env(safe-area-inset-bottom) + 2rem) env(safe-area-inset-left);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.back-link {
+  display: inline-block;
+  margin: 0.7rem 1rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.back-link:hover, .back-link:focus { color: var(--ink); }
+
+/* ---------- Top-right mute toggle ---------- */
+.mute-toggle {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.5rem);
+  right: 0.6rem;
+  width: 44px; height: 44px;
+  border-radius: 999px;
+  border: 2px solid var(--brand);
+  background: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.mute-toggle:active { transform: translateY(1px); }
+
+/* ---------- Top-left switch-user pill ---------- */
+.switch-user-pill {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 2.8rem);
+  left: 0.6rem;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: var(--user);
+  color: white;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  min-height: 44px;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.switch-user-pill .su-emoji { font-size: 1rem; }
+.switch-user-pill:active { transform: translateY(1px); }
+
+#app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.persistence-banner {
+  position: fixed;
+  bottom: env(safe-area-inset-bottom);
+  left: 0; right: 0;
+  margin: 0.6rem auto;
+  max-width: 92%;
+  background: #fffbeb;
+  border: 2px solid var(--amber);
+  color: #78350f;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-align: center;
+  z-index: 40;
+}
+
+.boot-status {
+  text-align: center; padding: 4rem 1rem; color: var(--muted); font-weight: 700;
+}
+
+/* ---------- Generic screen card ---------- */
+.screen {
+  background: var(--card-bg);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  margin: 3rem 0 1rem;
+  padding: 1.5rem 1.25rem 1.4rem;
+  animation: fadeIn 240ms ease;
+}
+.screen.tight { padding: 1.1rem 1rem 1.2rem; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.title-1 {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(2rem, 7vw, 2.6rem);
+  margin: 0 0 0.3rem;
+  background: linear-gradient(90deg, var(--brand), var(--purple));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--brand);
+  text-align: center;
+  line-height: 1.1;
+}
+.title-2 {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  margin: 0 0 0.4rem;
+  color: var(--ink);
+  text-align: center;
+}
+.subtitle {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+  margin: 0 0 1rem;
+}
+.lede {
+  color: var(--ink);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 1.05rem;
+  min-height: var(--tap-min);
+  padding: 0.7rem 1.2rem;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 100ms, background 140ms, border-color 140ms, box-shadow 140ms;
+  touch-action: manipulation;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--user);
+  color: white;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+}
+.btn-secondary {
+  background: white;
+  color: var(--user-ink);
+  border-color: var(--user);
+}
+.btn-secondary:hover { background: var(--user-soft); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border-color: transparent;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.btn-ghost:hover { color: var(--ink); }
+
+.btn-warn {
+  background: var(--red-bg);
+  color: #991b1b;
+  border-color: var(--red);
+}
+
+.btn-big {
+  font-size: 1.2rem;
+  padding: 1rem 1.3rem;
+  min-height: 56px;
+  border-radius: 18px;
+  width: 100%;
+}
+
+.btn-row {
+  display: flex; gap: 0.7rem; flex-wrap: wrap; justify-content: center;
+  margin-top: 0.8rem;
+}
+.btn-row.stack { flex-direction: column; }
+.btn-row.stack .btn { width: 100%; }
+
+/* ---------- User picker (entry screen) ---------- */
+.picker-screen {
+  max-width: 760px;
+  margin: 4rem auto 1rem;
+  padding: 0 0.5rem;
+  animation: fadeIn 240ms ease;
+}
+.picker-hello {
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(2rem, 8vw, 3rem);
+  text-align: center;
+  margin: 0 0 0.2rem;
+  background: linear-gradient(90deg, #FFB347, #C77DFF);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--brand);
+}
+.picker-sub {
+  color: var(--muted);
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 1.5rem;
+}
+.picker-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .picker-grid { grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+}
+.user-card {
+  background: white;
+  border: 3px solid var(--accent, #ddd);
+  border-radius: 24px;
+  padding: 1.5rem 1.2rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: transform 120ms, box-shadow 140ms;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  min-height: 220px;
+}
+.user-card:active { transform: translateY(2px); }
+.user-card:hover {
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+.user-card .face {
+  width: 90px; height: 90px; border-radius: 50%;
+  background: var(--accent-soft, #eee);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3rem;
+  margin-bottom: 0.7rem;
+}
+.user-card .uname {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.8rem;
+  color: var(--accent-ink, var(--ink));
+  margin-bottom: 0.2rem;
+}
+.user-card .grade {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+}
+.user-card .cta {
+  background: var(--accent, var(--brand));
+  color: white;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* ---------- Home ---------- */
+.home-hero {
+  text-align: center;
+  padding: 0.5rem 0.2rem 0.4rem;
+}
+.home-hero .badge {
+  display: inline-block;
+  background: var(--user-soft);
+  color: var(--user-ink);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.day-pills {
+  display: flex; gap: 0.4rem; justify-content: center; margin: 0.7rem 0 1.2rem;
+  flex-wrap: wrap;
+}
+.day-pill {
+  font-weight: 800; font-size: 0.85rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: var(--muted);
+  border: 2px solid transparent;
+}
+.day-pill.current {
+  background: var(--user);
+  color: white;
+}
+.day-pill.done {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.home-actions {
+  display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.home-actions .btn { min-width: 150px; }
+
+.rest-illustration {
+  font-size: 4rem; text-align: center; margin: 0.4rem 0 0.8rem; line-height: 1;
+}
+
+/* ---------- Test runner (Mon / Fri kid screen) ---------- */
+.runner {
+  text-align: center;
+  padding-top: 0.3rem;
+}
+.runner .counter {
+  font-weight: 800;
+  color: var(--user-ink);
+  letter-spacing: 0.04em;
+  font-size: 1rem;
+  margin-bottom: 0.7rem;
+}
+.runner .speaker {
+  font-size: 6rem;
+  margin: 1rem auto 1.4rem;
+  user-select: none;
+}
+.runner .runner-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+}
+.runner .btn-big { width: 100%; }
+.early-done {
+  display: block;
+  text-align: center;
+  margin: 1.2rem auto 0;
+  color: var(--muted);
+  text-decoration: underline;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: none; border: 0;
+  cursor: pointer;
+}
+
+.joke-card {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 3px dashed var(--amber);
+  border-radius: 22px;
+  padding: 1.2rem 1.1rem;
+  margin: 0.8rem 0 0.6rem;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: #78350f;
+  font-weight: 700;
+}
+.joke-card .joke-tag {
+  display: inline-block;
+  background: var(--amber);
+  color: white;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.5rem;
+}
+
+/* ---------- Handoff ---------- */
+.handoff {
+  text-align: center;
+  padding: 1rem 0.4rem;
+}
+.handoff .emoji {
+  font-size: 4rem;
+  display: block;
+  margin: 0.4rem 0 1rem;
+}
+
+/* ---------- Parent grading grid ---------- */
+.grading-header {
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+.grading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin: 0.8rem 0 5rem;
+}
+.word-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 78px;
+  padding: 0.5rem 0.4rem;
+  border-radius: 14px;
+  border: 2px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  color: var(--ink);
+  transition: transform 100ms, border-color 140ms, background 140ms;
+  font-size: 1rem;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.word-card .word-text { font-size: 1rem; word-break: break-word; }
+.word-card .status { font-size: 1.4rem; line-height: 1; margin-bottom: 0.15rem; }
+
+.word-card.correct {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: var(--green);
+}
+.word-card.miss {
+  background: var(--red-bg);
+  border-color: var(--red);
+  color: var(--red);
+}
+.word-card.miss .word-text { text-decoration: line-through; }
+
+.word-card.shake { animation: shake 360ms; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-6px); }
+  40%     { transform: translateX(6px); }
+  60%     { transform: translateX(-4px); }
+  80%     { transform: translateX(4px); }
+}
+@media (prefers-reduced-motion: reduce) { .word-card.shake { animation: none; } }
+
+.sticky-save {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: env(safe-area-inset-bottom);
+  padding: 0.8rem 1rem;
+  background: linear-gradient(180deg, rgba(255,255,255,0.0), rgba(255,255,255,0.92) 28%);
+  display: flex; justify-content: center;
+  z-index: 30;
+}
+.sticky-save .btn { width: 100%; max-width: 480px; }
+
+/* ---------- Tuesday lesson + drill ---------- */
+.rule-card {
+  background: var(--user-soft);
+  border: 2px solid var(--user);
+  border-radius: 22px;
+  padding: 1rem 1.1rem;
+  margin: 0.8rem 0 1rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.big-word {
+  text-align: center;
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(4rem, 18vw, 7rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  margin: 1.2rem 0 1.4rem;
+  color: var(--ink);
+  word-break: break-word;
+}
+.big-word .hl {
+  color: var(--user-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--user);
+  text-underline-offset: 0.1em;
+  text-decoration-thickness: 0.08em;
+}
+.big-word .hl.dim {
+  color: #cbd5e1;
+  text-decoration: none;
+}
+
+.write-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.45rem;
+  margin: 0.8rem 0 1.2rem;
+  padding: 0;
+  list-style: none;
+}
+.write-list li {
+  background: var(--user-soft);
+  border-radius: 12px;
+  padding: 0.55rem 0.6rem;
+  font-weight: 800;
+  text-align: center;
+  font-size: 1.05rem;
+  color: var(--user-ink);
+  word-break: break-word;
+}
+
+/* ---------- Wednesday dictation ---------- */
+.dictation-counter {
+  font-weight: 800; color: var(--user-ink);
+  text-align: center; margin: 0.3rem 0 0.7rem;
+}
+.dictation-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 1.15rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  border: 2px solid #d1d5db;
+  background: white;
+  color: var(--ink);
+  font-weight: 700;
+  margin: 0.6rem 0 0.4rem;
+  -webkit-appearance: none;
+}
+.dictation-input:focus { border-color: var(--user); outline: none; }
+
+.feedback-row {
+  margin: 0.8rem 0;
+  background: var(--user-soft);
+  border-radius: 14px;
+  padding: 0.7rem 0.8rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.feedback-row .word-ok { color: var(--green); font-weight: 800; }
+.feedback-row .word-bad { color: var(--red); font-weight: 800; text-decoration: line-through; }
+.feedback-row .score-line {
+  display: block;
+  margin-top: 0.4rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+/* ---------- Thursday word chain ---------- */
+.chain-start {
+  text-align: center;
+  font-family: 'Fredoka One', cursive;
+  font-size: clamp(2.2rem, 9vw, 3rem);
+  background: var(--user-soft);
+  border-radius: 18px;
+  padding: 0.7rem 1rem;
+  margin: 0.5rem 0 1rem;
+  color: var(--user-ink);
+  letter-spacing: 0.05em;
+  word-break: break-word;
+}
+
+.chain-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.chain-list li {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: white;
+  border: 2px solid var(--green);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.chain-list li::before {
+  content: "✓";
+  color: var(--green);
+  font-weight: 800;
+}
+
+.chain-feedback {
+  margin: 0.4rem 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-height: 1.4em;
+}
+.chain-feedback.ok { color: var(--green); }
+.chain-feedback.bad { color: var(--red); }
+
+.chain-controls {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+.chain-controls .btn { flex: 1 1 auto; min-width: 120px; }
+
+/* ---------- Progress tracker ---------- */
+.tracker-rows {
+  display: flex; flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.7rem 0 1.2rem;
+}
+.tracker-row {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.6rem 0.8rem;
+}
+.tracker-row.current { border-color: var(--user); background: var(--user-soft); }
+.tracker-row.future { opacity: 0.55; }
+.tracker-row .wk {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  color: var(--user-ink);
+}
+.tracker-row .focus { font-weight: 800; color: var(--ink); font-size: 0.92rem; line-height: 1.25; }
+.tracker-row .scores {
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+.tracker-row .scores .imp { color: var(--green); margin-left: 0.3rem; }
+.tracker-row .pill {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tracker-row .pill.mastered { background: var(--green); color: white; }
+.tracker-row .pill.warn { background: var(--amber); color: white; }
+.tracker-row .pill.now { background: var(--user); color: white; }
+
+.module-group-header {
+  font-family: 'Fredoka One', cursive;
+  color: var(--user-ink);
+  font-size: 1rem;
+  margin: 0.6rem 0 0.3rem;
+  padding-left: 0.2rem;
+}
+
+/* ---------- Freestyle ---------- */
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem 0 0.8rem;
+}
+.week-tile {
+  background: white;
+  border: 2px solid var(--user);
+  border-radius: 16px;
+  padding: 0.7rem 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+.week-tile:active { transform: translateY(1px); }
+.week-tile .n {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  color: var(--user-ink);
+  line-height: 1;
+}
+.week-tile .f {
+  font-weight: 800; font-size: 0.8rem; color: var(--ink);
+  margin-top: 0.3rem; line-height: 1.2;
+}
+.week-tile .mc {
+  display: inline-block;
+  background: var(--user-soft);
+  color: var(--user-ink);
+  border-radius: 999px;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  margin-top: 0.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Success / celebration ---------- */
+.celebrate {
+  text-align: center;
+  padding: 1rem 0.5rem;
+}
+.celebrate .big-emoji {
+  font-size: 4rem;
+  display: block;
+  margin: 0.3rem 0 0.8rem;
+}
+.celebrate .summary {
+  background: var(--green-bg);
+  border: 2px solid var(--green);
+  color: var(--green);
+  font-weight: 800;
+  padding: 0.7rem 0.9rem;
+  border-radius: 16px;
+  margin: 0.4rem 0 1rem;
+}
+
+/* ---------- Final celebration ---------- */
+.final-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+  margin: 1rem 0 1.2rem;
+}
+.final-grid .cell {
+  background: var(--user-soft);
+  border-radius: 14px;
+  padding: 0.6rem 0.4rem;
+  text-align: center;
+}
+.final-grid .cell .wk {
+  font-family: 'Fredoka One', cursive;
+  color: var(--user-ink);
+  font-size: 1.2rem;
+}
+.final-grid .cell .sc {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ---------- Confirm dialog ---------- */
+.confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 1rem;
+  animation: fadeIn 160ms ease;
+}
+.confirm-card {
+  background: white;
+  border-radius: 20px;
+  padding: 1.4rem 1.2rem 1.2rem;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+}
+.confirm-card h2 {
+  font-family: 'Fredoka One', cursive;
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+}
+.confirm-card p {
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0 0 1rem;
+  line-height: 1.4;
+}
+
+/* ---------- Misc ---------- */
+.muted-note { color: var(--muted); font-size: 0.9rem; text-align: center; font-weight: 600; margin: 0.5rem 0 0; }
+
+.locale-badge {
+  display: inline-block;
+  background: var(--user);
+  color: white;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.4rem;
+}

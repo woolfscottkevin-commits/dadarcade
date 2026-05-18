@@ -72,6 +72,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-ga:hover{border-color:#ebcb8b;box-shadow:0 0 30px rgba(235,203,139,0.25),0 8px 32px rgba(0,0,0,0.4)}
 .card-ga .card-icon{border-radius:12px;object-fit:cover;border:2px solid #7a4f32;background:#211a16}
 
+.card-sp h2{color:#42a5f5}
+.card-sp:hover{border-color:#42a5f5;box-shadow:0 0 30px rgba(66,165,245,0.25),0 8px 32px rgba(0,0,0,0.4)}
+
 /* Three-section homepage layout */
 .games-section{width:100%;max-width:1100px;margin-top:2.5rem}
 .games-section.all-games{max-width:700px}
@@ -140,6 +143,26 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
+    <a href="/spelling" class="card card-sp" data-new>
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- ABC block stack -->
+        <rect x="6" y="10" width="22" height="22" rx="3" fill="#42a5f5" stroke="#1e88e5" stroke-width="2"/>
+        <text x="17" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">A</text>
+        <rect x="30" y="10" width="22" height="22" rx="3" fill="#FFB347" stroke="#b35900" stroke-width="2"/>
+        <text x="41" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">B</text>
+        <rect x="54" y="10" width="22" height="22" rx="3" fill="#C77DFF" stroke="#6a1b9a" stroke-width="2"/>
+        <text x="65" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">C</text>
+        <!-- Pencil under the blocks -->
+        <rect x="12" y="44" width="44" height="9" rx="2" fill="#FFD54F" stroke="#b35900" stroke-width="1.5"/>
+        <path d="M56 44 L66 48.5 L56 53 Z" fill="#3949AB" stroke="#1a1a2e" stroke-width="1.5"/>
+        <rect x="10" y="44" width="3" height="9" fill="#E91E63"/>
+        <!-- Sound wave -->
+        <path d="M14 64 Q22 60 30 64 Q38 68 46 64 Q54 60 62 64" stroke="#42a5f5" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <h2>Spelling Trainer</h2>
+      <p>For Connor &amp; Claire. Audio dictation with rotating accents, pattern lessons, sentence dictation, and a Word Chain game. Per-kid progress saved on the device.</p>
+    </a>
+
     <a href="/morning-drive" class="card card-md" data-new>
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="6" width="72" height="68" rx="10" fill="#1e1b4b"/>
@@ -378,6 +401,23 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section all-games">
   <h2 class="section-title">All Games</h2>
   <div class="grid">
+    <a href="/spelling" class="card card-sp" data-new>
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="10" width="22" height="22" rx="3" fill="#42a5f5" stroke="#1e88e5" stroke-width="2"/>
+        <text x="17" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">A</text>
+        <rect x="30" y="10" width="22" height="22" rx="3" fill="#FFB347" stroke="#b35900" stroke-width="2"/>
+        <text x="41" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">B</text>
+        <rect x="54" y="10" width="22" height="22" rx="3" fill="#C77DFF" stroke="#6a1b9a" stroke-width="2"/>
+        <text x="65" y="27" font-family="Courier New" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">C</text>
+        <rect x="12" y="44" width="44" height="9" rx="2" fill="#FFD54F" stroke="#b35900" stroke-width="1.5"/>
+        <path d="M56 44 L66 48.5 L56 53 Z" fill="#3949AB" stroke="#1a1a2e" stroke-width="1.5"/>
+        <rect x="10" y="44" width="3" height="9" fill="#E91E63"/>
+        <path d="M14 64 Q22 60 30 64 Q38 68 46 64 Q54 60 62 64" stroke="#42a5f5" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <h2>Spelling Trainer</h2>
+      <p>For Connor &amp; Claire. Audio dictation with rotating accents, pattern lessons, sentence dictation, and a Word Chain game. Per-kid progress saved on the device.</p>
+    </a>
+
     <a href="/morning-drive" class="card card-md" data-new>
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="6" width="72" height="68" rx="10" fill="#1e1b4b"/>
@@ -690,6 +730,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Dad Quest">Dad Quest</option>
         <option value="Par 3">Par 3</option>
         <option value="Morning Drive">Morning Drive</option>
+        <option value="Spelling Trainer">Spelling Trainer</option>
 
         <option value="Website / Other">Website / Other</option>
       </select>
