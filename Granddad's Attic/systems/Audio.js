@@ -145,15 +145,65 @@ export class AudioSystem {
   async radioVoice(text) {
     await this.radioStatic();
     if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+    if (this.muted) return;
 
+    const voices = await this.voicesReady();
     window.speechSynthesis.cancel();
     const utterance = new window.SpeechSynthesisUtterance(text);
     utterance.rate = 0.82;
     utterance.pitch = 0.72;
-    utterance.volume = this.muted ? 0 : 0.72;
-    const voices = window.speechSynthesis.getVoices();
-    const lowerVoice = voices.find((voice) => /male|daniel|fred|reed|ralph|tom|george/i.test(voice.name));
-    if (lowerVoice) utterance.voice = lowerVoice;
+    utterance.volume = 0.72;
+    const voice = this.pickRadioVoice(voices);
+    if (voice) {
+      utterance.voice = voice;
+      utterance.lang = voice.lang;
+    } else {
+      utterance.lang = "en-GB";
+    }
     window.speechSynthesis.speak(utterance);
+  }
+
+  // The radio sounds best with a deeper male British voice ("Daniel" on macOS,
+  // for example). We:
+  //   1. Wait for `voiceschanged` if the list starts empty (Safari quirk).
+  //   2. Normalize voice.lang underscores → hyphens (macOS reports `en_GB`).
+  //   3. Prefer non-"compact" voices so we don't pick the robotic fallback.
+  //   4. Search by name regex for the warmer voices Granddad should sound like.
+  //   5. Fall through to any en-GB → en-* → null.
+  voicesReady() {
+    if (this._voicesPromise) return this._voicesPromise;
+    this._voicesPromise = new Promise((resolve) => {
+      const list = window.speechSynthesis.getVoices();
+      if (list && list.length > 0) { resolve(list); return; }
+      let settled = false;
+      const settle = () => {
+        if (settled) return;
+        settled = true;
+        resolve(window.speechSynthesis.getVoices() || []);
+      };
+      try { window.speechSynthesis.onvoiceschanged = settle; } catch (e) { /* ignore */ }
+      setTimeout(settle, 1500);
+    });
+    return this._voicesPromise;
+  }
+
+  pickRadioVoice(voices) {
+    if (!voices || voices.length === 0) return null;
+    const norm = (s) => (typeof s === "string" ? s.toLowerCase().replace(/_/g, "-") : "");
+    const isCompact = (v) => /compact/i.test(v.name || "") || /compact/i.test(v.voiceURI || "");
+    const inLocale = (loc) => voices.filter((v) => norm(v.lang).startsWith(loc));
+    const preferNatural = (list) => {
+      const natural = list.filter((v) => !isCompact(v));
+      return natural.length > 0 ? natural : list;
+    };
+    // 1. By name — the warm, deeper voices Granddad's message wants.
+    const named = preferNatural(voices.filter((v) => /daniel|reed|rocko|fred|ralph|tom|george/i.test(v.name || "")));
+    if (named.length > 0) return named[0];
+    // 2. British first.
+    const gb = preferNatural(inLocale("en-gb"));
+    if (gb.length > 0) return gb[0];
+    // 3. Any English.
+    const en = preferNatural(voices.filter((v) => norm(v.lang).startsWith("en")));
+    return en[0] || null;
   }
 }

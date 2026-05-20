@@ -1,3 +1,7 @@
+// Tiny localStorage wrapper. Reads + writes are wrapped in try/catch so
+// quota-exceeded, private-mode, or missing-storage failures don't surface
+// as console errors and block the game.
+
 export class Persistence {
   constructor(storageKey) {
     this.storageKey = storageKey;
@@ -7,16 +11,23 @@ export class Persistence {
     try {
       const raw = localStorage.getItem(this.storageKey);
       return raw ? JSON.parse(raw) : {};
-    } catch {
+    } catch (err) {
       return {};
     }
   }
 
   save(state) {
-    localStorage.setItem(this.storageKey, JSON.stringify(state));
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(state));
+    } catch (err) {
+      // Silent fallback — we keep the in-memory state going. The next
+      // successful save will pick up wherever the player is now.
+    }
   }
 
   clear() {
-    localStorage.removeItem(this.storageKey);
+    try {
+      localStorage.removeItem(this.storageKey);
+    } catch (err) { /* ignore */ }
   }
 }

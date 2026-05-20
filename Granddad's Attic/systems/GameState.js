@@ -9,10 +9,11 @@ const initialState = {
   flags: {
     radioUnlocked: false,
     radio_message_played: false,
-    floorboard_revealed: false,
     hint_badge_realized: false,
     paintingMoved: false,
-    letterRead: false
+    letterRead: false,
+    // First-visit nudges + discoverability flags.
+    firstHotspotFound: false
   },
   inventory: [],
   examined: [],

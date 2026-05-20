@@ -1,16 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-90KFJNYR94');</script>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Granddad's Attic | Dad Arcade</title>
   <meta name="description" content="Play Granddad's Attic, a warm story-driven puzzle adventure from Dad Arcade.">
   <link rel="canonical" href="https://dadarcade.com/granddads-attic">
+  <meta property="og:title" content="Granddad's Attic — Dad Arcade">
+  <meta property="og:description" content="A warm pre-rendered puzzle adventure about family, wartime secrets, and one quiet attic.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dadarcade.com/granddads-attic">
+  <meta property="og:site_name" content="Dad Arcade">
+  <meta name="twitter:card" content="summary">
   <base href="/Granddad's%20Attic/">
-  <link rel="stylesheet" href="styles/attic.css?v=phase5e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪑</text></svg>">
+  <link rel="stylesheet" href="styles/attic.css?v=20260519a">
 </head>
 <body>
+  <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
+  <button type="button" id="mute-toggle" class="mute-toggle" aria-label="Mute sound">🔊</button>
   <main id="app" class="attic-app" aria-live="polite"></main>
-  <script type="module" src="main.js?v=phase5e"></script>
+  <div id="toast-stack" class="toast-stack" aria-live="polite" aria-atomic="false"></div>
+  <script type="module" src="main.js?v=20260519a"></script>
 </body>
 </html>

@@ -8,7 +8,10 @@ export const EndScreen = {
           <h1>Granddad's Attic</h1>
           <p>You found what he left behind, and the room finally let go of its secret.</p>
           <p class="solve-time">Solved in ${solveTime}</p>
-          <button class="primary-button" type="button">Play Again</button>
+          <div class="end-actions">
+            <button class="primary-button" type="button">Play Again</button>
+            <a class="secondary-button" href="/">← Back to Dad Arcade</a>
+          </div>
         </div>
       </section>
     `;

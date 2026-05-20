@@ -3,7 +3,11 @@ export const TitleScreen = {
     root.innerHTML = "";
 
     const screen = document.createElement("section");
-    screen.className = "title-screen";
+    screen.className = "title-screen with-vignette";
+    screen.innerHTML = `<img class="title-bg" src="assets/scenes/center.webp" alt="" aria-hidden="true">`;
+
+    const content = document.createElement("div");
+    content.className = "title-copy";
 
     const title = document.createElement("h1");
     title.textContent = "Granddad's Attic";
@@ -37,7 +41,8 @@ export const TitleScreen = {
       actions.append(startOver);
     }
 
-    screen.append(title, tagline, actions);
+    content.append(title, tagline, actions);
+    screen.append(content);
     root.append(screen);
   }
 };

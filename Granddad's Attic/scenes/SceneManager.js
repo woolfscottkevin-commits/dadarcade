@@ -1,9 +1,9 @@
-import { FootlockerPuzzle } from "../puzzles/Footlocker.js";
-import { DiaryPuzzle } from "../puzzles/Diary.js";
-import { RadioPuzzle } from "../puzzles/Radio.js";
-import { MusicBoxPuzzle } from "../puzzles/MusicBox.js";
-import { SafePuzzle } from "../puzzles/Safe.js";
-import { HotspotRenderer } from "./HotspotRenderer.js";
+import { FootlockerPuzzle } from "../puzzles/Footlocker.js?v=20260519a";
+import { DiaryPuzzle } from "../puzzles/Diary.js?v=20260519a";
+import { RadioPuzzle } from "../puzzles/Radio.js?v=20260519a";
+import { MusicBoxPuzzle } from "../puzzles/MusicBox.js?v=20260519a";
+import { SafePuzzle } from "../puzzles/Safe.js?v=20260519a";
+import { HotspotRenderer } from "./HotspotRenderer.js?v=20260519a";
 
 const itemLabels = {
   BRASS_KEY: "Brass Key",
@@ -43,7 +43,8 @@ export class SceneManager {
   render(scene) {
     this.root.innerHTML = "";
     const shell = document.createElement("section");
-    shell.className = `scene-shell${this.debug ? " debug" : ""}`;
+    const knownHotspots = this.gameState.get("firstHotspotFound");
+    shell.className = `scene-shell${this.debug ? " debug" : ""}${knownHotspots ? " hotspots-known" : ""}`;
 
     const topbar = document.createElement("div");
     topbar.className = "topbar";
@@ -101,12 +102,14 @@ export class SceneManager {
       inventory.append(button);
     }
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "inventory-item photo-hint";
-    button.textContent = "Photo";
-    button.addEventListener("click", () => this.showMemoryPhoto());
-    inventory.append(button);
+    const hintButton = document.createElement("button");
+    hintButton.type = "button";
+    hintButton.className = "inventory-item photo-hint";
+    hintButton.textContent = "Hint";
+    hintButton.setAttribute("title", "Stuck? Granddad left a hint.");
+    hintButton.setAttribute("aria-label", "Show a hint");
+    hintButton.addEventListener("click", () => this.showMemoryPhoto());
+    inventory.append(hintButton);
 
     return inventory;
   }
@@ -138,9 +141,13 @@ export class SceneManager {
   }
 
   activateHotspot(hotspot) {
+    if (!this.gameState.get("firstHotspotFound")) {
+      this.gameState.set("firstHotspotFound", true);
+      this.commit();
+      this.showToast("✨ Nice find — keep looking around.");
+    }
     const actions = {
       goToScene: () => this.show(hotspot.target),
-      message: () => this.setCaption(hotspot.text),
       footlocker: () => this.showFootlocker(),
       takeFootlockerRewards: () => this.takeFootlockerRewards(),
       weddingPhoto: () => this.showWeddingPhoto(),
@@ -153,6 +160,24 @@ export class SceneManager {
     };
 
     actions[hotspot.action]?.();
+  }
+
+  showToast(text) {
+    const stack = document.querySelector("#toast-stack");
+    if (!stack) return;
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = text;
+    stack.append(toast);
+    setTimeout(() => {
+      if (toast.isConnected) toast.remove();
+    }, 2000);
+  }
+
+  pickupItem(itemId) {
+    this.gameState.addItem(itemId);
+    const label = itemLabels[itemId] ?? itemId;
+    this.showToast(`✦ Picked up ${label}`);
   }
 
   useInventory(item) {
@@ -231,8 +256,8 @@ export class SceneManager {
   }
 
   takeFootlockerRewards() {
-    this.gameState.addItem("BRASS_KEY");
-    this.gameState.addItem("DIARY");
+    this.pickupItem("BRASS_KEY");
+    this.pickupItem("DIARY");
     this.audio.chime();
     this.commit();
     this.refreshScene();
@@ -251,7 +276,7 @@ export class SceneManager {
     this.gameState.markExamined("wedding_photo_back");
     this.commit();
     this.showModal({
-      title: "Wedding Photograph",
+      title: "Wedding Photograph (back)",
       image: "assets/closeups/wedding-photo-back.webp",
       body: `
         <p class="inscription artifact-card">Hank & Margaret - 6.14.46</p>
@@ -420,7 +445,6 @@ export class SceneManager {
     this.audio.radioVoice?.(granddadRadioMessage);
     this.gameState.markSolved("radio");
     this.gameState.set("radio_message_played", true);
-    this.gameState.set("floorboard_revealed", true);
     this.commit();
     this.showModal({
       title: "Granddad's Message",
@@ -434,7 +458,7 @@ export class SceneManager {
   }
 
   takeMusicBox() {
-    this.gameState.addItem("MUSIC_BOX");
+    this.pickupItem("MUSIC_BOX");
     this.gameState.markSolved("musicbox");
     this.audio.chime();
     this.commit();
@@ -476,7 +500,7 @@ export class SceneManager {
       return;
     }
 
-    this.gameState.addItem("BADGE");
+    this.pickupItem("BADGE");
     this.audio.chime();
     this.commit();
     this.refreshScene();
@@ -552,28 +576,65 @@ export class SceneManager {
 
   async showLetter() {
     this.audio.page();
+    const isFirstRead = !this.gameState.get("letterRead");
     this.gameState.set("letterRead", true);
     this.gameState.finish();
     this.commit();
 
     let letter = "";
     try {
-      letter = await fetch("assets/text/letter.txt").then((response) => response.text());
+      letter = await fetch("assets/text/letter.txt?v=20260519a").then((response) => response.text());
     } catch {
-      letter = "To whoever finds this -\n\nI love you. Be kind to your mother. Read more books.\n\n- Granddad";
+      letter = [
+        "To whoever finds this —",
+        "",
+        "I never told anyone what I really did during the war. I was",
+        "sworn to silence, and by the time I was free to speak, I had",
+        "forgotten how. So I am writing it down the only way I know.",
+        "",
+        "I worked on codes. Long strings of numbers that other people",
+        "had sent across the ocean and didn't want us to read. It was",
+        "a desk and a pencil and ten thousand pages of nonsense. But",
+        "once, in the spring of '43, our team caught one that mattered,",
+        "and it helped end the war a little sooner.",
+        "",
+        "I never told your grandmother. I never told your mother. I am",
+        "telling you now because you cared enough to find this, and",
+        "because someone in this family should know that the quiet old",
+        "man in the brown chair was, for a brief moment, useful.",
+        "",
+        "I love you. Be kind to your mother. Read more books.",
+        "",
+        "— Granddad"
+      ].join("\n");
     }
+
+    const statusLine = isFirstRead
+      ? `<p class="modal-status">Take a moment. Continue unlocks in eight seconds.</p>`
+      : "";
 
     this.showModal({
       title: "Final Letter",
       image: "assets/closeups/final-letter.webp",
-      body: `<pre class="letter-text">${letter}</pre><p class="modal-status">Take a moment. Continue unlocks in eight seconds.</p>`,
-      actions: [{ label: "Continue", onClick: () => { this.closeModal(); this.onEnd?.(); }, disabled: true }],
+      body: `<pre class="letter-text">${letter}</pre>${statusLine}`,
+      actions: [{ label: "Continue", onClick: () => { this.closeModal(); this.onEnd?.(); }, disabled: isFirstRead }],
       onMount: (modal) => {
+        if (!isFirstRead) return;
         const button = modal.querySelector(".modal-actions button");
-        setTimeout(() => {
-          button.disabled = false;
-          modal.querySelector(".modal-status").textContent = "You can continue now.";
+        const status = modal.querySelector(".modal-status");
+        const timeoutId = setTimeout(() => {
+          if (button && button.isConnected) button.disabled = false;
+          if (status && status.isConnected) status.textContent = "You can continue now.";
         }, 8000);
+        // Cancel the timer if the modal is removed before it fires
+        // (Escape key, navigation, etc.).
+        const observer = new MutationObserver(() => {
+          if (!modal.isConnected) {
+            clearTimeout(timeoutId);
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.body, { childList: true });
       }
     });
   }
@@ -592,11 +653,21 @@ export class SceneManager {
 
   currentHint() {
     if (this.gameState.get("safe")) return { id: "ending", text: "Thank you for finding this." };
-    if (this.gameState.hasItem("BADGE")) return { id: "safe_unsolved_2", text: "HONOR. The word that mattered most. Use the badge to find it." };
+    if (this.gameState.hasItem("BADGE")) return { id: "safe_unsolved_2", text: "HONOR. The word that mattered most. Use the badge grid to spell it." };
     if (this.gameState.get("hint_badge_realized")) return { id: "badge_realized", text: "The jacket deserves another look." };
-    if (this.gameState.get("radio")) return { id: "musicbox_unsolved_2", text: "B-A-D-G-E. Some words just sound like music." };
-    if (this.gameState.get("diary")) return { id: "radio_unsolved_2", text: "Margaret's birthday - September seventh. Couldn't forget that one if I tried." };
-    if (this.gameState.get("footlocker")) return { id: "diary_unsolved_2", text: "Shift three to the right and call it Tuesday." };
+    // After the music box opens but before the kid notices the sheet music:
+    if (this.gameState.get("musicbox") && !this.gameState.get("hint_badge_realized")) {
+      return { id: "musicbox_unsolved_2", text: "B - A - D - G - E. Some words just sound like music." };
+    }
+    if (this.gameState.get("radio")) return { id: "musicbox_unsolved_1", text: "There's a loose floorboard near the desk." };
+    // Diary unlocked but radio not yet — nudge the radio frequency.
+    if (this.gameState.get("diary") && !this.gameState.get("radio")) {
+      return { id: "radio_unsolved_2", text: "Margaret's birthday — September seventh. 97.0. Couldn't forget that one if I tried." };
+    }
+    // Footlocker open but diary not yet — the cipher numbers next to the dates.
+    if (this.gameState.get("footlocker") && !this.gameState.get("diary")) {
+      return { id: "diary_unsolved_2", text: "Shift three to the right and call it Tuesday. K shifts back to H." };
+    }
     return { id: "intro", text: "Take your time. Look at everything." };
   }
 
@@ -724,6 +795,7 @@ export class SceneManager {
 
   showModal({ title, image, art, body, actions = [], onMount }) {
     this.closeModal();
+    const previousActive = document.activeElement;
     const overlay = document.createElement("div");
     const hasArt = Boolean(image || art);
     overlay.className = "modal-overlay";
@@ -749,12 +821,51 @@ export class SceneManager {
       actionBar.append(button);
     }
 
+    // Focus trap + ESC to close. Restores focus to the launching element
+    // when the modal goes away.
+    const focusables = () =>
+      overlay.querySelectorAll("button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        // Only auto-close if there's a non-disabled action button (otherwise the
+        // modal is blocking on a user choice that shouldn't be skipped).
+        const enabledActions = Array.from(focusables()).filter((el) => el.closest(".modal-actions"));
+        if (enabledActions.length > 0) {
+          e.preventDefault();
+          // Click the last action (usually "Close" / "Continue") so any state
+          // tracking it does still fires.
+          enabledActions[enabledActions.length - 1].click();
+        }
+        return;
+      }
+      if (e.key === "Tab") {
+        const items = Array.from(focusables());
+        if (items.length === 0) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    overlay.addEventListener("keydown", onKey);
+    overlay._closeCleanup = () => {
+      try { previousActive && previousActive.focus && previousActive.focus(); } catch (e) { /* ignore */ }
+    };
+
     document.body.append(overlay);
     onMount?.(overlay);
+    // Focus the first interactive element so keyboard users land in the modal.
+    setTimeout(() => {
+      const items = Array.from(focusables());
+      if (items.length > 0) items[0].focus();
+    }, 0);
   }
 
   closeModal() {
-    document.querySelector(".modal-overlay")?.remove();
+    const overlay = document.querySelector(".modal-overlay");
+    if (!overlay) return;
+    try { overlay._closeCleanup?.(); } catch (e) { /* ignore */ }
+    overlay.remove();
   }
 
   toast(text, title = "Granddad's Attic") {
