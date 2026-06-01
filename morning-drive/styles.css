@@ -177,10 +177,23 @@ body {
   transition: transform 80ms, background 140ms, border-color 140ms;
 }
 .choice:active { transform: translateY(1px); }
-.choice:disabled { cursor: default; opacity: 0.7; }
-.choice.locked-correct { background: var(--green); border-color: var(--green); color: white; }
-.choice.locked-wrong   { background: #fee2e2; border-color: var(--red); color: #991b1b; }
+.choice:disabled { cursor: default; opacity: 0.55; }
+/* Solved/wrong picks stay at full opacity so the attempt history is clearly
+   readable when the phone is handed back — only the untouched options fade. */
+.choice.locked-correct { background: var(--green); border-color: var(--green); color: white; opacity: 1; }
+.choice.locked-wrong   { background: #ef4444; border-color: #b91c1c; color: #fff; opacity: 1; font-weight: 800; }
 .choice.revealed-correct { background: var(--green-bg); border-color: var(--green); color: var(--ink); }
+
+/* Per-question attempt tally so Dad can see how many tries it took. */
+.attempt-badge {
+  margin-top: 0.55rem;
+  display: inline-block;
+  font-weight: 800; font-size: 0.85rem;
+  padding: 0.3rem 0.65rem; border-radius: 999px;
+}
+.attempt-badge.ok           { background: var(--green-bg); color: #166534; }
+.attempt-badge.after-wrong  { background: #fef3c7; color: #92400e; }
+.attempt-badge.wrong-running{ background: #fee2e2; color: #991b1b; }
 
 .qmeta { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.6rem; flex-wrap: wrap; }
 .hint-btn {

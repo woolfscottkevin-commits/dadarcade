@@ -22,6 +22,8 @@ let isReadOnly = false;
 let scores = { claire: 0, connor: 0 };
 const answered = new Set(); // problemKey markers so a kid can't score twice
 const attemptCounts = new Map(); // problemKey -> wrong-pick count so far
+let dayProgress = {}; // persisted per-day state, replayed after a reload:
+                      // { [problemKey]: { wrong: [choiceIdx,…], solved: bool } }
 
 // ----------------------------------------------------------------------------
 // Boot
@@ -83,6 +85,9 @@ async function loadDay({ date, readOnly }) {
   // live (no Reviewing banner, attempts logged) — they're back to today,
   // just got there a long way around.
   isReadOnly = !!readOnly && data.date !== todayInET();
+  // Pull any saved attempt history for a live day so wrong picks come back red
+  // and solved questions stay solved even if the page reloaded mid-session.
+  dayProgress = isReadOnly ? {} : loadProgressForDay(activeDate);
   renderHeader();
   renderSections();
   // Analytics ping
@@ -106,6 +111,7 @@ function resetState() {
   scoreConnorEl.textContent = "0";
   answered.clear();
   attemptCounts.clear();
+  dayProgress = {};
 }
 
 function showStatus(text) { statusEl.textContent = text; show(statusEl); }
@@ -212,6 +218,30 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
   let locked = false;
   let revealedAfterReadOnly = false;
 
+  // Attempt tally — shows Dad at a glance how many wrong picks happened.
+  const badge = document.createElement("div");
+  badge.className = "attempt-badge";
+  badge.hidden = true;
+  function refreshBadge() {
+    const wrong = attemptCounts.get(problemKey) || 0;
+    if (locked) {
+      if (wrong === 0) {
+        badge.className = "attempt-badge ok";
+        badge.textContent = "✅ First try!";
+      } else {
+        badge.className = "attempt-badge after-wrong";
+        badge.textContent = `✅ Correct after ${wrong} wrong ${wrong === 1 ? "try" : "tries"}`;
+      }
+      badge.hidden = false;
+    } else if (wrong > 0) {
+      badge.className = "attempt-badge wrong-running";
+      badge.textContent = `❌ ${wrong} wrong ${wrong === 1 ? "try" : "tries"} so far`;
+      badge.hidden = false;
+    } else {
+      badge.hidden = true;
+    }
+  }
+
   choices.forEach((choiceText, idx) => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -234,20 +264,46 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
         card.classList.add("correct");
         grid.querySelectorAll(".choice").forEach((b) => { b.disabled = true; });
         onCorrect && onCorrect();
+        saveProblemProgress(problemKey, { solved: true });
+        refreshBadge();
         logAttempt({ kid, kind, problemKey, topic, attempts, correct: true });
       } else {
         attemptCounts.set(problemKey, priorWrong + 1);
         btn.classList.add("locked-wrong");
         btn.disabled = true;
+        saveProblemProgress(problemKey, { wrongIndex: idx });
         card.classList.remove("wrong");
         // restart shake animation
         void card.offsetWidth;
         card.classList.add("wrong");
+        refreshBadge();
       }
     });
     grid.appendChild(btn);
   });
   card.appendChild(grid);
+  card.appendChild(badge);
+
+  // Replay any saved attempts (e.g. after the tab reloaded while the phone was
+  // locked) so wrong picks stay red and a solved question stays solved.
+  const saved = !isReadOnly ? dayProgress[problemKey] : null;
+  if (saved) {
+    const btns = grid.querySelectorAll(".choice");
+    attemptCounts.set(problemKey, (saved.wrong || []).length);
+    (saved.wrong || []).forEach((wi) => {
+      const b = btns[wi];
+      if (b) { b.classList.add("locked-wrong"); b.disabled = true; }
+    });
+    if (saved.solved) {
+      locked = true;
+      const cb = btns[correctIndex];
+      if (cb) cb.classList.add("locked-correct");
+      card.classList.add("correct");
+      btns.forEach((b) => { b.disabled = true; });
+      onCorrect && onCorrect(); // restore score badge / trophy
+    }
+    refreshBadge();
+  }
 
   if (!isReadOnly && hint) {
     const meta = document.createElement("div");
@@ -477,6 +533,46 @@ async function openPastSheet() {
 }
 
 function closePastSheet() { hide(pastSheet); }
+
+// ----------------------------------------------------------------------------
+// Local progress persistence
+// ----------------------------------------------------------------------------
+// Mirrors each kid's attempt history into localStorage, keyed by day, so the
+// red wrong-answer marks (and a solved question) survive a page reload — phones
+// get locked and handed around, and mobile Safari quietly reloads the tab. We
+// keep the most recent days only so storage can't grow without bound.
+
+const PROGRESS_KEY = "morning-drive-progress-v1";
+const PROGRESS_MAX_DAYS = 30;
+
+function readAllProgress() {
+  try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function loadProgressForDay(date) {
+  return readAllProgress()[date] || {};
+}
+
+function saveProblemProgress(problemKey, { wrongIndex, solved } = {}) {
+  if (isReadOnly || !activeDate) return; // never record while reviewing a past day
+  try {
+    const all = readAllProgress();
+    const day = all[activeDate] || (all[activeDate] = {});
+    const entry = day[problemKey] || (day[problemKey] = { wrong: [], solved: false });
+    if (typeof wrongIndex === "number" && !entry.wrong.includes(wrongIndex)) {
+      entry.wrong.push(wrongIndex);
+    }
+    if (solved) entry.solved = true;
+
+    // Prune oldest days (date strings sort lexically = chronologically).
+    const dates = Object.keys(all).sort();
+    while (dates.length > PROGRESS_MAX_DAYS) delete all[dates.shift()];
+
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+    dayProgress = all[activeDate];
+  } catch { /* storage full / unavailable — best-effort only */ }
+}
 
 // ----------------------------------------------------------------------------
 // Attempt logging
