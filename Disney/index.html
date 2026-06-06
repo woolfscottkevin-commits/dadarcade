@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Lights, Camera, Hunt! | Dad Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Limelight&family=Nunito:ital,wght@0,600;0,700;0,800;1,700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     🎬  ANSWER KEY — EDIT HERE IF NEEDED
+     The graded "choice" stops have their correct answer set by the
+     `answer` field in the STOPS array down in the <script> below.
+     Search for ">>> EDIT ANSWERS HERE <<<". All answers are stable,
+     well-known park facts (or current as of June 2026), but glance
+     at them before the trip and adjust if anything has changed.
+
+     ⚙️  TWO TOGGLES (top of <script>):
+       LOCKOUT_ENABLED  — set false to remove the wrong-answer wait
+                          (handy for testing or for very little kids)
+       LOCKOUT_SECONDS  — length of the wait after a wrong answer
+     ============================================================ */
+
+  :root{
+    --velvet:#2a0810;
+    --velvet-2:#1c050b;
+    --gold:#e6bf57;
+    --gold-bright:#f7d97a;
+    --gold-deep:#b8902f;
+    --cream:#f6e8cf;
+    --ink:#1a0407;
+    --red:#c0392b;
+    --bulb:#ffe9a8;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Nunito',sans-serif;
+    color:var(--cream);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #5a1320 0%, var(--velvet) 45%, var(--velvet-2) 100%);
+    min-height:100%;
+    overflow-x:hidden;
+  }
+  /* faint film-grain / vignette */
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:radial-gradient(110% 90% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+    mix-blend-mode:multiply;
+  }
+  .wrap{
+    max-width:560px;margin:0 auto;padding:18px 16px 48px;position:relative;z-index:2;
+  }
+
+  /* ---------- marquee bulb frame ---------- */
+  .marquee{
+    border:3px solid var(--gold-deep);
+    border-radius:18px;
+    background:linear-gradient(180deg, rgba(45,8,18,.85), rgba(20,4,10,.9));
+    position:relative;
+    box-shadow:0 18px 50px rgba(0,0,0,.55), inset 0 0 30px rgba(0,0,0,.45);
+    padding:26px 20px;
+  }
+  .marquee::before{
+    content:"";position:absolute;inset:7px;border-radius:12px;
+    border:2px dashed rgba(230,191,87,.35);pointer-events:none;
+  }
+  /* bulbs */
+  .bulbs{position:absolute;inset:-3px;border-radius:18px;pointer-events:none;}
+  .bulbs span{
+    position:absolute;width:9px;height:9px;border-radius:50%;
+    background:var(--bulb);
+    box-shadow:0 0 8px 2px rgba(255,221,140,.85);
+    animation:twinkle 1.4s infinite ease-in-out;
+  }
+  @keyframes twinkle{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  /* ---------- title screen ---------- */
+  .clap{font-size:54px;text-align:center;line-height:1;margin:2px 0 6px;filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));}
+  h1.title{
+    font-family:'Limelight',serif;
+    text-align:center;
+    color:var(--gold-bright);
+    font-size:30px;letter-spacing:2px;line-height:1.15;
+    margin:6px 0 2px;
+    text-shadow:0 2px 0 var(--gold-deep), 0 0 18px rgba(247,217,122,.35);
+  }
+  .subtitle{
+    font-family:'Special Elite',monospace;
+    text-align:center;color:var(--cream);opacity:.85;
+    font-size:13px;letter-spacing:1px;margin:0 0 14px;
+  }
+  .starring{
+    font-family:'Cinzel',serif;font-weight:700;text-align:center;
+    color:var(--gold);font-size:15px;letter-spacing:3px;margin:14px 0 4px;
+  }
+  .names{
+    font-family:'Limelight',serif;text-align:center;color:var(--gold-bright);
+    font-size:24px;letter-spacing:1px;margin:0 0 16px;
+    text-shadow:0 0 14px rgba(247,217,122,.4);
+  }
+  .ticket{
+    background:rgba(0,0,0,.28);
+    border:1px solid rgba(230,191,87,.4);
+    border-radius:12px;padding:14px 16px;margin:14px 0;
+    font-size:14.5px;line-height:1.5;
+  }
+  .ticket b{color:var(--gold-bright);}
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:block;width:100%;border:none;cursor:pointer;
+    font-family:'Cinzel',serif;font-weight:700;letter-spacing:1px;
+    font-size:18px;color:var(--ink);
+    background:linear-gradient(180deg,var(--gold-bright),var(--gold-deep));
+    border-radius:14px;padding:16px 18px;margin-top:10px;
+    box-shadow:0 6px 0 #7d5e1c, 0 10px 22px rgba(0,0,0,.4);
+    transition:transform .06s ease, box-shadow .06s ease;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #7d5e1c,0 6px 14px rgba(0,0,0,.4);}
+  .btn.secondary{
+    background:linear-gradient(180deg,#6a1a25,#3c0c15);color:var(--cream);
+    box-shadow:0 6px 0 #2a060d,0 10px 22px rgba(0,0,0,.4);
+    border:1px solid rgba(230,191,87,.4);
+  }
+  .btn.secondary:active{box-shadow:0 2px 0 #2a060d;}
+
+  /* ---------- progress stars ---------- */
+  .progress{
+    display:flex;justify-content:center;gap:6px;flex-wrap:wrap;
+    margin:4px 0 16px;
+  }
+  .pstar{font-size:20px;filter:grayscale(1) opacity(.4);transition:.3s;}
+  .pstar.on{filter:none;transform:scale(1.12);text-shadow:0 0 10px rgba(247,217,122,.8);}
+
+  /* ---------- stop card ---------- */
+  .scene-no{
+    font-family:'Special Elite',monospace;text-align:center;
+    color:var(--gold);font-size:13px;letter-spacing:2px;margin:0 0 2px;text-transform:uppercase;
+  }
+  .area{
+    text-align:center;font-family:'Cinzel',serif;font-weight:700;
+    color:var(--cream);opacity:.8;font-size:12px;letter-spacing:3px;
+    text-transform:uppercase;margin:0 0 10px;
+  }
+  .emoji-big{font-size:46px;text-align:center;margin:4px 0 8px;}
+  h2.clue{
+    font-family:'Cinzel',serif;font-weight:900;color:var(--gold-bright);
+    text-align:center;font-size:21px;line-height:1.25;margin:0 0 10px;
+    text-shadow:0 1px 0 var(--gold-deep);
+  }
+  .task{
+    font-family:'Special Elite',monospace;
+    background:rgba(0,0,0,.25);border-left:3px solid var(--gold);
+    border-radius:0 10px 10px 0;padding:12px 14px;margin:10px 0 6px;
+    font-size:15px;line-height:1.55;color:var(--cream);
+  }
+  .hint{text-align:center;font-size:13px;opacity:.7;margin:8px 0 2px;font-style:italic;}
+
+  /* choice buttons */
+  .choice{
+    display:block;width:100%;cursor:pointer;border:2px solid rgba(230,191,87,.55);
+    background:rgba(0,0,0,.25);color:var(--cream);
+    font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;
+    border-radius:12px;padding:14px;margin-top:10px;transition:.12s;
+  }
+  .choice:active{transform:scale(.98);}
+  .choice.correct{background:linear-gradient(180deg,#3a7d3a,#235023);border-color:#7CFC8A;color:#fff;}
+  .choice.wrong{background:linear-gradient(180deg,#7d2a2a,#4a1414);border-color:#ff8a8a;color:#fff;animation:shake .4s;}
+  .choice:disabled{cursor:default;opacity:.85;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-7px);}40%{transform:translateX(7px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+
+  .feedback{text-align:center;font-weight:800;font-size:16px;margin-top:12px;min-height:22px;}
+  .feedback.good{color:#9be79b;}
+  .feedback.bad{color:#ffadad;}
+
+  /* lockout ring */
+  .lock{display:none;flex-direction:column;align-items:center;margin-top:14px;}
+  .ring{position:relative;width:84px;height:84px;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .count{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Cinzel',serif;font-weight:900;font-size:30px;color:var(--gold-bright);
+  }
+  .lock p{font-family:'Special Elite',monospace;font-size:13px;opacity:.85;margin:8px 0 0;}
+
+  /* star earned pop */
+  .earned{text-align:center;margin-top:8px;}
+  .earned .bigstar{font-size:60px;display:inline-block;animation:pop .5s ease;filter:drop-shadow(0 0 16px rgba(247,217,122,.8));}
+  @keyframes pop{0%{transform:scale(0) rotate(-40deg);}70%{transform:scale(1.25) rotate(8deg);}100%{transform:scale(1) rotate(0);}}
+
+  /* finale */
+  .finale-prize{
+    font-family:'Limelight',serif;color:var(--gold-bright);text-align:center;
+    font-size:30px;line-height:1.2;margin:8px 0;
+    text-shadow:0 0 20px rgba(247,217,122,.6);
+  }
+  .reveal-emoji{font-size:80px;text-align:center;margin:6px 0;animation:pop .6s ease;}
+
+  .foot{text-align:center;font-family:'Special Elite',monospace;font-size:11px;opacity:.45;margin-top:22px;letter-spacing:1px;}
+
+  /* confetti canvas */
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:40;display:none;}
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <div class="marquee">
+    <div class="bulbs" id="bulbs"></div>
+    <div id="app"><!-- screens render here --></div>
+  </div>
+  <div class="foot">A DAD ARCADE PRODUCTION · dadarcade.com</div>
+</div>
+
+<script>
+/* ============================================================
+   ⚙️  TOGGLES
+   ============================================================ */
+const LOCKOUT_ENABLED = true;   // set false to disable the wrong-answer wait
+const LOCKOUT_SECONDS = 10;     // wait length after a wrong answer
+
+/* ============================================================
+   🎬  THE HUNT  ( >>> EDIT ANSWERS HERE <<< )
+   type 'choice'  -> graded multiple choice. `answer` = correct option text.
+   type 'confirm' -> honor-system "We did it!" task (no grading, no lockout)
+   ============================================================ */
+const STOPS = [
+  {
+    area:"Park Entrance",
+    emoji:"🗼",
+    clue:"Find the Tower of Stars",
+    task:"As soon as you walk in, look way up at the TALL tower at the very front of the park (it's called the Crossroads of the World). Someone famous is standing on the very tippy-top!",
+    type:"choice",
+    options:["Donald Duck","Darth Vader","Mickey Mouse","Buzz Lightyear"],
+    answer:"Mickey Mouse",
+    hint:"He has round black ears…"
+  },
+  {
+    area:"Hollywood Boulevard",
+    emoji:"🚗",
+    clue:"Old-Timey Hollywood",
+    task:"This street is built to look like Hollywood almost 100 years ago. Find a shiny OLD-FASHIONED car parked along the boulevard and strike a silly pose next to it for a photo!",
+    type:"confirm"
+  },
+  {
+    area:"Chinese Theater",
+    emoji:"🖐️",
+    clue:"Hands of the Stars",
+    task:"In front of the giant fancy theater (the one shaped like a Chinese temple), look DOWN at the ground. Real movie stars pressed their hands into the cement long ago! Find a handprint, press your own hand into it, and 📸 TAKE A PHOTO of your hands in the handprint. Is your hand bigger or smaller than the star's?",
+    type:"choice",
+    options:["Bigger","Smaller"],
+    answer:"Smaller",
+    hint:"The movie stars were grown-ups…"
+  },
+  {
+    area:"Echo Lake",
+    emoji:"🦕",
+    clue:"The Lake Monster",
+    task:"Near the lake, find the GIANT green dinosaur with a loooong neck (her name is Gertie). What KIND of dinosaur is she?",
+    type:"choice",
+    options:["A long-neck (Brontosaurus)","T-Rex","Triceratops","Stegosaurus"],
+    answer:"A long-neck (Brontosaurus)",
+    hint:"Look at that loooong neck and tail."
+  },
+  {
+    area:"Echo Lake · Star Tours",
+    emoji:"🤖",
+    clue:"The Walking Machine",
+    task:"Find the HUGE four-legged walking war machine from Star Wars standing guard near the Star Tours ride (it's called an AT-AT). Count its legs out loud!",
+    type:"choice",
+    options:["2","4","6","8"],
+    answer:"4",
+    hint:"It walks like a giant metal camel."
+  },
+  {
+    area:"Sunset Boulevard",
+    emoji:"🏚️",
+    clue:"The Spooky Hotel",
+    task:"As you head down Sunset Boulevard, you'll pass a TALL, spooky, falling-apart hotel. Find the big sign on the front and read it out loud. The hotel is called the 'Hollywood _______ Hotel.' What's the missing word?",
+    type:"choice",
+    options:["Sunshine","Monster","Castle","Tower"],
+    answer:"Tower",
+    hint:"It's the tallest, towering building in the whole park."
+  },
+  {
+    area:"Sunset Boulevard",
+    emoji:"🎸",
+    clue:"The Rockin' Ride",
+    task:"Right next door, find the wild roller coaster that zooms in the dark. It just got a BRAND-NEW makeover starring some famous puppets! Which group of puppets now rocks this ride?",
+    type:"choice",
+    options:["Minions","The Wiggles","The Muppets","Sesame Street"],
+    answer:"The Muppets",
+    hint:"A frog named Kermit and a pig named Miss Piggy…"
+  }
+];
+
+/* The sealed grand prize — stays hidden until every star is earned */
+const PRIZE = {
+  emoji:"🍦",
+  headline:"ICE CREAM!",
+  body:"You're standing right next to HOLLYWOOD SCOOPS. Walk up to the window and pick ANY flavor or sundae you want — it's on Dad!"
+};
+
+/* ============================================================
+   ENGINE
+   ============================================================ */
+const app = document.getElementById('app');
+let current = 0;
+let earned = 0;
+let lockTimer = null;
+
+/* place marquee bulbs around the frame */
+(function placeBulbs(){
+  const c = document.getElementById('bulbs');
+  const N = 26;
+  for(let i=0;i<N;i++){
+    const s=document.createElement('span');
+    const t=i/N;
+    // distribute around a rounded rectangle perimeter (approx)
+    let x,y;
+    if(t<0.25){x=t/0.25*100;y=0;}
+    else if(t<0.5){x=100;y=(t-0.25)/0.25*100;}
+    else if(t<0.75){x=100-(t-0.5)/0.25*100;y=100;}
+    else{x=0;y=100-(t-0.75)/0.25*100;}
+    s.style.left='calc('+x+'% - 4px)';
+    s.style.top='calc('+y+'% - 4px)';
+    s.style.animationDelay=(i*0.09)+'s';
+    c.appendChild(s);
+  }
+})();
+
+function progressBar(){
+  let html='<div class="progress">';
+  for(let i=0;i<STOPS.length;i++){
+    html+='<span class="pstar '+(i<earned?'on':'')+'">⭐</span>';
+  }
+  html+='</div>';
+  return html;
+}
+
+/* ---------- TITLE SCREEN ---------- */
+function renderTitle(){
+  app.innerHTML = `
+    <div class="clap">🎬</div>
+    <h1 class="title">Lights · Camera<br>HUNT!</h1>
+    <p class="subtitle">~ A Hollywood Studios Star Hunt ~</p>
+    <p class="starring">STARRING</p>
+    <p class="names">Claire &amp; Connor</p>
+    <div class="ticket">
+      🎟️ <b>Your mission:</b> Explore the park and find <b>${STOPS.length} hidden movie clues</b>.
+      Earn a <b>golden star</b> for each one. Collect <b>all ${STOPS.length} stars</b> to unlock the
+      <b>top-secret GRAND FINALE prize</b>… 🤫
+    </div>
+    <button class="btn" id="startBtn">🎬 ROLL CAMERA — START!</button>
+    <button class="btn secondary" id="howBtn">How do we play?</button>
+  `;
+  document.getElementById('startBtn').onclick = ()=>{current=0;renderStop();};
+  document.getElementById('howBtn').onclick = renderHow;
+}
+
+function renderHow(){
+  app.innerHTML = `
+    <h1 class="title" style="font-size:24px">How to Play</h1>
+    <div class="ticket" style="font-family:'Nunito'">
+      🌟 Walk to each spot in the park and read the clue together.<br><br>
+      🔎 Some clues are <b>questions</b> — tap your answer. Get it right and you win a star! Tap wrong and you'll wait a few seconds before trying again, so think it through.<br><br>
+      📸 Some clues are <b>missions</b> — do the silly task, then tap <b>"We did it!"</b><br><br>
+      🏆 Earn all <b>${STOPS.length} stars</b> and the secret prize unlocks!
+    </div>
+    <button class="btn" id="backBtn">Got it! 🎬</button>
+  `;
+  document.getElementById('backBtn').onclick = renderTitle;
+}
+
+/* ---------- STOP SCREEN ---------- */
+function renderStop(){
+  const s = STOPS[current];
+  clearTimeout(lockTimer);
+  let optionsHtml='';
+  if(s.type==='choice'){
+    s.options.forEach(opt=>{
+      optionsHtml+=`<button class="choice" data-opt="${opt.replace(/"/g,'&quot;')}">${opt}</button>`;
+    });
+  } else {
+    optionsHtml = `<button class="btn" id="confirmBtn">📸 We did it! ⭐</button>`;
+  }
+
+  app.innerHTML = `
+    ${progressBar()}
+    <p class="scene-no">Clue ${current+1} of ${STOPS.length}</p>
+    <p class="area">${s.area}</p>
+    <div class="emoji-big">${s.emoji}</div>
+    <h2 class="clue">${s.clue}</h2>
+    <div class="task">${s.task}</div>
+    ${s.hint?`<p class="hint">💡 ${s.hint}</p>`:''}
+    <div id="opts">${optionsHtml}</div>
+    <div class="feedback" id="fb"></div>
+    <div class="lock" id="lock">
+      <div class="ring">
+        <svg width="84" height="84">
+          <circle cx="42" cy="42" r="36" stroke="rgba(255,255,255,.15)" stroke-width="7" fill="none"/>
+          <circle id="ringFill" cx="42" cy="42" r="36" stroke="#e6bf57" stroke-width="7" fill="none"
+            stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="0"/>
+        </svg>
+        <div class="count" id="countTxt"></div>
+      </div>
+      <p>Take a closer look… try again in a moment.</p>
+    </div>
+  `;
+
+  if(s.type==='choice'){
+    document.querySelectorAll('.choice').forEach(b=>{
+      b.onclick = ()=>handleChoice(b, s);
+    });
+  } else {
+    document.getElementById('confirmBtn').onclick = ()=>awardStar();
+  }
+}
+
+function handleChoice(btn, s){
+  const choice = btn.getAttribute('data-opt');
+  const buttons = document.querySelectorAll('.choice');
+  if(choice === s.answer){
+    btn.classList.add('correct');
+    buttons.forEach(b=>b.disabled=true);
+    const fb=document.getElementById('fb');
+    fb.textContent='🎉 That\'s it! Star earned!';
+    fb.className='feedback good';
+    setTimeout(awardStar, 850);
+  } else {
+    btn.classList.add('wrong');
+    const fb=document.getElementById('fb');
+    fb.textContent='Not quite — look again! 🔎';
+    fb.className='feedback bad';
+    if(LOCKOUT_ENABLED){
+      buttons.forEach(b=>b.disabled=true);
+      runLockout(buttons);
+    }
+  }
+}
+
+function runLockout(buttons){
+  const lock=document.getElementById('lock');
+  const ringFill=document.getElementById('ringFill');
+  const countTxt=document.getElementById('countTxt');
+  lock.style.display='flex';
+  const total=LOCKOUT_SECONDS;
+  let remaining=total;
+  const circ=226;
+  countTxt.textContent=remaining;
+  ringFill.style.strokeDashoffset='0';
+  const tick=()=>{
+    remaining--;
+    const frac=remaining/total;
+    ringFill.style.strokeDashoffset=String(circ*(1-frac));
+    countTxt.textContent=remaining>0?remaining:'✓';
+    if(remaining<=0){
+      clearTimeout(lockTimer);
+      lock.style.display='none';
+      buttons.forEach(b=>{b.disabled=false;b.classList.remove('wrong');});
+      const fb=document.getElementById('fb');
+      fb.textContent='OK — give it another go! 💪';
+      fb.className='feedback';
+    } else {
+      lockTimer=setTimeout(tick,1000);
+    }
+  };
+  lockTimer=setTimeout(tick,1000);
+}
+
+function awardStar(){
+  earned++;
+  // brief "star earned" flourish
+  app.innerHTML = `
+    ${progressBar()}
+    <div class="earned">
+      <div class="bigstar">⭐</div>
+      <h2 class="clue" style="margin-top:6px">Star ${earned} of ${STOPS.length}!</h2>
+      <p class="subtitle" style="font-size:14px">${earned<STOPS.length?'Great detective work!':'You found them ALL!'}</p>
+    </div>
+    <button class="btn" id="nextBtn">${earned<STOPS.length?'Next clue ➜':'🏆 Open the GRAND FINALE'}</button>
+  `;
+  burstConfetti(60);
+  document.getElementById('nextBtn').onclick = ()=>{
+    if(earned<STOPS.length){current++;renderStop();}
+    else renderFinale();
+  };
+}
+
+/* ---------- FINALE / PRIZE REVEAL ---------- */
+function renderFinale(){
+  app.innerHTML = `
+    ${progressBar()}
+    <p class="scene-no">★ THE GRAND FINALE ★</p>
+    <h1 class="title" style="font-size:24px;margin-top:4px">You're a STAR!</h1>
+    <p class="subtitle">All ${STOPS.length} stars collected!</p>
+    <div class="reveal-emoji">${PRIZE.emoji}</div>
+    <p class="finale-prize">Your prize is…<br>${PRIZE.headline}</p>
+    <div class="ticket" style="text-align:center;font-size:15px">${PRIZE.body}</div>
+    <button class="btn" id="againBtn">↺ Play again</button>
+  `;
+  bigCelebration();
+  document.getElementById('againBtn').onclick = ()=>{
+    earned=0;current=0;renderTitle();
+  };
+}
+
+/* ---------- CONFETTI ---------- */
+const cvs=document.getElementById('confetti');
+const ctx=cvs.getContext('2d');
+let parts=[];
+function sizeCanvas(){cvs.width=innerWidth;cvs.height=innerHeight;}
+sizeCanvas();addEventListener('resize',sizeCanvas);
+const COLORS=['#e6bf57','#f7d97a','#c0392b','#f6e8cf','#ffffff','#b8902f'];
+function burstConfetti(n){
+  cvs.style.display='block';
+  for(let i=0;i<n;i++){
+    parts.push({
+      x:innerWidth/2+(Math.random()-.5)*120,
+      y:innerHeight*0.35,
+      vx:(Math.random()-.5)*7,
+      vy:Math.random()*-9-3,
+      g:0.28+Math.random()*0.1,
+      size:5+Math.random()*7,
+      color:COLORS[(Math.random()*COLORS.length)|0],
+      rot:Math.random()*6.28,vr:(Math.random()-.5)*.3,
+      life:90+Math.random()*40
+    });
+  }
+  if(!rafOn)loop();
+}
+function bigCelebration(){
+  let bursts=0;
+  const fire=()=>{burstConfetti(80);bursts++;if(bursts<5)setTimeout(fire,350);};
+  fire();
+}
+let rafOn=false;
+function loop(){
+  rafOn=true;
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  parts.forEach(p=>{
+    p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;p.life--;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    ctx.fillStyle=p.color;
+    ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+    ctx.restore();
+  });
+  parts=parts.filter(p=>p.life>0 && p.y<cvs.height+40);
+  if(parts.length>0){requestAnimationFrame(loop);}
+  else{rafOn=false;cvs.style.display='none';}
+}
+
+/* boot */
+renderTitle();
+</script>
+</body>
+</html>
