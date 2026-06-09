@@ -262,7 +262,6 @@ function noiseBurst(dur, gain, cutoff){
 function sndBoing(){ const base=300+Math.random()*220; tone(base,0.13,'triangle',0.18,base*1.7); }
 function sndPop(){ noiseBurst(0.16,0.32,2200); tone(680,0.12,'square',0.13,180); }
 function sndAww(){ tone(420,0.45,'sine',0.20,180); tone(300,0.5,'sine',0.10,150); }
-function sndCheer(){ [0,0.09,0.18].forEach((dt,i)=>setTimeout(()=>tone(523*Math.pow(1.16,i),0.14,'triangle',0.16,null),dt*1000)); }
 function sndLevel(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.18),i*110)); }
 
 //=================================================================
