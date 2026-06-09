@@ -103,7 +103,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   <div class="hud-top">
     <div class="hud-pill">⭐ <span id="hud-score">0</span></div>
     <div class="hud-progress">
-      <div class="ptext"><span id="hud-levelname">Level 1</span> · pop <span id="hud-goal">6</span>!</div>
+      <div class="ptext"><span id="hud-levelname">Level 1</span> &middot; 🎈 <span id="hud-count">0 / 5</span></div>
       <div class="hud-bar"><div class="hud-bar-fill" id="hud-fill"></div></div>
     </div>
     <div class="hud-pill hud-lives" id="hud-lives">❤️❤️❤️</div>
@@ -135,6 +135,14 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   <button class="big-btn pink" id="btn-again">Play Again!</button>
 </div>
 
+<!-- LEVEL LOST -->
+<div class="overlay" id="screen-lost">
+  <div class="game-title" style="font-size:clamp(2.2rem,11vw,4.4rem);background:linear-gradient(90deg,#ffd9e6,#ff8fb6,#7c5cff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent">Oh no!</div>
+  <div class="tagline">Some balloons floated away on <span id="lost-level">Level 1</span>!<br>Let's try again 🎈</div>
+  <button class="big-btn pink" id="btn-retry">Try Again!</button>
+  <div class="score-line" id="lost-startover" style="opacity:.7;cursor:pointer;pointer-events:auto;font-size:clamp(.9rem,3vw,1.1rem)">↺ Start from Level 1</div>
+</div>
+
 <a href="/" class="home-link">← Dad Arcade</a>
 
 <script>
@@ -158,11 +166,18 @@ const SKINS = [
     palette:{ body:'#3ec6b8', body2:'#1f8f86', skin:'#ffd9a8', hair:'#23303a', hat:'#222', accent:'#ffe24a' } },
 ];
 
-// ---------- Level config (tuned for ~60–90s each, always winnable) ----------
+// ---------- Level config ----------
+// Each level is a FIXED WAVE: `count` Uncle balloons float up; pop them before
+// they escape. Spawning stops once all `count` are out, so the level always
+// ends with a clean screen. `lives` = how many balloons you can miss (or bombs
+// you can tap) before the level is lost. Escalation: fewer/slower early → more
+// balloons, faster rise, more on screen at once, and bombs on later levels.
 const LEVELS = [
-  { name:'Level 1', goal:6,  maxBalloons:3, riseFrac:0.075, spawnEvery:1.30, bombs:false, bombChance:0 },
-  { name:'Level 2', goal:8,  maxBalloons:5, riseFrac:0.120, spawnEvery:1.00, bombs:false, bombChance:0 },
-  { name:'Level 3', goal:10, maxBalloons:6, riseFrac:0.170, spawnEvery:0.80, bombs:true,  bombChance:0.22 },
+  { name:'Level 1', count:5,  maxConcurrent:2, riseFrac:0.060, spawnEvery:1.60, bombs:false, bombChance:0,    lives:3 },
+  { name:'Level 2', count:7,  maxConcurrent:3, riseFrac:0.085, spawnEvery:1.30, bombs:false, bombChance:0,    lives:3 },
+  { name:'Level 3', count:9,  maxConcurrent:4, riseFrac:0.105, spawnEvery:1.05, bombs:true,  bombChance:0.18, lives:4 },
+  { name:'Level 4', count:11, maxConcurrent:5, riseFrac:0.130, spawnEvery:0.90, bombs:true,  bombChance:0.22, lives:4 },
+  { name:'Level 5', count:14, maxConcurrent:6, riseFrac:0.150, spawnEvery:0.78, bombs:true,  bombChance:0.25, lives:5 },
 ];
 
 // ---------- Storage ----------
@@ -267,11 +282,14 @@ function sndLevel(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.1
 //=================================================================
 // Game state
 //=================================================================
-let state = 'start';              // start | playing | levelclear | end
+let state = 'start';              // start | playing | levelclear | lost | end
 let levelIdx = 0;
 let score = 0;
-let lives = 3;
-let popsThisLevel = 0;
+let levelStartScore = 0;          // score baseline, so a retry rolls back cleanly
+let lives = 3;                    // hearts this level = miss budget
+let uncleSpawned = 0;             // Uncle balloons released so far this level
+let popped = 0;                   // Uncle balloons popped this level
+let escaped = 0;                  // Uncle balloons that floated away this level
 let runStartBest = bestScore;     // best at the moment this run began (for New Best!)
 let spawnTimer = 0;
 let firstBalloonHinted = false;   // show "TAP!" on the very first balloon
@@ -300,9 +318,9 @@ function stageRadius(stage){
 }
 function hitRadius(b){ return Math.max(58, b.r + 16); } // always forgiving (≥110 dia)
 
-function spawnBalloon(){
+function spawnBalloon(kind){
   const lvl = LEVELS[levelIdx];
-  const isBomb = lvl.bombs && Math.random() < lvl.bombChance;
+  const isBomb = kind==='bomb';
   const stage = 1;
   const r = isBomb ? 64*sizeScale : stageRadius(stage);
   const margin = r + 8;
@@ -328,8 +346,9 @@ function popBalloon(b){
   b.popping = true;
   b.popT = 0.26;            // brief frozen silly face
   score += 10;
-  popsThisLevel++;
+  popped++;
   lifetimePops++; lsSet(LS.pops, lifetimePops);
+  if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
   // juice
   hitstop = Math.max(hitstop, 0.075);     // ~4-5 frame freeze
   addShake(0.18, 7*sizeScale);
@@ -338,7 +357,7 @@ function popBalloon(b){
   sndPop();
   if(hintActive){ hintActive=false; }
   updateHUD();
-  if(popsThisLevel >= LEVELS[levelIdx].goal) completeLevel();
+  checkWin();              // popped them all? → level complete
 }
 
 function hitBomb(b){
@@ -351,7 +370,7 @@ function hitBomb(b){
   // soft grey puff
   for(let i=0;i<14;i++) pushParticle(b.x,b.y,'puff','#9aa');
   updateHUD();
-  if(lives<=0) endGame(false);
+  if(lives<=0) loseLevel();
 }
 
 //=================================================================
@@ -392,46 +411,68 @@ function oliverReact(s){ oliver.state=s; oliver.t = (s==='cheer'?0.5:0.8); }
 //=================================================================
 function startGame(){
   initAudio();
-  levelIdx=0; score=0; lives=3; popsThisLevel=0;
-  balloons.length=0; particles.length=0;
-  spawnTimer=0; hitstop=0; shakeT=0;
-  firstBalloonHinted=false; hintActive=false;
+  levelIdx=0; score=0; levelStartScore=0;
   runStartBest = bestScore;
-  oliver.state='idle'; oliver.t=0;
-  state='playing';
-  show('screen-start',false); show('screen-end',false);
-  updateHUD();
+  firstBalloonHinted=false;
+  particles.length=0;
+  show('screen-start',false); show('screen-end',false); show('screen-lost',false);
+  beginLevel(true);
   gtag('event','level_start',{game:'balloon-uncle-bop',level:1});
 }
 
-function completeLevel(){
-  sndLevel(); bigCascade();
-  oliverReact('cheer');
-  gtag('event','level_complete',{game:'balloon-uncle-bop',level:levelIdx+1});
-  if(levelIdx >= LEVELS.length-1){
-    endGame(true);
-    return;
-  }
+// (Re)start the current level. fresh=true on first entry / advance (records the
+// score baseline); fresh=false on retry (rolls score back to that baseline so
+// replaying a level can't inflate the score).
+function beginLevel(fresh){
+  if(fresh) levelStartScore=score; else score=levelStartScore;
+  const lvl=LEVELS[levelIdx];
+  lives=lvl.lives;
+  uncleSpawned=0; popped=0; escaped=0;
+  balloons.length=0;
+  spawnTimer=0.4; hitstop=0; shakeT=0;
+  hintActive=false;
+  oliver.state='idle'; oliver.t=0;
+  show('screen-lost',false); show('screen-end',false);
+  hideBanner();
+  state='playing';
+  updateHUD();
+}
+
+// Win check: the whole wave is resolved (every Uncle popped or escaped) and we
+// still have hearts left.
+function checkWin(){
+  if(state!=='playing') return;
+  if(popped+escaped >= LEVELS[levelIdx].count) winLevel();
+}
+
+function winLevel(){
+  if(levelIdx >= LEVELS.length-1){ endGame(true); return; }
   state='levelclear';
-  showBanner('Level Done!');
+  balloons.length=0; hintActive=false;
+  sndLevel(); bigCascade(); oliverReact('cheer');
+  showBanner('Level '+(levelIdx+1)+' Done!');
+  gtag('event','level_complete',{game:'balloon-uncle-bop',level:levelIdx+1});
   setTimeout(()=>{
     levelIdx++;
-    popsThisLevel=0;
-    balloons.length=0;
-    spawnTimer=0;
-    hideBanner();
-    state='playing';
-    updateHUD();
+    beginLevel(true);
     gtag('event','level_start',{game:'balloon-uncle-bop',level:levelIdx+1});
   }, 1700);
 }
 
-function endGame(won){
+function loseLevel(){
+  state='lost';
+  balloons.length=0; hintActive=false;
+  oliverReact('sad'); sndAww();
+  document.getElementById('lost-level').textContent = LEVELS[levelIdx].name;
+  show('screen-lost',true);
+  gtag('event','level_failed',{game:'balloon-uncle-bop',level:levelIdx+1});
+}
+
+function endGame(won){    // full-game win (or generic end)
   state='end';
   balloons.length=0;            // clean end screen (overlay is transparent)
   hintActive=false;
   if(won){ sndLevel(); bigCascade(); }
-  // best score
   const isBest = score>runStartBest && score>0;
   if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
   document.getElementById('end-title').textContent = won ? 'You Did It!' : 'Good Game!';
@@ -507,17 +548,23 @@ function update(dt){
   if(state!=='playing') return;
 
   const lvl=LEVELS[levelIdx];
-  // spawn
+  // Spawn the wave: release `count` Uncle balloons over time, with bombs mixed
+  // in on later levels. Once all Uncles are out, spawning stops entirely.
   spawnTimer-=dt;
-  const alive=balloons.filter(b=>!b.popping&&!b.dead).length;
-  if(spawnTimer<=0 && alive<lvl.maxBalloons){
-    spawnBalloon();
-    spawnTimer=lvl.spawnEvery*(0.7+Math.random()*0.6);
+  const onScreen=balloons.filter(b=>!b.popping&&!b.dead).length;
+  if(uncleSpawned<lvl.count && spawnTimer<=0 && onScreen<lvl.maxConcurrent){
+    if(lvl.bombs && Math.random()<lvl.bombChance){
+      spawnBalloon('bomb');                 // decoy — doesn't count toward the wave
+    }else{
+      spawnBalloon('uncle'); uncleSpawned++;
+    }
+    spawnTimer=lvl.spawnEvery*(0.75+Math.random()*0.5);
     if(!firstBalloonHinted){ firstBalloonHinted=true; hintActive=true; }
   }
   // move balloons
   for(let i=balloons.length-1;i>=0;i--){
     const b=balloons[i];
+    if(!b) continue;                  // array may be cleared mid-frame on win/lose
     if(b.dead){ balloons.splice(i,1); continue; }
     if(b.tapAnim>0) b.tapAnim=Math.max(0,b.tapAnim-dt*5);
     if(b.popping){
@@ -531,8 +578,19 @@ function update(dt){
     b.x += Math.sin(b.wob)*8*sizeScale*dt + b.vx*dt;
     if(b.x<b.r){ b.x=b.r; b.vx=Math.abs(b.vx); }
     if(b.x>cssW-b.r){ b.x=cssW-b.r; b.vx=-Math.abs(b.vx); }
-    // floated off the top — disappears, no penalty
-    if(b.y + b.r < -10){ balloons.splice(i,1); }
+    // floated off the top
+    if(b.y + b.r < -10){
+      balloons.splice(i,1);
+      if(b.kind==='uncle'){
+        // missed one — costs a heart (gentle), and counts toward the wave
+        escaped++; lives--;
+        oliverReact('sad'); sndAww(); addShake(0.12, 4*sizeScale);
+        updateHUD();
+        if(lives<=0) loseLevel();
+        else checkWin();
+      }
+      // bombs that float away are harmless (good!) — just removed
+    }
   }
 }
 
@@ -752,11 +810,12 @@ requestAnimationFrame(frame);
 // HUD + UI
 //=================================================================
 function updateHUD(){
+  const lvl=LEVELS[levelIdx];
   document.getElementById('hud-score').textContent=score;
-  document.getElementById('hud-levelname').textContent=LEVELS[levelIdx].name;
-  document.getElementById('hud-goal').textContent=LEVELS[levelIdx].goal;
+  document.getElementById('hud-levelname').textContent=lvl.name;
+  document.getElementById('hud-count').textContent=popped+' / '+lvl.count;
   document.getElementById('hud-lives').textContent='❤️'.repeat(Math.max(0,lives))||'　';
-  const pct=Math.min(100,(popsThisLevel/LEVELS[levelIdx].goal)*100);
+  const pct=Math.min(100,((popped+escaped)/lvl.count)*100);
   document.getElementById('hud-fill').style.width=pct+'%';
 }
 function show(id,on){ document.getElementById(id).classList.toggle('show',on); }
@@ -825,6 +884,8 @@ function lighten(hex,amt){
 // ---------- wire buttons ----------
 document.getElementById('btn-play').addEventListener('click', startGame);
 document.getElementById('btn-again').addEventListener('click', ()=>{ refreshStartScreen(); show('screen-end',false); startGame(); });
+document.getElementById('btn-retry').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); beginLevel(false); });
+document.getElementById('lost-startover').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); startGame(); });
 
 // ---------- boot ----------
 resize();
