@@ -75,6 +75,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-hs h2{color:#e6bf57}
 .card-hs:hover{border-color:#e6bf57;box-shadow:0 0 30px rgba(230,191,87,0.28),0 8px 32px rgba(0,0,0,0.4)}
 
+.card-ck h2{color:#ff6ec7}
+.card-ck:hover{border-color:#ff6ec7;box-shadow:0 0 30px rgba(255,110,199,0.28),0 8px 32px rgba(0,0,0,0.4)}
+
 
 /* Three-section homepage layout */
 .games-section{width:100%;max-width:1100px;margin-top:2.5rem}
@@ -144,6 +147,24 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section" id="new-this-week-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
+    <a href="/checkers" class="card card-ck" data-added="2026-06-09">
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- stacked king checker piece -->
+        <ellipse cx="40" cy="61" rx="27" ry="9" fill="#75294f"/>
+        <ellipse cx="40" cy="55" rx="27" ry="9" fill="#ff6ec7"/>
+        <ellipse cx="40" cy="49" rx="27" ry="9" fill="#75294f"/>
+        <ellipse cx="40" cy="43" rx="27" ry="9" fill="#ff6ec7"/>
+        <ellipse cx="40" cy="41" rx="21" ry="6.5" fill="#ffd0ec"/>
+        <!-- crown = "king me" -->
+        <path d="M27 33 l3.5 -13 9.5 9 9.5 -9 3.5 13 z" fill="#ffd700" stroke="#b8902f" stroke-width="1.5" stroke-linejoin="round"/>
+        <circle cx="30.5" cy="20" r="2.5" fill="#0ff"/>
+        <circle cx="49.5" cy="20" r="2.5" fill="#0ff"/>
+        <circle cx="40" cy="24" r="2.5" fill="#0ff"/>
+      </svg>
+      <h2>Checkers</h2>
+      <p>Classic checkers with forced jumps, multi-jumps, and king me. Play the computer on three difficulty levels, or pass-and-play with a friend — neon arcade style.</p>
+    </a>
+
     <a href="/Disney" class="card card-hs" data-added="2026-06-06">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="8" y="30" width="64" height="44" rx="5" fill="#2a0810" stroke="#e6bf57" stroke-width="2"/>
@@ -399,6 +420,22 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section all-games">
   <h2 class="section-title">All Games</h2>
   <div class="grid">
+    <a href="/checkers" class="card card-ck" data-added="2026-06-09">
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="40" cy="61" rx="27" ry="9" fill="#75294f"/>
+        <ellipse cx="40" cy="55" rx="27" ry="9" fill="#ff6ec7"/>
+        <ellipse cx="40" cy="49" rx="27" ry="9" fill="#75294f"/>
+        <ellipse cx="40" cy="43" rx="27" ry="9" fill="#ff6ec7"/>
+        <ellipse cx="40" cy="41" rx="21" ry="6.5" fill="#ffd0ec"/>
+        <path d="M27 33 l3.5 -13 9.5 9 9.5 -9 3.5 13 z" fill="#ffd700" stroke="#b8902f" stroke-width="1.5" stroke-linejoin="round"/>
+        <circle cx="30.5" cy="20" r="2.5" fill="#0ff"/>
+        <circle cx="49.5" cy="20" r="2.5" fill="#0ff"/>
+        <circle cx="40" cy="24" r="2.5" fill="#0ff"/>
+      </svg>
+      <h2>Checkers</h2>
+      <p>Classic checkers with forced jumps, multi-jumps, and king me. Play the computer on three difficulty levels, or pass-and-play with a friend — neon arcade style.</p>
+    </a>
+
     <a href="/Disney" class="card card-hs" data-added="2026-06-06">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="8" y="30" width="64" height="44" rx="5" fill="#2a0810" stroke="#e6bf57" stroke-width="2"/>
@@ -723,6 +760,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
         <option value="Chomp Chase">Chomp Chase</option>
         <option value="Mini Golf">Mini Golf</option>
         <option value="Chess">Chess</option>
+        <option value="Checkers">Checkers</option>
         <option value="Brickfall">Brickfall</option>
         <option value="Ultimate Tic-Tac-Toe">Ultimate Tic-Tac-Toe</option>
         <option value="Dad Quest">Dad Quest</option>
