@@ -1,47 +1,48 @@
 Balloon Uncle Bop — Art Drop Slots
 ==================================
 
-The game is 100% playable RIGHT NOW with no art — every image below has a
-clean hand-drawn canvas fallback. Drop a PNG with the EXACT filename into this
-folder and it will appear automatically on the next load. No code changes.
+The game is 100% playable with no art — every image below has a clean
+hand-drawn canvas fallback. Drop an image with the EXACT filename into this
+folder and it appears automatically on the next load. No code changes.
 
-General rules for every face image:
-  • Square canvas, recommended 512 x 512 px
-  • TRANSPARENT background (PNG with alpha)
-  • Center the face; leave a little breathing room around the edges
-  • The balloon's knot + string are drawn by the game underneath, so you only
-    need the head/face — no need to draw a balloon body or string.
+IMPORTANT — image format
+  Use real PNG or JPG files. iPhone photos are often HEIC (even when the file
+  is named ".png") and will NOT load in a browser. If a photo doesn't show up,
+  it's almost certainly HEIC — re-export/convert it to PNG or JPG first.
+  Any shape/size works: each photo is auto-cropped to a circle (cover-fit), so
+  a normal phone photo with a background is fine. A head-and-shoulders crop
+  reads best. Big phone photos (5–12 MB) should be downsized to ~700 px for
+  fast loading.
 
 FAMILY FACES — the balloons that float up
 -----------------------------------------
 Every balloon is a RANDOM family member, so all faces appear mixed together in
-a level. ONE photo per person (the game grows that same photo bigger each tap
-to make it "inflate" — you do NOT need multiple inflation drawings).
+a level. ONE photo per person (the balloon grows that same photo bigger each
+tap to "inflate" — no multiple inflation drawings needed).
 
-  face-dad.png      you
-  face-claire.png   kid 1
-  face-connor.png   kid 2
+  face-dad.png      \
+  face-claire.png    >  the family balloons (edit the FACES array in index.html
+  face-connor.png   /   to add/rename people — data only, no other changes)
 
-Want to add a 4th person (or rename someone)? Edit the FACES array near the top
-of index.html — copy a line, set a new id/name/img filename + any fallback
-palette. Data only, no other code changes. The names shown on the start screen
-come straight from that array.
+OLIVER — the star (the nephew)
+------------------------------
+  face-oliver.png   Oliver's photo. Used in TWO places, reserved as a treat:
+                    1) the little cheering buddy at the bottom during play
+                    2) the BIG "Oliver Wins!" hero on the win screen
+                    His face is intentionally kept OFF the lose screen.
 
-Tip: a tight head-and-shoulders crop on a transparent background reads best at
-balloon size. A quick way to get transparent PNGs is any "remove background"
-tool, then export at ~512x512.
+GOLD BONUS BALLOON
+  (no art needed) a rare golden star balloon is drawn by the game. One tap =
+  big bonus points. Pure treat; it never costs a life.
 
-BOMB — the "don't tap me" balloon (only appears on Level 3+)
-  bomb.png      grumpy / stormy face, angry brow, clearly DIFFERENT from the
-                happy family balloons (think red/dark + scowl). Must read as
-                "uh-oh" at a glance to a 6-year-old, but stay cute, not scary.
-
-OLIVER — the little buddy at the bottom who reacts to the action (3 poses)
-  oliver-idle.png   calm, gentle smile (idle bounce)
-  oliver-cheer.png  arms up, big cheer (plays on every pop + level win)
-  oliver-sad.png    aww / sad-but-cute (plays if a bomb is tapped)
+BOMB — the "don't tap me" balloon (Level 3+)
+  bomb.png      grumpy / stormy face, clearly DIFFERENT from the happy family
+                balloons (red/dark + scowl). If absent, a drawn one is used.
 
 BACKGROUND (optional)
-  background.png  full-screen party scene. If present it replaces the default
-                CSS/canvas gradient. Any size; it's cover-fit to the screen.
-                A landscape-ish image works best across portrait + landscape.
+  background.png  full-screen party scene; replaces the gradient. Cover-fit.
+
+Leaderboard: all-time top scores use the site's shared /api/scores backend
+(game id "bub", registered in api/scores.js). Players enter 3 initials
+(defaults to OLI). It needs the live site to save scores; locally it just
+shows "No scores yet".

@@ -64,7 +64,7 @@ function getCorsHeaders(req) {
 }
 
 // Valid game prefixes
-const VALID_GAMES = ['si', 'snake', 'pd', 'brickfall'];
+const VALID_GAMES = ['si', 'snake', 'pd', 'brickfall', 'bub'];
 
 const MAX_LIMIT = 50;
 const DEFAULT_LIMIT = 10;

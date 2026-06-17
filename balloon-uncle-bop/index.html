@@ -92,6 +92,60 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18)}
 .home-link:active{color:#fff}
 .overlay.show ~ .home-link{display:block}
+
+/* ---------- Win-screen Oliver hero ---------- */
+#screen-end{justify-content:flex-start;gap:12px;overflow-y:auto;
+  padding:max(18px,env(safe-area-inset-top)) 18px max(80px,env(safe-area-inset-bottom))}
+#end-crown{font-size:clamp(2.4rem,9vw,3.4rem);line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4));margin-bottom:-8px}
+#end-oliver{width:clamp(130px,34vw,220px);height:clamp(130px,34vw,220px);border-radius:50%;object-fit:cover;
+  border:6px solid #ffe24a;box-shadow:0 0 44px rgba(255,226,74,.75),0 12px 30px rgba(0,0,0,.5);
+  animation:heroPop .5s cubic-bezier(.2,1.6,.4,1),heroFloat 2.2s ease-in-out .5s infinite}
+@keyframes heroPop{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes heroFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+
+/* ---------- Leaderboard ---------- */
+.lb-wrap{width:min(94vw,440px);background:rgba(0,0,0,.28);border:2px solid rgba(255,255,255,.18);
+  border-radius:20px;padding:14px 14px 16px}
+.lb-head{font-size:clamp(1rem,4vw,1.3rem);font-weight:900;color:#ffe24a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+#rank-line{font-size:clamp(1.05rem,4.4vw,1.5rem);font-weight:900;color:#7cff8a;min-height:1.3em;margin-bottom:4px}
+#initials-row{display:flex;gap:10px;justify-content:center;margin:6px 0 8px}
+.init-cell{width:clamp(46px,13vw,62px);height:clamp(56px,16vw,74px);border:3px solid rgba(255,255,255,.3);
+  background:rgba(0,0,0,.35);border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:clamp(2rem,8.5vw,2.7rem);font-weight:900;color:#ffe24a;cursor:pointer;pointer-events:auto;
+  font-family:inherit;transition:transform .1s,border-color .1s,box-shadow .1s}
+.init-cell.active{border-color:#ffe24a;box-shadow:0 0 18px rgba(255,226,74,.6);transform:translateY(-3px)}
+.init-cell:active{transform:scale(.94)}
+.lb-entry-hint{font-size:.82rem;font-weight:700;color:#ffd9e6;opacity:.85;margin-top:-2px}
+.btn-save{pointer-events:auto;cursor:pointer;border:none;border-radius:18px;font-family:inherit;font-weight:900;
+  font-size:clamp(1.1rem,4.5vw,1.5rem);color:#fff;text-transform:uppercase;letter-spacing:.02em;padding:12px 26px;
+  background:linear-gradient(180deg,#7cff8a,#28c76f);box-shadow:0 6px 0 #1c8f4f,0 10px 18px rgba(0,0,0,.4);margin:8px 0 4px}
+.btn-save:active{transform:translateY(4px);box-shadow:0 2px 0 #1c8f4f}
+.btn-save[disabled]{filter:grayscale(.25) brightness(.92)}
+.lb-grid{display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;text-align:left;margin-top:4px}
+.lb-rank{font-weight:900;color:#ffd9e6;font-size:clamp(.95rem,3.6vw,1.15rem);text-align:right}
+.lb-rank.top{color:#ffe24a}
+.lb-init{font-weight:900;letter-spacing:.06em;font-size:clamp(.95rem,3.6vw,1.15rem)}
+.lb-score{font-weight:800;color:#fff;font-size:clamp(.95rem,3.6vw,1.15rem);text-align:right}
+.lb-rank.lbme,.lb-init.lbme,.lb-score.lbme{color:#ffe24a;text-shadow:0 0 12px rgba(255,226,74,.6)}
+.lb-empty{grid-column:1/-1;text-align:center;color:#ffd9e6;opacity:.85;font-weight:700;padding:8px}
+.lb-loading{grid-column:1/-1;text-align:center;color:#ffd9e6;opacity:.7;font-weight:700;padding:8px}
+
+/* board view sits over everything as a solid modal */
+#screen-board{background:rgba(26,11,46,0.985);justify-content:flex-start;overflow-y:auto;
+  padding:max(24px,env(safe-area-inset-top)) 18px max(40px,env(safe-area-inset-bottom));gap:16px}
+
+/* trophy button on start */
+.trophy-btn{pointer-events:auto;cursor:pointer;border:2px solid rgba(255,255,255,.25);background:rgba(0,0,0,.3);
+  color:#ffe24a;font-family:inherit;font-weight:800;font-size:clamp(.95rem,3.4vw,1.15rem);border-radius:999px;
+  padding:9px 22px;display:flex;align-items:center;gap:8px;margin-top:2px}
+.trophy-btn:active{transform:scale(.96)}
+
+/* combo popup */
+#combo-pop{position:fixed;left:50%;top:28%;transform:translateX(-50%);z-index:3;pointer-events:none;display:none;
+  font-size:clamp(2rem,11vw,4rem);font-weight:900;color:#ffe24a;
+  text-shadow:0 4px 0 rgba(0,0,0,.3),0 0 24px rgba(255,140,40,.8);-webkit-text-stroke:2px #c9356c}
+#combo-pop.show{display:block;animation:comboPop .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes comboPop{0%{opacity:0;transform:translateX(-50%) scale(.4)}30%{opacity:1;transform:translateX(-50%) scale(1.18)}100%{opacity:0;transform:translateX(-50%) scale(1) translateY(-34px)}}
 </style>
 </head>
 <body>
@@ -120,19 +174,37 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   </button>
   <div class="score-line" id="start-best" style="opacity:.85"></div>
   <div class="skins" id="skins"></div>
+  <button class="trophy-btn" id="btn-board">🏆 Leaderboard</button>
 </div>
 
 <!-- LEVEL banner -->
 <div class="banner" id="banner"><span class="banner-text" id="banner-text">Level Done!</span></div>
+<div id="combo-pop"></div>
 
 <!-- END -->
 <div class="overlay" id="screen-end">
-  <div class="game-title" id="end-title" style="font-size:clamp(2.4rem,12vw,5rem)">Good Game!</div>
-  <div class="score-line">You popped</div>
-  <div class="score-big" id="end-score">0</div>
+  <div id="end-crown" style="display:none">👑</div>
+  <img id="end-oliver" src="assets/face-oliver.png" alt="Oliver" style="display:none">
+  <div class="game-title" id="end-title" style="font-size:clamp(2.2rem,11vw,4.6rem)">Good Game!</div>
+  <div class="score-line">You scored <span id="end-score" style="color:#ffe24a;font-weight:900">0</span>!</div>
   <div class="newbest" id="end-newbest" style="display:none">★ New Best! ★</div>
-  <div class="score-line" id="end-best" style="opacity:.85"></div>
+  <div class="score-line" id="end-best" style="opacity:.85;font-size:clamp(1rem,4vw,1.4rem)"></div>
+  <div class="lb-wrap" id="lb-section">
+    <div id="rank-line"></div>
+    <div class="lb-entry-hint" id="entry-hint">Put your initials on the board!</div>
+    <div id="initials-row"></div>
+    <button class="btn-save" id="btn-save">⭐ Save my score</button>
+    <div class="lb-head" style="margin-top:14px">All-Time Top Pops</div>
+    <div class="lb-grid" id="lb-list"></div>
+  </div>
   <button class="big-btn pink" id="btn-again">Play Again!</button>
+</div>
+
+<!-- LEADERBOARD VIEW -->
+<div class="overlay" id="screen-board">
+  <div class="game-title" style="font-size:clamp(2rem,10vw,4rem)">🏆 Top Pops</div>
+  <div class="lb-wrap"><div class="lb-head">All-Time</div><div class="lb-grid" id="board-list"></div></div>
+  <button class="big-btn pink" id="btn-board-back" style="padding:16px 44px;font-size:clamp(1.4rem,6vw,2rem)">Back</button>
 </div>
 
 <!-- LEVEL LOST -->
@@ -152,11 +224,12 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 //=================================================================
 
 // ---------- Family faces (add/rename people by editing data only) ----------
-// Every balloon that floats up is a RANDOM family member. Drop ONE square,
-// transparent PNG per person into assets/ with the matching filename below and
-// it appears automatically on the next load — no code changes. Until a photo is
-// added, that person shows a distinct hand-drawn fallback face (the palette).
-// Recommended art: 512 x 512 px, transparent background, face centered.
+// Every balloon that floats up is a RANDOM family member. Drop ONE photo per
+// person into assets/ with the matching filename below and it appears
+// automatically on the next load — no code changes. ANY photo works: it's
+// auto-cropped to a circle (cover-fit), so it can be a normal phone photo with
+// a background and any shape/size (a head-and-shoulders crop reads best). Until
+// a photo is added, that person shows a distinct hand-drawn fallback (palette).
 // To add a 4th person: copy a line, give it a new id/name/img + any palette.
 const FACES = [
   { id:'dad',    name:'Dad',    img:'assets/face-dad.png',
@@ -232,8 +305,12 @@ function loadImg(src){
 }
 // background override (optional)
 const bgImg = loadImg('assets/background.png');
-// preload every skin's images + oliver
+// preload every family face
 FACES.forEach(f=>loadImg(f.img));
+// Oliver = the star (the nephew). His real photo is the cheering buddy at the
+// bottom AND the big hero on the win screen. Kept separate from the family
+// balloons so his face stays a special "that's me!" treat.
+const oliverFace = loadImg('assets/face-oliver.png');
 const oliverImg = { idle:loadImg('assets/oliver-idle.png'), cheer:loadImg('assets/oliver-cheer.png'), sad:loadImg('assets/oliver-sad.png') };
 const bombImg = loadImg('assets/bomb.png');
 
@@ -275,6 +352,10 @@ function sndBoing(){ const base=300+Math.random()*220; tone(base,0.13,'triangle'
 function sndPop(){ noiseBurst(0.16,0.32,2200); tone(680,0.12,'square',0.13,180); }
 function sndAww(){ tone(420,0.45,'sine',0.20,180); tone(300,0.5,'sine',0.10,150); }
 function sndLevel(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.18),i*110)); }
+function sndGold(){ [784,988,1318].forEach((f,i)=>setTimeout(()=>tone(f,0.12,'triangle',0.16),i*55)); noiseBurst(0.12,0.18,4000); }
+function sndWin(){ [523,659,784,1046,1318,1046,1318].forEach((f,i)=>setTimeout(()=>tone(f,0.22,'triangle',0.2),i*120)); }
+// rising "ladder" pop: pitch climbs with the current combo for a building feel
+function sndPopCombo(n){ const base=560+Math.min(12,n)*55; noiseBurst(0.14,0.30,2400); tone(base,0.12,'square',0.13,180); }
 
 //=================================================================
 // Game state
@@ -306,6 +387,27 @@ const oliver = { state:'idle', t:0, bob:0 };
 let lastTS = 0;
 let nextId = 1;
 
+// combo: consecutive pops with no miss/bomb. Multiplier ramps gently (every 3
+// pops → +1, capped at x5) so a good run scores more and feels like it's building.
+let combo = 0;
+let comboMult = 1;
+function comboMultFor(c){ return Math.min(5, 1 + Math.floor(c/3)); }
+
+// rare golden bonus balloon — a quick one-tap catch worth big points. Doesn't
+// count toward the wave and costs nothing if it escapes. Pure treat / score chase.
+const GOLD_CHANCE = 0.07;
+const GOLD_BONUS = 50;
+
+// ---------- Leaderboard ----------
+const API_URL = '/api/scores?game=bub';   // relative → works locally + on dadarcade.com
+const LB_LIMIT = 8;
+let lbCache = { alltime:[], daily:[] };
+let initialsChars = [14,11,8];   // O,L,I  (A=0); defaults to Oliver
+let initialsCursor = 0;
+let initialsSubmitting = false;
+let pendingScore = 0;
+let submittedThisRun = false;
+
 //=================================================================
 // Spawning / balloons
 //=================================================================
@@ -318,19 +420,21 @@ function hitRadius(b){ return Math.max(58, b.r + 16); } // always forgiving (≥
 function spawnBalloon(kind){
   const lvl = LEVELS[levelIdx];
   const isBomb = kind==='bomb';
+  const isGold = kind==='gold';
   const stage = 1;
-  const r = isBomb ? 64*sizeScale : stageRadius(stage);
+  const r = isBomb ? 64*sizeScale : (isGold ? 72*sizeScale : stageRadius(stage));
   const margin = r + 8;
   const x = margin + Math.random()*Math.max(1,(cssW - margin*2));
   const rise = lvl.riseFrac * cssH; // px per second upward
+  const riseMul = isGold ? 1.35 : 1;            // gold drifts a touch faster — catch it!
   balloons.push({
     id: nextId++,
-    kind: isBomb ? 'bomb' : 'uncle',
-    face: isBomb ? null : randomFace(),
+    kind: isBomb ? 'bomb' : (isGold ? 'gold' : 'uncle'),
+    face: (isBomb||isGold) ? null : randomFace(),
     x, y: cssH + r + 10,
     stage,
     r,
-    vy: -rise*(0.85+Math.random()*0.3),
+    vy: -rise*riseMul*(0.85+Math.random()*0.3),
     vx: (Math.random()*2-1)*14*sizeScale,
     wob: Math.random()*Math.PI*2,
     tapAnim: 0,
@@ -343,24 +447,54 @@ function spawnBalloon(kind){
 function popBalloon(b){
   b.popping = true;
   b.popT = 0.26;            // brief frozen silly face
-  score += 10;
+  // combo + multiplier
+  combo++;
+  const prevMult = comboMult;
+  comboMult = comboMultFor(combo);
+  const gain = 10*comboMult;
+  score += gain;
   popped++;
   lifetimePops++; lsSet(LS.pops, lifetimePops);
   if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
-  // juice
+  // juice — escalates gently with the combo
   hitstop = Math.max(hitstop, 0.075);     // ~4-5 frame freeze
-  addShake(0.18, 7*sizeScale);
-  confettiBurst(b.x, b.y, 22);
+  addShake(0.18, (7+comboMult)*sizeScale);
+  confettiBurst(b.x, b.y, 18+comboMult*6);
+  const pal=(b.face||FACES[0]).palette;
+  pushScorePop(b.x, b.y - b.r*0.6, '+'+gain, lighten(pal.body,40));
   oliverReact('cheer');
-  sndPop();
+  sndPopCombo(combo);
+  if(comboMult>prevMult && comboMult>=2) showCombo(comboMult);
   if(hintActive){ hintActive=false; }
   updateHUD();
   checkWin();              // popped them all? → level complete
 }
 
+// golden bonus balloon — one quick tap, big points, gold burst. Pure treat:
+// it never counts toward the wave and never costs a life if it floats away.
+function popGold(b){
+  b.popping = true;
+  b.popT = 0.26;
+  combo++;                                  // keeps the streak alive
+  comboMult = comboMultFor(combo);
+  const gain = GOLD_BONUS*comboMult;
+  score += gain;
+  lifetimePops++; lsSet(LS.pops, lifetimePops);
+  if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
+  hitstop = Math.max(hitstop, 0.09);
+  addShake(0.24, 11*sizeScale);
+  for(let i=0;i<34 && particles.length<PARTICLE_CAP;i++)
+    pushParticle(b.x,b.y,'confetti',['#ffe24a','#fff3a8','#ffc23e','#fff'][(Math.random()*4)|0]);
+  pushScorePop(b.x, b.y - b.r*0.6, '+'+gain+'!', '#ffe24a');
+  oliverReact('cheer');
+  sndGold();
+  updateHUD();
+}
+
 function hitBomb(b){
   // gentle negative — never scary
   lives--;
+  combo=0; comboMult=1;        // streak broken
   b.dead = true;
   addShake(0.22, 9*sizeScale);
   oliverReact('sad');
@@ -388,6 +522,12 @@ function pushParticle(x,y,type,color){
 }
 function confettiBurst(x,y,n){ for(let i=0;i<n;i++) pushParticle(x,y,'confetti',CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]); }
 function tapPuff(x,y,col){ for(let i=0;i<7;i++) pushParticle(x,y,'puff',col); }
+// floating "+N" score popup — drifts up and fades at the pop point
+function pushScorePop(x,y,text,color){
+  if(particles.length>=PARTICLE_CAP) particles.shift();
+  particles.push({ x,y, vx:0, vy:-70*sizeScale, life:0.95, max:0.95,
+    size:(22+Math.random()*4)*sizeScale, color, type:'text', text:text, rot:0, vr:0 });
+}
 function bigCascade(){
   for(let i=0;i<70 && particles.length<PARTICLE_CAP;i++){
     pushParticle(Math.random()*cssW, -10 - Math.random()*cssH*0.3, 'confetti', CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]);
@@ -426,6 +566,7 @@ function beginLevel(fresh){
   const lvl=LEVELS[levelIdx];
   lives=lvl.lives;
   uncleSpawned=0; popped=0; escaped=0;
+  combo=0; comboMult=1;
   balloons.length=0;
   spawnTimer=0.4; hitstop=0; shakeT=0;
   hintActive=false;
@@ -470,13 +611,17 @@ function endGame(won){    // full-game win (or generic end)
   state='end';
   balloons.length=0;            // clean end screen (overlay is transparent)
   hintActive=false;
-  if(won){ sndLevel(); bigCascade(); }
+  if(won){ sndWin(); bigCascade(); setTimeout(bigCascade,500); oliverReact('cheer'); }
   const isBest = score>runStartBest && score>0;
   if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
-  document.getElementById('end-title').textContent = won ? 'You Did It!' : 'Good Game!';
+  // OLIVER WINS! — his face is the peak reveal, win only (never on a sad ending)
+  document.getElementById('end-crown').style.display = won ? 'block' : 'none';
+  document.getElementById('end-oliver').style.display = (won && oliverFace && oliverFace._ok) ? 'block' : 'none';
+  document.getElementById('end-title').textContent = won ? 'Oliver Wins!' : 'Good Game!';
   document.getElementById('end-score').textContent = score;
   document.getElementById('end-best').textContent = 'Best: '+bestScore;
   document.getElementById('end-newbest').style.display = isBest ? 'block' : 'none';
+  startLeaderboardEntry(score);   // initials entry + board on the end screen
   show('screen-end',true);
   gtag('event', won?'game_win':'game_over', {game:'balloon-uncle-bop', score:score, level:levelIdx+1});
 }
@@ -510,6 +655,7 @@ function onPointerDown(e){
 }
 function tapBalloon(b){
   if(b.kind==='bomb'){ hitBomb(b); return; }
+  if(b.kind==='gold'){ b.tapAnim=1; tapPuff(b.x,b.y-b.r*0.3,'#ffe24a'); popGold(b); return; }
   b.tapAnim = 1;
   const pal=(b.face||FACES[0]).palette;
   tapPuff(b.x, b.y - b.r*0.3, pal.body);
@@ -537,9 +683,12 @@ function update(dt){
   for(let i=particles.length-1;i>=0;i--){
     const pt=particles[i];
     pt.life-=dt; if(pt.life<=0){ particles.splice(i,1); continue; }
-    pt.vy += 240*dt*sizeScale;        // gravity
-    pt.x+=pt.vx*dt; pt.y+=pt.vy*dt; pt.rot+=pt.vr*dt;
-    pt.vx*=0.99;
+    if(pt.type==='text'){ pt.y+=pt.vy*dt; pt.vy*=0.90; }   // drift up + slow, no gravity
+    else {
+      pt.vy += 240*dt*sizeScale;        // gravity
+      pt.x+=pt.vx*dt; pt.y+=pt.vy*dt; pt.rot+=pt.vr*dt;
+      pt.vx*=0.99;
+    }
   }
   if(hitstop>0){ hitstop-=dt; return; } // freeze the world (balloons) only
 
@@ -551,7 +700,10 @@ function update(dt){
   spawnTimer-=dt;
   const onScreen=balloons.filter(b=>!b.popping&&!b.dead).length;
   if(uncleSpawned<lvl.count && spawnTimer<=0 && onScreen<lvl.maxConcurrent){
-    if(lvl.bombs && Math.random()<lvl.bombChance){
+    const roll=Math.random();
+    if(roll<GOLD_CHANCE){
+      spawnBalloon('gold');                 // rare bonus — doesn't count toward the wave
+    }else if(lvl.bombs && roll<GOLD_CHANCE+lvl.bombChance){
       spawnBalloon('bomb');                 // decoy — doesn't count toward the wave
     }else{
       spawnBalloon('uncle'); uncleSpawned++;
@@ -582,12 +734,13 @@ function update(dt){
       if(b.kind==='uncle'){
         // missed one — costs a heart (gentle), and counts toward the wave
         escaped++; lives--;
+        combo=0; comboMult=1;        // streak broken
         oliverReact('sad'); sndAww(); addShake(0.12, 4*sizeScale);
         updateHUD();
         if(lives<=0) loseLevel();
         else checkWin();
       }
-      // bombs that float away are harmless (good!) — just removed
+      // bombs and gold that float away are harmless (good!) — just removed
     }
   }
 }
@@ -691,53 +844,112 @@ function drawBalloon(b){
   ctx.save();
   ctx.translate(b.x,b.y); ctx.scale(sx,sy); ctx.translate(-b.x,-b.y);
   if(b.kind==='bomb'){
-    if(bombImg && bombImg._ok) drawImgCentered(bombImg,b.x,b.y,b.r);
+    if(bombImg && bombImg._ok) drawImgCentered(bombImg,b.x,b.y,b.r,'#3a0d12');
     else drawBombFallback(b.x,b.y,b.r);
+  }else if(b.kind==='gold'){
+    drawGoldBalloon(b.x,b.y,b.r);
   }else{
     const face = b.face || FACES[0];
     const img = loadImg(face.img);
     if(img && img._ok){
-      drawImgCentered(img,b.x,b.y,b.r);
+      drawImgCentered(img,b.x,b.y,b.r,(face.palette.body2||face.palette.body));
     }else{
       roundFace(b.x,b.y,b.r,face.palette,b.stage,b.popping||b.stage>=5);
     }
   }
   ctx.restore();
 }
-function drawImgCentered(img,x,y,r){
-  const s=r*2.2; ctx.drawImage(img, x-s/2, y-s/2 - r*0.08, s, s);
+// Draw a photo AS a glossy balloon: knot + string behind, the photo cover-fit
+// and clipped to the balloon ellipse (so any-shape photos look right), then a
+// rim + shine on top so it reads as a real balloon.
+function drawImgCentered(img,x,y,r,knot){
+  const cy=y - r*0.08;                       // balloon center (matches roundFace)
+  ctx.fillStyle=knot||'#c9356c';
+  ctx.beginPath(); ctx.moveTo(x-r*0.12,cy+r*0.96); ctx.lineTo(x+r*0.12,cy+r*0.96); ctx.lineTo(x,cy+r*1.12); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x,cy+r*1.12); ctx.quadraticCurveTo(x+r*0.18,cy+r*1.4,x-r*0.05,cy+r*1.6); ctx.stroke();
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(x,cy,r*0.92,r,0,0,Math.PI*2); ctx.clip();
+  const bw=r*1.84, bh=r*2;                    // cover-fit the photo into the ellipse box
+  const ar=(img.naturalWidth||1)/(img.naturalHeight||1);
+  let w=bw, h=bw/ar; if(h<bh){ h=bh; w=bh*ar; }
+  ctx.drawImage(img, x-w/2, cy-h/2, w, h);
+  ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=Math.max(2,r*0.05);
+  ctx.beginPath(); ctx.ellipse(x,cy,r*0.92,r,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.32)';
+  ctx.beginPath(); ctx.ellipse(x-r*0.34,cy-r*0.42,r*0.16,r*0.24,-0.5,0,Math.PI*2); ctx.fill();
+}
+
+function drawStar(cx,cy,outer,inner,fill){
+  ctx.fillStyle=fill; ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const ang=-Math.PI/2 + i*Math.PI/5, rad=(i%2===0)?outer:inner;
+    const px=cx+Math.cos(ang)*rad, py=cy+Math.sin(ang)*rad;
+    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+  }
+  ctx.closePath(); ctx.fill();
+}
+function drawGoldBalloon(x,y,r){
+  const cy=y - r*0.08;
+  ctx.fillStyle='#b8860b';
+  ctx.beginPath(); ctx.moveTo(x-r*0.12,cy+r*0.96); ctx.lineTo(x+r*0.12,cy+r*0.96); ctx.lineTo(x,cy+r*1.12); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.45)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(x,cy+r*1.12); ctx.quadraticCurveTo(x+r*0.18,cy+r*1.4,x-r*0.05,cy+r*1.6); ctx.stroke();
+  const grd=ctx.createRadialGradient(x-r*0.3,cy-r*0.4,r*0.2,x,cy,r);
+  grd.addColorStop(0,'#fff6c2'); grd.addColorStop(0.5,'#ffd84a'); grd.addColorStop(1,'#e89a1c');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.ellipse(x,cy,r*0.92,r,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.ellipse(x-r*0.32,cy-r*0.4,r*0.18,r*0.26,-0.5,0,Math.PI*2); ctx.fill();
+  drawStar(x,cy,r*0.5,r*0.22,'#fff');
+  const tw=(Math.sin(lastTS*0.008)*0.5+0.5);
+  ctx.globalAlpha=0.4+0.6*tw; ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(x+r*0.52,cy-r*0.46,r*0.09,0,6.28); ctx.fill();
+  ctx.globalAlpha=1;
 }
 
 function drawOliver(){
-  const ow=120*sizeScale, oh=120*sizeScale;
-  const baseY=cssH - oh*0.5 - 4;
-  let st=oliver.state;
-  const bob = Math.sin(oliver.bob* (st==='cheer'?12:4))* (st==='cheer'?10:4)*sizeScale;
-  const x=cssW*0.5, y=baseY - (st==='cheer'?Math.abs(bob):0) + (st==='idle'?bob:0);
+  const base=120*sizeScale;
+  const st=oliver.state;
+  const baseY=cssH - base*0.5 - 4;
+  const x=cssW*0.5;
+  // motion conveys mood: idle gentle bob, cheer = happy jumps, sad = small droop.
+  let y=baseY, scale=1, tilt=0;
+  if(st==='cheer'){ y=baseY-Math.abs(Math.sin(oliver.bob*12))*16*sizeScale; scale=1.12; tilt=Math.sin(oliver.bob*16)*0.10; }
+  else if(st==='sad'){ y=baseY+5*sizeScale; scale=0.92; tilt=0.12; }
+  else { y=baseY+Math.sin(oliver.bob*4)*4*sizeScale; }
+
+  // Oliver's REAL photo as the cheering buddy (circular). His photo never changes
+  // expression, so his face is never shown "sad" — only the motion droops.
+  if(oliverFace && oliverFace._ok){
+    const r=base*0.5*scale;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(tilt);
+    ctx.fillStyle = st==='cheer' ? '#ffe24a' : '#7c5cff';     // ring frame, gold when cheering
+    ctx.beginPath(); ctx.arc(0,0,r+4*sizeScale,0,6.28); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(0,0,r,0,6.28); ctx.clip();
+    const ar=(oliverFace.naturalWidth||1)/(oliverFace.naturalHeight||1);
+    let w=r*2,h=r*2/ar; if(h<r*2){ h=r*2; w=r*2*ar; }
+    ctx.drawImage(oliverFace,-w/2,-h/2,w,h);
+    ctx.restore(); ctx.restore();
+    return;
+  }
+  // ---- fallback drawn buddy (only if his photo isn't present) ----
   const im = oliverImg[st];
-  if(im && im._ok){ ctx.drawImage(im, x-ow/2, y-oh/2, ow, oh); return; }
-  // fallback Oliver — a cheery little buddy
-  ctx.save(); ctx.translate(x,y);
-  if(st==='cheer'){ ctx.rotate(Math.sin(oliver.bob*16)*0.08); }
-  if(st==='sad'){ ctx.translate(0, 4*sizeScale); }
-  const r=ow*0.42;
-  // body
+  if(im && im._ok){ ctx.drawImage(im, x-base/2, y-base/2, base, base); return; }
+  ctx.save(); ctx.translate(x,y); ctx.rotate(tilt);
+  const r=base*0.42;
   const g=ctx.createLinearGradient(0,-r,0,r);
   g.addColorStop(0,'#7c5cff'); g.addColorStop(1,'#4a2db5');
   ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,r,r*1.05,0,0,6.28); ctx.fill();
-  // belly
   ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.ellipse(0,r*0.25,r*0.6,r*0.66,0,0,6.28); ctx.fill();
-  // eyes
   ctx.fillStyle='#fff'; for(const s of[-1,1]){ ctx.beginPath(); ctx.arc(s*r*0.32,-r*0.3,r*0.2,0,6.28); ctx.fill(); }
   ctx.fillStyle='#222';
   const look = st==='sad'?0.12:0;
   for(const s of[-1,1]){ ctx.beginPath(); ctx.arc(s*r*0.32,-r*0.3+r*look,r*0.1,0,6.28); ctx.fill(); }
-  // mouth
   ctx.strokeStyle='#222'; ctx.lineWidth=r*0.1; ctx.lineCap='round'; ctx.beginPath();
   if(st==='sad'){ ctx.arc(0,r*0.28,r*0.26,Math.PI*1.15,Math.PI*1.85); }
   else { ctx.arc(0,r*0.05,r*0.3, st==='cheer'?0.15:0.25, Math.PI-0.15); }
   ctx.stroke();
-  // little arms (cheer = up)
   ctx.strokeStyle='#4a2db5'; ctx.lineWidth=r*0.18; ctx.lineCap='round';
   if(st==='cheer'){ ctx.beginPath(); ctx.moveTo(-r*0.8,0); ctx.lineTo(-r*1.1,-r*0.6); ctx.moveTo(r*0.8,0); ctx.lineTo(r*1.1,-r*0.6); ctx.stroke(); }
   else { ctx.beginPath(); ctx.moveTo(-r*0.8,r*0.1); ctx.lineTo(-r*1.05,r*0.4); ctx.moveTo(r*0.8,r*0.1); ctx.lineTo(r*1.05,r*0.4); ctx.stroke(); }
@@ -749,12 +961,20 @@ function drawParticles(){
     const a=Math.max(0,pt.life/pt.max);
     ctx.globalAlpha=a;
     ctx.save(); ctx.translate(pt.x,pt.y); ctx.rotate(pt.rot);
-    ctx.fillStyle=pt.color;
-    if(pt.type==='confetti') ctx.fillRect(-pt.size/2,-pt.size/2,pt.size,pt.size*0.6);
-    else { ctx.beginPath(); ctx.arc(0,0,pt.size/2,0,6.28); ctx.fill(); }
+    if(pt.type==='text'){
+      ctx.font='900 '+pt.size+'px ui-rounded,system-ui,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.lineWidth=Math.max(3,pt.size*0.18); ctx.strokeStyle='rgba(58,16,32,0.9)';
+      ctx.strokeText(pt.text,0,0);
+      ctx.fillStyle=pt.color; ctx.fillText(pt.text,0,0);
+    } else {
+      ctx.fillStyle=pt.color;
+      if(pt.type==='confetti') ctx.fillRect(-pt.size/2,-pt.size/2,pt.size,pt.size*0.6);
+      else { ctx.beginPath(); ctx.arc(0,0,pt.size/2,0,6.28); ctx.fill(); }
+    }
     ctx.restore();
   }
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=1; ctx.textAlign='start'; ctx.textBaseline='alphabetic';
 }
 
 function drawHint(){
@@ -775,6 +995,8 @@ function drawHint(){
 }
 
 function render(){
+  // HUD only belongs during play — keep it off the start/win/lose/board screens
+  document.getElementById('hud').style.opacity = (state==='playing'||state==='levelclear') ? '1' : '0';
   drawBackground();
   // world layer (shakes)
   ctx.save();
@@ -782,7 +1004,9 @@ function render(){
     const k=shakeT/shakeDur, m=shakeMag*k;
     ctx.translate((Math.random()*2-1)*m,(Math.random()*2-1)*m);
   } else { shakeMag=0; }
-  drawOliver();
+  // Oliver buddy cheers during play/start, but never on the lose screen (his
+  // face stays off failure) or the win screen (the big hero is the only Oliver).
+  if(state!=='lost' && state!=='end') drawOliver();
   for(const b of balloons) drawBalloon(b);
   drawParticles();
   drawHint();
@@ -818,6 +1042,12 @@ function updateHUD(){
 function show(id,on){ document.getElementById(id).classList.toggle('show',on); }
 function showBanner(txt){ document.getElementById('banner-text').textContent=txt; document.getElementById('banner').classList.add('show'); }
 function hideBanner(){ document.getElementById('banner').classList.remove('show'); }
+// brief "x2!" pop when the combo multiplier climbs a tier
+function showCombo(mult){
+  const el=document.getElementById('combo-pop');
+  el.textContent='x'+mult+'!';
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
 
 // start-screen mascot face (inline SVG, always renders)
 document.getElementById('play-face').innerHTML =
@@ -843,10 +1073,23 @@ function buildSkins(){
     const img=loadImg(f.img);
     const drawPrev=()=>{
       c2.clearRect(0,0,120,120);
-      if(img && img._ok){ c2.drawImage(img,4,4,112,112); }
-      else { drawPreviewFace(c2,60,54,42,f.palette); }
+      if(img && img._ok){
+        c2.save(); c2.beginPath(); c2.arc(60,60,56,0,6.28); c2.clip();
+        const ar=(img.naturalWidth||1)/(img.naturalHeight||1);
+        let w=112,h=112/ar; if(h<112){ h=112; w=112*ar; }
+        c2.drawImage(img,60-w/2,60-h/2,w,h); c2.restore();
+        c2.strokeStyle='rgba(255,255,255,0.5)'; c2.lineWidth=3;
+        c2.beginPath(); c2.arc(60,60,56,0,6.28); c2.stroke();
+      } else { drawPreviewFace(c2,60,54,42,f.palette); }
     };
-    drawPrev(); setTimeout(drawPrev,400); // redraw once real art may have loaded
+    drawPrev();
+    // redraw when the photo actually finishes loading (chain onto loadImg's own
+    // onload so _ok is set first), with a timed backup for cached/edge cases
+    if(img && !img._ok){
+      const prior=img.onload;
+      img.onload=function(){ if(prior) prior.call(img); drawPrev(); };
+    }
+    setTimeout(drawPrev,600);
     wrap.appendChild(el);
   });
 }
@@ -876,16 +1119,147 @@ function lighten(hex,amt){
   return 'rgb('+r+','+g+','+b+')';
 }
 
+//=================================================================
+// Leaderboard (all-time, 3-initial arcade style — shares the site's
+// Upstash-backed /api/scores backend; game id "bub")
+//=================================================================
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function initialsString(){ return initialsChars.map(c=>String.fromCharCode(65+((c%26)+26)%26)).join(''); }
+function loadInitials(){
+  let s=lsGet('bub_initials','OLI'); if(!/^[A-Z]{3}$/.test(s)) s='OLI';
+  initialsChars=[s.charCodeAt(0)-65, s.charCodeAt(1)-65, s.charCodeAt(2)-65];
+}
+// 3 big tappable letter cells. Tap a cell to cycle its letter (kid-friendly,
+// no keyboard needed); physical keyboard also works (see keydown below).
+function buildInitialsRow(){
+  const row=document.getElementById('initials-row'); if(!row) return;
+  row.innerHTML='';
+  for(let i=0;i<3;i++){
+    const cell=document.createElement('div');
+    cell.className='init-cell'+(i===initialsCursor?' active':'');
+    cell.textContent=String.fromCharCode(65+initialsChars[i]);
+    cell.addEventListener('click',()=>{
+      if(initialsSubmitting||submittedThisRun) return;
+      initialsCursor=i;
+      initialsChars[i]=(initialsChars[i]+1)%26;
+      buildInitialsRow();
+    });
+    row.appendChild(cell);
+  }
+}
+function startLeaderboardEntry(scoreVal){
+  pendingScore=scoreVal; submittedThisRun=false; initialsSubmitting=false; initialsCursor=0;
+  loadInitials();
+  buildInitialsRow();
+  const btn=document.getElementById('btn-save');
+  btn.disabled=false; btn.textContent='⭐ Save my score'; btn.style.display='block';
+  document.getElementById('rank-line').textContent='';
+  document.getElementById('entry-hint').style.display='block';
+  document.getElementById('initials-row').style.display='flex';
+  renderBoard(document.getElementById('lb-list'), lbCache.alltime, null);
+  fetchLeaderboard(()=>renderBoard(document.getElementById('lb-list'), lbCache.alltime, null));
+}
+function submitInitials(){
+  if(initialsSubmitting||submittedThisRun) return;
+  const initials=initialsString();
+  if(!/^[A-Z]{3}$/.test(initials)) return;
+  lsSet('bub_initials', initials);
+  initialsSubmitting=true;
+  const btn=document.getElementById('btn-save'); btn.disabled=true; btn.textContent='Saving…';
+  doSubmit(initials, pendingScore, (ok,data)=>{
+    initialsSubmitting=false;
+    if(ok){
+      submittedThisRun=true;
+      try{ localStorage.removeItem('bub_pending'); }catch(e){}
+      const rank=data && data.alltimeRank;
+      document.getElementById('rank-line').textContent = rank ? ('🎉 You’re #'+rank+' all-time!') : '⭐ Saved to the board!';
+      if(data){ lbCache.alltime=data.alltime||lbCache.alltime; lbCache.daily=data.daily||lbCache.daily; }
+      renderBoard(document.getElementById('lb-list'), lbCache.alltime, initials);
+      document.getElementById('entry-hint').style.display='none';
+      document.getElementById('initials-row').style.display='none';
+      btn.style.display='none';
+      if(typeof gtag==='function') gtag('event','bub_score_submitted',{score:pendingScore});
+    } else {
+      try{ localStorage.setItem('bub_pending', JSON.stringify({initials:initials,score:pendingScore})); }catch(e){}
+      btn.disabled=false; btn.textContent='Try Save Again';
+      document.getElementById('rank-line').textContent='Couldn’t save — we’ll try again later.';
+    }
+  });
+}
+function doSubmit(initials, scoreVal, cb){
+  let done=false; const finish=(ok,data)=>{ if(done)return; done=true; cb(ok,data); };
+  setTimeout(()=>finish(false,null), 6000);     // network safety net
+  fetch(API_URL,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initials:initials,score:scoreVal}) })
+    .then(r=> r.ok ? r.json().then(d=>finish(true,d)) : r.json().then(d=>finish(false,d)).catch(()=>finish(false,null)) )
+    .catch(()=>finish(false,null));
+}
+function fetchLeaderboard(cb){
+  let done=false; const finish=(data)=>{ if(done)return; done=true; if(cb)cb(data); };
+  setTimeout(()=>finish(null), 6000);
+  fetch(API_URL+'&limit='+LB_LIMIT,{method:'GET'})
+    .then(r=> r.ok ? r.json() : null)
+    .then(data=>{ if(data){ lbCache.alltime=data.alltime||[]; lbCache.daily=data.daily||[]; } finish(data); })
+    .catch(()=>finish(null));
+}
+function renderBoard(listEl, list, mine){
+  if(!listEl) return;
+  if(!list || !list.length){ listEl.innerHTML='<div class="lb-empty">No scores yet — be the first! 🎈</div>'; return; }
+  let html='';
+  for(const e of list){
+    const top=e.rank<=3?' top':'';
+    const me=(mine && e.initials===mine)?' lbme':'';
+    const medal=e.rank===1?'🥇':e.rank===2?'🥈':e.rank===3?'🥉':(e.rank+'.');
+    html += '<div class="lb-rank'+top+me+'">'+medal+'</div>'+
+            '<div class="lb-init'+me+'">'+escapeHtml(e.initials)+(e.rank===1?' 👑':'')+'</div>'+
+            '<div class="lb-score'+me+'">'+Number(e.score).toLocaleString()+'</div>';
+  }
+  listEl.innerHTML=html;
+}
+function checkPendingSubmission(){
+  let p; try{ p=JSON.parse(localStorage.getItem('bub_pending')||'null'); }catch(e){ p=null; }
+  if(p && /^[A-Z]{3}$/.test(p.initials) && p.score>0){
+    doSubmit(p.initials, p.score, (ok)=>{ if(ok){ try{ localStorage.removeItem('bub_pending'); }catch(e){} } });
+  }
+}
+function showBoard(){
+  const mine=lsGet('bub_initials','OLI');
+  renderBoard(document.getElementById('board-list'), lbCache.alltime, mine);
+  fetchLeaderboard(()=>renderBoard(document.getElementById('board-list'), lbCache.alltime, mine));
+  show('screen-start',false);
+  show('screen-board',true);
+}
+function hideBoard(){ show('screen-board',false); show('screen-start',true); }
+// physical keyboard support (desktop / adults): type letters, arrows move, Enter saves
+document.addEventListener('keydown',(e)=>{
+  if(state!=='end'||submittedThisRun||initialsSubmitting) return;
+  const end=document.getElementById('screen-end');
+  if(!end||!end.classList.contains('show')) return;
+  if(e.key==='Enter'){ submitInitials(); return; }
+  if(e.key==='ArrowLeft'){ initialsCursor=(initialsCursor+2)%3; buildInitialsRow(); return; }
+  if(e.key==='ArrowRight'){ initialsCursor=(initialsCursor+1)%3; buildInitialsRow(); return; }
+  if(/^[a-zA-Z]$/.test(e.key)){
+    initialsChars[initialsCursor]=e.key.toUpperCase().charCodeAt(0)-65;
+    initialsCursor=Math.min(2, initialsCursor+1);
+    buildInitialsRow();
+  }
+});
+
 // ---------- wire buttons ----------
 document.getElementById('btn-play').addEventListener('click', startGame);
+document.getElementById('btn-save').addEventListener('click', submitInitials);
+document.getElementById('btn-board').addEventListener('click', showBoard);
+document.getElementById('btn-board-back').addEventListener('click', hideBoard);
 document.getElementById('btn-again').addEventListener('click', ()=>{ refreshStartScreen(); show('screen-end',false); startGame(); });
 document.getElementById('btn-retry').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); beginLevel(false); });
 document.getElementById('lost-startover').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); startGame(); });
 
 // ---------- boot ----------
 resize();
+loadInitials();
 refreshStartScreen();
 updateHUD();
+fetchLeaderboard();          // warm the board so it's ready on the win screen
+checkPendingSubmission();    // retry any score that failed to save last time
 </script>
 </body>
 </html>
