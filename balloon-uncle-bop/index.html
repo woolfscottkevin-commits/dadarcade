@@ -151,20 +151,22 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 // Balloon Uncle Bop — touch-only tap game for little kids
 //=================================================================
 
-// ---------- Skin manifest (add new skins by editing data only) ----------
-// Each skin: 5 inflation-stage images + optional pop face + an unlock
-// threshold (lifetime pops) + a palette used for the canvas fallback so
-// the game looks great even before any PNG art exists.
-const SKINS = [
-  { id:'classic', name:'Uncle', unlockAt:0,
-    stages:['assets/uncle-1.png','assets/uncle-2.png','assets/uncle-3.png','assets/uncle-4.png','assets/uncle-5.png'],
-    pop:'assets/uncle-pop.png',
+// ---------- Family faces (add/rename people by editing data only) ----------
+// Every balloon that floats up is a RANDOM family member. Drop ONE square,
+// transparent PNG per person into assets/ with the matching filename below and
+// it appears automatically on the next load — no code changes. Until a photo is
+// added, that person shows a distinct hand-drawn fallback face (the palette).
+// Recommended art: 512 x 512 px, transparent background, face centered.
+// To add a 4th person: copy a line, give it a new id/name/img + any palette.
+const FACES = [
+  { id:'dad',    name:'Dad',    img:'assets/face-dad.png',
     palette:{ body:'#ff5d8f', body2:'#c9356c', skin:'#ffd9a8', hair:'#7a4a2b' } },
-  { id:'pirate', name:'Pirate Uncle', unlockAt:50,
-    stages:['assets/skin-pirate-1.png','assets/skin-pirate-2.png','assets/skin-pirate-3.png','assets/skin-pirate-4.png','assets/skin-pirate-5.png'],
-    pop:null,
-    palette:{ body:'#3ec6b8', body2:'#1f8f86', skin:'#ffd9a8', hair:'#23303a', hat:'#222', accent:'#ffe24a' } },
+  { id:'claire', name:'Claire', img:'assets/face-claire.png',
+    palette:{ body:'#5db0ff', body2:'#2f6fc9', skin:'#ffd9a8', hair:'#caa24a' } },
+  { id:'connor', name:'Connor', img:'assets/face-connor.png',
+    palette:{ body:'#46d39a', body2:'#1f8f6a', skin:'#ffd9a8', hair:'#3a2a1a' } },
 ];
+function randomFace(){ return FACES[Math.floor(Math.random()*FACES.length)]; }
 
 // ---------- Level config ----------
 // Each level is a FIXED WAVE: `count` Uncle balloons float up; pop them before
@@ -184,16 +186,11 @@ const LEVELS = [
 const LS = {
   best:    'bub_best',
   pops:    'bub_lifetime_pops',
-  skin:    'bub_skin',
 };
 function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v==null?d:v; }catch(e){ return d; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,String(v)); }catch(e){} }
 let bestScore   = parseInt(lsGet(LS.best,'0'),10)||0;
 let lifetimePops= parseInt(lsGet(LS.pops,'0'),10)||0;
-let currentSkin = lsGet(LS.skin,'classic');
-
-function skinUnlocked(s){ return lifetimePops >= s.unlockAt; }
-function getSkin(id){ return SKINS.find(s=>s.id===id) || SKINS[0]; }
 
 // ---------- Canvas / viewport ----------
 const canvas = document.getElementById('game');
@@ -236,7 +233,7 @@ function loadImg(src){
 // background override (optional)
 const bgImg = loadImg('assets/background.png');
 // preload every skin's images + oliver
-SKINS.forEach(s=>{ s.stages.forEach(loadImg); if(s.pop) loadImg(s.pop); });
+FACES.forEach(f=>loadImg(f.img));
 const oliverImg = { idle:loadImg('assets/oliver-idle.png'), cheer:loadImg('assets/oliver-cheer.png'), sad:loadImg('assets/oliver-sad.png') };
 const bombImg = loadImg('assets/bomb.png');
 
@@ -329,6 +326,7 @@ function spawnBalloon(kind){
   balloons.push({
     id: nextId++,
     kind: isBomb ? 'bomb' : 'uncle',
+    face: isBomb ? null : randomFace(),
     x, y: cssH + r + 10,
     stage,
     r,
@@ -513,8 +511,8 @@ function onPointerDown(e){
 function tapBalloon(b){
   if(b.kind==='bomb'){ hitBomb(b); return; }
   b.tapAnim = 1;
-  const sk=getSkin(currentSkin);
-  tapPuff(b.x, b.y - b.r*0.3, sk.palette.body);
+  const pal=(b.face||FACES[0]).palette;
+  tapPuff(b.x, b.y - b.r*0.3, pal.body);
   if(b.stage>=5){
     popBalloon(b);
   }else{
@@ -696,13 +694,12 @@ function drawBalloon(b){
     if(bombImg && bombImg._ok) drawImgCentered(bombImg,b.x,b.y,b.r);
     else drawBombFallback(b.x,b.y,b.r);
   }else{
-    const sk=getSkin(currentSkin);
-    const usePop = b.popping && sk.pop && loadImg(sk.pop)._ok;
-    const img = usePop ? loadImg(sk.pop) : loadImg(sk.stages[b.stage-1]);
+    const face = b.face || FACES[0];
+    const img = loadImg(face.img);
     if(img && img._ok){
       drawImgCentered(img,b.x,b.y,b.r);
     }else{
-      roundFace(b.x,b.y,b.r,sk.palette,b.stage,b.popping||b.stage>=5);
+      roundFace(b.x,b.y,b.r,face.palette,b.stage,b.popping||b.stage>=5);
     }
   }
   ctx.restore();
@@ -830,28 +827,26 @@ document.getElementById('play-face').innerHTML =
   "<circle cx='38' cy='43' r='4' fill='#222'/><circle cx='62' cy='43' r='4' fill='#222'/>"+
   "<path d='M36 58 Q50 70 64 58' stroke='#222' stroke-width='5' fill='none' stroke-linecap='round'/>";
 
-// ---------- skin picker ----------
+// ---------- family showcase ----------
+// Non-interactive: shows who you'll be popping. Each balloon picks a random
+// face at spawn, so there's nothing to select here.
 function buildSkins(){
   const wrap=document.getElementById('skins'); wrap.innerHTML='';
-  SKINS.forEach(s=>{
-    const unlocked=skinUnlocked(s);
+  FACES.forEach(f=>{
     const el=document.createElement('div');
-    el.className='skin'+(s.id===currentSkin?' sel':'')+(unlocked?'':' locked');
+    el.className='skin sel'; el.style.cursor='default';
     const cv=document.createElement('canvas'); cv.width=120; cv.height=120;
     el.appendChild(cv);
-    const nm=document.createElement('div'); nm.className='nm'; nm.textContent=s.name; el.appendChild(nm);
-    if(!unlocked){ const lk=document.createElement('div'); lk.className='lk'; lk.textContent='Pop '+(s.unlockAt-lifetimePops)+' more'; el.appendChild(lk); }
-    // draw preview using fallback art (or real img if present)
+    const nm=document.createElement('div'); nm.className='nm'; nm.textContent=f.name; el.appendChild(nm);
+    // draw preview using the real photo if present, else the fallback face
     const c2=cv.getContext('2d');
-    const img=loadImg(s.stages[2]);
+    const img=loadImg(f.img);
     const drawPrev=()=>{
       c2.clearRect(0,0,120,120);
       if(img && img._ok){ c2.drawImage(img,4,4,112,112); }
-      else { drawPreviewFace(c2,60,54,42,s.palette); }
-      if(!unlocked){ c2.fillStyle='rgba(0,0,0,0.45)'; c2.fillRect(0,0,120,120); c2.font='40px serif'; c2.textAlign='center'; c2.fillText('🔒',60,72); }
+      else { drawPreviewFace(c2,60,54,42,f.palette); }
     };
     drawPrev(); setTimeout(drawPrev,400); // redraw once real art may have loaded
-    if(unlocked){ el.addEventListener('click',()=>{ currentSkin=s.id; lsSet(LS.skin,s.id); buildSkins(); }); }
     wrap.appendChild(el);
   });
 }
