@@ -148,7 +148,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 #combo-pop{position:fixed;left:50%;top:28%;transform:translateX(-50%);z-index:3;pointer-events:none;display:none;
   font-size:clamp(2rem,11vw,4rem);font-weight:900;color:#ffe24a;
   text-shadow:0 4px 0 rgba(0,0,0,.3),0 0 24px rgba(255,140,40,.8);-webkit-text-stroke:2px #c9356c}
-#combo-pop.show{display:block;animation:comboPop .7s cubic-bezier(.2,1.6,.4,1)}
+#combo-pop.show{display:block;animation:comboPop .7s cubic-bezier(.2,1.6,.4,1) forwards}
 @keyframes comboPop{0%{opacity:0;transform:translateX(-50%) scale(.4)}30%{opacity:1;transform:translateX(-50%) scale(1.18)}100%{opacity:0;transform:translateX(-50%) scale(1) translateY(-34px)}}
 </style>
 </head>
@@ -601,7 +601,7 @@ function beginLevel(fresh){
   hintActive=false;
   oliver.state='idle'; oliver.t=0;
   show('screen-lost',false); show('screen-end',false);
-  hideBanner();
+  hideBanner(); hideCombo();
   state='playing';
   updateHUD();
 }
@@ -614,6 +614,7 @@ function checkWin(){
 }
 
 function winLevel(){
+  hideCombo();
   if(levelIdx >= LEVELS.length-1){ endGame(true); return; }
   state='levelclear';
   balloons.length=0; hintActive=false;
@@ -629,7 +630,7 @@ function winLevel(){
 
 function loseLevel(){
   state='lost';
-  balloons.length=0; hintActive=false;
+  balloons.length=0; hintActive=false; hideCombo();
   oliverReact('sad'); sndAww();
   document.getElementById('lost-level').textContent = LEVELS[levelIdx].name;
   show('screen-lost',true);
@@ -639,7 +640,7 @@ function loseLevel(){
 function endGame(won){    // full-game win (or generic end)
   state='end';
   balloons.length=0;            // clean end screen (overlay is transparent)
-  hintActive=false;
+  hintActive=false; hideCombo();
   if(won){ sndWin(); bigCascade(); setTimeout(bigCascade,500); oliverReact('cheer'); }
   const isBest = score>runStartBest && score>0;
   if(score>bestScore){ bestScore=score; lsSet(LS.best,bestScore); }
@@ -1071,6 +1072,8 @@ function updateHUD(){
 function show(id,on){ document.getElementById(id).classList.toggle('show',on); }
 function showBanner(txt){ document.getElementById('banner-text').textContent=txt; document.getElementById('banner').classList.add('show'); }
 function hideBanner(){ document.getElementById('banner').classList.remove('show'); }
+// hide the floating "xN!" combo popup so it can't linger over the win/lose screens
+function hideCombo(){ document.getElementById('combo-pop').classList.remove('show'); }
 // brief "x2!" pop when the combo multiplier climbs a tier
 function showCombo(mult){
   const el=document.getElementById('combo-pop');
