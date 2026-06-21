@@ -29,8 +29,8 @@
     { "src": "/blog/how-to-play-space-invaders.html", "status": 308, "headers": { "Location": "/blog/how-to-play-alien-descent" } },
     { "src": "/pong", "status": 308, "headers": { "Location": "/paddle-duel" } },
     { "src": "/pong/(.*)", "status": 308, "headers": { "Location": "/paddle-duel/$1" } },
-    { "src": "/Granddad's Attic", "status": 308, "headers": { "Location": "/granddads-attic" } },
-    { "src": "/Granddad's Attic/(.*)", "status": 308, "headers": { "Location": "/granddads-attic/$1" } },
+    { "src": "/Granddad(?:'|%27)s(?:%20| )Attic", "status": 308, "headers": { "Location": "/granddads-attic" } },
+    { "src": "/Granddad(?:'|%27)s(?:%20| )Attic/(.*)", "status": 308, "headers": { "Location": "/granddads-attic/$1" } },
     { "handle": "filesystem" },
     { "src": "/(.*)", "status": 404, "dest": "/404.html" }
   ]
