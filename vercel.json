@@ -14,9 +14,7 @@
     { "source": "/pong", "destination": "/paddle-duel", "permanent": true },
     { "source": "/pong/(.*)", "destination": "/paddle-duel/$1", "permanent": true },
     { "source": "/Granddad's Attic", "destination": "/granddads-attic", "permanent": true },
-    { "source": "/Granddad's Attic/(.*)", "destination": "/granddads-attic/$1", "permanent": true },
-    { "source": "/Disney", "destination": "/Hollywood%20Studios", "permanent": true },
-    { "source": "/Disney/(.*)", "destination": "/Hollywood%20Studios/$1", "permanent": true }
+    { "source": "/Granddad's Attic/(.*)", "destination": "/granddads-attic/$1", "permanent": true }
   ],
   "headers": [
     {
@@ -33,6 +31,8 @@
     }
   ],
   "routes": [
+    { "src": "/Disney", "status": 308, "headers": { "Location": "/Hollywood%20Studios" } },
+    { "src": "/Disney/(.*)", "status": 308, "headers": { "Location": "/Hollywood%20Studios/$1" } },
     { "handle": "filesystem" },
     { "src": "/(.*)", "status": 404, "dest": "/404.html" }
   ]
