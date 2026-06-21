@@ -31,8 +31,14 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://dadarcade.com/Disney</loc>
+    <loc>https://dadarcade.com/Hollywood%20Studios</loc>
     <lastmod>2026-06-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://dadarcade.com/Epcot</loc>
+    <lastmod>2026-06-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

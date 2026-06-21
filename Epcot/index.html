@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>World Showcase Scavenger Hunt | Dad Arcade</title>
+<meta name="description" content="A phone-friendly scavenger hunt that takes kids all the way around Epcot's World Showcase — travel the map, earn stamps, collect souvenirs, and win a prize.">
+<meta name="theme-color" content="#1f3a5f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%231f3a5f' stroke='%23e8b341' stroke-width='5'/><ellipse cx='50' cy='50' rx='17' ry='40' fill='none' stroke='%23e8b341' stroke-width='3.5'/><line x1='10' y1='50' x2='90' y2='50' stroke='%23e8b341' stroke-width='3.5'/></svg>">
+
+<!-- Open Graph -->
+<meta property="og:title" content="World Showcase Scavenger Hunt — Dad Arcade">
+<meta property="og:description" content="A phone-friendly scavenger hunt that takes kids all the way around Epcot's World Showcase — travel the map, earn stamps, collect souvenirs, and win a prize.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/Epcot">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:ital,wght@0,500;0,700;0,800;1,600&family=Special+Elite&display=swap" rel="stylesheet">
+
+<!-- GA4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-90KFJNYR94');
+</script>
+
+<style>
+  /* ============================================================
+     WORLD SHOWCASE SCAVENGER HUNT — Dad Arcade
+     Single-file vanilla HTML/CSS/JS. No build step, no backend.
+
+     Only THREE stops are hard-graded, all with fixed/verifiable
+     answers (Eiffel legs=4, Japan pagoda levels=5, Mexico=volcano).
+     Other "count" stops are honor-mode so a wrong guidebook number
+     can never lock a kid out for a correct answer.
+     ============================================================ */
+  :root{
+    --paper:#f4ead5; --paper-dark:#e8d9b8; --ink:#27384d; --ink-soft:#52617a;
+    --navy:#1f3a5f; --navy-deep:#15263d; --gold:#c8941f; --gold-bright:#e8b341;
+    --red:#b4332b; --green:#2f7d5b; --stamp:#9a2b25; --shadow:rgba(21,38,61,.28);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Nunito',sans-serif;color:var(--ink);min-height:100vh;
+    background:
+      radial-gradient(circle at 20% 15%, #234a78 0%, transparent 55%),
+      radial-gradient(circle at 85% 80%, #1a2f4d 0%, transparent 50%),
+      linear-gradient(160deg,#1f3a5f 0%, #15263d 100%);
+    background-attachment:fixed;display:flex;justify-content:center;
+    padding:18px 14px 40px;position:relative;overflow-x:hidden;
+  }
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.06;
+    background-image:radial-gradient(circle, #fff 1px, transparent 1.4px);background-size:26px 26px;}
+  .shell{width:100%;max-width:560px;position:relative;z-index:2;}
+
+  .book{
+    background:linear-gradient(155deg,var(--paper) 0%, var(--paper-dark) 100%);
+    border-radius:18px;padding:20px 18px 24px;
+    box-shadow:0 22px 50px -12px var(--shadow), inset 0 0 0 2px rgba(200,148,31,.35);
+    position:relative;overflow:hidden;
+  }
+  .book::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:repeating-linear-gradient(0deg, rgba(120,90,40,.025) 0 2px, transparent 2px 4px);}
+
+  .sound-toggle{position:absolute;top:14px;right:12px;z-index:6;width:36px;height:36px;border-radius:50%;
+    border:1.5px dashed var(--gold);background:rgba(255,255,255,.4);cursor:pointer;font-size:17px;line-height:1;
+    display:flex;align-items:center;justify-content:center;color:var(--navy-deep);transition:transform .1s;}
+  .sound-toggle:active{transform:scale(.9);}
+
+  header{text-align:center;position:relative;z-index:3;}
+  .kicker{font-family:'Special Elite',monospace;letter-spacing:3px;font-size:11px;text-transform:uppercase;
+    color:var(--gold);display:inline-block;border:1.5px dashed var(--gold);border-radius:30px;padding:5px 14px;margin-bottom:9px;}
+  h1{font-family:'Fredoka',sans-serif;font-weight:700;color:var(--navy-deep);line-height:.98;margin:0;
+    font-size:clamp(28px,8vw,44px);letter-spacing:-.5px;text-shadow:1px 2px 0 rgba(200,148,31,.25);}
+  .sub{color:var(--ink-soft);font-size:14px;margin-top:7px;font-weight:600;}
+
+  /* topbar: rank + pills */
+  .topbar{margin-top:14px;position:relative;z-index:3;display:none;}
+  .rankrow{display:flex;align-items:center;gap:9px;}
+  .rank-emoji{font-size:22px;line-height:1;}
+  .rank-meta{flex:1;}
+  .rank-name{font-family:'Fredoka',sans-serif;font-weight:600;font-size:13px;color:var(--navy-deep);}
+  .rank-bar{height:8px;border-radius:6px;background:rgba(82,97,122,.2);overflow:hidden;margin-top:3px;}
+  .rank-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gold-bright),var(--gold));transition:width .6s cubic-bezier(.2,.8,.25,1);}
+  .pills{display:flex;gap:8px;margin-left:6px;}
+  .pill{font-family:'Special Elite',monospace;font-size:12px;letter-spacing:.5px;background:rgba(255,255,255,.5);
+    border:1.5px solid rgba(200,148,31,.4);border-radius:20px;padding:5px 11px;color:var(--navy-deep);
+    display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  .pill.streak{border-color:var(--red);color:var(--red);}
+  .pill.hot{animation:pop .4s;}
+  @keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.18);}100%{transform:scale(1);}}
+
+  /* journey map */
+  .progress-label{display:flex;justify-content:space-between;align-items:center;
+    font-family:'Special Elite',monospace;font-size:11px;color:var(--ink-soft);margin:12px 0 4px;letter-spacing:1px;}
+  .map-wrap{position:relative;width:100%;height:158px;z-index:3;display:none;}
+  .map-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;
+    background:rgba(255,255,255,.55);border:1.6px dashed rgba(82,97,122,.45);opacity:.5;
+    transition:opacity .3s, transform .3s, box-shadow .3s, background .3s;}
+  .pin.done{opacity:1;border:2px solid var(--gold);background:#fff8e8;
+    box-shadow:0 2px 7px rgba(200,148,31,.4);}
+  .pin.done::after{content:"✓";position:absolute;right:-3px;top:-4px;font-size:10px;background:var(--green);
+    color:#fff;width:14px;height:14px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka',sans-serif;}
+  .pin.current{opacity:1;border-color:var(--gold);box-shadow:0 0 0 4px rgba(232,179,65,.35);animation:pulse 1.6s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:translate(-50%,-50%) scale(1);}50%{transform:translate(-50%,-50%) scale(1.14);}}
+  .pin-marker{position:absolute;transform:translate(-50%,-115%);font-size:26px;line-height:1;z-index:5;pointer-events:none;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.3));
+    transition:left .75s cubic-bezier(.4,.1,.3,1), top .75s cubic-bezier(.4,.1,.3,1);animation:hover 2.4s ease-in-out infinite;}
+  @keyframes hover{0%,100%{margin-top:0;}50%{margin-top:-4px;}}
+
+  /* souvenir shelf */
+  .souvenirs{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;min-height:30px;position:relative;z-index:3;}
+  .souv{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,.5);border:1.5px solid rgba(200,148,31,.4);
+    display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;animation:popIn .4s cubic-bezier(.2,1.4,.4,1);}
+
+  /* mascot */
+  .mascot{display:flex;align-items:flex-end;gap:10px;margin-top:14px;position:relative;z-index:3;}
+  .mascot .face{font-size:38px;line-height:1;flex:0 0 auto;cursor:pointer;user-select:none;
+    filter:drop-shadow(0 3px 3px rgba(0,0,0,.18));animation:bob 3s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg);}50%{transform:translateY(-4px) rotate(2deg);}}
+  .mascot .face:active{transform:scale(.85) rotate(8deg);}
+  .mascot .bubble{position:relative;background:#fffdf6;border:1.5px solid rgba(200,148,31,.5);border-radius:14px;
+    padding:9px 13px;font-size:14px;line-height:1.4;color:var(--ink);font-weight:600;box-shadow:0 4px 12px -6px var(--shadow);flex:1;}
+  .mascot .bubble::before{content:"";position:absolute;left:-8px;bottom:12px;border-width:6px 8px 6px 0;border-style:solid;
+    border-color:transparent #fffdf6 transparent transparent;filter:drop-shadow(-1px 0 0 rgba(200,148,31,.5));}
+
+  .screen{position:relative;z-index:3;}
+  .card{margin-top:14px;background:#fffdf6;border-radius:14px;padding:20px 18px 22px;
+    box-shadow:0 8px 22px -10px var(--shadow);border:1px solid rgba(200,148,31,.3);animation:slideIn .45s cubic-bezier(.2,.8,.25,1);}
+  .card.flip{animation:flipIn .5s cubic-bezier(.3,.7,.3,1);}
+  @keyframes slideIn{from{opacity:0;transform:translateY(14px) scale(.99);}to{opacity:1;transform:none;}}
+  @keyframes flipIn{0%{opacity:0;transform:perspective(900px) rotateY(-32deg) translateX(20px);transform-origin:left center;}100%{opacity:1;transform:none;}}
+
+  .flag{font-size:54px;line-height:1;text-align:center;filter:drop-shadow(0 4px 4px rgba(0,0,0,.15));}
+  .country{font-family:'Fredoka',sans-serif;font-weight:600;text-align:center;color:var(--navy-deep);font-size:30px;margin:4px 0 2px;}
+  .stop-num{text-align:center;font-family:'Special Elite',monospace;font-size:11px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;}
+  .clue-label{font-family:'Special Elite',monospace;font-size:11px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin:18px 0 6px;}
+  .clue{font-style:italic;font-size:16px;line-height:1.5;color:var(--ink);font-weight:600;}
+  .task{margin-top:16px;background:linear-gradient(180deg,#fff5e0,#fdeecb);border-left:4px solid var(--gold);border-radius:8px;padding:12px 14px;font-size:14.5px;line-height:1.45;}
+  .task b{color:var(--gold);font-family:'Fredoka',sans-serif;}
+
+  .ask{margin-top:18px;text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;color:var(--navy-deep);}
+  .options{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:14px;}
+  .opt{font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(17px,4.8vw,22px);padding:16px 8px;border-radius:12px;
+    cursor:pointer;line-height:1.1;background:#fff;color:var(--navy);border:2px solid var(--navy);box-shadow:0 4px 0 var(--navy);
+    transition:transform .08s, box-shadow .08s, background .2s;user-select:none;text-align:center;}
+  .opt:active{transform:translateY(4px);box-shadow:0 0 0 var(--navy);}
+  .opt.wrong{background:#f7d9d6;border-color:var(--red);box-shadow:0 4px 0 var(--red);animation:shake .4s;}
+  .opt.right{background:#d6efe0;border-color:var(--green);box-shadow:0 4px 0 var(--green);color:var(--green);}
+  .opt.locked{opacity:.45;cursor:not-allowed;}
+  @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-7px);}40%{transform:translateX(7px);}60%{transform:translateX(-5px);}80%{transform:translateX(5px);}}
+
+  .stepper{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px;}
+  .step-btn{width:58px;height:58px;border-radius:50%;border:2px solid var(--navy);background:#fff;color:var(--navy);
+    font-family:'Fredoka',sans-serif;font-weight:700;font-size:30px;line-height:1;cursor:pointer;box-shadow:0 4px 0 var(--navy);
+    display:flex;align-items:center;justify-content:center;}
+  .step-btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--navy);}
+  .step-num{font-family:'Fredoka',sans-serif;font-weight:700;font-size:52px;color:var(--navy-deep);min-width:74px;text-align:center;}
+
+  .text-input{width:100%;margin-top:14px;padding:14px;border-radius:12px;border:2px solid var(--navy);
+    font-family:'Fredoka',sans-serif;font-size:20px;text-align:center;color:var(--navy);background:#fff;box-shadow:0 4px 0 rgba(31,58,95,.25);}
+  .text-input:focus{outline:none;border-color:var(--gold);}
+
+  .btn{display:block;width:100%;margin-top:14px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;padding:15px;
+    border:none;border-radius:12px;cursor:pointer;background:linear-gradient(180deg,var(--gold-bright),var(--gold));color:#3a2a00;
+    box-shadow:0 5px 0 #97700f;transition:transform .08s,box-shadow .08s;}
+  .btn:active{transform:translateY(5px);box-shadow:0 0 0 #97700f;}
+  .btn.green{background:linear-gradient(180deg,#46b483,#2f7d5b);color:#fff;box-shadow:0 5px 0 #1d5a3f;}
+  .btn.disabled{filter:grayscale(.6);opacity:.6;pointer-events:none;}
+
+  .mini-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+  .mini-btn{flex:1 1 auto;min-width:130px;text-align:center;cursor:pointer;font-family:'Special Elite',monospace;
+    font-size:12px;letter-spacing:.5px;background:rgba(255,255,255,.5);border:1.5px dashed var(--ink-soft);border-radius:10px;padding:10px 12px;color:var(--ink-soft);}
+  .mini-btn:active{transform:translateY(2px);}
+  .hint-box{margin-top:12px;background:#eef4ff;border:1.5px solid var(--navy);border-radius:10px;padding:11px 14px;
+    font-size:14px;line-height:1.45;color:var(--navy-deep);font-weight:600;animation:slideIn .3s;}
+  .photo-thumb{margin-top:12px;display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid var(--green);border-radius:10px;padding:8px;animation:slideIn .3s;}
+  .photo-thumb img{width:56px;height:56px;object-fit:cover;border-radius:7px;}
+  .photo-thumb span{font-family:'Special Elite',monospace;font-size:12px;color:var(--green);}
+
+  .lockout{margin-top:16px;text-align:center;background:#fbe3df;border:2px solid var(--red);border-radius:12px;padding:16px;animation:slideIn .3s;}
+  .lockout .msg{font-weight:700;color:var(--stamp);margin-top:6px;font-size:14px;}
+  .lockout .ring{width:74px;height:74px;margin:6px auto 4px;border-radius:50%;
+    background:conic-gradient(var(--red) var(--deg,0deg), #f2c6c0 0deg);display:flex;align-items:center;justify-content:center;}
+  .lockout .ring .inner{width:58px;height:58px;border-radius:50%;background:#fbe3df;display:flex;align-items:center;justify-content:center;
+    font-family:'Fredoka',sans-serif;font-weight:700;font-size:24px;color:var(--red);}
+  .feedback{margin-top:14px;text-align:center;font-family:'Fredoka',sans-serif;font-weight:600;font-size:18px;color:var(--green);min-height:22px;animation:slideIn .3s;}
+
+  /* start / setup */
+  .start-art{font-size:58px;text-align:center;margin:6px 0;letter-spacing:6px;}
+  .start-copy{text-align:center;color:var(--ink-soft);font-size:15px;line-height:1.5;margin:6px 4px 4px;font-weight:600;}
+  .rules{margin:14px auto 0;max-width:380px;font-size:13.5px;line-height:1.5;color:var(--ink-soft);}
+  .rules li{margin:6px 0;}
+  .setup-label{font-family:'Fredoka',sans-serif;font-weight:600;color:var(--navy-deep);font-size:16px;margin:16px 0 6px;text-align:center;}
+  .name-input{width:100%;padding:13px;border-radius:12px;border:2px solid var(--navy);font-family:'Fredoka',sans-serif;
+    font-size:18px;text-align:center;color:var(--navy);background:#fff;box-shadow:0 4px 0 rgba(31,58,95,.2);margin-bottom:10px;}
+  .name-input:focus{outline:none;border-color:var(--gold);}
+  .avatars{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:4px 0 6px;}
+  .av{aspect-ratio:1;border-radius:12px;border:2px solid rgba(82,97,122,.3);background:#fff;font-size:26px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+  .av.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(232,179,65,.3);background:#fff8e8;}
+  .add-explorer{text-align:center;font-family:'Special Elite',monospace;font-size:12px;letter-spacing:.5px;color:var(--navy);
+    cursor:pointer;margin:4px 0 2px;border-bottom:1.5px dotted var(--navy);display:inline-block;}
+  .explorer-block{margin-top:10px;padding-top:10px;border-top:1.5px dashed rgba(200,148,31,.4);}
+
+  /* overlays */
+  .overlay{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(21,38,61,.55);animation:fadeIn .25s;}
+  @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+  .pop{width:100%;max-width:420px;background:linear-gradient(155deg,var(--paper),var(--paper-dark));border-radius:18px;
+    padding:24px 22px;text-align:center;border:2px solid var(--gold);box-shadow:0 22px 50px -10px rgba(0,0,0,.5);
+    animation:popIn .5s cubic-bezier(.2,1.3,.4,1);}
+  @keyframes popIn{from{opacity:0;transform:scale(.7) rotate(-3deg);}to{opacity:1;transform:none;}}
+  .pop .big-emoji{font-size:56px;line-height:1;}
+  .pop h3{font-family:'Fredoka',sans-serif;font-size:24px;margin:8px 0 6px;color:var(--navy-deep);}
+  .pop .greet{font-family:'Fredoka',sans-serif;font-weight:600;color:var(--gold);font-size:15px;margin-bottom:4px;}
+  .pop p{font-size:15px;line-height:1.5;color:var(--ink);font-weight:600;margin:6px 0;}
+  .badge-art{font-size:50px;line-height:1;animation:bob 2.4s ease-in-out infinite;}
+  .greet-game{margin:14px 0 4px;padding-top:12px;border-top:1.5px dashed rgba(200,148,31,.45);}
+  .greet-q{font-family:'Fredoka',sans-serif;font-weight:600;font-size:14px;color:var(--navy-deep);margin-bottom:8px;}
+  .greet-opts{display:flex;flex-direction:column;gap:7px;}
+  .greet-btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:15px;padding:10px;border-radius:10px;background:#fff;
+    color:var(--navy);border:2px solid var(--navy);box-shadow:0 3px 0 var(--navy);cursor:pointer;}
+  .greet-btn:active{transform:translateY(3px);box-shadow:0 0 0 var(--navy);}
+  .greet-btn.right{background:#d6efe0;border-color:var(--green);color:var(--green);box-shadow:0 3px 0 var(--green);}
+  .greet-btn.wrong{background:#f7d9d6;border-color:var(--red);color:var(--red);box-shadow:0 3px 0 var(--red);}
+  .greet-btn.locked{opacity:.55;pointer-events:none;}
+
+  /* certificate / scrapbook */
+  .prize{text-align:center;background:linear-gradient(160deg,#e8b341,#c8941f);border-radius:16px;padding:26px 20px 30px;color:#3a2a00;
+    border:3px dashed #fff6df;box-shadow:0 14px 40px -10px rgba(0,0,0,.4);animation:popIn .6s cubic-bezier(.2,1.3,.4,1);}
+  .prize .trophy{font-size:58px;}
+  .prize h2{font-family:'Fredoka',sans-serif;font-size:30px;margin:6px 0 0;color:#3a2a00;text-shadow:1px 1px 0 #fff6df;}
+  .cert-title{font-family:'Fredoka',sans-serif;font-weight:700;font-size:20px;color:var(--navy-deep);margin:4px 0 0;}
+  .cert-date{font-family:'Special Elite',monospace;font-size:12px;letter-spacing:1px;color:#5a4200;margin:3px 0;}
+  .cert-id{font-family:'Special Elite',monospace;font-size:11px;letter-spacing:2px;color:#6a4f00;opacity:.85;margin-bottom:6px;}
+  .cert-stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:10px 0 6px;}
+  .cert-stat{background:rgba(255,255,255,.55);border-radius:12px;padding:8px 13px;font-family:'Fredoka',sans-serif;font-weight:700;color:var(--navy-deep);font-size:14px;}
+  .cert-badges{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;margin:8px 0;}
+  .cert-badge{font-size:28px;line-height:1;}
+  .prize p{font-weight:700;font-size:15px;line-height:1.5;}
+  .souvenir-shelf{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:12px 0 4px;}
+  .souvenir-shelf .souv{width:30px;height:30px;font-size:17px;background:rgba(255,255,255,.7);border-color:rgba(122,90,40,.4);}
+  .treat{font-size:42px;margin-top:10px;}
+  .scrapbook{margin-top:16px;background:#fffdf6;border-radius:14px;padding:14px;border:1px solid rgba(200,148,31,.4);}
+  .scrapbook h4{font-family:'Special Elite',monospace;font-size:12px;letter-spacing:1px;color:var(--ink-soft);text-transform:uppercase;margin:0 0 10px;}
+  .scrap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .scrap-grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 3px 8px -3px var(--shadow);transform:rotate(-1.2deg);}
+  .scrap-grid img:nth-child(even){transform:rotate(1.5deg);}
+  .reset{margin-top:18px;display:inline-block;font-family:'Special Elite',monospace;font-size:12px;letter-spacing:1px;color:#5a4200;cursor:pointer;border-bottom:1.5px dotted #5a4200;}
+
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:55;}
+  .credit{text-align:center;margin-top:16px;font-family:'Special Elite',monospace;font-size:11px;letter-spacing:1px;color:rgba(255,255,255,.5);}
+  .credit small{display:block;opacity:.7;font-size:10px;letter-spacing:.5px;margin-top:4px;}
+
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001s !important;animation-iteration-count:1 !important;transition-duration:.001s !important;}}
+</style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="shell">
+    <div class="book">
+      <button class="sound-toggle" id="soundToggle" aria-label="Toggle sound">🔊</button>
+      <header>
+        <span class="kicker">✦ Official Explorer Passport ✦</span>
+        <h1>World Showcase<br>Scavenger Hunt</h1>
+        <p class="sub" id="subline">Travel the globe • Earn your stamps • Win the prize</p>
+      </header>
+
+      <div class="topbar" id="topbar">
+        <div class="rankrow">
+          <span class="rank-emoji" id="rankEmoji">🌱</span>
+          <div class="rank-meta">
+            <div class="rank-name" id="rankName">Rookie Explorer</div>
+            <div class="rank-bar"><div class="rank-fill" id="rankFill" style="width:0%"></div></div>
+          </div>
+          <div class="pills">
+            <span class="pill" id="starPill">★ <span id="starCount">0</span></span>
+            <span class="pill streak" id="streakPill" style="display:none;">🔥 <span id="streakCount">0</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="progress-label" id="progLabel" style="display:none;">
+        <span>WORLD MAP</span><span id="progressCount">0 / 11 STAMPS</span>
+      </div>
+      <div class="map-wrap" id="mapWrap"></div>
+      <div class="souvenirs" id="souvenirs" style="display:none;"></div>
+
+      <div class="mascot" id="mascot" style="display:none;">
+        <div class="face" id="mascotFace">🦜</div>
+        <div class="bubble" id="mascotBubble">Hello, explorer!</div>
+      </div>
+
+      <div class="screen" id="screen"></div>
+    </div>
+    <div class="credit">DAD ARCADE • dadarcade.com
+      <small>An unofficial fan-made game. Not affiliated with or endorsed by Disney.</small>
+    </div>
+  </div>
+
+<script>
+/* ===================== QUESTIONS ===================== */
+const QUESTIONS = [
+  { flag:"🇨🇦", country:"Canada", souvenir:"🍁", hello:"Hello!",
+    clue:`Your journey starts where mountains stand tall; follow the path to a roaring waterfall. To check off this land and reach your goal, find a giant, carved wooden totem pole!`,
+    task:`Find the tallest totem pole and count how many carved faces you can spot on it.`,
+    type:"count", ask:"How many faces did you count on the totem pole?",
+    fact:`Totem poles aren't just decorations — each carved animal records a real family story. Canada's were hand-carved by a Tsimshian artist from a single giant cedar tree!` },
+  { flag:"🇬🇧", country:"United Kingdom", souvenir:"🫖", hello:"Cheerio!",
+    clue:`Hop across the pond to a land of rainy weather, where you can walk through a green hedge maze together. Before you leave and wave goodbye, find a classic red telephone booth standing high!`,
+    task:`Find your way through the maze, then snap a photo inside the red phone booth.`,
+    type:"confirm", ask:"Made it through the maze and found the phone booth?", confirmText:"📸 We did it!", photo:true,
+    fact:`Those red phone boxes are a British icon you can spot all over London. The hedge maze is a real garden puzzle — gardeners shape it by hand with giant shears!` },
+  { flag:"🇫🇷", country:"France", souvenir:"🥐", hello:"Bonjour!",
+    clue:`Say "Bonjour" to the Eiffel Tower, so famous and grand — the tallest of sights in this beautiful land! Step back, look up at the way it was made, and count the strong legs on which it is displayed!`,
+    task:`Count how many legs the Eiffel Tower stands on at its base.`,
+    type:"choice", ask:"How many legs does the Eiffel Tower stand on?", options:[2,3,4,6], answer:4,
+    hint:`Look right at the bottom where the tower meets the ground. Count the big legs holding it up — it's an even number, and more than two!`,
+    fact:`The real Eiffel Tower in Paris is taller than an 80-story building — and it actually grows about 6 inches taller on hot summer days when the metal expands!` },
+  { flag:"🇲🇦", country:"Morocco", souvenir:"🪔", hello:"As-salaam alaikum!",
+    clue:`Wander the market where tiles are under your feet, into the quiet courtyard away from the street. Look in the center, right on the ground, and find the mosaic tile fountain you've tracked down!`,
+    task:`Find the tiled fountain and count the points on the star in its design.`,
+    type:"count", ask:"How many star points did you count?",
+    fact:`Moroccan artists build those dazzling patterns from thousands of tiny hand-cut tiles called zellige. Look closely — no two are placed exactly alike!` },
+  { flag:"🇯🇵", country:"Japan", souvenir:"🍣", hello:"Konnichiwa!",
+    clue:`A giant red gate stands tall in the lake — but climb up the hill for the sight you must take! A tower of roofs reaching up to the sky; count all the levels of the pagoda up high!`,
+    task:`Count how many levels (stacked roofs) the pagoda has.`,
+    type:"choice", ask:"How many levels does the pagoda have?", options:[3,4,5,7], answer:5,
+    hint:`Count each roof from the bottom to the very top — every roof is one "level." It's the same as the number of fingers on one hand!`,
+    fact:`A pagoda's stacked roofs were designed to survive earthquakes by swaying gently instead of cracking. Beautiful AND clever engineering!` },
+  { flag:"🇺🇸", country:"The American Adventure", souvenir:"🔔", hello:"Howdy!",
+    clue:`Halfway around the world, you're back in the States, past the large brick building and colonial gates. Look way up high, using all your power, to spot the time on the giant clock tower!`,
+    task:`Find the clock tower and write down exactly what time it shows.`,
+    type:"text", ask:"What time does the clock tower say?", placeholder:"e.g. 3:45",
+    fact:`That building looks huge and old, but it's a trick — the brick patterns get smaller near the top to fool your eyes into thinking it's taller than it really is!` },
+  { flag:"🇮🇹", country:"Italy", souvenir:"🍕", hello:"Ciao!",
+    clue:`Cross into a city built right on the sea, and look out at the water where boats float free. Tied up to poles painted with stripes to note, find a long, flat gondola boat!`,
+    task:`Find the gondolas tied to the candy-striped posts, then snap a photo.`,
+    type:"confirm", ask:"Found the gondolas at the striped posts?", confirmText:"📸 Found them!", photo:true,
+    fact:`In Venice, Italy, there are no roads for cars at all — people get around by boat! Those striped poles are like parking spots for the gondolas.` },
+  { flag:"🇩🇪", country:"Germany", souvenir:"🥨", hello:"Guten Tag!",
+    clue:`Listen for the tick-tock of the cuckoo clocks, then look for a tiny village built out of rocks. Watch very closely down by the track, and wait for a miniature train to chug back!`,
+    task:`Find the tiny model village and snap a photo when a little train rolls by.`,
+    type:"confirm", ask:"Spotted the model village and a passing train?", confirmText:"📸 Got it!", photo:true,
+    fact:`Germany is famous for cuckoo clocks and tiny model railroads. Some of the little trains here loop the village hundreds of times a day!` },
+  { flag:"🇨🇳", country:"China", souvenir:"🐉", hello:"Nǐ hǎo!",
+    clue:`Walk through the bright gate of red, gold, and green, head inside the round temple to see a stunning scene. Look straight up at the ceiling where art is found, and spot the golden dragons in a circle so round!`,
+    task:`Stand in the center of the round temple and count the dragons on the ceiling.`,
+    type:"count", ask:"How many golden dragons did you count?",
+    fact:`In China, dragons are good luck — symbols of power, wisdom, and rain for the crops, not scary monsters. See how many you can find around the pavilion!` },
+  { flag:"🇳🇴", country:"Norway", souvenir:"⛵", hello:"Hei!",
+    clue:`Head to the land of Vikings, fjords, and snow. Inside the main shop is where you need to go. He has a big nose and hair out of control — snap a silly photo with the giant wooden Troll!`,
+    task:`Find the giant troll inside the shop and take a silly group photo with it.`,
+    type:"confirm", ask:"Took a silly photo with the troll?", confirmText:"🧌 Snapped it!", photo:true,
+    fact:`In Norwegian folktales, trolls live in the mountains and turn to stone if sunlight touches them — which is exactly why this big fellow hides indoors!` },
+  { flag:"🇲🇽", country:"Mexico", souvenir:"🪅", hello:"¡Hola!",
+    clue:`Your final stop is a pyramid under the night sky. Head inside where it's twilight, no matter how high. Look across the water where the boats slowly go, and spot what is rumbling and smoking below!`,
+    task:`On the boat ride, look across the water and find what is rumbling and smoking.`,
+    type:"choice", ask:"What is rumbling and smoking in the background?", options:["Volcano","Waterfall","Castle","Pyramid"], answer:"Volcano",
+    hint:`Look across the water for something that rumbles, smokes, and glows red-orange. It's a mountain that erupts!`,
+    fact:`That volcano is a real working model that really rumbles and glows! Mexico has many famous volcanoes in real life, like Popocatépetl near Mexico City.` }
+];
+
+const AVATARS = ['🧭','🦁','🐯','🦊','🐼','🦄','🐲','🐧','🦉','🐙'];
+
+const BADGES = {
+  sharpEyes:    { icon:'🦅', name:'Sharp Eyes',      blurb:'Three perfect stops in a row!' },
+  onFire:       { icon:'🔥', name:'On Fire',         blurb:'A streak of six — unstoppable!' },
+  globeTrotter: { icon:'🌍', name:'Globe-Trotter',   blurb:'Halfway around the world!' },
+  worldExplorer:{ icon:'🏆', name:'World Explorer',  blurb:'You finished the whole journey!' },
+  perfect:      { icon:'✨', name:'Perfect Passport', blurb:'Every challenge, first try!' },
+  shutterbug:   { icon:'📸', name:'Shutterbug',      blurb:'Snapped photos at 3+ stops!' },
+  polyglot:     { icon:'🗣️', name:'Polyglot',        blurb:'Learned every "hello" along the way!' }
+};
+
+const RANKS = [
+  { min:0,  emoji:'🌱', name:'Rookie Explorer' },
+  { min:8,  emoji:'🧭', name:'Adventurer' },
+  { min:17, emoji:'🗺️', name:'Globe-Trotter' },
+  { min:26, emoji:'🏆', name:'Master Explorer' }
+];
+const TITLES = ['the Brave','the Curious','the Bold','the Swift','the Mighty','the Clever','the Daring','the Great','the Fearless','the Wise'];
+const JOKES = [
+  "Why did the map go to school? To get a little brighter! 🗺️",
+  "What do you call a sleeping dinosaur on vacation? A travel-saurus… zzz! 🦕",
+  "Why don't passports ever get lost? They always know their place! 🛂",
+  "What did the ocean say to the explorer? Nothing — it just waved! 🌊",
+  "Why did the explorer bring a ladder? To reach new heights! 🪜",
+  "What's the fastest country? RUN-way… I mean Norway! 🏃"
+];
+const ENCOURAGE = [
+  "You've got sharp explorer eyes!","Keep going — the prize is getting closer!","Nice work, world traveler!",
+  "Onward to the next country!","Your passport is filling up beautifully!","Great exploring! Two thumbs up.","What a globe-trotter you are!"
+];
+const PIP = { idle:'🦜', cheer:'🥳', think:'🤔', wow:'😮' };
+
+const LOCKOUT_SECONDS = 8;
+const LOCKOUT_ENABLED = true;
+const SAVE_KEY = 'wsh_v3';
+
+/* map pin coordinates around an ellipse (computed once) */
+const MAP_PINS = QUESTIONS.map((q,i)=>{
+  const ang = (-90 + i*(360/QUESTIONS.length)) * Math.PI/180;
+  const x = 50 + 45*Math.cos(ang);
+  const y = 31 + 26*Math.sin(ang);
+  return { x, top:(y/62)*100 };
+});
+
+/* ===================== state ===================== */
+function freshState(){
+  return { explorers:[], index:0, stars:0, streak:0, badges:[], photos:{}, perStop:{},
+    souvenirs:[], greetings:0, greetedStops:[], rankIdx:0, explorerId:'', title:'',
+    started:false, finished:false, muted:false };
+}
+let state = freshState();
+let attempts = 0, stepValue = 1, lockedUntil = 0, lockTimer = null, justStampedIndex = -1;
+let pipTaps = 0, pipTapTimer = null;
+
+const $ = id => document.getElementById(id);
+const screen = $('screen'), topbar = $('topbar'), progLabel = $('progLabel');
+const mapWrap = $('mapWrap'), souvenirsEl = $('souvenirs'), subline = $('subline');
+const mascotEl = $('mascot'), mascotFace = $('mascotFace'), mascotBubble = $('mascotBubble');
+const starCountEl = $('starCount'), streakPill = $('streakPill'), streakCountEl = $('streakCount');
+const rankEmoji = $('rankEmoji'), rankName = $('rankName'), rankFill = $('rankFill');
+const progressCount = $('progressCount'), soundToggle = $('soundToggle');
+
+/* ===================== persistence ===================== */
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){} }
+function loadSaved(){ try{ const r=localStorage.getItem(SAVE_KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+/* ===================== audio ===================== */
+let actx=null;
+function audio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ actx=null; } }
+  if(actx && actx.state==='suspended'){ try{ actx.resume(); }catch(e){} } return actx; }
+function tone(freq,dur,type='sine',vol=0.2,when=0){
+  if(state.muted) return; const c=audio(); if(!c) return;
+  const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.value=freq;
+  const t=c.currentTime+when; o.connect(g); g.connect(c.destination);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur+0.03);
+}
+const sfx = {
+  tap(){ tone(330,0.05,'triangle',0.10); },
+  correct(){ [523,659,784,1047].forEach((f,i)=>tone(f,0.16,'triangle',0.16,i*0.06)); },
+  wrong(){ tone(190,0.16,'sawtooth',0.12); tone(120,0.20,'sawtooth',0.10,0.05); },
+  stamp(){ tone(150,0.08,'square',0.20); tone(80,0.16,'sine',0.18,0.02); },
+  page(){ tone(620,0.07,'sine',0.05); tone(320,0.11,'sine',0.05,0.03); },
+  badge(){ [659,880,1047,1319].forEach((f,i)=>tone(f,0.18,'triangle',0.16,i*0.07)); },
+  level(){ [523,784,1047].forEach((f,i)=>tone(f,0.22,'sine',0.16,i*0.09)); },
+  win(){ [523,659,784,1047,784,1047,1319,1568].forEach((f,i)=>tone(f,0.2,'triangle',0.18,i*0.11)); }
+};
+function buzz(p){ if(state.muted) return; if(navigator.vibrate){ try{ navigator.vibrate(p); }catch(e){} } }
+
+soundToggle.onclick = ()=>{ state.muted=!state.muted; soundToggle.textContent=state.muted?'🔇':'🔊'; if(!state.muted) sfx.tap(); save(); };
+
+/* ===================== mascot ===================== */
+function setPip(mood){ mascotFace.textContent = PIP[mood]||PIP.idle; }
+function say(line, mood){ if(mood) setPip(mood); mascotBubble.textContent = line; }
+mascotFace.onclick = ()=>{
+  sfx.tap(); setPip('wow');
+  pipTaps++; clearTimeout(pipTapTimer);
+  pipTapTimer = setTimeout(()=>{ pipTaps=0; }, 1600);
+  if(pipTaps>=5){ pipTaps=0; tellJoke(); }
+};
+function tellJoke(){
+  const j = JOKES[Math.floor(Math.random()*JOKES.length)];
+  miniConfetti();
+  overlay(`<div class="big-emoji">🦜</div><div class="greet">Pip says…</div><p>${j}</p><button class="btn green" data-close>Ha! →</button>`);
+}
+
+/* ===================== journey map ===================== */
+function buildMap(){
+  if(mapWrap.dataset.built) return;
+  let pinsHtml = MAP_PINS.map((p,i)=>`<div class="pin" data-pin="${i}" style="left:${p.x}%;top:${p.top}%;">${QUESTIONS[i].flag}</div>`).join('');
+  mapWrap.innerHTML = `
+    <svg class="map-svg" viewBox="0 0 100 62" preserveAspectRatio="none">
+      <ellipse cx="50" cy="31" rx="45" ry="26" fill="none" stroke="rgba(82,97,122,.35)" stroke-width="1" stroke-dasharray="2 2.5"/>
+    </svg>
+    ${pinsHtml}
+    <div class="pin-marker" id="pinMarker">${(state.explorers[0]&&state.explorers[0].avatar)||'🧭'}</div>`;
+  mapWrap.dataset.built = '1';
+}
+function updateMap(){
+  if(!mapWrap.dataset.built) return;
+  MAP_PINS.forEach((p,i)=>{
+    const pin = mapWrap.querySelector(`.pin[data-pin="${i}"]`);
+    if(!pin) return;
+    pin.className = 'pin' + (i<state.index?' done':'') + (i===state.index && state.started && !state.finished?' current':'');
+  });
+  const marker = $('pinMarker');
+  if(marker){
+    const idx = Math.min(state.index, QUESTIONS.length-1);
+    marker.style.left = MAP_PINS[idx].x + '%';
+    marker.style.top  = MAP_PINS[idx].top + '%';
+    marker.textContent = (state.explorers[0]&&state.explorers[0].avatar)||'🧭';
+  }
+  progressCount.textContent = `${state.index} / ${QUESTIONS.length} STAMPS`;
+}
+
+/* ===================== topbar / rank / souvenirs ===================== */
+function rankIndex(stars){ let r=0; for(let i=0;i<RANKS.length;i++){ if(stars>=RANKS[i].min) r=i; } return r; }
+function renderTopbar(){
+  const ri = rankIndex(state.stars);
+  rankEmoji.textContent = RANKS[ri].emoji;
+  rankName.textContent = RANKS[ri].name;
+  const maxStars = QUESTIONS.length*3;
+  rankFill.style.width = Math.min(100,(state.stars/maxStars)*100) + '%';
+  starCountEl.textContent = state.stars;
+  if(state.streak>=2){
+    streakPill.style.display='flex';
+    const fire = state.streak>=6?'🔥🔥🔥': state.streak>=4?'🔥🔥':'🔥';
+    streakCountEl.textContent = state.streak;
+    streakPill.firstChild.textContent = fire+' ';
+  } else streakPill.style.display='none';
+}
+function renderSouvenirs(){
+  if(!state.souvenirs.length){ souvenirsEl.style.display='none'; return; }
+  souvenirsEl.style.display='flex';
+  souvenirsEl.innerHTML = state.souvenirs.map(s=>`<div class="souv">${s}</div>`).join('');
+}
+
+/* ===================== title ===================== */
+function showPlayChrome(on){
+  const d = on?'':'none';
+  topbar.style.display = on?'block':'none';
+  progLabel.style.display = on?'flex':'none';
+  mapWrap.style.display = on?'block':'none';
+  mascotEl.style.display = on?'flex':'none';
+  subline.style.display = on?'none':'block';
+  if(on){ renderSouvenirs(); } else souvenirsEl.style.display='none';
+}
+function renderTitle(){
+  const saved = loadSaved();
+  showPlayChrome(false);
+  soundToggle.textContent = (saved && saved.muted) ? '🔇':'🔊';
+
+  let resumeBlock='';
+  if(saved && saved.started && !saved.finished && saved.index>0){
+    const names=(saved.explorers||[]).map(e=>e.name).filter(Boolean).join(' & ')||'Explorer';
+    resumeBlock = `<button class="btn green" id="resumeBtn">↻ Resume — ${names}, Stop ${saved.index+1}</button>
+      <span class="add-explorer" id="freshBtn" style="margin-top:12px;">Start a brand-new adventure</span>`;
+  }
+  screen.innerHTML = `
+    <div class="card">
+      <div class="start-art">🌍 ✈️ 🗺️</div>
+      <p class="start-copy">Welcome, explorers! You're about to travel all the way around the World Showcase, from <b>Canada</b> to <b>Mexico</b>. Solve each clue, complete the task, and earn a stamp at every country.</p>
+      <ul class="rules">
+        <li>🧭 <b>11 countries</b> — watch your explorer travel the map!</li>
+        <li>⭐ First-try answers earn <b>3 stars</b> and rank you up.</li>
+        <li>🎒 Collect a <b>souvenir</b> and learn a <b>"hello"</b> at each stop.</li>
+        <li>📸 Snap photos for your travel scrapbook.</li>
+        <li>🏆 The <b>Grand Prize</b> is sealed until every stamp is earned…</li>
+      </ul>
+      ${resumeBlock || `<button class="btn" id="beginBtn">Choose your explorers →</button>`}
+    </div>`;
+
+  if(saved && saved.started && !saved.finished && saved.index>0){
+    $('resumeBtn').onclick = ()=>{
+      sfx.page(); state = Object.assign(freshState(), saved); attempts=0; lockedUntil=0;
+      soundToggle.textContent = state.muted?'🔇':'🔊';
+      showPlayChrome(true); buildMap(); updateMap(); renderTopbar(); renderSouvenirs();
+      renderStop();
+    };
+    $('freshBtn').onclick = ()=>{ clearSave(); sfx.tap(); renderSetup(); };
+  } else {
+    $('beginBtn').onclick = ()=>{ sfx.tap(); renderSetup(); };
+  }
+}
+
+/* ===================== setup ===================== */
+let setupExplorers = [{name:'', avatar:AVATARS[0]}];
+function renderSetup(){
+  showPlayChrome(false);
+  const blocks = setupExplorers.map((ex,idx)=>`
+    <div class="${idx>0?'explorer-block':''}">
+      <div class="setup-label">${idx===0?'Explorer name':'Second explorer'}</div>
+      <input class="name-input" data-idx="${idx}" placeholder="${idx===0?'Type your name':'Type a name'}" value="${ex.name||''}" maxlength="14" autocomplete="off" />
+      <div class="avatars" data-avset="${idx}">
+        ${AVATARS.map(a=>`<div class="av ${a===ex.avatar?'sel':''}" data-av="${a}" data-idx="${idx}">${a}</div>`).join('')}
+      </div>
+    </div>`).join('');
+  screen.innerHTML = `
+    <div class="card">
+      <div class="flag">🧭</div>
+      <div class="country" style="font-size:24px;">Who's exploring?</div>
+      <p class="start-copy" style="margin-top:2px;">Pick a name and a travel buddy. Playing with a sibling? Add a second explorer!</p>
+      ${blocks}
+      ${setupExplorers.length<2 ? `<span class="add-explorer" id="addExp">+ Add a second explorer</span>` : ''}
+      <button class="btn" id="goBtn" style="margin-top:16px;">Begin the Adventure →</button>
+    </div>`;
+  [...document.querySelectorAll('.name-input')].forEach(inp=>{ inp.oninput=()=>{ setupExplorers[+inp.dataset.idx].name=inp.value; }; });
+  [...document.querySelectorAll('.av')].forEach(av=>{
+    av.onclick=()=>{ const i=+av.dataset.idx; setupExplorers[i].avatar=av.dataset.av; sfx.tap();
+      [...document.querySelectorAll(`.av[data-idx="${i}"]`)].forEach(x=>x.classList.remove('sel')); av.classList.add('sel'); };
+  });
+  const addExp=$('addExp'); if(addExp) addExp.onclick=()=>{ setupExplorers.push({name:'',avatar:AVATARS[3]}); sfx.tap(); renderSetup(); };
+  $('goBtn').onclick = ()=>{
+    const explorers = setupExplorers.map(e=>({name:(e.name||'').trim(),avatar:e.avatar})).filter((e,i)=> i===0 || e.name.length>0);
+    if(!explorers[0].name) explorers[0].name='Explorer';
+    state = freshState(); state.explorers=explorers; state.started=true; state.muted=(soundToggle.textContent==='🔇');
+    state.explorerId = 'WSE-' + Math.floor(10000+Math.random()*89999);
+    attempts=0; lockedUntil=0;
+    sfx.page();
+    showPlayChrome(true); buildMap(); updateMap(); renderTopbar(); renderSouvenirs();
+    say(`Pack your bags, ${explorers.map(e=>e.name).join(' & ')}! First stop: Canada. 🍁`, 'cheer');
+    save(); renderStop();
+  };
+}
+function explorerNames(){ return (state.explorers||[]).map(e=>e.name).filter(Boolean).join(' & ')||'Explorer'; }
+function firstName(){ return (state.explorers&&state.explorers[0]&&state.explorers[0].name)||'Explorer'; }
+
+/* ===================== stop ===================== */
+function renderStop(){
+  buildMap(); updateMap(); renderTopbar(); renderSouvenirs();
+  attempts=0; stepValue=1;
+  const q=QUESTIONS[state.index];
+  setPip('think'); say(`Stop ${state.index+1}: ${q.country}. ${q.hello} Solve the clue!`);
+
+  let interaction='';
+  if(q.type==='choice'){
+    interaction=`<div class="ask">${q.ask}</div>
+      <div class="options" id="options">${q.options.map(o=>`<div class="opt" data-val="${o}">${o}</div>`).join('')}</div>
+      <div class="mini-row"><div class="mini-btn" id="hintBtn">💡 Need a hint?</div></div>
+      <div class="feedback" id="feedback"></div>`;
+  } else if(q.type==='count'){
+    interaction=`<div class="ask">${q.ask}</div>
+      <div class="stepper"><button class="step-btn" id="minus" aria-label="less">–</button>
+        <div class="step-num" id="stepNum">1</div><button class="step-btn" id="plus" aria-label="more">+</button></div>
+      <button class="btn" id="countBtn">Stamp my passport ✦</button><div class="feedback" id="feedback"></div>`;
+  } else if(q.type==='text'){
+    interaction=`<div class="ask">${q.ask}</div>
+      <input class="text-input" id="textIn" placeholder="${q.placeholder||''}" autocomplete="off" />
+      <button class="btn" id="textBtn">Stamp my passport ✦</button><div class="feedback" id="feedback"></div>`;
+  } else {
+    interaction=`<div class="ask">${q.ask}</div>
+      ${q.photo?`<div class="mini-row"><label class="mini-btn" for="photoIn">📸 Add a photo (optional)</label>
+        <input id="photoIn" type="file" accept="image/*" capture="environment" style="display:none;" /></div><div id="photoSlot"></div>`:''}
+      <button class="btn green" id="confirmBtn">${q.confirmText||'We did it! ✅'}</button>`;
+  }
+  screen.innerHTML = `
+    <div class="card flip">
+      <div class="stop-num">Stop ${state.index+1} of ${QUESTIONS.length}</div>
+      <div class="flag">${q.flag}</div>
+      <div class="country">${q.country}</div>
+      <div class="clue-label">✦ The Clue</div>
+      <div class="clue">${q.clue}</div>
+      <div class="task"><b>Task:</b> ${q.task}</div>
+      ${interaction}
+    </div>`;
+  if(q.type==='choice'){ wireChoice(q); wireHint(q); }
+  if(q.type==='count')  wireCount(q);
+  if(q.type==='text')   wireText(q);
+  if(q.type==='confirm') wireConfirm(q);
+  if(q.type==='choice' && Date.now()<lockedUntil) startLockoutUI();
+  save();
+}
+
+function wireChoice(q){
+  const opts=[...document.querySelectorAll('.opt')];
+  opts.forEach(opt=>{
+    opt.onclick=()=>{
+      if(Date.now()<lockedUntil) return;
+      if(String(opt.dataset.val)===String(q.answer)){
+        sfx.correct(); buzz([40,40,80]); opt.classList.add('right'); opts.forEach(o=>o.classList.add('locked'));
+        const fb=$('feedback'); if(fb) fb.textContent='Correct! 🎉';
+        awardStop(q, attempts===0?3:(attempts===1?2:1), attempts===0);
+      } else {
+        attempts++; sfx.wrong(); buzz(120); opt.classList.add('wrong');
+        const fb=$('feedback'); if(fb) fb.textContent='Not quite — look again!';
+        say(`Hmm, not that one. Tap "Need a hint?" if you're stuck!`,'wow');
+        beginLockout();
+      }
+    };
+  });
+}
+function wireHint(q){
+  const hintBtn=$('hintBtn'); if(!hintBtn) return; let shown=false;
+  hintBtn.onclick=()=>{
+    sfx.tap();
+    if(!shown){ shown=true;
+      const box=document.createElement('div'); box.className='hint-box';
+      box.innerHTML=`💡 ${q.hint} <br><span style="display:inline-block;margin-top:8px;color:var(--red);border-bottom:1.5px dotted var(--red);cursor:pointer;" id="revealBtn">Still stuck? Show me the answer</span>`;
+      hintBtn.parentElement.insertAdjacentElement('afterend', box); hintBtn.style.display='none';
+      $('revealBtn').onclick=()=>{
+        const opts=[...document.querySelectorAll('.opt')];
+        opts.forEach(o=>{ o.classList.add('locked'); if(String(o.dataset.val)===String(q.answer)) o.classList.add('right'); });
+        lockedUntil=0; if(lockTimer){clearInterval(lockTimer);lockTimer=null;} const lb=$('lockBox'); if(lb) lb.remove();
+        sfx.stamp(); awardStop(q,1,false);
+      };
+    }
+  };
+}
+function wireCount(q){
+  const numEl=$('stepNum'); const set=v=>{ stepValue=Math.max(0,Math.min(40,v)); numEl.textContent=stepValue; };
+  $('minus').onclick=()=>{ sfx.tap(); set(stepValue-1); };
+  $('plus').onclick =()=>{ sfx.tap(); set(stepValue+1); };
+  $('countBtn').onclick=()=>{ sfx.correct(); buzz([40,40,80]);
+    const fb=$('feedback'); if(fb) fb.textContent=`You counted ${stepValue} — sharp eyes! ✦`;
+    $('countBtn').classList.add('disabled'); awardStop(q,3,true); };
+}
+function wireText(q){
+  const submit=()=>{ const v=$('textIn').value.trim();
+    if(!v){ const fb=$('feedback'); if(fb) fb.textContent='Write down the time first!'; return; }
+    sfx.correct(); buzz([40,40,80]); const fb=$('feedback'); if(fb) fb.textContent=`Recorded "${v}" — stamp earned! 🕰️`;
+    $('textBtn').classList.add('disabled'); awardStop(q,3,true); };
+  $('textBtn').onclick=submit; $('textIn').addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+}
+/* downscale a captured photo so the scrapbook fits in localStorage */
+function resizeImage(file, maxDim, cb){
+  const url=URL.createObjectURL(file); const img=new Image();
+  img.onload=()=>{ let w=img.width,h=img.height; const scale=Math.min(1,maxDim/Math.max(w,h));
+    w=Math.round(w*scale); h=Math.round(h*scale); const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+    try{ cb(c.toDataURL('image/jpeg',0.72)); }catch(e){ cb(null); } };
+  img.onerror=()=>{ URL.revokeObjectURL(url); cb(null); }; img.src=url;
+}
+function wireConfirm(q){
+  if(q.photo){
+    const inp=$('photoIn'), slot=$('photoSlot');
+    inp.onchange=()=>{ const file=inp.files&&inp.files[0]; if(!file) return;
+      resizeImage(file,900,dataUrl=>{ if(!dataUrl) return; state.photos[state.index]=dataUrl;
+        slot.innerHTML=`<div class="photo-thumb"><img src="${dataUrl}" alt="your photo"/><span>Added to your scrapbook!</span></div>`;
+        sfx.tap(); save(); }); };
+  }
+  $('confirmBtn').onclick=()=>{ sfx.correct(); buzz([40,40,80]); awardStop(q,3,true); };
+}
+
+/* ===================== award a stop ===================== */
+function has(b){ return state.badges.includes(b); }
+function push(b){ if(!has(b)) state.badges.push(b); }
+
+function awardStop(q, stars, cleanFirstTry){
+  state.perStop[state.index]=stars; state.stars+=stars;
+  if(cleanFirstTry) state.streak+=1; else state.streak=0;
+  if(q.souvenir && !state.souvenirs.includes(q.souvenir)) state.souvenirs.push(q.souvenir);
+
+  justStampedIndex=state.index; sfx.stamp(); setPip('cheer');
+  burst([q.flag, q.souvenir, '⭐']);
+  updateMap(); renderTopbar(); renderSouvenirs();
+  if(state.streak>=2){ streakPill.classList.add('hot'); setTimeout(()=>streakPill.classList.remove('hot'),420); }
+
+  const prevRank=state.rankIdx; const nr=rankIndex(state.stars); let rankUp=false;
+  if(nr>prevRank){ state.rankIdx=nr; rankUp=true; }
+
+  const newBadges=[];
+  if(state.streak>=3 && !has('sharpEyes')){ push('sharpEyes'); newBadges.push('sharpEyes'); }
+  if(state.streak>=6 && !has('onFire')){ push('onFire'); newBadges.push('onFire'); }
+
+  say(ENCOURAGE[Math.floor(Math.random()*ENCOURAGE.length)]); save();
+
+  const afterExtras = ()=> factThenAdvance(q);
+  const afterBadges = ()=>{ if(rankUp){ sfx.level(); showRankUp(state.rankIdx, afterExtras); } else afterExtras(); };
+  if(newBadges.length) showBadge(newBadges[0], afterBadges);
+  else setTimeout(afterBadges, 650);
+}
+
+function factThenAdvance(q){
+  showFact(q, ()=>{
+    const wasHalfway=(state.index===5);
+    state.index+=1;
+    if(state.index>=6 && !has('globeTrotter')){ push('globeTrotter'); save(); }
+    updateMap(); save();
+    if(state.index>=QUESTIONS.length){ renderFinale(); }
+    else if(wasHalfway){ showHalfway(()=>{ sfx.page(); renderStop(); }); }
+    else { sfx.page(); renderStop(); }
+  });
+}
+
+/* ===================== overlays ===================== */
+function overlay(html, onClose){
+  const ov=document.createElement('div'); ov.className='overlay'; ov.innerHTML=`<div class="pop">${html}</div>`;
+  document.body.appendChild(ov);
+  const close=()=>{ ov.remove(); if(onClose) onClose(); };
+  const btn=ov.querySelector('[data-close]'); if(btn) btn.onclick=close;
+  return { ov, close };
+}
+function showFact(q, onClose){
+  sfx.tap();
+  // greeting bonus mini-game options: correct hello + 2 distractors
+  const others = QUESTIONS.filter(x=>x.hello!==q.hello).map(x=>x.hello);
+  const picks=[]; while(picks.length<2 && others.length){ picks.push(others.splice(Math.floor(Math.random()*others.length),1)[0]); }
+  let opts=[q.hello,...picks]; for(let i=opts.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+  const alreadyGreeted = state.greetedStops.includes(state.index);
+  const greetHtml = alreadyGreeted ? '' : `
+    <div class="greet-game">
+      <div class="greet-q">🎒 You collected a ${q.souvenir}! Quick bonus — which word means "hello" in ${q.country}?</div>
+      <div class="greet-opts" id="greetOpts">${opts.map(o=>`<button class="greet-btn" data-g="${o.replace(/"/g,'&quot;')}">${o}</button>`).join('')}</div>
+    </div>`;
+  const { ov } = overlay(`
+    <div class="big-emoji">${q.flag}</div>
+    <div class="greet">${q.hello}</div>
+    <h3>Did you know?</h3>
+    <p>${q.fact}</p>
+    ${greetHtml}
+    <button class="btn" data-close>Got it! →</button>`, onClose);
+
+  if(!alreadyGreeted){
+    const btns=[...ov.querySelectorAll('.greet-btn')];
+    btns.forEach(b=>{
+      b.onclick=()=>{
+        if(b.classList.contains('locked')) return;
+        const correct = b.dataset.g===q.hello.replace(/"/g,'&quot;') || b.textContent===q.hello;
+        btns.forEach(x=>{ x.classList.add('locked'); if(x.textContent===q.hello) x.classList.add('right'); });
+        if(correct){ sfx.badge(); state.greetings+=1; }
+        else { b.classList.add('wrong'); sfx.wrong(); }
+        state.greetedStops.push(state.index); save();
+      };
+    });
+  }
+}
+function showBadge(key, onClose){
+  const b=BADGES[key]; sfx.badge(); buzz([60,50,60,50,120]);
+  overlay(`<div class="badge-art">${b.icon}</div><div class="greet">Badge unlocked!</div><h3>${b.name}</h3><p>${b.blurb}</p><button class="btn green" data-close>Awesome! →</button>`, onClose);
+}
+function showRankUp(idx, onClose){
+  const r=RANKS[idx]; miniConfetti();
+  overlay(`<div class="big-emoji">${r.emoji}</div><div class="greet">Rank up!</div><h3>${r.name}</h3><p>${firstName()}, you've leveled up! Keep earning stars.</p><button class="btn" data-close>Onward! →</button>`, onClose);
+}
+function showHalfway(onClose){
+  sfx.win(); buzz([40,40,40,40,120]); miniConfetti();
+  overlay(`<div class="big-emoji">🌍🎉</div><h3>Halfway around the world!</h3><p>Amazing work, ${firstName()}! You've explored 6 countries. Six more to go — and the Grand Prize is waiting!</p><button class="btn" data-close>Keep exploring! →</button>`, onClose);
+}
+
+/* ===================== lockout ===================== */
+function beginLockout(){
+  if(!LOCKOUT_ENABLED){ setTimeout(()=>document.querySelectorAll('.opt').forEach(o=>o.classList.remove('wrong')),450); return; }
+  lockedUntil=Date.now()+LOCKOUT_SECONDS*1000; startLockoutUI();
+}
+function startLockoutUI(){
+  const opts=[...document.querySelectorAll('.opt')]; opts.forEach(o=>{ if(!o.classList.contains('right')) o.classList.add('locked'); });
+  const old=$('lockBox'); if(old) old.remove();
+  const card=document.querySelector('.card'); const box=document.createElement('div'); box.className='lockout'; box.id='lockBox';
+  box.innerHTML=`<div class="ring" id="ring"><div class="inner" id="ringNum"></div></div><div class="msg">Take a breath and look again…</div>`;
+  card.appendChild(box);
+  if(lockTimer) clearInterval(lockTimer);
+  const tick=()=>{ const remain=Math.max(0,Math.ceil((lockedUntil-Date.now())/1000));
+    const ringNum=$('ringNum'), ring=$('ring'); if(ringNum) ringNum.textContent=remain;
+    if(ring){ const pct=remain/LOCKOUT_SECONDS; ring.style.setProperty('--deg',(pct*360)+'deg'); }
+    if(remain<=0){ clearInterval(lockTimer); lockTimer=null; lockedUntil=0; const lb=$('lockBox'); if(lb) lb.remove();
+      document.querySelectorAll('.opt').forEach(o=>o.classList.remove('locked','wrong')); const fb=$('feedback'); if(fb) fb.textContent='Try again — you can do it!'; } };
+  tick(); lockTimer=setInterval(tick,250);
+}
+
+/* ===================== finale ===================== */
+function renderFinale(){
+  state.finished=true; push('worldExplorer');
+  if(state.stars>=QUESTIONS.length*3) push('perfect');
+  if(Object.keys(state.photos).length>=3) push('shutterbug');
+  if(state.greetings>=QUESTIONS.length) push('polyglot');
+  if(!state.title) state.title = TITLES[Math.floor(Math.random()*TITLES.length)];
+  save();
+
+  updateMap(); renderTopbar(); progressCount.textContent=`${QUESTIONS.length} / ${QUESTIONS.length} STAMPS ★`;
+  showPlayChrome(false); // hide map/mascot; the certificate is the focus
+
+  const maxStars=QUESTIONS.length*3;
+  const dateStr=new Date().toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+  const avatars=(state.explorers||[]).map(e=>e.avatar).join(' ');
+  const titledNames=(state.explorers||[]).map(e=>`${e.name} ${state.title}`).join(' & ');
+  const badgesHtml=state.badges.map(k=>`<span class="cert-badge" title="${BADGES[k].name}">${BADGES[k].icon}</span>`).join('');
+  const souvHtml=state.souvenirs.map(s=>`<div class="souv">${s}</div>`).join('');
+  const photoKeys=Object.keys(state.photos||{});
+  let scrapHtml='';
+  if(photoKeys.length){
+    scrapHtml=`<div class="scrapbook"><h4>📸 Your Travel Scrapbook</h4><div class="scrap-grid">
+      ${photoKeys.map(k=>`<img src="${state.photos[k]}" alt="${QUESTIONS[k]?QUESTIONS[k].country:''} photo"/>`).join('')}</div></div>`;
+  }
+  screen.innerHTML=`
+    <div class="prize">
+      <div class="trophy">🏆</div>
+      <h2>Master Explorer!</h2>
+      <div style="font-size:30px;margin:2px 0;">${avatars}</div>
+      <div class="cert-title">${titledNames}</div>
+      <div class="cert-date">Completed ${dateStr}</div>
+      <div class="cert-id">Explorer ID ${state.explorerId||'WSE-00000'}</div>
+      <div class="cert-stats">
+        <div class="cert-stat">★ ${state.stars} / ${maxStars}</div>
+        <div class="cert-stat">${RANKS[rankIndex(state.stars)].emoji} ${RANKS[rankIndex(state.stars)].name}</div>
+        <div class="cert-stat">🌍 11 countries</div>
+      </div>
+      ${state.badges.length?`<div class="cert-badges">${badgesHtml}</div>`:''}
+      ${souvHtml?`<div class="souvenir-shelf">${souvHtml}</div>`:''}
+      <p style="margin-top:10px;">You traveled all the way around the World Showcase and filled your passport!</p>
+      <div class="treat">🍭🐉</div>
+      <p style="margin-top:6px;">Your Grand Prize: head to the <b>China</b> pavilion and treat yourself to a small <b>sugar painting candy</b> (táng huà) — a hand-poured sugar treasure, often shaped like a dragon!</p>
+    </div>
+    ${scrapHtml}
+    <div style="text-align:center;">
+      <p style="color:rgba(255,255,255,.85);font-family:'Special Elite',monospace;font-size:12px;letter-spacing:.5px;margin-top:16px;">📷 Take a screenshot to keep your certificate!</p>
+      <span class="reset" id="resetBtn" style="color:#fff6df;border-color:#fff6df;">↻ Start a new adventure</span>
+    </div>`;
+  $('resetBtn').onclick=()=>{ clearSave(); setupExplorers=[{name:'',avatar:AVATARS[0]}]; mapWrap.dataset.built=''; mapWrap.innerHTML='';
+    state=freshState(); attempts=0; lockedUntil=0; sfx.tap(); renderTitle(); };
+  sfx.win(); buzz([40,60,40,60,40,60,200]); launchConfetti();
+}
+
+/* ===================== confetti + burst ===================== */
+function makeConfetti(count, frameCap){
+  const cv=$('confetti'), ctx=cv.getContext('2d'); cv.width=innerWidth; cv.height=innerHeight;
+  const colors=['#e8b341','#b4332b','#2f7d5b','#1f3a5f','#c8941f','#fff6df'];
+  const pieces=Array.from({length:count},()=>({ x:Math.random()*cv.width, y:-20-Math.random()*cv.height*0.5,
+    w:6+Math.random()*8, h:8+Math.random()*10, c:colors[Math.floor(Math.random()*colors.length)], star:Math.random()<0.25,
+    vy:2+Math.random()*3.5, vx:-1.5+Math.random()*3, rot:Math.random()*6.28, vr:-0.2+Math.random()*0.4 }));
+  let frames=0;
+  (function draw(){ ctx.clearRect(0,0,cv.width,cv.height);
+    pieces.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.c;
+      if(p.star){ ctx.font=`${p.h+6}px serif`; ctx.fillText('★',-p.w/2,p.h/2); } else ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h); ctx.restore(); });
+    frames++; if(frames<frameCap) requestAnimationFrame(draw); else ctx.clearRect(0,0,cv.width,cv.height); })();
+}
+function launchConfetti(){ makeConfetti(160,340); }
+function miniConfetti(){ makeConfetti(70,180); }
+/* emoji burst from center-top (stamp earned) */
+function burst(emojis){
+  const cv=$('confetti'), ctx=cv.getContext('2d'); cv.width=innerWidth; cv.height=innerHeight;
+  const cx=cv.width/2, cy=cv.height*0.32; const list=emojis.filter(Boolean);
+  const parts=Array.from({length:14},(_,i)=>{ const a=(i/14)*Math.PI*2; const sp=3+Math.random()*3;
+    return { x:cx,y:cy, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-2, e:list[i%list.length], life:0, rot:Math.random()*6.28, vr:-0.2+Math.random()*0.4, sz:20+Math.random()*10 }; });
+  let frames=0;
+  (function draw(){ ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p=>{ p.vy+=0.12; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.font=`${p.sz}px serif`; ctx.textAlign='center'; ctx.fillText(p.e,0,0); ctx.restore(); });
+    frames++; if(frames<70) requestAnimationFrame(draw); else ctx.clearRect(0,0,cv.width,cv.height); })();
+}
+window.addEventListener('resize',()=>{ const cv=$('confetti'); cv.width=innerWidth; cv.height=innerHeight; });
+
+/* ===================== boot ===================== */
+renderTitle();
+</script>
+</body>
+</html>

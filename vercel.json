@@ -14,7 +14,9 @@
     { "source": "/pong", "destination": "/paddle-duel", "permanent": true },
     { "source": "/pong/(.*)", "destination": "/paddle-duel/$1", "permanent": true },
     { "source": "/Granddad's Attic", "destination": "/granddads-attic", "permanent": true },
-    { "source": "/Granddad's Attic/(.*)", "destination": "/granddads-attic/$1", "permanent": true }
+    { "source": "/Granddad's Attic/(.*)", "destination": "/granddads-attic/$1", "permanent": true },
+    { "source": "/Disney", "destination": "/Hollywood%20Studios", "permanent": true },
+    { "source": "/Disney/(.*)", "destination": "/Hollywood%20Studios/$1", "permanent": true }
   ],
   "headers": [
     {
