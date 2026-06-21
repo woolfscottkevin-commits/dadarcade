@@ -292,25 +292,43 @@ if(window.visualViewport) window.visualViewport.addEventListener('resize', resiz
 // Every image is optional. If a file is missing/broken we draw a clean
 // canvas placeholder, so the game is 100% playable before any art exists.
 const imgCache = {};
-function loadImg(src){
+// iOS Safari silently refuses to decode/draw PNGs much above ~5 megapixels, so a
+// perfectly valid but oversized phone photo still shows the drawn fallback with
+// NO error. We warn loudly here (on load error AND on oversized decode) so a
+// broken/HEIC/too-big photo is never invisible. Downsize photos to ~700px — see
+// assets/README.txt.
+const IMG_MAXPX = 5 * 1024 * 1024; // ~5 MP — the practical iOS decode ceiling
+// `expected`=true for art that is SUPPOSED to be present (the family faces +
+// Oliver). Those get a load-failure warning so a missing/HEIC photo is never
+// invisible. Optional art (background, bomb, drawn-Oliver) is left silent on
+// purpose — it has a clean fallback. The oversized-decode warning fires for ANY
+// image, since a too-big file is always a real iOS-rendering problem.
+function loadImg(src, expected){
   if(!src) return null;
   if(imgCache[src]) return imgCache[src];
   const im = new Image();
   im._ok = false;
-  im.onload  = ()=>{ im._ok = im.naturalWidth>0; };
-  im.onerror = ()=>{ im._ok = false; };
+  im.onload  = ()=>{
+    im._ok = im.naturalWidth>0;
+    if(im.naturalWidth*im.naturalHeight > IMG_MAXPX){
+      console.warn('[balloon] '+src+' is '+im.naturalWidth+'×'+im.naturalHeight+
+        ' ('+((im.naturalWidth*im.naturalHeight)/1048576).toFixed(1)+' MP) — too large; iPad/iOS may draw it blank. Downsize to ~700px.');
+    }
+  };
+  im.onerror = ()=>{ im._ok = false;
+    if(expected) console.warn('[balloon] failed to load '+src+' — confirm the file exists and is a real PNG/JPG (iPhone HEIC renamed .png will not load).'); };
   im.src = src;
   imgCache[src] = im;
   return im;
 }
 // background override (optional)
 const bgImg = loadImg('assets/background.png');
-// preload every family face
-FACES.forEach(f=>loadImg(f.img));
+// preload every family face (expected → warns if a photo is missing/HEIC/too big)
+FACES.forEach(f=>loadImg(f.img, true));
 // Oliver = the star (the nephew). His real photo is the cheering buddy at the
 // bottom AND the big hero on the win screen. Kept separate from the family
 // balloons so his face stays a special "that's me!" treat.
-const oliverFace = loadImg('assets/face-oliver.png');
+const oliverFace = loadImg('assets/face-oliver.png', true);
 const oliverImg = { idle:loadImg('assets/oliver-idle.png'), cheer:loadImg('assets/oliver-cheer.png'), sad:loadImg('assets/oliver-sad.png') };
 const bombImg = loadImg('assets/bomb.png');
 
