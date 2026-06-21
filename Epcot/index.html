@@ -230,6 +230,8 @@
   .greet-btn.right{background:#d6efe0;border-color:var(--green);color:var(--green);box-shadow:0 3px 0 var(--green);}
   .greet-btn.wrong{background:#f7d9d6;border-color:var(--red);color:var(--red);box-shadow:0 3px 0 var(--red);}
   .greet-btn.locked{opacity:.55;pointer-events:none;}
+  .greet-reveal{font-family:'Fredoka',sans-serif;font-weight:600;font-size:14px;color:var(--navy-deep);margin-top:10px;}
+  .greet-reveal b{color:var(--gold);font-size:16px;}
 
   /* certificate / scrapbook */
   .prize{text-align:center;background:linear-gradient(160deg,#e8b341,#c8941f);border-radius:16px;padding:26px 20px 30px;color:#3a2a00;
@@ -788,14 +790,18 @@ function showFact(q, onClose){
   const picks=[]; while(picks.length<2 && others.length){ picks.push(others.splice(Math.floor(Math.random()*others.length),1)[0]); }
   let opts=[q.hello,...picks]; for(let i=opts.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [opts[i],opts[j]]=[opts[j],opts[i]]; }
   const alreadyGreeted = state.greetedStops.includes(state.index);
-  const greetHtml = alreadyGreeted ? '' : `
+  // The "hello" was taught at stop-start by the mascot, so quiz recall here and
+  // reveal the answer only AFTER a pick — the screen never gives it away.
+  const greetHtml = alreadyGreeted
+    ? `<div class="greet-game"><div class="greet-q">🎒 In ${q.country}, you say hello like this:</div><div class="greet">${q.hello}</div></div>`
+    : `
     <div class="greet-game">
-      <div class="greet-q">🎒 You collected a ${q.souvenir}! Quick bonus — which word means "hello" in ${q.country}?</div>
+      <div class="greet-q">🎒 You collected a ${q.souvenir}! Do you remember how to say <b>hello</b> in ${q.country}?</div>
       <div class="greet-opts" id="greetOpts">${opts.map(o=>`<button class="greet-btn" data-g="${o.replace(/"/g,'&quot;')}">${o}</button>`).join('')}</div>
+      <div class="greet-reveal" id="greetReveal" style="display:none;"></div>
     </div>`;
   const { ov } = overlay(`
     <div class="big-emoji">${q.flag}</div>
-    <div class="greet">${q.hello}</div>
     <h3>Did you know?</h3>
     <p>${q.fact}</p>
     ${greetHtml}
@@ -803,6 +809,7 @@ function showFact(q, onClose){
 
   if(!alreadyGreeted){
     const btns=[...ov.querySelectorAll('.greet-btn')];
+    const reveal=ov.querySelector('#greetReveal');
     btns.forEach(b=>{
       b.onclick=()=>{
         if(b.classList.contains('locked')) return;
@@ -810,6 +817,7 @@ function showFact(q, onClose){
         btns.forEach(x=>{ x.classList.add('locked'); if(x.textContent===q.hello) x.classList.add('right'); });
         if(correct){ sfx.badge(); state.greetings+=1; }
         else { b.classList.add('wrong'); sfx.wrong(); }
+        if(reveal){ reveal.innerHTML = `${correct?'🎉 Yes! ':'👋 '}In ${q.country}, you say <b>${q.hello}</b>`; reveal.style.display='block'; }
         state.greetedStops.push(state.index); save();
       };
     });
