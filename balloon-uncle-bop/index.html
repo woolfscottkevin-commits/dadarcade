@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<!-- Resolve relative asset paths from the game folder. Production serves this
+     page at /balloon-uncle-bop with NO trailing slash (cleanUrls), so a bare
+     "assets/x.png" would otherwise resolve to the domain root and 404. -->
+<base href="/balloon-uncle-bop/">
 <title>Balloon Uncle Bop — Dad Arcade</title>
 <meta name="description" content="A super-simple tap game for little kids. Tap the floating Uncle balloons to puff them up, then POP! Confetti, silly faces, and three easy levels. Touch-only, no reading required — perfect for a 6-year-old on an iPad.">
 <meta name="theme-color" content="#1a0b2e">
