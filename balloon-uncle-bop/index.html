@@ -275,8 +275,15 @@ const ctx = canvas.getContext('2d');
 let cssW=0, cssH=0, dpr=1, sizeScale=1;
 
 function resize(){
-  const vw = (window.visualViewport && window.visualViewport.width)  || window.innerWidth;
-  const vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+  // Size from the LAYOUT viewport, not the pinch-zoomed VISUAL viewport. When the
+  // page is pinch-zoomed (visualViewport.scale > 1) vv.width/height shrink, which
+  // used to collapse this fullscreen canvas into a small top-left box mid-game.
+  // Multiplying by scale recovers the full layout size; when scale==1 it still
+  // tracks the iOS toolbar. Falls back to innerWidth/Height with no visualViewport.
+  const vv = window.visualViewport;
+  const sc = (vv && vv.scale) || 1;
+  const vw = vv ? vv.width  * sc : window.innerWidth;
+  const vh = vv ? vv.height * sc : window.innerHeight;
   cssW = Math.round(vw); cssH = Math.round(vh);
   dpr = Math.min(window.devicePixelRatio||1, 2.5); // cap for fill-rate
   canvas.width = Math.round(cssW*dpr);
