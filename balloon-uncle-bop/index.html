@@ -8,13 +8,13 @@
      "assets/x.png" would otherwise resolve to the domain root and 404. -->
 <base href="/balloon-uncle-bop/">
 <title>Balloon Uncle Bop — Dad Arcade</title>
-<meta name="description" content="A super-simple tap game for little kids. Tap the floating Uncle balloons to puff them up, then POP! Confetti, silly faces, and three easy levels. Touch-only, no reading required — perfect for a 6-year-old on an iPad.">
+<meta name="description" content="A gentle tap-and-math game for little kids. Puff up the floating family balloons, then solve a quick addition or subtraction problem (numbers to 10) to POP each one! Touch-only tappable answers, confetti, silly faces, and three easy levels — great for a 6-year-old on an iPad.">
 <meta name="theme-color" content="#1a0b2e">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='50' cy='44' rx='30' ry='34' fill='%23ff5d8f'/><circle cx='40' cy='40' r='5' fill='%23fff'/><circle cx='60' cy='40' r='5' fill='%23fff'/><circle cx='40' cy='41' r='2.5' fill='%23222'/><circle cx='60' cy='41' r='2.5' fill='%23222'/><path d='M38 56 Q50 66 62 56' stroke='%23222' stroke-width='4' fill='none' stroke-linecap='round'/><path d='M50 78 l-5 14 10 0 z' fill='%23ff5d8f'/></svg>">
 
 <!-- Open Graph -->
 <meta property="og:title" content="Balloon Uncle Bop — Dad Arcade">
-<meta property="og:description" content="Tap floating Uncle balloons to puff them up, then POP! A zero-instructions tap game made for little kids. Three easy levels, confetti, and silly faces.">
+<meta property="og:description" content="Puff up the floating family balloons, then solve a quick add or subtract problem to POP each one! A gentle tap-and-math game for little kids. Three easy levels, confetti, and silly faces.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://dadarcade.com/balloon-uncle-bop">
 
@@ -150,6 +150,24 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   text-shadow:0 4px 0 rgba(0,0,0,.3),0 0 24px rgba(255,140,40,.8);-webkit-text-stroke:2px #c9356c}
 #combo-pop.show{display:block;animation:comboPop .7s cubic-bezier(.2,1.6,.4,1) forwards}
 @keyframes comboPop{0%{opacity:0;transform:translateX(-50%) scale(.4)}30%{opacity:1;transform:translateX(-50%) scale(1.18)}100%{opacity:0;transform:translateX(-50%) scale(1) translateY(-34px)}}
+
+/* math gate — a quick problem to pop each balloon (touch-only, tappable choices) */
+#screen-math{background:rgba(18,7,38,0.6);backdrop-filter:blur(3px)}
+.math-card{display:flex;flex-direction:column;align-items:center;gap:clamp(10px,2.6vw,16px);
+  background:linear-gradient(180deg,#34176a,#23104a);border:3px solid rgba(255,255,255,.22);
+  border-radius:30px;padding:clamp(18px,5vw,34px) clamp(22px,7vw,46px);
+  box-shadow:0 20px 60px rgba(0,0,0,.55);max-width:min(94vw,540px)}
+.math-prompt{font-size:clamp(1rem,4vw,1.5rem);font-weight:800;color:#ffd9e6}
+.math-q{font-size:clamp(2.8rem,13vw,5rem);font-weight:900;line-height:1;letter-spacing:.02em;color:#ffe24a;
+  text-shadow:0 5px 0 rgba(0,0,0,.28)}
+.math-choices{display:flex;gap:clamp(10px,3.4vw,20px);margin-top:clamp(6px,2vw,12px);justify-content:center;flex-wrap:wrap}
+.math-choice{pointer-events:auto;cursor:pointer;font-family:inherit;font-weight:900;color:#3a0d2a;
+  font-size:clamp(2rem,9vw,3.2rem);width:clamp(76px,23vw,118px);height:clamp(76px,23vw,118px);
+  border:none;border-radius:24px;background:linear-gradient(180deg,#fff,#ffe1ec);
+  box-shadow:0 9px 0 #b07a93,0 14px 24px rgba(0,0,0,.42);transition:transform .08s,box-shadow .08s,background .12s}
+.math-choice:active{transform:translateY(6px);box-shadow:0 3px 0 #b07a93}
+.math-choice.right{background:linear-gradient(180deg,#a8ffba,#28c76f);color:#fff;box-shadow:0 9px 0 #1c8f4f}
+.math-choice.wrong{background:linear-gradient(180deg,#ffb3c2,#ff5d8f);color:#fff;box-shadow:0 9px 0 #b32f5b}
 </style>
 </head>
 <body>
@@ -171,7 +189,7 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 <!-- START -->
 <div class="overlay show" id="screen-start">
   <div class="game-title">Balloon<br>Uncle Bop</div>
-  <div class="tagline">Tap the balloons to POP! 🎈</div>
+  <div class="tagline">Puff up a balloon, solve the math, POP! 🎈➕</div>
   <button class="big-btn" id="btn-play">
     <svg class="btn-face" viewBox="0 0 100 100" id="play-face"></svg>
     Play!
@@ -184,6 +202,19 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 <!-- LEVEL banner -->
 <div class="banner" id="banner"><span class="banner-text" id="banner-text">Level Done!</span></div>
 <div id="combo-pop"></div>
+
+<!-- MATH GATE — a quick problem to actually POP a fully-puffed balloon -->
+<div class="overlay" id="screen-math">
+  <div class="math-card">
+    <div class="math-prompt">Answer to POP! 🎈</div>
+    <div class="math-q" id="math-q"></div>
+    <div class="math-choices" id="math-choices">
+      <button class="math-choice" type="button"></button>
+      <button class="math-choice" type="button"></button>
+      <button class="math-choice" type="button"></button>
+    </div>
+  </div>
+</div>
 
 <!-- END -->
 <div class="overlay" id="screen-end">
@@ -422,6 +453,17 @@ let combo = 0;
 let comboMult = 1;
 function comboMultFor(c){ return Math.min(5, 1 + Math.floor(c/3)); }
 
+// ---------- Math gate ----------
+// Every Uncle balloon, once fully puffed, asks a quick add/subtract problem; a
+// correct tap pops it (full credit), a wrong tap lets it escape (a miss). The
+// whole wave freezes while a problem is up. Difficulty is data-only: MATH_MAX
+// caps every number and answer, so sums/differences always stay 0..MATH_MAX.
+const MATH_MAX = 10;
+let mathActive = false;   // true while a problem is on screen (freezes the wave + canvas taps)
+let mathBalloon = null;   // the balloon waiting on this answer
+let mathAnswer = 0;       // the correct answer
+let mathLocked = false;   // debounce taps during the brief right/wrong flash
+
 // rare golden bonus balloon — a quick one-tap catch worth big points. Doesn't
 // count toward the wave and costs nothing if it escapes. Pure treat / score chase.
 const GOLD_CHANCE = 0.07;
@@ -535,6 +577,75 @@ function hitBomb(b){
 }
 
 //=================================================================
+// Math gate — a tappable add/subtract problem on every pop
+//=================================================================
+function mathRandInt(lo,hi){ return lo + Math.floor(Math.random()*(hi-lo+1)); }
+function makeMathProblem(){
+  let a,b,ans,op;
+  if(Math.random()<0.5){                       // subtraction, never negative
+    a = mathRandInt(2, MATH_MAX);
+    b = mathRandInt(1, a);
+    ans = a - b; op = '−';
+  } else {                                      // addition, sum within MATH_MAX
+    a = mathRandInt(1, MATH_MAX-1);
+    b = mathRandInt(1, MATH_MAX - a);
+    ans = a + b; op = '+';
+  }
+  // three choices: the answer + two nearby decoys, all distinct and 0..MATH_MAX
+  const set = new Set([ans]);
+  let guard=0;
+  while(set.size<3 && guard++<60){
+    const d = ans + mathRandInt(-3,3);
+    if(d>=0 && d<=MATH_MAX) set.add(d);
+  }
+  while(set.size<3) set.add(mathRandInt(0,MATH_MAX));
+  const opts=[...set];
+  for(let i=opts.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+  return { text:a+' '+op+' '+b+' = ?', ans, opts };
+}
+// A fully-puffed balloon asks a problem instead of popping immediately.
+function showMathProblem(b){
+  mathActive=true; mathBalloon=b; mathLocked=false;
+  const p=makeMathProblem(); mathAnswer=p.ans;
+  document.getElementById('math-q').textContent=p.text;
+  document.querySelectorAll('#math-choices .math-choice').forEach((btn,i)=>{
+    btn.textContent=p.opts[i]; btn.dataset.val=p.opts[i]; btn.classList.remove('right','wrong');
+  });
+  show('screen-math',true);
+}
+function onMathChoice(btn){
+  if(!mathActive || mathLocked) return;
+  mathLocked=true; initAudio();
+  const correct = parseInt(btn.dataset.val,10)===mathAnswer;
+  // brief flash: always show the right answer green; a wrong pick turns red
+  document.querySelectorAll('#math-choices .math-choice').forEach(x=>{
+    const v=parseInt(x.dataset.val,10);
+    if(v===mathAnswer) x.classList.add('right');
+    else if(x===btn) x.classList.add('wrong');
+  });
+  setTimeout(()=>resolveMath(correct), correct?320:680);
+}
+function resolveMath(correct){
+  const b=mathBalloon;
+  mathActive=false; mathBalloon=null; mathLocked=false;
+  show('screen-math',false);
+  if(!b) return;
+  if(correct){
+    popBalloon(b);                               // full credit + juice
+  }else{
+    // wrong answer = the balloon gets away (a miss): costs a heart, breaks the
+    // combo, and counts toward the wave — same as floating off the top.
+    const i=balloons.indexOf(b); if(i>=0) balloons.splice(i,1);
+    escaped++; lives--; combo=0; comboMult=1;
+    oliverReact('sad'); sndAww(); addShake(0.18, 6*sizeScale);
+    for(let k=0;k<12;k++) pushParticle(b.x,b.y,'puff','#cbb6c4');
+    updateHUD();
+    if(lives<=0) loseLevel(); else checkWin();
+  }
+}
+function hideMath(){ mathActive=false; mathBalloon=null; mathLocked=false; show('screen-math',false); }
+
+//=================================================================
 // Particles
 //=================================================================
 const CONFETTI_COLORS=['#ffe24a','#ff5d8f','#7c5cff','#3ec6b8','#ff8a5b','#7cff8a','#fff'];
@@ -601,7 +712,7 @@ function beginLevel(fresh){
   hintActive=false;
   oliver.state='idle'; oliver.t=0;
   show('screen-lost',false); show('screen-end',false);
-  hideBanner(); hideCombo();
+  hideBanner(); hideCombo(); hideMath();
   state='playing';
   updateHUD();
 }
@@ -666,6 +777,7 @@ function canvasPoint(e){
 function onPointerDown(e){
   e.preventDefault();
   if(state!=='playing') return;
+  if(mathActive) return;          // a problem is up — taps go to the answer buttons
   initAudio();
   const p=canvasPoint(e);
   const now=lastTS;
@@ -690,7 +802,7 @@ function tapBalloon(b){
   const pal=(b.face||FACES[0]).palette;
   tapPuff(b.x, b.y - b.r*0.3, pal.body);
   if(b.stage>=5){
-    popBalloon(b);
+    showMathProblem(b);     // fully puffed → solve a problem to actually POP it
   }else{
     b.stage++;
     b.r = stageRadius(b.stage);
@@ -723,6 +835,7 @@ function update(dt){
   if(hitstop>0){ hitstop-=dt; return; } // freeze the world (balloons) only
 
   if(state!=='playing') return;
+  if(mathActive) return;          // freeze the wave (no spawn/move/escape) while answering
 
   const lvl=LEVELS[levelIdx];
   // Spawn the wave: release `count` Uncle balloons over time, with bombs mixed
@@ -1284,6 +1397,10 @@ document.getElementById('btn-board-back').addEventListener('click', hideBoard);
 document.getElementById('btn-again').addEventListener('click', ()=>{ refreshStartScreen(); show('screen-end',false); startGame(); });
 document.getElementById('btn-retry').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); beginLevel(false); });
 document.getElementById('lost-startover').addEventListener('click', ()=>{ initAudio(); show('screen-lost',false); startGame(); });
+// math-gate answer buttons (pointerdown = snappy, matches the canvas tap model)
+document.querySelectorAll('#math-choices .math-choice').forEach(btn=>{
+  btn.addEventListener('pointerdown', e=>{ e.preventDefault(); onMathChoice(btn); }, {passive:false});
+});
 
 // ---------- boot ----------
 resize();
