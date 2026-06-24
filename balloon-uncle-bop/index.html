@@ -7,6 +7,9 @@
      page at /balloon-uncle-bop with NO trailing slash (cleanUrls), so a bare
      "assets/x.png" would otherwise resolve to the domain root and 404. -->
 <base href="/balloon-uncle-bop/">
+<!-- Password gate: if this device already unlocked, mark <html> now (before the
+     body renders) so returning players never see a flash of the secret-word screen. -->
+<script>try{if(localStorage.getItem('bub_unlocked')==='1')document.documentElement.classList.add('bub-unlocked');}catch(e){}</script>
 <title>Balloon Uncle Bop — Dad Arcade</title>
 <meta name="description" content="A gentle tap-and-math game for little kids. Puff up the floating family balloons, then solve a quick addition or subtraction problem (numbers to 10) to POP each one! Touch-only tappable answers, confetti, silly faces, and three easy levels — great for a 6-year-old on an iPad.">
 <meta name="theme-color" content="#1a0b2e">
@@ -168,6 +171,17 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
 .math-choice:active{transform:translateY(6px);box-shadow:0 3px 0 #b07a93}
 .math-choice.right{background:linear-gradient(180deg,#a8ffba,#28c76f);color:#fff;box-shadow:0 9px 0 #1c8f4f}
 .math-choice.wrong{background:linear-gradient(180deg,#ffb3c2,#ff5d8f);color:#fff;box-shadow:0 9px 0 #b32f5b}
+
+/* password gate — secret-word screen on entry (soft family gate, not real security) */
+html.bub-unlocked #screen-pass{display:none!important}
+#screen-pass{z-index:6;background:#1a0b2e;gap:clamp(14px,3.4vw,24px)}
+.pass-input{pointer-events:auto;font-family:inherit;font-weight:800;text-align:center;color:#3a0d2a;
+  font-size:clamp(1.4rem,6vw,2rem);background:#fff;border:3px solid #ffe24a;border-radius:18px;
+  padding:14px 18px;width:min(80vw,360px);outline:none;box-shadow:0 6px 0 rgba(0,0,0,.25)}
+.pass-input::placeholder{color:#caa9c2;font-weight:700}
+.pass-input.bad{border-color:#ff5d8f;animation:passShake .4s}
+@keyframes passShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.pass-msg{min-height:1.4em;font-weight:800;color:#ff8fb6;font-size:clamp(1rem,4vw,1.3rem)}
 </style>
 </head>
 <body>
@@ -248,6 +262,17 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   <div class="tagline">Some balloons floated away on <span id="lost-level">Level 1</span>!<br>Let's try again 🎈</div>
   <button class="big-btn pink" id="btn-retry">Try Again!</button>
   <div class="score-line" id="lost-startover" style="opacity:.7;cursor:pointer;pointer-events:auto;font-size:clamp(.9rem,3vw,1.1rem)">↺ Start from Level 1</div>
+</div>
+
+<!-- PASSWORD GATE — secret-word screen shown on entry (remembered per device) -->
+<div class="overlay show" id="screen-pass">
+  <div class="game-title" style="font-size:clamp(2.2rem,10vw,4rem)">🔒 Secret Word</div>
+  <div class="tagline">Ask a grown-up for the secret word! 🎈</div>
+  <input id="pass-input" class="pass-input" type="text" inputmode="text"
+         autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"
+         placeholder="secret word" aria-label="Secret word">
+  <button class="big-btn" id="pass-go" type="button">Let me in!</button>
+  <div class="pass-msg" id="pass-msg"></div>
 </div>
 
 <a href="/" class="home-link">← Dad Arcade</a>
@@ -1389,6 +1414,39 @@ document.addEventListener('keydown',(e)=>{
   }
 });
 
+// ---------- Password gate ----------
+// Soft "secret word" gate so only family who know it can play. NOTE: client-side
+// only — the word lives in this file, so it deters casual visitors but is NOT
+// real security. Unlock is remembered per device (localStorage) so a kid is
+// never re-prompted.
+const PASS_WORD = 'birthday';
+const PASS_KEY  = 'bub_unlocked';
+function unlockGame(){
+  try{ localStorage.setItem(PASS_KEY,'1'); }catch(e){}
+  document.documentElement.classList.add('bub-unlocked');
+  show('screen-pass', false);
+  initAudio();            // the unlock tap is a user gesture — warm up audio
+}
+function tryPassword(){
+  const input = document.getElementById('pass-input');
+  const v = (input.value||'').trim().toLowerCase();
+  if(v === PASS_WORD){ unlockGame(); return; }
+  document.getElementById('pass-msg').textContent = 'Oops — try again!';
+  input.value='';
+  input.classList.remove('bad'); void input.offsetWidth; input.classList.add('bad');
+  try{ input.focus(); }catch(e){}
+}
+function initPasswordGate(){
+  let unlocked=false;
+  try{ unlocked = localStorage.getItem(PASS_KEY)==='1'; }catch(e){}
+  if(unlocked){ document.documentElement.classList.add('bub-unlocked'); show('screen-pass', false); return; }
+  show('screen-pass', true);
+  document.getElementById('pass-go').addEventListener('click', tryPassword);
+  const input = document.getElementById('pass-input');
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); tryPassword(); } });
+  setTimeout(()=>{ try{ input.focus(); }catch(e){} }, 60);
+}
+
 // ---------- wire buttons ----------
 document.getElementById('btn-play').addEventListener('click', startGame);
 document.getElementById('btn-save').addEventListener('click', submitInitials);
@@ -1403,6 +1461,7 @@ document.querySelectorAll('#math-choices .math-choice').forEach(btn=>{
 });
 
 // ---------- boot ----------
+initPasswordGate();          // gate entry behind the secret word
 resize();
 loadInitials();
 refreshStartScreen();
