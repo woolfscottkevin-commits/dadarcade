@@ -1336,9 +1336,9 @@ function submitInitials(){
   lsSet('bub_initials', initials);
   initialsSubmitting=true;
   const btn=document.getElementById('btn-save'); btn.disabled=true; btn.textContent='Saving…';
-  doSubmit(initials, pendingScore, (ok,data)=>{
+  doSubmit(initials, pendingScore, (status,data)=>{
     initialsSubmitting=false;
-    if(ok){
+    if(status==='ok'){
       submittedThisRun=true;
       try{ localStorage.removeItem('bub_pending'); }catch(e){}
       const rank=data && data.alltimeRank;
@@ -1349,19 +1349,38 @@ function submitInitials(){
       document.getElementById('initials-row').style.display='none';
       btn.style.display='none';
       if(typeof gtag==='function') gtag('event','bub_score_submitted',{score:pendingScore});
-    } else {
+    } else if(status==='rejected'){
+      // Server refused the save (or it never reached the server) — it was NOT
+      // recorded, so queuing an auto-retry for the next visit is safe.
       try{ localStorage.setItem('bub_pending', JSON.stringify({initials:initials,score:pendingScore})); }catch(e){}
       btn.disabled=false; btn.textContent='Try Save Again';
       document.getElementById('rank-line').textContent='Couldn’t save — we’ll try again later.';
+    } else {
+      // Ambiguous: slow connection, we stopped waiting but the save may have
+      // landed. Do NOT queue an auto-retry — that's what produced duplicate
+      // leaderboard entries. Leave a manual retry available instead.
+      btn.disabled=false; btn.textContent='Try Save Again';
+      document.getElementById('rank-line').textContent='Slow connection — your score may already be saved. Check the board, or try again.';
     }
   });
 }
+// Reports the outcome as one of three statuses, because "did the server record
+// this?" matters for whether a retry is safe:
+//   'ok'        — HTTP 200, confirmed saved.
+//   'rejected'  — HTTP 4xx/5xx, or a network error before the request landed.
+//                 The score was NOT recorded, so an auto-retry is safe.
+//   'ambiguous' — our 6s safety net fired and we aborted the in-flight request.
+//                 The POST may or may not have reached the server, so callers
+//                 must NOT auto-retry it (that double-counted slow saves).
 function doSubmit(initials, scoreVal, cb){
-  let done=false; const finish=(ok,data)=>{ if(done)return; done=true; cb(ok,data); };
-  setTimeout(()=>finish(false,null), 6000);     // network safety net
-  fetch(API_URL,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initials:initials,score:scoreVal}) })
-    .then(r=> r.ok ? r.json().then(d=>finish(true,d)) : r.json().then(d=>finish(false,d)).catch(()=>finish(false,null)) )
-    .catch(()=>finish(false,null));
+  let done=false;
+  const finish=(status,data)=>{ if(done)return; done=true; clearTimeout(timer); cb(status,data); };
+  const controller = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  const timer = setTimeout(()=>{ if(controller){ try{ controller.abort(); }catch(e){} } finish('ambiguous',null); }, 6000); // network safety net
+  fetch(API_URL,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({initials:initials,score:scoreVal}), signal: controller?controller.signal:undefined })
+    .then(r=> r.ok ? r.json().then(d=>finish('ok',d)).catch(()=>finish('ok',null))
+                   : r.json().then(d=>finish('rejected',d)).catch(()=>finish('rejected',null)) )
+    .catch(err=> finish((err && err.name==='AbortError') ? 'ambiguous' : 'rejected', null));
 }
 function fetchLeaderboard(cb){
   let done=false; const finish=(data)=>{ if(done)return; done=true; if(cb)cb(data); };
@@ -1388,7 +1407,15 @@ function renderBoard(listEl, list, mine){
 function checkPendingSubmission(){
   let p; try{ p=JSON.parse(localStorage.getItem('bub_pending')||'null'); }catch(e){ p=null; }
   if(p && /^[A-Z]{3}$/.test(p.initials) && p.score>0){
-    doSubmit(p.initials, p.score, (ok)=>{ if(ok){ try{ localStorage.removeItem('bub_pending'); }catch(e){} } });
+    // Clear first. If this retry comes back 'ambiguous' (timed out — may have
+    // landed), leaving it queued would let a future retry double-submit a score
+    // that actually saved. Only a confirmed 'rejected' re-queues it.
+    try{ localStorage.removeItem('bub_pending'); }catch(e){}
+    doSubmit(p.initials, p.score, (status)=>{
+      if(status==='rejected'){
+        try{ localStorage.setItem('bub_pending', JSON.stringify({initials:p.initials,score:p.score})); }catch(e){}
+      }
+    });
   }
 }
 function showBoard(){
