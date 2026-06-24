@@ -151,7 +151,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section" id="new-this-week-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
-    <a href="/balloon-uncle-bop" class="card card-bub" data-added="2026-06-09" data-updated="2026-06-16">
+    <a href="/balloon-uncle-bop" class="card card-bub" data-added="2026-06-09" data-updated="2026-06-23" data-new-until="2026-07-21">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="40" cy="34" rx="26" ry="29" fill="#ff5d8f"/>
         <ellipse cx="31" cy="25" rx="7" ry="9" fill="#ff8fb6" opacity="0.7"/>
@@ -454,7 +454,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section all-games">
   <h2 class="section-title">All Games</h2>
   <div class="grid">
-    <a href="/balloon-uncle-bop" class="card card-bub" data-added="2026-06-09" data-updated="2026-06-16">
+    <a href="/balloon-uncle-bop" class="card card-bub" data-added="2026-06-09" data-updated="2026-06-23" data-new-until="2026-07-21">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <ellipse cx="40" cy="34" rx="26" ry="29" fill="#ff5d8f"/>
         <ellipse cx="31" cy="25" rx="7" ry="9" fill="#ff8fb6" opacity="0.7"/>
@@ -856,19 +856,29 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
   const NEW_WINDOW_DAYS = 7;
   const cutoff = Date.now() - NEW_WINDOW_DAYS * 24 * 60 * 60 * 1000;
   const freshness = card => {
-    const added = new Date(card.dataset.added).getTime();
-    const updated = card.dataset.updated ? new Date(card.dataset.updated).getTime() : NaN;
+    // parse date-only strings as LOCAL midnight (not UTC) so badge boundaries land
+    // at local midnight, consistent with the data-new-until pin below
+    const added = new Date(card.dataset.added + 'T00:00:00').getTime();
+    const updated = card.dataset.updated ? new Date(card.dataset.updated + 'T00:00:00').getTime() : NaN;
     return Math.max(isNaN(added) ? -Infinity : added, isNaN(updated) ? -Infinity : updated);
   };
+  // A card is "new" if it's within the rolling window OR explicitly pinned via
+  // data-new-until="YYYY-MM-DD" (stays new through the end of that day). The pin
+  // lets us keep a freshly-updated game featured for longer than the default week.
+  const isNew = card => {
+    const until = card.dataset.newUntil ? new Date(card.dataset.newUntil + 'T23:59:59').getTime() : NaN;
+    if (!isNaN(until) && Date.now() <= until) return true;
+    return freshness(card) >= cutoff;
+  };
   document.querySelectorAll('.card[data-added]').forEach(card => {
-    if (freshness(card) >= cutoff) card.setAttribute('data-new', '');
+    if (isNew(card)) card.setAttribute('data-new', '');
     else card.removeAttribute('data-new');
   });
   const section = document.getElementById('new-this-week-section');
   if (section) {
     let visible = 0;
     section.querySelectorAll('.card[data-added]').forEach(card => {
-      if (freshness(card) >= cutoff) visible++;
+      if (isNew(card)) visible++;
       else card.style.display = 'none';
     });
     if (visible === 0) section.style.display = 'none';
