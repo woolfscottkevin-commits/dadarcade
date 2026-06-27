@@ -64,6 +64,8 @@ html,body{height:100%;width:100%;overflow:hidden;
   display:flex;flex-direction:column;gap:8px;touch-action:none}
 #hint{text-align:center;font-size:clamp(.78rem,3vw,1rem);font-weight:700;color:#bdb6e8;min-height:1.1em;
   text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.peg-dot{display:inline-block;width:13px;height:13px;border-radius:50%;background:#6b5fa8;
+  border:2px solid rgba(255,255,255,.45);vertical-align:-2px;margin-right:2px}
 #tray{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .chip{pointer-events:auto;cursor:grab;touch-action:none;
   background:rgba(40,36,72,0.92);border:2.5px solid rgba(255,255,255,0.16);border-radius:16px;
@@ -225,6 +227,8 @@ const TUNE = {
   MOVE_WAKE_SPEED: 2.0,    // must exceed once before "stuck" can be judged
   MAX_ATTEMPT_MS: 14000,
   OUT_MARGIN: 90,
+  BOUNCE_KICK: 7,          // active bumper impulse (px/step) — Matter restitution alone is too weak to read
+  BOUNCE_MAX_SPEED: 15,    // cap outgoing bounce speed so the marble can't tunnel thin walls
 };
 
 // ============================================================ PIECE TYPES
@@ -630,9 +634,15 @@ function loadLevel(lv) {
   buildTray();
   setPhase(S.EDITING);
   refreshUI();
-  document.getElementById('hint').textContent =
-    lv <= 1 ? 'Drag a piece onto the board, then press DROP!'
-            : 'Build a path to the cup, then DROP the marble!';
+  const hintEl = document.getElementById('hint');
+  if (obstacles.length) {
+    // explain the grey pegs/bars on the board, colour-matched to how they're drawn
+    hintEl.innerHTML = '<span class="peg-dot"></span> Grey pegs block the marble &mdash; build a path <b>around</b> them, then DROP!';
+  } else if (lv <= 1) {
+    hintEl.textContent = 'Drag a piece onto the board, then press DROP!';
+  } else {
+    hintEl.textContent = 'Build a path to the cup, then DROP the marble!';
+  }
 }
 
 function pressDrop() {
@@ -730,16 +740,23 @@ function render() {
   ctx.strokeStyle = 'rgba(120,110,200,0.5)'; ctx.lineWidth = 4;
   roundRectPath(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, 14); ctx.stroke();
 
-  // obstacles
+  // obstacles — drawn as solid grey "blockers" with a hazard ring so they clearly
+  // read as walls to route around (not targets/bumpers)
   for (const o of obstacles) {
     if (o.type === 'peg') {
       ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
       ctx.fillStyle = '#6b5fa8'; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+      // hazard ring + center dot = "blocker, steer around"
+      ctx.strokeStyle = 'rgba(255,120,140,0.85)'; ctx.lineWidth = 2.5; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.r * 0.55, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
     } else {
       ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.angle);
       ctx.fillStyle = '#6b5fa8'; roundRectPath(ctx, -o.w / 2, -o.h / 2, o.w, o.h, o.h / 2); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,120,140,0.7)'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]);
+      roundRectPath(ctx, -o.w / 2 + 3, -o.h / 2 + 3, o.w - 6, o.h - 6, Math.max(2, (o.h - 6) / 2)); ctx.stroke();
+      ctx.setLineDash([]);
       ctx.restore();
     }
   }
@@ -1046,11 +1063,30 @@ function sfx(kind) {
 }
 function updateMuteBtn() { document.getElementById('mute').textContent = muted ? '🔇' : '🔊'; }
 
-// bounce sound on bouncer hit
+// Active bumper: on a bouncer hit, reflect the marble about the pad's face and add an
+// outward kick. (A static body's restitution in Matter is too weak to give a satisfying
+// bounce, so we drive the bounce ourselves — like a pinball bumper.)
 Events.on(engine, 'collisionStart', (ev) => {
-  if (phase !== S.MOVING) return;
+  if (phase !== S.MOVING || !marble) return;
   for (const pair of ev.pairs) {
-    if (pair.bodyA.label === 'piece:bouncer' || pair.bodyB.label === 'piece:bouncer') { sfx('bounce'); break; }
+    const a = pair.bodyA, b = pair.bodyB;
+    const bouncer = a.label === 'piece:bouncer' ? a : (b.label === 'piece:bouncer' ? b : null);
+    const hitMarble = a.label === 'marble' || b.label === 'marble';
+    if (!bouncer || !hitMarble) continue;
+
+    const mp = marble.body.position, bp = bouncer.position, v = marble.body.velocity;
+    // face normal = perpendicular to the pad's long axis, flipped to point toward the marble
+    let nx = Math.cos(bouncer.angle + Math.PI / 2), ny = Math.sin(bouncer.angle + Math.PI / 2);
+    if ((mp.x - bp.x) * nx + (mp.y - bp.y) * ny < 0) { nx = -nx; ny = -ny; }
+    // reflect incoming velocity about the normal, then add a fixed outward kick
+    const dot = v.x * nx + v.y * ny;
+    let ox = v.x - 2 * dot * nx + nx * TUNE.BOUNCE_KICK;
+    let oy = v.y - 2 * dot * ny + ny * TUNE.BOUNCE_KICK;
+    const sp = Math.hypot(ox, oy);
+    if (sp > TUNE.BOUNCE_MAX_SPEED) { const k = TUNE.BOUNCE_MAX_SPEED / sp; ox *= k; oy *= k; }
+    Body.setVelocity(marble.body, { x: ox, y: oy });
+    sfx('bounce');
+    break; // one bumper kick per frame
   }
 });
 
