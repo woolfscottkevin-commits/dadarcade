@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Marble Maze — Dad Arcade</title>
+<meta name="description" content="Build-your-own marble drop puzzle for kids. Drag ramps, chutes, funnels and bouncers onto the board, rotate them to build a path, then pull the lever to drop the marble into the goal. Endless levels that add one more piece each time. Touch and mouse friendly.">
+<meta name="theme-color" content="#14132b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2314132b'/><rect x='20' y='30' width='40' height='9' rx='4' fill='%235ad1ff' transform='rotate(20 40 34)'/><rect x='44' y='58' width='40' height='9' rx='4' fill='%239b7bff' transform='rotate(-18 64 62)'/><circle cx='34' cy='22' r='9' fill='%23ff9d3c'/><circle cx='31' cy='19' r='3' fill='%23ffe1b8'/></svg>">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Marble Maze — Dad Arcade">
+<meta property="og:description" content="Build a path with ramps, chutes, funnels and bouncers, then pull the lever and drop the marble into the goal. Endless levels, one more piece each time. Made for kids on tablets and phones.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://dadarcade.com/marble-maze">
+
+<!-- GA4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-90KFJNYR94"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-90KFJNYR94');
+</script>
+
+<!-- Rounded kid-friendly font, matches other Dad Arcade kid games -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+
+<!-- Matter.js physics (compound bodies used for concave pieces — poly-decomp not required) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;width:100%;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 0%, #221d44 0%, #14132b 60%, #0e0c1f 100%);
+  color:#fff;font-family:'Baloo 2','Comic Sans MS',ui-rounded,system-ui,sans-serif;
+  touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+
+#game{display:block;position:fixed;inset:0;touch-action:none;z-index:1}
+
+/* ---------- Top HUD ---------- */
+#topbar{position:fixed;top:0;left:0;right:0;z-index:3;pointer-events:none;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+  padding:max(8px,env(safe-area-inset-top)) 12px 0}
+.pill{background:rgba(16,14,34,0.72);border:2px solid rgba(255,255,255,0.18);border-radius:999px;
+  padding:7px 15px;font-size:clamp(.95rem,3.4vw,1.3rem);font-weight:800;line-height:1;
+  display:flex;align-items:center;gap:7px;backdrop-filter:blur(5px);white-space:nowrap}
+.pill.lvl{border-color:#8b7bff}
+.pill.bud{border-color:#5fe1ff}
+.pill .num{color:#ffe24a}
+#best{font-size:clamp(.7rem,2.6vw,.95rem);font-weight:700;color:rgba(220,225,255,.55);
+  margin-top:4px;text-align:center;width:100%}
+#bestwrap{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  z-index:3;pointer-events:none;text-align:center}
+#mute{pointer-events:auto;cursor:pointer;background:rgba(16,14,34,0.72);border:2px solid rgba(255,255,255,0.18);
+  border-radius:999px;width:40px;height:40px;font-size:1.2rem;color:#fff;display:flex;align-items:center;justify-content:center}
+
+/* ---------- Bottom panel: tray + controls ---------- */
+#panel{position:fixed;left:0;right:0;bottom:0;z-index:3;
+  padding:8px 10px max(8px,env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, rgba(14,12,31,0) 0%, rgba(14,12,31,0.9) 22%, #0e0c1f 100%);
+  display:flex;flex-direction:column;gap:8px;touch-action:none}
+#hint{text-align:center;font-size:clamp(.78rem,3vw,1rem);font-weight:700;color:#bdb6e8;min-height:1.1em;
+  text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#tray{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.chip{pointer-events:auto;cursor:grab;touch-action:none;
+  background:rgba(40,36,72,0.92);border:2.5px solid rgba(255,255,255,0.16);border-radius:16px;
+  padding:8px 6px 6px;width:clamp(62px,18vw,84px);display:flex;flex-direction:column;align-items:center;gap:2px;
+  transition:transform .08s ease,border-color .12s ease,opacity .15s ease}
+.chip:active{transform:scale(.94)}
+.chip .emo{font-size:clamp(1.5rem,6vw,2rem);line-height:1}
+.chip .lab{font-size:clamp(.62rem,2.4vw,.8rem);font-weight:800;letter-spacing:.01em}
+.chip.disabled{opacity:.35;pointer-events:none;cursor:default}
+.chip[data-k="ramp"]{border-color:#5ad1ff}.chip[data-k="ramp"] .lab{color:#5ad1ff}
+.chip[data-k="chute"]{border-color:#9b7bff}.chip[data-k="chute"] .lab{color:#9b7bff}
+.chip[data-k="bouncer"]{border-color:#3ddc97}.chip[data-k="bouncer"] .lab{color:#3ddc97}
+.chip[data-k="funnel"]{border-color:#ffb347}.chip[data-k="funnel"] .lab{color:#ffb347}
+
+#controls{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap}
+.btn{pointer-events:auto;cursor:pointer;border:none;border-radius:18px;font-family:inherit;font-weight:800;
+  color:#fff;display:flex;align-items:center;gap:8px;transition:transform .07s ease,box-shadow .07s ease,opacity .15s ease}
+.btn:active{transform:translateY(4px)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.btn.small{font-size:clamp(1rem,4vw,1.3rem);padding:10px 16px;background:rgba(56,50,96,0.95);
+  box-shadow:0 5px 0 rgba(0,0,0,.45)}
+.btn.small:active{box-shadow:0 1px 0 rgba(0,0,0,.45)}
+.btn.drop{font-size:clamp(1.3rem,5.5vw,1.9rem);text-transform:uppercase;letter-spacing:.02em;color:#2a1a00;
+  padding:14px clamp(26px,7vw,46px);background:linear-gradient(180deg,#ffe24a,#ffb33e);
+  box-shadow:0 7px 0 #c97d1e,0 12px 22px rgba(0,0,0,.4)}
+.btn.drop:active{box-shadow:0 2px 0 #c97d1e,0 6px 12px rgba(0,0,0,.4)}
+.btn.drop.pulling{transform:translateY(4px);box-shadow:0 2px 0 #c97d1e}
+.btn.del{background:linear-gradient(180deg,#ff7d9c,#ff4f6f);box-shadow:0 5px 0 #b32f4d}
+.btn.del:active{box-shadow:0 1px 0 #b32f4d}
+#selctrls{display:flex;gap:10px;align-items:center}
+#selctrls.hidden{display:none}
+
+/* ---------- Win overlay ---------- */
+#win{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:18px;padding:24px;background:rgba(8,7,20,0.6);backdrop-filter:blur(3px)}
+#win.show{display:flex;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.win-emoji{font-size:clamp(3rem,16vw,6rem);line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-12px) rotate(4deg)}}
+.win-title{font-size:clamp(2rem,9vw,3.4rem);font-weight:800;line-height:1;
+  background:linear-gradient(90deg,#6dffb0,#5fe1ff,#ffe24a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.win-sub{font-size:clamp(1rem,4vw,1.4rem);font-weight:700;color:#cfeede}
+
+/* ---------- Miss toast ---------- */
+#miss{position:fixed;left:50%;top:38%;transform:translateX(-50%);z-index:4;pointer-events:none;
+  display:none;font-size:clamp(1.4rem,6vw,2.4rem);font-weight:800;color:#fff;
+  background:rgba(30,28,60,0.92);border:2.5px solid #ffd45f;border-radius:18px;padding:12px 28px;
+  box-shadow:0 8px 22px rgba(0,0,0,.45)}
+#miss.show{display:block;animation:toast 1.2s ease forwards}
+@keyframes toast{0%{opacity:0;transform:translateX(-50%) translateY(12px) scale(.8)}
+  15%{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+  80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-6px)}}
+
+/* ---------- Home link ---------- */
+.home-link{position:fixed;left:10px;bottom:max(8px,env(safe-area-inset-bottom));z-index:6;pointer-events:auto;
+  color:rgba(255,255,255,.5);font-size:.85rem;font-weight:700;text-decoration:none;background:rgba(0,0,0,.3);
+  padding:5px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.16)}
+.home-link:active{color:#fff}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="topbar">
+  <div class="pill lvl">Level <span class="num" id="lvlnum">1</span></div>
+  <div id="mute" title="Sound on/off">🔊</div>
+  <div class="pill bud">🧱 <span class="num" id="budnum">1</span></div>
+</div>
+<div id="bestwrap"><div id="best">Best: Level 1</div></div>
+
+<div id="panel">
+  <div id="hint">Drag a piece onto the board, then press DROP!</div>
+  <div id="tray"></div>
+  <div id="controls">
+    <button class="btn small" id="newmaze">🔄 New Maze</button>
+    <div id="selctrls" class="hidden">
+      <button class="btn small" id="rotL">⟲</button>
+      <button class="btn small" id="rotR">⟳</button>
+      <button class="btn small del" id="del">🗑️</button>
+    </div>
+    <button class="btn drop" id="drop">⟱ Drop</button>
+  </div>
+</div>
+
+<div id="miss">Try again! 🙂</div>
+
+<div id="win">
+  <div class="win-emoji">🎉</div>
+  <div class="win-title">Level Complete!</div>
+  <div class="win-sub" id="winsub">On to the next maze…</div>
+  <button class="btn drop" id="continue">Continue →</button>
+</div>
+
+<a class="home-link" href="/">← Dad Arcade</a>
+
+<script>
+"use strict";
+(function () {
+const { Engine, Composite, Bodies, Body, Events } = Matter;
+
+// ============================================================ CANVAS / DPR
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let CW = 0, CH = 0, DPR = 1;
+let board = { x: 0, y: 0, w: 0, h: 0 };   // play-area rect in CSS px
+let U = 32;                                // base unit; piece sizes scale off this
+let marbleR = 12;
+
+function measure() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  CW = window.innerWidth; CH = window.innerHeight;
+  canvas.width = Math.round(CW * DPR);
+  canvas.height = Math.round(CH * DPR);
+  canvas.style.width = CW + 'px';
+  canvas.style.height = CH + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  const topH = 58;
+  const panelH = (document.getElementById('panel').getBoundingClientRect().height) || 160;
+  const availH = CH - topH - panelH - 12;
+  const availW = CW - 20;
+  // portrait-friendly board (taller than wide)
+  let bw = Math.min(availW, availH * 0.66, 560);
+  let bh = Math.min(availH, bw * 1.5);
+  bw = Math.min(bw, bh * 0.66);
+  board = { x: (CW - bw) / 2, y: topH, w: bw, h: bh };
+  U = bw * 0.085;
+  marbleR = bw * 0.033;
+}
+
+// ============================================================ PHYSICS WORLD
+const engine = Engine.create();
+engine.gravity.y = 1.0;
+const world = engine.world;
+let wallBodies = [], levelBodies = [], marble = null;
+
+function clearComposite(arr) { arr.forEach(b => Composite.remove(world, b)); arr.length = 0; }
+
+function buildWalls() {
+  clearComposite(wallBodies);
+  const t = 60, opt = { isStatic: true, restitution: 0.1, friction: 0.4, label: 'wall' };
+  const b = board;
+  wallBodies.push(
+    Bodies.rectangle(b.x - t / 2, b.y + b.h / 2, t, b.h + t * 2, opt),          // left
+    Bodies.rectangle(b.x + b.w + t / 2, b.y + b.h / 2, t, b.h + t * 2, opt),    // right
+    Bodies.rectangle(b.x + b.w / 2, b.y + b.h + t / 2, b.w + t * 2, t, opt)     // floor
+  );
+  Composite.add(world, wallBodies);
+}
+
+// ============================================================ TUNING
+const TUNE = {
+  LEVER_MS: 360,
+  WIN_DWELL_MS: 500,
+  WIN_REST_SPEED: 1.0,     // marble this slow inside the goal counts as caught
+  MISS_STILL_SPEED: 0.7,
+  MISS_STILL_MS: 950,
+  MOVE_WAKE_SPEED: 2.0,    // must exceed once before "stuck" can be judged
+  MAX_ATTEMPT_MS: 14000,
+  OUT_MARGIN: 90,
+};
+
+// ============================================================ PIECE TYPES
+// Compound bodies for concave shapes (chute, funnel) so Matter collides correctly.
+function plankBetween(p, ax, ay, bx, by, t, extra) {
+  const cx = p.x + (ax + bx) / 2, cy = p.y + (ay + by) / 2;
+  const len = Math.hypot(bx - ax, by - ay);
+  const ang = Math.atan2(by - ay, bx - ax);
+  return Bodies.rectangle(cx, cy, len, t, Object.assign({ isStatic: true, angle: ang }, extra));
+}
+
+const PIECE_TYPES = {
+  ramp: {
+    key: 'ramp', label: 'Ramp', emoji: '📐', accent: '#5ad1ff',
+    fp: () => ({ hw: U * 1.0, hh: U * 0.16 }),
+    build(p, angle) {
+      return Bodies.rectangle(p.x, p.y, U * 2.0, U * 0.26, {
+        isStatic: true, angle, friction: 0.02, frictionStatic: 0.05, restitution: 0.1, label: 'piece:ramp'
+      });
+    },
+    draw(c, inst, sel) { drawAt(c, inst, () => drawPlank(c, U * 2.0, U * 0.26, '#5ad1ff', sel)); }
+  },
+  chute: {
+    key: 'chute', label: 'Chute', emoji: '🛝', accent: '#9b7bff',
+    fp: () => ({ hw: U * 1.5, hh: U * 1.5 }),
+    build(p, angle) {
+      const R = U * 1.5, t = U * 0.28, N = 7, a0 = Math.PI, a1 = Math.PI * 1.5;
+      const da = (a1 - a0) / N, parts = [];
+      for (let i = 0; i < N; i++) {
+        const th = a0 + (i + 0.5) * da;
+        parts.push(Bodies.rectangle(
+          p.x + R * Math.cos(th), p.y + R * Math.sin(th),
+          R * da * 1.2, t,
+          { isStatic: true, angle: th + Math.PI / 2, friction: 0.02, restitution: 0.12 }
+        ));
+      }
+      const body = Body.create({ parts, isStatic: true, friction: 0.02, restitution: 0.12, label: 'piece:chute' });
+      Body.rotate(body, angle, p);
+      return body;
+    },
+    draw(c, inst, sel) {
+      const R = U * 1.5, t = U * 0.28;
+      drawAt(c, inst, () => {
+        c.lineCap = 'round';
+        if (sel) { c.shadowColor = '#9b7bff'; c.shadowBlur = 18; }
+        c.strokeStyle = hexA('#9b7bff', 0.9); c.lineWidth = t;
+        c.beginPath(); c.arc(0, 0, R, Math.PI, Math.PI * 1.5); c.stroke();
+        c.shadowBlur = 0;
+        c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = t * 0.22;
+        c.beginPath(); c.arc(0, 0, R + t * 0.32, Math.PI, Math.PI * 1.5); c.stroke();
+      });
+    }
+  },
+  bouncer: {
+    key: 'bouncer', label: 'Bouncer', emoji: '🟢', accent: '#3ddc97',
+    fp: () => ({ hw: U * 0.6, hh: U * 0.24 }),
+    build(p, angle) {
+      return Bodies.rectangle(p.x, p.y, U * 1.2, U * 0.4, {
+        isStatic: true, angle, friction: 0.1, restitution: 0.92, label: 'piece:bouncer'
+      });
+    },
+    draw(c, inst, sel) {
+      drawAt(c, inst, () => {
+        c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 2;
+        for (let sx = -1; sx <= 1; sx++) {
+          const x = sx * U * 0.34;
+          c.beginPath();
+          c.moveTo(x, U * 0.06); c.lineTo(x - U * 0.1, U * 0.2);
+          c.lineTo(x + U * 0.1, U * 0.32); c.lineTo(x, U * 0.46);
+          c.stroke();
+        }
+        drawPlank(c, U * 1.2, U * 0.4, '#3ddc97', sel);
+      });
+    }
+  },
+  funnel: {
+    key: 'funnel', label: 'Funnel', emoji: '🔻', accent: '#ffb347',
+    fp: () => ({ hw: U * 1.32, hh: U * 0.92 }),
+    build(p, angle) {
+      const topY = -U * 0.75, botY = U * 0.62, gap = U * 0.5, outX = U * 1.25, t = U * 0.24;
+      const parts = [
+        plankBetween(p, -outX, topY, -gap, botY, t, { friction: 0.03, restitution: 0.12 }),
+        plankBetween(p, outX, topY, gap, botY, t, { friction: 0.03, restitution: 0.12 }),
+      ];
+      const body = Body.create({ parts, isStatic: true, friction: 0.03, restitution: 0.12, label: 'piece:funnel' });
+      Body.rotate(body, angle, p);
+      return body;
+    },
+    draw(c, inst, sel) {
+      const topY = -U * 0.75, botY = U * 0.62, gap = U * 0.5, outX = U * 1.25, t = U * 0.24;
+      drawAt(c, inst, () => {
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        if (sel) { c.shadowColor = '#ffb347'; c.shadowBlur = 18; }
+        c.strokeStyle = hexA('#ffb347', 0.92); c.lineWidth = t;
+        c.beginPath(); c.moveTo(-outX, topY); c.lineTo(-gap, botY); c.stroke();
+        c.beginPath(); c.moveTo(outX, topY); c.lineTo(gap, botY); c.stroke();
+        c.shadowBlur = 0;
+        c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = t * 0.22;
+        c.beginPath(); c.moveTo(-outX, topY); c.lineTo(-gap, botY); c.stroke();
+        c.beginPath(); c.moveTo(outX, topY); c.lineTo(gap, botY); c.stroke();
+      });
+    }
+  },
+};
+// NOTE: spinner intentionally excluded from v1 — a static/kinematic paddle in Matter
+// 0.19 does not transfer angular momentum reliably (it blocks rather than flings),
+// so it would be an inert tray item. Documented in the build summary.
+
+function drawAt(c, inst, fn) {
+  c.save();
+  c.translate(inst.x, inst.y); c.rotate(inst.angle);
+  fn();
+  c.restore();
+}
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function drawPlank(c, w, h, accent, sel) {
+  const r = h / 2;
+  if (sel) { c.shadowColor = accent; c.shadowBlur = 18; }
+  else { c.shadowColor = 'rgba(0,0,0,0.45)'; c.shadowBlur = 7; c.shadowOffsetY = 3; }
+  const g = c.createLinearGradient(0, -h / 2, 0, h / 2);
+  g.addColorStop(0, hexA(accent, 0.96)); g.addColorStop(1, hexA(accent, 0.55));
+  c.fillStyle = g;
+  roundRectPath(c, -w / 2, -h / 2, w, h, r); c.fill();
+  c.shadowBlur = 0; c.shadowOffsetY = 0;
+  c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = Math.max(1, h * 0.12);
+  c.beginPath(); c.moveTo(-w / 2 + r, -h / 2 + c.lineWidth); c.lineTo(w / 2 - r, -h / 2 + c.lineWidth); c.stroke();
+  if (sel) { c.strokeStyle = '#fff'; c.lineWidth = 2; roundRectPath(c, -w / 2, -h / 2, w, h, r); c.stroke(); }
+}
+function roundRectPath(c, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+// ============================================================ LEVEL GEN
+let level = 1, drop = { x: 0, y: 0 }, goal = { x: 0, y: 0, w: 0, h: 0 }, obstacles = [];
+let availableTypes = ['ramp', 'funnel'], budget = 1;
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function typesForLevel(lv) {
+  // L1-2 are pure horizontal-carry pieces so any pick the kid makes can solve it.
+  const t = ['ramp', 'funnel'];
+  if (lv >= 2) t.push('chute');
+  if (lv >= 4) t.push('bouncer');
+  return t;
+}
+
+// distance from point to segment (for keeping a clear drop->goal corridor)
+function distToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1;
+  let t = ((px - ax) * dx + (py - ay) * dy) / l2; t = clamp(t, 0, 1);
+  const cx = ax + t * dx, cy = ay + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function generateLevel(lv) {
+  level = lv;
+  budget = lv;
+  availableTypes = typesForLevel(lv);
+  const b = board;
+
+  drop = { x: b.x + rand(0.22, 0.78) * b.w, y: b.y + marbleR * 2.4 };
+
+  // Cup must catch the marble: inner channel (goalW - 2*wallThickness) needs to
+  // comfortably exceed the marble DIAMETER or the marble jams on the rim and the
+  // level becomes unwinnable. With wt=max(4,marbleR*0.35) below, inner gap ≈ 3.5R.
+  const goalW = marbleR * 4.2, goalH = marbleR * 2.8;
+  let maxOff, gyFrac;
+  if (lv <= 2) { maxOff = b.w * 0.12; gyFrac = 0.60; }
+  else if (lv <= 5) { maxOff = b.w * 0.30; gyFrac = 0.70; }
+  else { maxOff = b.w * 0.44; gyFrac = 0.78; }
+
+  const gx = clamp(drop.x + rand(-1, 1) * maxOff, b.x + goalW * 0.7, b.x + b.w - goalW * 0.7);
+  const gy = b.y + b.h * gyFrac;
+  goal = { x: gx - goalW / 2, y: gy, w: goalW, h: goalH };
+
+  // obstacles — kept OUT of the drop->goal corridor so a path always exists
+  obstacles = [];
+  const goalCx = goal.x + goal.w / 2, goalCy = goal.y;
+  const nOb = lv <= 2 ? 0 : (lv <= 5 ? lv - 2 : Math.min(6, lv - 2));
+  const corridor = marbleR * 4.5;
+  let attempts = 0;
+  while (obstacles.length < nOb && attempts < 200) {
+    attempts++;
+    const isWall = lv >= 6 && Math.random() < 0.35;
+    const ox = b.x + rand(0.12, 0.88) * b.w;
+    const oy = b.y + rand(0.22, 0.86) * b.h;
+    const ob = isWall
+      ? { type: 'wall', x: ox, y: oy, w: rand(U * 1.4, U * 2.2), h: U * 0.4, angle: rand(-0.5, 0.5), r: 0 }
+      : { type: 'peg', x: ox, y: oy, r: rand(U * 0.34, U * 0.5) };
+    const reach = ob.type === 'wall' ? ob.w / 2 : ob.r;
+    if (distToSeg(ox, oy, drop.x, drop.y, goalCx, goalCy) < corridor + reach) continue;
+    if (Math.hypot(ox - drop.x, oy - drop.y) < U * 2 + reach) continue;
+    if (ox > goal.x - U && ox < goal.x + goal.w + U && oy > goal.y - U && oy < goal.y + goal.h + U) continue;
+    let clash = false;
+    for (const o2 of obstacles) {
+      const r2 = o2.type === 'wall' ? o2.w / 2 : o2.r;
+      if (Math.hypot(ox - o2.x, oy - o2.y) < reach + r2 + U * 0.6) { clash = true; break; }
+    }
+    if (clash) continue;
+    obstacles.push(ob);
+  }
+}
+
+function buildLevel() {
+  clearComposite(levelBodies);
+  // goal catch-cup: two inner side walls + bottom, low restitution so catches stick
+  const g = goal, wt = Math.max(4, marbleR * 0.35);
+  const gopt = { isStatic: true, friction: 0.2, restitution: 0.05, label: 'goal-wall' };
+  levelBodies.push(
+    Bodies.rectangle(g.x + wt / 2, g.y + g.h / 2, wt, g.h, gopt),
+    Bodies.rectangle(g.x + g.w - wt / 2, g.y + g.h / 2, wt, g.h, gopt),
+    Bodies.rectangle(g.x + g.w / 2, g.y + g.h - wt / 2, g.w, wt, gopt)
+  );
+  // obstacles
+  for (const o of obstacles) {
+    if (o.type === 'peg') {
+      levelBodies.push(Bodies.circle(o.x, o.y, o.r, { isStatic: true, friction: 0.2, restitution: 0.4, label: 'obstacle' }));
+    } else {
+      levelBodies.push(Bodies.rectangle(o.x, o.y, o.w, o.h, { isStatic: true, angle: o.angle, friction: 0.3, restitution: 0.2, label: 'obstacle' }));
+    }
+  }
+  Composite.add(world, levelBodies);
+}
+
+// drop spout keep-out box (validation only, no body)
+function spoutBox() { return { x: drop.x, y: drop.y, hw: marbleR * 1.4, hh: marbleR * 1.3, angle: 0 }; }
+
+// ============================================================ MARBLE
+function spawnMarble() {
+  if (marble) { Composite.remove(world, marble.body); marble = null; }
+  const body = Bodies.circle(drop.x, drop.y, marbleR, {
+    isStatic: true, restitution: 0.35, friction: 0.02, frictionAir: 0.006, density: 0.004, label: 'marble'
+  });
+  Composite.add(world, body);
+  marble = { body, radius: marbleR };
+}
+function releaseMarble() {
+  if (!marble) return;
+  Body.setStatic(marble.body, false);
+  Body.setVelocity(marble.body, { x: 0, y: 0 });
+  Body.setAngularVelocity(marble.body, 0);
+}
+function parkMarble() {
+  if (!marble) { spawnMarble(); return; }
+  Body.setStatic(marble.body, true);
+  Body.setVelocity(marble.body, { x: 0, y: 0 });
+  Body.setAngularVelocity(marble.body, 0);
+  Body.setPosition(marble.body, { x: drop.x, y: drop.y });
+  Body.setAngle(marble.body, 0);
+}
+function marbleSpeed() { const v = marble.body.velocity; return Math.hypot(v.x, v.y); }
+function marbleInGoal() {
+  const p = marble.body.position;
+  return p.x >= goal.x && p.x <= goal.x + goal.w && p.y >= goal.y && p.y <= goal.y + goal.h;
+}
+function marbleOutOfPlay() {
+  const p = marble.body.position;
+  return p.y > board.y + board.h + TUNE.OUT_MARGIN || p.x < board.x - TUNE.OUT_MARGIN || p.x > board.x + board.w + TUNE.OUT_MARGIN;
+}
+
+// ============================================================ PLACEMENT VALIDATION (SAT)
+function obbCorners(cx, cy, hw, hh, angle) {
+  const c = Math.cos(angle), s = Math.sin(angle);
+  return [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]].map(([x, y]) => ({
+    x: cx + x * c - y * s, y: cy + x * s + y * c
+  }));
+}
+function polyOverlap(A, B) {
+  const polys = [A, B];
+  for (let pi = 0; pi < 2; pi++) {
+    const poly = polys[pi];
+    for (let i = 0; i < poly.length; i++) {
+      const j = (i + 1) % poly.length;
+      const nx = -(poly[j].y - poly[i].y), ny = poly[j].x - poly[i].x;
+      let minA = Infinity, maxA = -Infinity, minB = Infinity, maxB = -Infinity;
+      for (const p of A) { const d = p.x * nx + p.y * ny; minA = Math.min(minA, d); maxA = Math.max(maxA, d); }
+      for (const p of B) { const d = p.x * nx + p.y * ny; minB = Math.min(minB, d); maxB = Math.max(maxB, d); }
+      if (maxA < minB || maxB < minA) return false;
+    }
+  }
+  return true;
+}
+function circlePolyOverlap(cx, cy, r, poly) {
+  // nearest point on polygon to circle center, then distance test (+ inside test)
+  let inside = true;
+  for (let i = 0; i < poly.length; i++) {
+    const j = (i + 1) % poly.length;
+    const ex = poly[j].x - poly[i].x, ey = poly[j].y - poly[i].y;
+    const cross = ex * (cy - poly[i].y) - ey * (cx - poly[i].x);
+    if (cross < 0) inside = false;
+  }
+  if (inside) return true;
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const j = (i + 1) % poly.length;
+    best = Math.min(best, distToSeg(cx, cy, poly[i].x, poly[i].y, poly[j].x, poly[j].y));
+  }
+  return best <= r;
+}
+function rectCorners(x, y, w, h) { return [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }]; }
+
+function validatePlacement(typeKey, x, y, angle, excludeInst) {
+  const fp = PIECE_TYPES[typeKey].fp();
+  const corners = obbCorners(x, y, fp.hw, fp.hh, angle);
+  // inside board (small margin)
+  const m = 3;
+  for (const c of corners) {
+    if (c.x < board.x + m || c.x > board.x + board.w - m || c.y < board.y + m || c.y > board.y + board.h - m) return false;
+  }
+  // spout
+  const sb = spoutBox();
+  if (polyOverlap(corners, obbCorners(sb.x, sb.y, sb.hw, sb.hh, 0))) return false;
+  // goal (inflated)
+  if (polyOverlap(corners, rectCorners(goal.x - marbleR, goal.y - marbleR, goal.w + marbleR * 2, goal.h + marbleR * 2))) return false;
+  // obstacles
+  for (const o of obstacles) {
+    if (o.type === 'peg') { if (circlePolyOverlap(o.x, o.y, o.r + 1, corners)) return false; }
+    else if (polyOverlap(corners, obbCorners(o.x, o.y, o.w / 2, o.h / 2, o.angle))) return false;
+  }
+  // other placed pieces
+  for (const pc of placed) {
+    if (pc === excludeInst) continue;
+    const pfp = PIECE_TYPES[pc.typeKey].fp();
+    if (polyOverlap(corners, obbCorners(pc.x, pc.y, pfp.hw, pfp.hh, pc.angle))) return false;
+  }
+  return true;
+}
+
+// ============================================================ PLACED PIECES
+let placed = [], pieceSeq = 0, selectedId = null;
+
+function selectedPiece() { return placed.find(p => p.id === selectedId) || null; }
+function rebuildBody(inst) {
+  if (inst.body) Composite.remove(world, inst.body);
+  inst.body = PIECE_TYPES[inst.typeKey].build({ x: inst.x, y: inst.y }, inst.angle);
+  Composite.add(world, inst.body);
+}
+function commitPlace(typeKey, x, y, angle) {
+  const inst = { id: ++pieceSeq, typeKey, x, y, angle, body: null };
+  rebuildBody(inst);
+  placed.push(inst);
+  budget--;
+  selectedId = inst.id;
+  refreshUI(); sfx('place');
+}
+function removePiece(inst) {
+  if (inst.body) Composite.remove(world, inst.body);
+  placed = placed.filter(p => p !== inst);
+  budget++;
+  if (selectedId === inst.id) selectedId = null;
+  refreshUI(); sfx('remove');
+}
+function clearPieces() {
+  placed.forEach(p => p.body && Composite.remove(world, p.body));
+  placed = []; selectedId = null;
+}
+
+// ============================================================ STATE MACHINE
+const S = { EDITING: 'EDITING', DROPPING: 'DROPPING', MOVING: 'MOVING', WIN: 'WIN', MISS: 'MISS' };
+let phase = S.EDITING;
+let leverT = 0, dwellT = 0, stillT = 0, attemptT = 0, missT = 0, hasMoved = false, lever = 0;
+let maxLevel = 1;
+let confetti = [];
+
+function loadMax() { try { return Math.max(1, parseInt(localStorage.getItem('marbleMaze.maxLevel') || '1', 10) || 1); } catch (e) { return 1; } }
+function saveMax(v) { try { localStorage.setItem('marbleMaze.maxLevel', String(v)); } catch (e) {} }
+
+function isEditing() { return phase === S.EDITING; }
+
+function setPhase(p) {
+  phase = p;
+  const editing = p === S.EDITING;
+  document.getElementById('newmaze').disabled = !editing;
+  document.getElementById('drop').disabled = !editing;
+  document.querySelectorAll('.chip').forEach(ch => {
+    const avail = availableTypes.includes(ch.dataset.k);
+    ch.classList.toggle('disabled', !editing || budget <= 0 || !avail);
+  });
+  document.getElementById('win').classList.toggle('show', p === S.WIN);
+  const m = document.getElementById('miss');
+  if (p === S.MISS) { m.classList.remove('show'); void m.offsetWidth; m.classList.add('show'); }
+}
+
+function loadLevel(lv) {
+  drag = null;            // abandon any in-flight drag so it can't commit into the new level
+  generateLevel(lv);
+  clearPieces();
+  buildLevel();
+  spawnMarble();
+  leverT = dwellT = stillT = attemptT = missT = 0; hasMoved = false; lever = 0;
+  confetti = [];
+  buildTray();
+  setPhase(S.EDITING);
+  refreshUI();
+  document.getElementById('hint').textContent =
+    lv <= 1 ? 'Drag a piece onto the board, then press DROP!'
+            : 'Build a path to the cup, then DROP the marble!';
+}
+
+function pressDrop() {
+  if (phase !== S.EDITING) return;
+  selectedId = null; refreshSelCtrls();
+  leverT = 0; lever = 0;
+  setPhase(S.DROPPING);
+  document.getElementById('drop').classList.add('pulling');
+  sfx('lever');
+}
+function pressNewMaze() { if (phase === S.EDITING) loadLevel(level); }
+function pressContinue() { if (phase === S.WIN) loadLevel(level + 1); }
+
+function doWin() {
+  setPhase(S.WIN);
+  document.getElementById('winsub').textContent = 'On to Level ' + (level + 1) + '!';
+  if (level + 1 > maxLevel) { maxLevel = level + 1; saveMax(maxLevel); }
+  spawnConfetti(); refreshUI(); sfx('win');
+}
+function doMiss() { setPhase(S.MISS); missT = 0; sfx('miss'); }
+
+function update(dt) {
+  switch (phase) {
+    case S.DROPPING:
+      leverT += dt; lever = Math.min(1, leverT / TUNE.LEVER_MS);
+      if (leverT >= TUNE.LEVER_MS) {
+        releaseMarble(); lever = 1;
+        leverT = dwellT = stillT = attemptT = 0; hasMoved = false;
+        document.getElementById('drop').classList.remove('pulling');
+        setPhase(S.MOVING);
+      }
+      break;
+    case S.MOVING: {
+      attemptT += dt;
+      const spd = marbleSpeed();
+      if (spd > TUNE.MOVE_WAKE_SPEED) hasMoved = true;
+      const inGoal = marbleInGoal();
+      if (inGoal) {
+        dwellT += dt;
+        if (spd < TUNE.WIN_REST_SPEED || dwellT >= TUNE.WIN_DWELL_MS) { doWin(); break; }
+      } else { dwellT = 0; }
+      if (marbleOutOfPlay()) { doMiss(); break; }
+      if (hasMoved && !inGoal && spd < TUNE.MISS_STILL_SPEED) {
+        stillT += dt; if (stillT >= TUNE.MISS_STILL_MS) { doMiss(); break; }
+      } else stillT = 0;
+      if (attemptT >= TUNE.MAX_ATTEMPT_MS) doMiss();
+      break;
+    }
+    case S.MISS:
+      missT += dt;
+      if (missT >= 1150) { parkMarble(); leverT = dwellT = stillT = attemptT = 0; lever = 0; hasMoved = false; setPhase(S.EDITING); }
+      break;
+    case S.WIN:
+      updateConfetti(dt);
+      break;
+  }
+}
+
+// ============================================================ CONFETTI
+const ACCENTS = ['#5ad1ff', '#9b7bff', '#3ddc97', '#ffb347', '#ff6ec7', '#ffe24a'];
+function spawnConfetti() {
+  confetti = [];
+  for (let i = 0; i < 90; i++) {
+    confetti.push({
+      x: CW * (0.3 + Math.random() * 0.4), y: CH * 0.22 + Math.random() * 40,
+      vx: (Math.random() - 0.5) * 7, vy: Math.random() * -4 - 1,
+      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+      w: 6 + Math.random() * 8, h: 4 + Math.random() * 6,
+      color: ACCENTS[(Math.random() * ACCENTS.length) | 0], life: 0
+    });
+  }
+}
+function updateConfetti(dt) {
+  const step = dt / 16.667;
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const p = confetti[i];
+    p.vy += 0.25 * step; p.x += p.vx * step; p.y += p.vy * step; p.rot += p.vr * step; p.life += dt;
+    if (p.life > 2600) confetti.splice(i, 1);
+  }
+}
+
+// ============================================================ RENDER
+function render() {
+  ctx.clearRect(0, 0, CW, CH);
+  const b = board;
+
+  // board field
+  roundRectPath(ctx, b.x, b.y, b.w, b.h, 16);
+  const bg = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+  bg.addColorStop(0, 'rgba(40,34,78,0.55)'); bg.addColorStop(1, 'rgba(18,16,40,0.55)');
+  ctx.fillStyle = bg; ctx.fill();
+  ctx.save(); roundRectPath(ctx, b.x, b.y, b.w, b.h, 16); ctx.clip();
+
+  // walls (visual frame)
+  ctx.strokeStyle = 'rgba(120,110,200,0.5)'; ctx.lineWidth = 4;
+  roundRectPath(ctx, b.x + 2, b.y + 2, b.w - 4, b.h - 4, 14); ctx.stroke();
+
+  // obstacles
+  for (const o of obstacles) {
+    if (o.type === 'peg') {
+      ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#6b5fa8'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+    } else {
+      ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.angle);
+      ctx.fillStyle = '#6b5fa8'; roundRectPath(ctx, -o.w / 2, -o.h / 2, o.w, o.h, o.h / 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  drawGoal();
+  drawSpout();
+
+  // placed pieces
+  for (const pc of placed) PIECE_TYPES[pc.typeKey].draw(ctx, pc, pc.id === selectedId);
+
+  // drag ghost / new-piece ghost
+  if (drag && drag.ghost) {
+    const ok = drag.valid;
+    ctx.globalAlpha = 0.75;
+    PIECE_TYPES[drag.typeKey].draw(ctx, { x: drag.gx, y: drag.gy, angle: drag.gangle }, true);
+    ctx.globalAlpha = 1;
+    // red X overlay if invalid
+    if (!ok) { ctx.strokeStyle = 'rgba(255,80,110,0.9)'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(drag.gx, drag.gy, U * 0.9, 0, Math.PI * 2); ctx.stroke(); }
+  }
+
+  // rotate ring for selected piece
+  const sel = selectedPiece();
+  if (sel && isEditing() && (!drag || drag.mode !== 'new')) drawRotateRing(sel);
+
+  // marble
+  drawMarble();
+
+  ctx.restore(); // unclip
+
+  // confetti over everything
+  for (const p of confetti) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.globalAlpha = Math.max(0, 1 - p.life / 2600); ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+  }
+}
+
+function drawGoal() {
+  const g = goal;
+  const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 400);
+  ctx.save();
+  ctx.shadowColor = '#6dffb0'; ctx.shadowBlur = 12 + pulse * 10;
+  ctx.strokeStyle = '#6dffb0'; ctx.lineWidth = Math.max(5, marbleR * 0.5);
+  ctx.lineCap = 'round';
+  // cup: left, bottom, right (open top)
+  ctx.beginPath();
+  ctx.moveTo(g.x + ctx.lineWidth / 2, g.y);
+  ctx.lineTo(g.x + ctx.lineWidth / 2, g.y + g.h - ctx.lineWidth / 2);
+  ctx.lineTo(g.x + g.w - ctx.lineWidth / 2, g.y + g.h - ctx.lineWidth / 2);
+  ctx.lineTo(g.x + g.w - ctx.lineWidth / 2, g.y);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  // interior glow + star target marker
+  ctx.fillStyle = `rgba(109,255,176,${0.1 + pulse * 0.12})`;
+  ctx.fillRect(g.x, g.y, g.w, g.h);
+  ctx.globalAlpha = 0.85; ctx.font = `${g.w * 0.5}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#bfffe0'; ctx.fillText('⭐', g.x + g.w / 2, g.y + g.h * 0.55);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawSpout() {
+  const d = drop;
+  ctx.save();
+  // hopper funnel above drop
+  ctx.fillStyle = '#3a3470';
+  ctx.beginPath();
+  ctx.moveTo(d.x - marbleR * 2.2, d.y - marbleR * 2.4);
+  ctx.lineTo(d.x + marbleR * 2.2, d.y - marbleR * 2.4);
+  ctx.lineTo(d.x + marbleR * 1.2, d.y);
+  ctx.lineTo(d.x - marbleR * 1.2, d.y);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+  // lever handle (pivots while pulling)
+  const pivX = d.x + marbleR * 2.2, pivY = d.y - marbleR * 1.4;
+  const ang = -0.5 + lever * 1.1;
+  ctx.translate(pivX, pivY); ctx.rotate(ang);
+  ctx.strokeStyle = '#ffb33e'; ctx.lineCap = 'round'; ctx.lineWidth = marbleR * 0.5;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(marbleR * 1.8, 0); ctx.stroke();
+  ctx.fillStyle = '#ff6ec7'; ctx.beginPath(); ctx.arc(marbleR * 1.8, 0, marbleR * 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawMarble() {
+  if (!marble) return;
+  const p = marble.body.position, r = marble.radius;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+  const g = ctx.createRadialGradient(p.x - r * 0.35, p.y - r * 0.4, r * 0.1, p.x, p.y, r);
+  g.addColorStop(0, '#ffe1b8'); g.addColorStop(0.5, '#ff9d3c'); g.addColorStop(1, '#e0631c');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(p.x - r * 0.32, p.y - r * 0.36, r * 0.26, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawRotateRing(inst) {
+  const fp = PIECE_TYPES[inst.typeKey].fp();
+  const rad = Math.hypot(fp.hw, fp.hh) + 24;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 3; ctx.setLineDash([6, 6]);
+  ctx.beginPath(); ctx.arc(inst.x, inst.y, rad, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+  // handle knob at current angle
+  const hx = inst.x + Math.cos(inst.angle) * rad, hy = inst.y + Math.sin(inst.angle) * rad;
+  ctx.fillStyle = '#ffe24a'; ctx.shadowColor = '#ffe24a'; ctx.shadowBlur = 12;
+  ctx.beginPath(); ctx.arc(hx, hy, 13, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0; ctx.fillStyle = '#2a1a00'; ctx.font = '700 14px Baloo 2, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('↻', hx, hy + 1);
+  ctx.restore();
+}
+function ringRadius(inst) { const fp = PIECE_TYPES[inst.typeKey].fp(); return Math.hypot(fp.hw, fp.hh) + 24; }
+
+// ============================================================ INPUT
+let drag = null; // {mode:'new'|'move'|'rotate', typeKey, inst, gx,gy,gangle, ox,oy, valid, moved, grabDX,grabDY, ghost}
+const SNAP = Math.PI / 12; // 15°
+
+function canvasPt(e) { return { x: e.clientX, y: e.clientY }; } // canvas is full-viewport, CSS px
+
+function pointInInst(x, y, inst) {
+  const fp = PIECE_TYPES[inst.typeKey].fp();
+  const c = Math.cos(-inst.angle), s = Math.sin(-inst.angle);
+  const dx = x - inst.x, dy = y - inst.y;
+  const lx = dx * c - dy * s, ly = dx * s + dy * c;
+  const pad = 10;
+  return Math.abs(lx) <= fp.hw + pad && Math.abs(ly) <= fp.hh + pad;
+}
+function topPieceAt(x, y) {
+  for (let i = placed.length - 1; i >= 0; i--) if (pointInInst(x, y, placed[i])) return placed[i];
+  return null;
+}
+
+function onDown(e) {
+  if (!isEditing()) return;
+  if (drag) return;                 // ignore a second finger while a drag is active (multi-touch safety)
+  const pt = canvasPt(e);
+  // rotate handle of selected?
+  const sel = selectedPiece();
+  if (sel) {
+    const rr = ringRadius(sel), d = Math.hypot(pt.x - sel.x, pt.y - sel.y);
+    if (d > rr - 22 && d < rr + 22) {
+      drag = { mode: 'rotate', inst: sel, typeKey: sel.typeKey, oAngle: sel.angle, moved: false, pointerId: e.pointerId };
+      e.preventDefault(); return;
+    }
+  }
+  const hit = topPieceAt(pt.x, pt.y);
+  if (hit) {
+    selectedId = hit.id; refreshSelCtrls();
+    drag = { mode: 'move', inst: hit, typeKey: hit.typeKey,
+      gx: hit.x, gy: hit.y, gangle: hit.angle, ox: hit.x, oy: hit.y,
+      grabDX: hit.x - pt.x, grabDY: hit.y - pt.y, valid: true, moved: false, ghost: true, pointerId: e.pointerId };
+    if (hit.body) { Composite.remove(world, hit.body); hit.body = null; }
+    e.preventDefault();
+  } else {
+    // tap empty -> deselect
+    selectedId = null; refreshSelCtrls();
+    render();
+  }
+}
+
+function onMove(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  const pt = canvasPt(e);
+  if (drag.mode === 'rotate') {
+    const inst = drag.inst;
+    let a = Math.atan2(pt.y - inst.y, pt.x - inst.x);
+    a = Math.round(a / SNAP) * SNAP;
+    if (a !== inst.angle) { inst.angle = a; drag.moved = true; }
+  } else { // new or move
+    drag.gx = pt.x + (drag.grabDX || 0);
+    drag.gy = pt.y + (drag.grabDY || 0);
+    drag.gangle = drag.gangle || 0;
+    drag.valid = validatePlacement(drag.typeKey, drag.gx, drag.gy, drag.gangle, drag.inst || null);
+    drag.moved = true;
+  }
+  e.preventDefault();
+}
+
+function onUp(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  const d = drag; drag = null;
+  // if the dragged piece vanished mid-drag (e.g. a New Maze/resize reload), abandon cleanly
+  if ((d.mode === 'move' || d.mode === 'rotate') && !placed.includes(d.inst)) { refreshSelCtrls(); return; }
+  if (d.mode === 'rotate') {
+    const inst = d.inst;
+    if (validatePlacement(inst.typeKey, inst.x, inst.y, inst.angle, inst)) rebuildBody(inst);
+    else { inst.angle = d.oAngle; rebuildBody(inst); flashInvalid(); }
+    refreshUI(); return;
+  }
+  // move or new — check if released over the panel (trash)
+  const panelRect = document.getElementById('panel').getBoundingClientRect();
+  const overTrash = e.clientY >= panelRect.top;
+
+  if (d.mode === 'move') {
+    if (overTrash) { // delete & refund
+      // piece body already removed; finalize removal
+      placed = placed.filter(p => p !== d.inst);
+      budget++; if (selectedId === d.inst.id) selectedId = null;
+      refreshUI(); refreshSelCtrls(); sfx('remove'); return;
+    }
+    if (d.valid && validatePlacement(d.inst.typeKey, d.gx, d.gy, d.inst.angle, d.inst)) {
+      d.inst.x = d.gx; d.inst.y = d.gy; rebuildBody(d.inst); sfx('place');
+    } else { // snap back
+      d.inst.x = d.ox; d.inst.y = d.oy; rebuildBody(d.inst); flashInvalid();
+    }
+    refreshUI();
+  } else if (d.mode === 'new') {
+    if (!overTrash && d.valid && validatePlacement(d.typeKey, d.gx, d.gy, d.gangle, null)) {
+      commitPlace(d.typeKey, d.gx, d.gy, d.gangle);
+    } else if (!overTrash) { flashInvalid(); }
+  }
+  refreshSelCtrls();
+}
+
+function flashInvalid() { sfx('bad'); }
+
+// tray chip drag start
+function chipDown(e, typeKey) {
+  if (!isEditing() || budget <= 0 || !availableTypes.includes(typeKey)) return;
+  if (drag) return;                 // one drag at a time (multi-touch safety)
+  const pt = canvasPt(e);
+  selectedId = null; refreshSelCtrls();
+  drag = { mode: 'new', typeKey, gx: pt.x, gy: pt.y - U * 1.2, gangle: 0, valid: false, moved: false, ghost: true, grabDX: 0, grabDY: -U * 1.2, pointerId: e.pointerId };
+  drag.valid = validatePlacement(typeKey, drag.gx, drag.gy, 0, null);
+  e.preventDefault();
+}
+
+// Browser/OS-initiated cancel: ABORT the drag (restore moved piece) rather than
+// committing/trashing at the cancel coordinates the way onUp would.
+function onCancel(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  const d = drag; drag = null;
+  if (d.mode === 'move' && placed.includes(d.inst)) { d.inst.x = d.ox; d.inst.y = d.oy; rebuildBody(d.inst); }
+  refreshSelCtrls();
+}
+
+// ============================================================ UI
+function buildTray() {
+  const tray = document.getElementById('tray');
+  tray.innerHTML = '';
+  for (const key of ['ramp', 'chute', 'bouncer', 'funnel']) {
+    const t = PIECE_TYPES[key];
+    const el = document.createElement('div');
+    el.className = 'chip'; el.dataset.k = key;
+    el.innerHTML = `<span class="emo">${t.emoji}</span><span class="lab">${t.label}</span>`;
+    el.addEventListener('pointerdown', (e) => chipDown(e, key));
+    tray.appendChild(el);
+  }
+  refreshUI();
+}
+
+function refreshUI() {
+  document.getElementById('lvlnum').textContent = level;
+  document.getElementById('budnum').textContent = budget;
+  document.getElementById('best').textContent = 'Best: Level ' + maxLevel;
+  document.querySelectorAll('.chip').forEach(ch => {
+    const avail = availableTypes.includes(ch.dataset.k);
+    ch.classList.toggle('disabled', !isEditing() || budget <= 0 || !avail);
+    ch.style.display = avail ? '' : 'none';
+  });
+  refreshSelCtrls();
+}
+function refreshSelCtrls() {
+  const has = !!selectedPiece() && isEditing();
+  document.getElementById('selctrls').classList.toggle('hidden', !has);
+}
+
+function rotateSelected(dir) {
+  const inst = selectedPiece(); if (!inst || !isEditing()) return;
+  const old = inst.angle;
+  inst.angle = Math.round((inst.angle + dir * SNAP) / SNAP) * SNAP;
+  if (validatePlacement(inst.typeKey, inst.x, inst.y, inst.angle, inst)) { rebuildBody(inst); sfx('place'); }
+  else { inst.angle = old; flashInvalid(); }
+}
+
+// ============================================================ AUDIO
+let muted = false, actx = null;
+try { muted = localStorage.getItem('marbleMaze.muted') === '1'; } catch (e) {}
+function sfx(kind) {
+  if (muted) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const now = actx.currentTime;
+    const make = (f, t, dur, vol, type) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, now + t);
+      g.gain.setValueAtTime(0.0001, now + t);
+      g.gain.exponentialRampToValueAtTime(vol, now + t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + t + dur);
+      o.connect(g); g.connect(actx.destination); o.start(now + t); o.stop(now + t + dur + 0.02);
+    };
+    if (kind === 'place') make(520, 0, 0.08, 0.12, 'triangle');
+    else if (kind === 'remove') make(300, 0, 0.08, 0.1, 'sine');
+    else if (kind === 'bad') make(150, 0, 0.12, 0.12, 'sawtooth');
+    else if (kind === 'lever') { make(220, 0, 0.1, 0.12, 'square'); make(180, 0.08, 0.12, 0.1, 'square'); }
+    else if (kind === 'bounce') make(440, 0, 0.06, 0.08, 'sine');
+    else if (kind === 'miss') make(196, 0, 0.25, 0.12, 'triangle');
+    else if (kind === 'win') [523, 659, 784, 1047].forEach((f, i) => make(f, i * 0.1, 0.18, 0.14, 'triangle'));
+  } catch (e) {}
+}
+function updateMuteBtn() { document.getElementById('mute').textContent = muted ? '🔇' : '🔊'; }
+
+// bounce sound on bouncer hit
+Events.on(engine, 'collisionStart', (ev) => {
+  if (phase !== S.MOVING) return;
+  for (const pair of ev.pairs) {
+    if (pair.bodyA.label === 'piece:bouncer' || pair.bodyB.label === 'piece:bouncer') { sfx('bounce'); break; }
+  }
+});
+
+// ============================================================ MAIN LOOP
+let last = performance.now(), acc = 0;
+const FIXED = 1000 / 60;
+function frame(now) {
+  let dt = now - last; last = now;
+  if (dt > 50) dt = 50;
+  acc += dt;
+  let steps = 0;
+  while (acc >= FIXED && steps < 5) { Engine.update(engine, FIXED); acc -= FIXED; steps++; }
+  if (steps === 5) acc = 0;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+// ============================================================ WIRING
+function wire() {
+  // canvas pointer (placed-piece interaction)
+  canvas.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointercancel', onCancel);
+
+  document.getElementById('drop').addEventListener('click', pressDrop);
+  document.getElementById('newmaze').addEventListener('click', pressNewMaze);
+  document.getElementById('continue').addEventListener('click', pressContinue);
+  document.getElementById('rotL').addEventListener('click', () => rotateSelected(-1));
+  document.getElementById('rotR').addEventListener('click', () => rotateSelected(1));
+  document.getElementById('del').addEventListener('click', () => { const s = selectedPiece(); if (s && isEditing()) removePiece(s); });
+  document.getElementById('mute').addEventListener('click', () => {
+    muted = !muted; try { localStorage.setItem('marbleMaze.muted', muted ? '1' : '0'); } catch (e) {}
+    updateMuteBtn();
+  });
+
+  let rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      // a resize during the WIN celebration must not throw away the pending advance
+      const lv = (phase === S.WIN) ? level + 1 : level;
+      drag = null;
+      measure(); buildWalls(); loadLevel(lv);
+    }, 150);
+  });
+}
+
+// ============================================================ BOOT
+measure();
+buildWalls();
+maxLevel = loadMax();
+updateMuteBtn();
+buildTray();
+wire();
+loadLevel(maxLevel);   // resume at highest level reached
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
