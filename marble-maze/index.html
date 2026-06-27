@@ -253,14 +253,16 @@ const PIECE_TYPES = {
   },
   chute: {
     key: 'chute', label: 'Chute', emoji: '🛝', accent: '#9b7bff',
-    fp: () => ({ hw: U * 1.5, hh: U * 1.5 }),
+    // arc is recentered on the piece origin (see CHUTE_OFF) so this tight footprint
+    // matches the drawn shape — no invisible box claiming empty space.
+    fp: () => ({ hw: U * 0.98, hh: U * 0.98 }),
     build(p, angle) {
-      const R = U * 1.5, t = U * 0.28, N = 7, a0 = Math.PI, a1 = Math.PI * 1.5;
+      const R = U * 1.5, t = U * 0.28, N = 7, a0 = Math.PI, a1 = Math.PI * 1.5, off = R / 2;
       const da = (a1 - a0) / N, parts = [];
       for (let i = 0; i < N; i++) {
         const th = a0 + (i + 0.5) * da;
         parts.push(Bodies.rectangle(
-          p.x + R * Math.cos(th), p.y + R * Math.sin(th),
+          p.x + off + R * Math.cos(th), p.y + off + R * Math.sin(th),
           R * da * 1.2, t,
           { isStatic: true, angle: th + Math.PI / 2, friction: 0.02, restitution: 0.12 }
         ));
@@ -270,15 +272,15 @@ const PIECE_TYPES = {
       return body;
     },
     draw(c, inst, sel) {
-      const R = U * 1.5, t = U * 0.28;
+      const R = U * 1.5, t = U * 0.28, off = R / 2;
       drawAt(c, inst, () => {
         c.lineCap = 'round';
         if (sel) { c.shadowColor = '#9b7bff'; c.shadowBlur = 18; }
         c.strokeStyle = hexA('#9b7bff', 0.9); c.lineWidth = t;
-        c.beginPath(); c.arc(0, 0, R, Math.PI, Math.PI * 1.5); c.stroke();
+        c.beginPath(); c.arc(off, off, R, Math.PI, Math.PI * 1.5); c.stroke();
         c.shadowBlur = 0;
         c.strokeStyle = 'rgba(255,255,255,0.5)'; c.lineWidth = t * 0.22;
-        c.beginPath(); c.arc(0, 0, R + t * 0.32, Math.PI, Math.PI * 1.5); c.stroke();
+        c.beginPath(); c.arc(off, off, R + t * 0.32, Math.PI, Math.PI * 1.5); c.stroke();
       });
     }
   },
@@ -770,12 +772,24 @@ function render() {
   // drag ghost / new-piece ghost
   if (drag && drag.ghost) {
     const ok = drag.valid;
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.78;
     PIECE_TYPES[drag.typeKey].draw(ctx, { x: drag.gx, y: drag.gy, angle: drag.gangle }, true);
     ctx.globalAlpha = 1;
-    // red X overlay if invalid
-    if (!ok) { ctx.strokeStyle = 'rgba(255,80,110,0.9)'; ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(drag.gx, drag.gy, U * 0.9, 0, Math.PI * 2); ctx.stroke(); }
+    // Show the piece's ACTUAL collision footprint so it's obvious what space it claims:
+    // dashed green when it fits, solid red (filled) when something is in the way.
+    const fp = PIECE_TYPES[drag.typeKey].fp();
+    const cs = obbCorners(drag.gx, drag.gy, fp.hw, fp.hh, drag.gangle);
+    ctx.beginPath();
+    ctx.moveTo(cs[0].x, cs[0].y);
+    for (let i = 1; i < cs.length; i++) ctx.lineTo(cs[i].x, cs[i].y);
+    ctx.closePath();
+    if (ok) {
+      ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(120,255,170,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = 'rgba(255,80,110,0.15)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,80,110,0.95)'; ctx.lineWidth = 3; ctx.stroke();
+    }
   }
 
   // rotate ring for selected piece
