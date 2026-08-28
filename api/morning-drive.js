@@ -18,6 +18,11 @@ const ALLOWED_ORIGINS = [
 ];
 const MAX_PAST_DAYS = 30;
 
+// Sections that log a scored attempt. Geography and Two Truths are shared
+// between both kids, so they stay unlogged — `kid` is NOT NULL and guessing an
+// attribution would poison the per-kid difficulty stats.
+const ATTEMPT_KINDS = ["math", "vocab_match"];
+
 function corsHeaders(req) {
   const reqOrigin = req.headers.origin || "";
   let origin;
@@ -119,11 +124,11 @@ async function handlePost(req, res) {
   }
 
   const body = req.body || {};
-  const { date, kid, kind, problemKey, topic, attempts, correct } = body;
+  const { date, kid, kind, problemKey, topic, itemKey, attempts, correct } = body;
 
   if (!isValidDateStr(date)) return res.status(400).json({ error: "Invalid date" });
   if (!["claire", "connor"].includes(kid)) return res.status(400).json({ error: "Invalid kid" });
-  if (!["math", "vocab_match"].includes(kind)) return res.status(400).json({ error: "Invalid kind" });
+  if (!ATTEMPT_KINDS.includes(kind)) return res.status(400).json({ error: "Invalid kind" });
   if (typeof problemKey !== "string" || !problemKey) return res.status(400).json({ error: "Missing problemKey" });
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 50) {
     return res.status(400).json({ error: "Invalid attempts" });
@@ -137,6 +142,9 @@ async function handlePost(req, res) {
     kind,
     problem_key: problemKey,
     topic: topic || null,
+    // Which specific item this was (the vocab word, the geography answer) —
+    // powers the spaced-repetition queue in Word Match.
+    item_key: typeof itemKey === "string" && itemKey ? itemKey.slice(0, 120) : null,
     attempts,
     correct,
   });

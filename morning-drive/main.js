@@ -142,16 +142,27 @@ function renderSections() {
   hide(statusEl);
   sectionsEl.innerHTML = "";
   const p = activePayload;
+  // Sections rotate day to day, and past days were generated under older
+  // shapes, so we render whatever the payload actually contains rather than
+  // assuming a fixed set. Order below is the order Dad reads them out.
+  const add = (node) => { if (node) sectionsEl.appendChild(node); };
 
-  sectionsEl.appendChild(renderMathSection("claire", "Claire's Math", "👧", p.claireMath || []));
-  sectionsEl.appendChild(renderMathSection("connor", "Connor's Math", "🧒", p.connorMath || []));
-  sectionsEl.appendChild(renderWordsSection(p.wordsOfDay));
-  sectionsEl.appendChild(renderVocabMatchSection(p.vocabMatch, p.wordsOfDay));
-  sectionsEl.appendChild(renderNewsSection(p.news || []));
-  sectionsEl.appendChild(renderTriviaSection(p.trivia || []));
-  sectionsEl.appendChild(renderFactsSection(p.facts || []));
-  sectionsEl.appendChild(renderJokesSection(p.jokes || []));
-  sectionsEl.appendChild(renderWyrSection(p.wyr || []));
+  if (p.claireMath?.length) add(renderMathSection("claire", "Claire's Math", "👧", p.claireMath));
+  if (p.connorMath?.length) add(renderMathSection("connor", "Connor's Math", "🧒", p.connorMath));
+  if (p.wordsOfDay) add(renderWordsSection(p.wordsOfDay));
+  add(renderWordMatchSection(p));
+  if (p.bibleVerse) add(renderBibleSection(p.bibleVerse));
+  if (p.quote) add(renderQuoteSection(p.quote));
+  if (p.geography) add(renderGeographySection(p.geography));
+  if (p.thisDayInHistory) add(renderThisDaySection(p.thisDayInHistory));
+  if (p.news?.length) add(renderNewsSection(p.news));
+  if (p.trivia?.length) add(renderTriviaSection(p.trivia));
+  if (p.facts?.length) add(renderFactsSection(p.facts));
+  if (p.twoTruths) add(renderTwoTruthsSection(p.twoTruths));
+  if (p.riddle) add(renderRiddleSection(p.riddle));
+  if (p.characterTrait) add(renderCharacterTraitSection(p.characterTrait));
+  if (p.jokes?.length) add(renderJokesSection(p.jokes));
+  if (p.wyr?.length) add(renderWyrSection(p.wyr));
 
   show(sectionsEl);
 }
@@ -205,7 +216,7 @@ function renderMathSection(kid, title, emoji, questions) {
   return section;
 }
 
-function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices, correctIndex, onCorrect, quotedDef }) {
+function renderMCQuestion({ problemKey, kid, kind, topic, itemKey, prompt, hint, choices, correctIndex, onCorrect, quotedDef, revealHtml, logged = true }) {
   const card = document.createElement("div");
   card.className = "qcard";
   const promptHtml = quotedDef
@@ -217,6 +228,7 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
 
   let locked = false;
   let revealedAfterReadOnly = false;
+  let revealNode = null; // optional context block, shown once they've answered
 
   // Attempt tally — shows Dad at a glance how many wrong picks happened.
   const badge = document.createElement("div");
@@ -266,7 +278,8 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
         onCorrect && onCorrect();
         saveProblemProgress(problemKey, { solved: true });
         refreshBadge();
-        logAttempt({ kid, kind, problemKey, topic, attempts, correct: true });
+        if (revealNode) revealNode.hidden = false;
+        if (logged) logAttempt({ kid, kind, problemKey, topic, itemKey, attempts, correct: true });
       } else {
         attemptCounts.set(problemKey, priorWrong + 1);
         btn.classList.add("locked-wrong");
@@ -284,6 +297,16 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
   card.appendChild(grid);
   card.appendChild(badge);
 
+  // Context revealed after they answer (geography, two-truths). In read-only
+  // review mode it's open from the start, same as every other reveal card.
+  if (revealHtml) {
+    revealNode = document.createElement("div");
+    revealNode.className = "answer-reveal";
+    revealNode.innerHTML = revealHtml;
+    revealNode.hidden = !isReadOnly;
+    card.appendChild(revealNode);
+  }
+
   // Replay any saved attempts (e.g. after the tab reloaded while the phone was
   // locked) so wrong picks stay red and a solved question stays solved.
   const saved = !isReadOnly ? dayProgress[problemKey] : null;
@@ -300,6 +323,7 @@ function renderMCQuestion({ problemKey, kid, kind, topic, prompt, hint, choices,
       if (cb) cb.classList.add("locked-correct");
       card.classList.add("correct");
       btns.forEach((b) => { b.disabled = true; });
+      if (revealNode) revealNode.hidden = false;
       onCorrect && onCorrect(); // restore score badge / trophy
     }
     refreshBadge();
@@ -361,33 +385,202 @@ function renderWordCard(label, levelClass, w) {
   return card;
 }
 
-function renderVocabMatchSection(vocabMatch, wordsOfDay) {
-  const { section, body } = makeSection("vocab", "Word Match", "🧩");
-  if (!vocabMatch) {
-    body.innerHTML = `<p class="rc-sub">No vocab match today.</p>`;
-    return section;
+function renderWordMatchSection(p) {
+  const review = p.vocabReview;
+  const hasReview = review && ((review.claire?.length || 0) + (review.connor?.length || 0)) > 0;
+
+  // Days generated before the review rewrite carry the old `vocabMatch` shape,
+  // which quizzed that same morning's words. Render those as-is so Past Days
+  // still replays faithfully instead of showing an empty section.
+  if (!hasReview) return renderLegacyVocabMatchSection(p.vocabMatch);
+
+  const { section, body } = makeSection("vocab", "Word Match", "\u{1F9E9}");
+  const intro = document.createElement("p");
+  intro.className = "rc-sub section-note";
+  intro.textContent = "Words from earlier mornings — do you still remember them?";
+  body.appendChild(intro);
+
+  for (const kid of ["connor", "claire"]) {
+    const items = review[kid] || [];
+    if (!items.length) continue;
+    const label = document.createElement("p");
+    label.className = "rc-sub";
+    const name = kid === "claire" ? "Claire" : "Connor";
+    label.innerHTML = `<span class="level-badge ${kid === "claire" ? "lc" : "ln"}">${name}</span>`;
+    body.appendChild(label);
+    items.forEach((vm, i) => body.appendChild(renderWordMatchCard(kid, vm, i)));
   }
-  body.appendChild(renderVocabMatchCard("Connor — which word means this?", "connor", vocabMatch.connor, wordsOfDay?.connor?.word));
-  body.appendChild(renderVocabMatchCard("Claire — which word means this?", "claire", vocabMatch.claire, wordsOfDay?.claire?.word));
   return section;
 }
 
-function renderVocabMatchCard(label, kid, vm, fallbackWord) {
-  const problemKey = `vocab_match_${kid}`;
+function renderWordMatchCard(kid, vm, i) {
   return renderMCQuestion({
-    problemKey,
+    problemKey: `vocab_review_${kid}_${i + 1}`,
     kid,
     kind: "vocab_match",
-    topic: "vocab-definition",
-    prompt: label,
+    topic: "vocab-review",
+    itemKey: vm.word, // the word itself, so misses can be resurfaced later
+    prompt: "Which word means this?",
     quotedDef: vm.definition,
     choices: vm.options,
     correctIndex: vm.correctIndex,
-    onCorrect: () => {
-      // Vocab match scores don't roll into the math score badge — they count
-      // separately. We still log them so we can chart later.
-    },
+    revealHtml: vm.learnedOn
+      ? `<span class="learned-on">You learned this on ${escapeHtml(friendlyDate(vm.learnedOn))}.</span>`
+      : "",
   });
+}
+
+function renderLegacyVocabMatchSection(vocabMatch) {
+  if (!vocabMatch) return null;
+  const { section, body } = makeSection("vocab", "Word Match", "\u{1F9E9}");
+  for (const kid of ["connor", "claire"]) {
+    const vm = vocabMatch[kid];
+    if (!vm) continue;
+    const name = kid === "claire" ? "Claire" : "Connor";
+    body.appendChild(renderMCQuestion({
+      problemKey: `vocab_match_${kid}`,
+      kid,
+      kind: "vocab_match",
+      topic: "vocab-definition",
+      itemKey: vm.word,
+      prompt: `${name} — which word means this?`,
+      quotedDef: vm.definition,
+      choices: vm.options,
+      correctIndex: vm.correctIndex,
+    }));
+  }
+  return section;
+}
+
+function renderBibleSection(v) {
+  const { section, body } = makeSection("bible", "Verse of the Day", "\u{1F4D6}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-sub">
+      <span class="level-badge ref">${escapeHtml(v.reference)}</span>
+      ${v.translation ? `<span class="translation-tag">${escapeHtml(v.translation)}</span>` : ""}
+    </p>
+    <blockquote class="verse-text">${escapeHtml(v.text)}</blockquote>
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(v.question)}</p>
+    <button type="button" class="reveal-btn r-bible">Tell me about it \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-body">${escapeHtml(v.meaning)}</p>
+      <p class="story-line"><strong>The story:</strong> ${escapeHtml(v.story)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderQuoteSection(q) {
+  const { section, body } = makeSection("quote", "Quote of the Day", "\u{1F4AC}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <blockquote class="quote-text">${escapeHtml(q.text)}</blockquote>
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(q.question)}</p>
+    <button type="button" class="reveal-btn r-quote">Who said it? \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-body quote-author">\u2014 ${escapeHtml(q.author)}</p>
+      <p class="example-line">${escapeHtml(q.context)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderGeographySection(geo) {
+  const { section, body } = makeSection("geo", "Geography", "\u{1F5FA}\uFE0F");
+  const rows = [["us", "United States", "\u{1F1FA}\u{1F1F8}"], ["world", "Around the World", "\u{1F30D}"]];
+  for (const [key, label, emoji] of rows) {
+    const g = geo[key];
+    if (!g) continue;
+    const head = document.createElement("p");
+    head.className = "rc-sub";
+    head.innerHTML = `<span class="level-badge geo">${emoji} ${escapeHtml(label)}</span>`;
+    body.appendChild(head);
+    body.appendChild(renderMCQuestion({
+      problemKey: `geo_${key}`,
+      kind: "geography",
+      topic: `geography-${key}`,
+      prompt: g.question,
+      choices: g.choices,
+      correctIndex: g.correctIndex,
+      logged: false, // shared between both kids, so there's no `kid` to log it under
+      revealHtml: `
+        <p class="rc-body">${escapeHtml(g.context)}</p>
+        ${g.funFact ? `<p class="example-line">\u2728 ${escapeHtml(g.funFact)}</p>` : ""}`,
+    }));
+  }
+  return section;
+}
+
+function renderThisDaySection(t) {
+  const { section, body } = makeSection("tdih", "On This Day", "\u{1F4C5}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(t.question)}</p>
+    <button type="button" class="reveal-btn r-tdih">What happened? \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-sub"><span class="level-badge year">${escapeHtml(t.year)}</span></p>
+      <p class="rc-body"><strong>${escapeHtml(t.event)}</strong></p>
+      <p class="example-line">${escapeHtml(t.context)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderTwoTruthsSection(tt) {
+  const { section, body } = makeSection("truths", "Two Truths and a Lie", "\u{1F575}\uFE0F");
+  const items = tt.items || [];
+  if (items.length !== 3) return null;
+  body.appendChild(renderMCQuestion({
+    problemKey: "two_truths",
+    kind: "two_truths",
+    topic: "two-truths",
+    prompt: "Two of these are true. Which one is the LIE?",
+    choices: items.map((i) => i.text),
+    correctIndex: tt.lieIndex,
+    logged: false,
+    revealHtml: `<p class="rc-body">${escapeHtml(tt.explanation)}</p>`,
+  }));
+  return section;
+}
+
+function renderRiddleSection(r) {
+  const { section, body } = makeSection("riddle", "Riddle", "\u{1F9E0}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-body"><strong>${escapeHtml(r.riddle)}</strong></p>
+    <button type="button" class="reveal-btn r-riddle">Reveal answer \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-body"><strong>Answer:</strong> ${escapeHtml(r.answer)}</p>
+      <p class="example-line">${escapeHtml(r.explanation)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderCharacterTraitSection(c) {
+  const { section, body } = makeSection("trait", "Today's Challenge", "\u{1F31F}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-sub"><span class="emoji" aria-hidden="true">${escapeHtml(c.emoji || "\u{1F31F}")}</span> <strong>${escapeHtml(c.trait)}</strong></p>
+    <p class="rc-body">${escapeHtml(c.definition)}</p>
+    <button type="button" class="reveal-btn r-trait">Why it matters \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-body">${escapeHtml(c.why)}</p>
+      <p class="challenge-line">\u{1F3AF} <strong>Try this today:</strong> ${escapeHtml(c.challenge)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
 }
 
 function renderNewsSection(news) {
@@ -578,14 +771,14 @@ function saveProblemProgress(problemKey, { wrongIndex, solved } = {}) {
 // Attempt logging
 // ----------------------------------------------------------------------------
 
-function logAttempt({ kid, kind, problemKey, topic, attempts, correct }) {
+function logAttempt({ kid, kind, problemKey, topic, itemKey, attempts, correct }) {
   if (isReadOnly) return; // don't pollute stats during review
   if (!activeDate) return;
   try {
     fetch("/api/morning-drive", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: activeDate, kid, kind, problemKey, topic, attempts, correct }),
+      body: JSON.stringify({ date: activeDate, kid, kind, problemKey, topic, itemKey, attempts, correct }),
       keepalive: true,
     }).catch(() => { /* silently ignore — best-effort log */ });
   } catch {}
@@ -601,3 +794,13 @@ function escapeHtml(s) {
   }[c]));
 }
 function escapeAttr(s) { return escapeHtml(s); }
+
+// "2026-08-12" -> "August 12". Used by Word Match to show when a word was learned.
+function friendlyDate(dateStr) {
+  try {
+    const [y, m, d] = String(dateStr).split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+      month: "long", day: "numeric", timeZone: "UTC",
+    });
+  } catch { return dateStr; }
+}

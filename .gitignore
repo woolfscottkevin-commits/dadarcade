@@ -3,3 +3,6 @@
 node_modules
 .env*.local
 .claude/
+.env
+.env.*
+!.env.example

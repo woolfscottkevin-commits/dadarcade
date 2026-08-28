@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <base href="/morning-drive/tests/">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morning Drive — local render preview</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles.css">
+  <script>
+    // Stub the API so every new section renders without a Supabase round trip.
+    const FAKE = {
+      date: "2026-08-28",
+      source: "preview",
+      payload: {
+        claireMath: [
+          { question: "A rectangle is 8 feet long and 5 feet wide. What is its area?", choices: ["13 sq ft", "26 sq ft", "40 sq ft", "45 sq ft"], correctIndex: 2, hint: "Area means length times width.", topic: "area of rectangles", format: "a straight computation shown as a number sentence" },
+          { question: "Which fraction is larger: 3/4 or 2/3?", choices: ["3/4", "2/3", "They are equal", "Cannot tell"], correctIndex: 0, hint: "Try giving them the same denominator.", topic: "comparing and ordering fractions", format: "a comparison question" },
+          { question: "Soccer practice starts at 3:45 and ends at 5:20. How long is practice?", choices: ["1 hour 25 min", "1 hour 35 min", "1 hour 45 min", "2 hours"], correctIndex: 1, hint: "Count up to 4:00 first.", topic: "elapsed time", format: "a real-world time or schedule situation" },
+          { question: "462 + 289 = ___", choices: ["641", "741", "751", "651"], correctIndex: 2, hint: "Watch the regrouping in the tens place.", topic: "multi-digit addition with regrouping", format: "a missing-number puzzle" },
+          { question: "About how much are 4 books at $7.85 each?", choices: ["About $20", "About $32", "About $40", "About $48"], correctIndex: 1, hint: "Round $7.85 to $8.", topic: "rounding and estimation", format: "an estimation question" },
+        ],
+        connorMath: [
+          { question: "34 + 28 = ___", choices: ["52", "62", "512", "64"], correctIndex: 1, hint: "Ten ones make a new ten.", topic: "two-digit addition with regrouping", format: "a missing-number puzzle" },
+          { question: "Which is greater, 407 or 470?", choices: ["407", "470", "They are equal", "Cannot tell"], correctIndex: 1, hint: "Look at the tens place.", topic: "comparing numbers", format: "a comparison question" },
+          { question: "Count by 5s: 15, 20, 25, ___", choices: ["26", "30", "35", "20"], correctIndex: 1, hint: "Add five each time.", topic: "skip counting", format: "a pattern or sequence" },
+          { question: "Three bags each hold 4 marbles. How many marbles in all?", choices: ["7", "10", "12", "16"], correctIndex: 2, hint: "Three groups of four.", topic: "early multiplication as equal groups", format: "a short story word problem" },
+          { question: "The clock shows 2:15. What time will it be in 30 minutes?", choices: ["2:30", "2:45", "3:15", "2:20"], correctIndex: 1, hint: "Half an hour later.", topic: "telling time", format: "a real-world time situation" },
+        ],
+        wordsOfDay: {
+          connor: { word: "sturdy", definition: "Strong and not easy to break.", example: "The sturdy oak table did not wobble at all." },
+          claire: { word: "peculiar", definition: "Strange or unusual in an interesting way.", example: "The peculiar bird hopped sideways instead of flying." },
+        },
+        vocabReview: {
+          connor: [
+            { word: "enormous", definition: "Very, very big.", learnedOn: "2026-08-14", options: ["gentle", "enormous", "hollow", "swift"], correctIndex: 1 },
+            { word: "gentle", definition: "Soft and kind, not rough.", learnedOn: "2026-08-19", options: ["gentle", "sturdy", "brittle", "eager"], correctIndex: 0 },
+          ],
+          claire: [
+            { word: "determined", definition: "Not willing to give up, even when something is hard.", learnedOn: "2026-08-11", options: ["vivid", "curious", "determined", "hesitant"], correctIndex: 2 },
+            { word: "vivid", definition: "So bright and clear you can picture it perfectly.", learnedOn: "2026-08-16", options: ["dreary", "vivid", "cautious", "modest"], correctIndex: 1 },
+            { word: "curious", definition: "Wanting to learn or know more about something.", learnedOn: "2026-08-21", options: ["curious", "weary", "stubborn", "polite"], correctIndex: 0 },
+          ],
+        },
+        bibleVerse: {
+          reference: "Proverbs 17:17", translation: "NIrV",
+          text: "A friend loves at all times. They are there to help when trouble comes.",
+          question: "What do you think it means to love someone 'at all times'?",
+          meaning: "A real friend does not only stick around when things are easy or fun. They stay with you on the hard days too, when you are sad or in trouble.",
+          story: "Proverbs is a book full of short, wise sayings collected mostly by King Solomon, who was known across the ancient world for being the wisest person alive. He wrote them down so young people could learn how to live well. This one is about the difference between someone who is fun to be around and someone who is truly a friend.",
+        },
+        quote: {
+          text: "It always seems impossible until it's done.",
+          question: "What do you think he meant by that?",
+          author: "Nelson Mandela",
+          context: "Nelson Mandela spent 27 years in prison in South Africa for standing against unfair laws that separated people by the colour of their skin. After he was freed, he became the country's president. He said this about big changes that look far too hard right up until someone finally manages them.",
+        },
+        geography: {
+          us: { question: "Which US state is known as the 'Sunshine State'?", choices: ["California", "Florida", "Arizona", "Hawaii"], correctIndex: 1, answer: "Florida", context: "Florida is a long peninsula in the southeast, with the Atlantic Ocean on one side and the Gulf on the other. It is famous for beaches, alligators, and rockets launching from Cape Canaveral.", funFact: "Florida has more thunderstorms than any other US state." },
+          world: { question: "Which country is home to the Great Barrier Reef?", choices: ["Brazil", "Indonesia", "Australia", "South Africa"], correctIndex: 2, answer: "Australia", context: "The Great Barrier Reef stretches along Australia's northeast coast for over 1,400 miles. It is made of billions of tiny living creatures called coral polyps.", funFact: "It is the only living thing on Earth that can be seen from space." },
+        },
+        thisDayInHistory: {
+          year: "1963", event: "Martin Luther King Jr. gave his 'I Have a Dream' speech in Washington, D.C.",
+          question: "Something famous was said on this date. Can you guess what kind of event it was?",
+          context: "More than 250,000 people came together to ask for fair treatment for all Americans. Dr. King stood on the steps of the Lincoln Memorial and described a future where children would be judged by their character rather than their skin colour. It became one of the most famous speeches ever given.",
+        },
+        riddle: { riddle: "I have keys but open no locks. I have space but no room. You can enter, but you cannot go inside. What am I?", answer: "A keyboard", explanation: "It plays on words: a keyboard has keys, a space bar, and an enter key — but none of them work like the real thing." },
+        twoTruths: { items: [{ text: "Octopuses have three hearts." }, { text: "Bananas grow on trees." }, { text: "Honey never spoils." }], lieIndex: 1, explanation: "Octopuses really do have three hearts. Honey found in 3,000-year-old Egyptian tombs was still edible. But bananas do not grow on trees — the banana plant is technically a giant herb, and its 'trunk' is made of tightly packed leaves." },
+        characterTrait: { trait: "Perseverance", emoji: "🧗", definition: "Keeping going even when something is hard and you want to quit.", why: "Almost nothing worth doing works on the first try. When you practise a hard piano piece or a tricky math page, your brain is actually building new connections — the struggle is the part that makes you better.", challenge: "Pick the one thing today that feels hardest, and try it three times before asking for help." },
+        news: [
+          { headline: "Scientists spot a new kind of glowing deep-sea jellyfish", summary: "A research submarine filmed a jellyfish that lights up in bright blue rings nearly two miles below the ocean surface. Scientists think the glow may help it startle predators.", question: "If you could design a glowing animal, what would yours look like?" },
+          { headline: "A greenhouse in Antarctica grew fresh vegetables", summary: "Researchers living at a polar station harvested lettuce, cucumbers and tomatoes grown without any soil at all. The plants got light from special lamps instead of the sun.", question: "Why do you think growing food matters so much at a place like that?" },
+        ],
+        facts: [
+          { emoji: "🐙", title: "Octopus blood is blue", fact: "Octopus blood uses copper to carry oxygen instead of iron like ours does. Copper turns blue when it grabs oxygen, so their blood looks blue instead of red. It also works better in very cold water." },
+          { emoji: "🌕", title: "The Moon is drifting away", fact: "Every year the Moon moves about an inch and a half further from Earth. That is roughly the speed your fingernails grow. Millions of years ago it looked much bigger in the sky." },
+          { emoji: "🦒", title: "Giraffes have the same neck bones as you", fact: "A giraffe's neck has exactly seven bones — the same number as in your neck. Each one is just enormously long, up to ten inches each." },
+        ],
+        jokes: [
+          { setup: "Why did the scarecrow win an award?", punchline: "Because he was outstanding in his field!", level: "connor" },
+          { setup: "What do you call a fish wearing a bowtie?", punchline: "Sofishticated.", level: "claire" },
+        ],
+        wyr: [
+          { a: "Be able to talk to animals", b: "Be able to breathe underwater" },
+          { a: "Have a pet dragon the size of a cat", b: "Have a pet elephant the size of a dog" },
+          { a: "Always have to skip everywhere", b: "Always have to sing instead of speak" },
+          { a: "Explore the deepest ocean", b: "Explore the far side of the Moon" },
+        ],
+        meta: { schemaVersion: 2 },
+      },
+    };
+    const realFetch = window.fetch;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.includes("past=1")) return Promise.resolve(new Response(JSON.stringify({ days: [{ date: "2026-08-27", headline: "Yesterday" }] }), { headers: { "Content-Type": "application/json" } }));
+      if (u.includes("/api/morning-drive")) {
+        if (opts && opts.method === "POST") return Promise.resolve(new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } }));
+        return Promise.resolve(new Response(JSON.stringify(FAKE), { headers: { "Content-Type": "application/json" } }));
+      }
+      return realFetch(url, opts);
+    };
+  </script>
+</head>
+<body>
+  <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
+  <main id="app" aria-live="polite">
+    <header class="app-header">
+      <h1>Morning Drive</h1>
+      <p class="app-sub" id="app-date"></p>
+      <div class="score-row">
+        <span class="score-badge score-claire">Claire <strong id="score-claire">0</strong> / 5 ⭐</span>
+        <span class="score-badge score-connor">Connor <strong id="score-connor">0</strong> / 5 ⭐</span>
+      </div>
+      <div id="read-only-banner" class="read-only-banner" hidden>
+        <span>Reviewing <strong id="ro-date"></strong></span>
+        <button type="button" id="back-to-today">Back to today</button>
+      </div>
+    </header>
+    <div id="status" class="status">Loading…</div>
+    <div id="error" class="error" hidden></div>
+    <div id="sections" class="sections" hidden></div>
+  </main>
+  <button type="button" id="past-days-btn" class="past-pill">📅 Past Days</button>
+  <div id="past-sheet" class="past-sheet" hidden role="dialog" aria-modal="true" aria-label="Past Days">
+    <div class="past-card">
+      <button type="button" class="past-close" aria-label="Close">×</button>
+      <h2>Past Days</h2>
+      <div id="past-list" class="past-list"></div>
+    </div>
+  </div>
+  <script type="module" src="../main.js"></script>
+</body>
+</html>

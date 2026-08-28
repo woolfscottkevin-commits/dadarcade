@@ -17,6 +17,13 @@
   --facts: #0ea5e9;         /* sky */
   --jokes: #eab308;         /* gold */
   --wyr: #ec4899;           /* pink */
+  --bible: #7c3aed;         /* violet */
+  --quote: #db2777;         /* rose */
+  --geo: #059669;           /* emerald */
+  --tdih: #b45309;          /* bronze */
+  --truths: #4f46e5;        /* indigo-deep */
+  --riddle: #0891b2;        /* cyan */
+  --trait: #ca8a04;         /* dark gold */
   --green: #22c55e;
   --green-bg: #f0fdf4;
   --red: #fca5a5;
@@ -133,6 +140,13 @@ body {
 .section.s-facts    { border-color: var(--facts); }
 .section.s-jokes    { border-color: var(--jokes); }
 .section.s-wyr      { border-color: var(--wyr); }
+.section.s-bible    { border-color: var(--bible); }
+.section.s-quote    { border-color: var(--quote); }
+.section.s-geo      { border-color: var(--geo); }
+.section.s-tdih     { border-color: var(--tdih); }
+.section.s-truths   { border-color: var(--truths); }
+.section.s-riddle   { border-color: var(--riddle); }
+.section.s-trait    { border-color: var(--trait); }
 
 .s-claire .section-header { background: linear-gradient(90deg, var(--claire), var(--claire-2)); }
 .s-connor .section-header { background: linear-gradient(90deg, var(--connor), var(--connor-2)); }
@@ -143,6 +157,13 @@ body {
 .s-facts  .section-header { background: var(--facts); }
 .s-jokes  .section-header { background: var(--jokes); color: #1f2937; }
 .s-wyr    .section-header { background: var(--wyr); }
+.s-bible  .section-header { background: var(--bible); }
+.s-quote  .section-header { background: var(--quote); }
+.s-geo    .section-header { background: var(--geo); }
+.s-tdih   .section-header { background: var(--tdih); }
+.s-truths .section-header { background: var(--truths); }
+.s-riddle .section-header { background: var(--riddle); }
+.s-trait  .section-header { background: var(--trait); color: #1f2937; }
 
 /* ---------- Math / vocab-match question card ---------- */
 .qcard {
@@ -237,6 +258,11 @@ body {
 .reveal-btn.r-trivia { background: var(--trivia); }
 .reveal-btn.r-facts  { background: var(--facts); }
 .reveal-btn.r-jokes  { background: var(--jokes); color: #1f2937; }
+.reveal-btn.r-bible  { background: var(--bible); }
+.reveal-btn.r-quote  { background: var(--quote); }
+.reveal-btn.r-tdih   { background: var(--tdih); }
+.reveal-btn.r-riddle { background: var(--riddle); }
+.reveal-btn.r-trait  { background: var(--trait); color: #1f2937; }
 
 .example-line { margin-top: 0.35rem; color: var(--muted); font-style: italic; font-weight: 700; }
 .level-badge {
@@ -245,7 +271,10 @@ body {
   background: #f3f4f6; color: var(--muted); margin-right: 0.4rem;
 }
 .level-badge.lc { background: #ede9fe; color: var(--claire); }
-.level-badge.ln { background: #fef3c7; color: #92400e; }
+.level-badge.ln  { background: #fef3c7; color: #92400e; }
+.level-badge.geo { background: #d1fae5; color: #065f46; }
+.level-badge.ref { background: #ede9fe; color: var(--bible); text-transform: none; letter-spacing: 0; font-size: 0.8rem; }
+.level-badge.year{ background: #fef3c7; color: var(--tdih); }
 
 /* News */
 .news-headline { font-family: 'Fredoka One', cursive; font-size: 1.05rem; margin: 0 0 0.35rem; color: var(--news); }
@@ -337,3 +366,52 @@ body {
 .past-item:active { transform: translateY(1px); }
 .past-item .pi-date { font-weight: 800; color: var(--claire); }
 .past-item .pi-head { color: var(--muted); font-weight: 600; font-size: 0.88rem; text-align: right; max-width: 60%; }
+
+
+/* ---------- Verse / Quote ---------- */
+.verse-text, .quote-text {
+  margin: 0.2rem 0 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 12px;
+  font-size: 1.05rem; line-height: 1.5; font-weight: 700;
+  color: var(--ink);
+}
+.verse-text { background: #f5f3ff; border-left: 4px solid var(--bible); }
+.quote-text { background: #fdf2f8; border-left: 4px solid var(--quote); font-style: italic; }
+.quote-author { font-family: 'Fredoka One', cursive; color: var(--quote); font-size: 1.05rem; }
+.translation-tag { font-size: 0.72rem; font-weight: 700; color: var(--muted); }
+
+/* The "what do you think it means?" line, before the reveal. */
+.think-prompt {
+  margin-top: 0.5rem; padding: 0.55rem 0.7rem;
+  background: #f9fafb; border-radius: 10px; font-weight: 700;
+}
+
+/* ---------- Context revealed after a multiple-choice answer ---------- */
+.answer-reveal {
+  margin-top: 0.6rem; padding: 0.6rem 0.75rem;
+  background: #f9fafb; border-left: 4px solid #e5e7eb; border-radius: 8px;
+}
+.answer-reveal .rc-body { font-weight: 600; line-height: 1.45; }
+.s-geo .answer-reveal { background: #ecfdf5; border-left-color: var(--geo); }
+.s-truths .answer-reveal { background: #eef2ff; border-left-color: var(--truths); }
+.learned-on { font-size: 0.85rem; font-weight: 700; color: var(--muted); font-style: italic; }
+
+/* ---------- Word Match ---------- */
+.section-note { font-style: italic; }
+
+/* The story behind the verse. Deliberately NOT italic — it's the longest block
+   on the page and a 7-year-old has to follow it read aloud. */
+.story-line {
+  margin-top: 0.55rem; padding: 0.6rem 0.75rem;
+  background: #faf5ff; border-radius: 8px;
+  font-weight: 600; line-height: 1.5;
+}
+.story-line strong { color: var(--bible); }
+
+/* ---------- Character trait challenge ---------- */
+.challenge-line {
+  margin-top: 0.5rem; padding: 0.6rem 0.75rem;
+  background: #fefce8; border-left: 4px solid var(--trait); border-radius: 8px;
+  font-weight: 700; line-height: 1.45;
+}

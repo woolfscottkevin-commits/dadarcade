@@ -8,12 +8,18 @@
 
 import { generateText, Output } from "ai";
 import {
+  activeSectionsFor,
+  assignMathPlan,
+  buildPayloadSchema,
   buildPrompt,
+  buildVocabReview,
   extractFingerprints,
+  fetchPriorWords,
   fetchRecentDifficulty,
+  fetchRecentFormats,
   fetchRecentReadable,
+  fetchVocabStats,
   getSupabase,
-  payloadSchema,
   todayET,
 } from "./_morning-drive-shared.js";
 
@@ -56,17 +62,36 @@ export async function generateAndStore(dateStr, generatedBy) {
     return { ok: true, status: "exists", date: dateStr };
   }
 
-  // Build the "do not repeat" context + difficulty signal in parallel.
-  const [readable, difficultyLines] = await Promise.all([
-    fetchRecentReadable(sb, 60),
-    fetchRecentDifficulty(sb),
-  ]);
+  // Which sections run today, and what each math question must cover. Both are
+  // derived from the date alone, so regenerating an old day reproduces it.
+  const activeSections = activeSectionsFor(dateStr);
+  const mathPlans = {
+    claire: assignMathPlan(dateStr, "claire"),
+    connor: assignMathPlan(dateStr, "connor"),
+  };
+
+  // Everything the prompt needs, plus the raw material for Word Match.
+  const [readable, difficultyLines, formatLines, priorWords, vocabStats] =
+    await Promise.all([
+      fetchRecentReadable(sb, 60),
+      fetchRecentDifficulty(sb),
+      fetchRecentFormats(sb, 21),
+      fetchPriorWords(sb, dateStr),
+      fetchVocabStats(sb),
+    ]);
 
   const prompt = buildPrompt({
     dateStr,
     doNotRepeat: readable,
     recentDifficulty: difficultyLines,
+    recentFormats: formatLines,
+    activeSections,
+    mathPlans,
   });
+
+  // Schema is built per-day from the active sections, so the model is never
+  // asked for a section that isn't running today.
+  const schema = buildPayloadSchema(activeSections);
 
   // Generate the day's payload. AI SDK v6 routes provider/model strings through
   // the Vercel AI Gateway automatically.
@@ -74,13 +99,33 @@ export async function generateAndStore(dateStr, generatedBy) {
   // Auth: OIDC. When this function runs on Vercel, OIDC auto-wires the
   // Gateway token with zero config and automatic rotation. For local dev,
   // run `vercel env pull` so `vercel dev` inherits the same OIDC-issued token.
-  //
-  // Structured output uses generateText + Output.object().
-  const { output: payload } = await generateText({
+  const { output: generated } = await generateText({
     model: MODEL,
-    output: Output.object({ schema: payloadSchema }),
+    output: Output.object({ schema }),
     prompt,
   });
+
+  // Word Match is assembled in code from PREVIOUS days' words — never by the
+  // model, and never from today's words. Early on there aren't enough prior
+  // words to build a question, so the section simply sits out until there are.
+  const vocabReview = {
+    claire: buildVocabReview({
+      priorWords, stats: vocabStats, kid: "claire", dateStr,
+      todaysWord: generated.wordsOfDay?.claire?.word,
+    }),
+    connor: buildVocabReview({
+      priorWords, stats: vocabStats, kid: "connor", dateStr,
+      todaysWord: generated.wordsOfDay?.connor?.word,
+    }),
+  };
+
+  const payload = {
+    ...generated,
+    vocabReview,
+    // Recorded so the page (and any later regeneration) knows exactly which
+    // sections this day was built with.
+    meta: { sections: activeSections, mathPlans, schemaVersion: 2 },
+  };
 
   // Insert the day row.
   const { error: insertDayErr } = await sb
@@ -111,10 +156,11 @@ export async function generateAndStore(dateStr, generatedBy) {
     ok: true,
     status: "generated",
     date: dateStr,
+    sections: activeSections,
     counts: {
       math: (payload.claireMath?.length || 0) + (payload.connorMath?.length || 0),
-      words: 2,
-      vocabMatch: 2,
+      words: payload.wordsOfDay ? 2 : 0,
+      vocabReview: vocabReview.claire.length + vocabReview.connor.length,
       news: payload.news?.length || 0,
       trivia: payload.trivia?.length || 0,
       facts: payload.facts?.length || 0,
