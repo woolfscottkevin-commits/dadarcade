@@ -1,7 +1,11 @@
 -- Morning Drive — Supabase migration #001
--- Apply by pasting into Supabase Studio → SQL Editor on the existing dadarcade project
--- (https://momzrpcwlnakargfhexf.supabase.co), or via `supabase db push` if you've wired
+-- Apply by pasting into Supabase Studio → SQL Editor on the woolfsatprep project
+-- (https://sonzonoitvcfiyjxzdbo.supabase.co), or via `supabase db push` if you've wired
 -- the local CLI. Idempotent: safe to re-run.
+--
+-- This header used to name a "dadarcade" project at momzrpcwlnakargfhexf. That project
+-- does not exist on either Supabase account — the morning_drive_* tables have always
+-- lived in woolfsatprep. Corrected 2026-08-28 after checking the live database.
 
 ------------------------------------------------------------
 -- Tables

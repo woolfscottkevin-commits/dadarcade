@@ -3,29 +3,26 @@
 The page (`/morning-drive`) ships ready to load. Before it'll actually
 produce content, three one-time setup steps:
 
-> **Check before trusting the project URL below.** This file names the
-> **woolfsatprep** project while `migrations/001_init.sql` names the
-> **dadarcade** project. They disagree and always have. The live value is
-> whatever `SUPABASE_URL` is set to in Vercel — confirm there, then fix
-> whichever of these two files is wrong.
-
 ## 1. Apply the Supabase migrations
 
 Morning Drive lives in the **woolfsatprep** Supabase project
-(`https://sonzonoitvcfiyjxzdbo.supabase.co`) — same account the MCP
-already has access to, and the `morning_drive_*` tables can't collide
-with the SAT app's own tables.
+(`https://sonzonoitvcfiyjxzdbo.supabase.co`) — the `morning_drive_*` tables
+can't collide with the SAT app's own tables.
+
+Note that woolfsatprep sits on a **different Supabase account** from the one
+holding `elitemathprep` / `testday` / `woolftrade` (org "Elite Math Prep",
+`woolf.scott.kevin@gmail.com`). If the dashboard bounces you to an org page
+when you open a project link, you're signed into the wrong account.
 
 [`migrations/001_init.sql`](./migrations/001_init.sql) has already been
 applied. If you ever need to re-run it (idempotent): paste into **Supabase
 Studio → SQL Editor → Run**.
 
-**[`migrations/002_vocab_review.sql`](./migrations/002_vocab_review.sql) still
-needs to be applied.** It adds an `item_key` column to
-`morning_drive_attempts` so Word Match can track which specific *word* a kid
-missed, rather than just which slot on the page. Until it's applied, review
-still works — it just falls back to age-based ordering instead of resurfacing
-words they got wrong.
+[`migrations/002_vocab_review.sql`](./migrations/002_vocab_review.sql) was
+applied on 2026-08-28. It adds an `item_key` column to `morning_drive_attempts`
+so Word Match can track which specific *word* a kid missed, rather than just
+which slot on the page. Verified live: the column and the
+`morning_drive_attempts_item_idx` index are both present.
 
 Three tables: `morning_drive_days`, `morning_drive_seen`,
 `morning_drive_attempts`. All with RLS enabled; service-role bypasses
