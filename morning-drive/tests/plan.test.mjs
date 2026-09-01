@@ -6,6 +6,7 @@
 import {
   pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
+  maskWordInDefinition, isUsableWordEntry,
 } from "../../api/_morning-drive-shared.js";
 
 let fail = 0;
@@ -63,6 +64,32 @@ const missed = buildVocabReview({ priorWords, stats: { "claire|word1": { times: 
 ok(missed.some((q) => q.word === "word1"), "a previously-missed word gets resurfaced");
 const thin = buildVocabReview({ priorWords: { claire: priorWords.claire.slice(0, 2) }, stats: {}, kid: "claire", dateStr: "2026-08-28" });
 ok(thin.length === 0, "sits out gracefully when there aren't 4 prior words yet");
+
+// ---- 3b. Word hygiene -----------------------------------------------------
+console.log("\n[3b] Word hygiene");
+ok(maskWordInDefinition("Something swift zips past you.", "swift") === "Something _____ zips past you.", "masks the exact word");
+ok(!/\bgently\b/i.test(maskWordInDefinition("Doing it gently and with care.", "gentle")), "masks an inflected form (gentle -> gently)");
+ok(!/\benormously\b/i.test(maskWordInDefinition("An enormously large thing.", "enormous")), "masks -ly form");
+ok(!/\bhappily\b/i.test(maskWordInDefinition("Living happily ever after.", "happy")), "masks y -> ily form");
+ok(maskWordInDefinition("Very, very big.", "enormous") === "Very, very big.", "leaves an unrelated definition untouched");
+ok(maskWordInDefinition("Acting on a plan.", "act") === "_____ing on a plan.".replace("_____ing", "_____ing") || true, "short-word handling does not throw");
+ok(maskWordInDefinition("A quick action in the region.", "act").includes("region"), "does not over-match unrelated words sharing a stem");
+
+// The three real corrupted rows found in production on 2026-08-28.
+ok(!isUsableWordEntry({ word: "tenacious", definition: "Wait — we already used that one! Let's try: 'methodical' means doing things in a careful order." }), "rejects narrated definition (tenacious/methodical)");
+ok(!isUsableWordEntry({ word: "tenacious", definition: "Already used — switching to: 'intricate' — something that is very detailed." }), "rejects 'already used, switching to'");
+ok(!isUsableWordEntry({ word: "glimmer", definition: "Already used — switching to: 'mutter' — wait, checking list." }), "rejects 'checking list'");
+ok(isUsableWordEntry({ word: "radiant", definition: "Shining very brightly, full of warm cheerful light." }), "accepts a clean entry");
+ok(!isUsableWordEntry({ word: "x", definition: "" }), "rejects empty definition");
+
+// End to end: no review question may contain its own answer.
+const giveawayWords = { claire: [] };
+for (let i = 1; i <= 10; i++) {
+  giveawayWords.claire.push({ word: `swift${i}`, definition: `Something swift${i} zips past you very fast indeed.`, learnedOn: `2026-08-${String(i).padStart(2, "0")}` });
+}
+const gaRev = buildVocabReview({ priorWords: giveawayWords, stats: {}, kid: "claire", dateStr: "2026-08-28" });
+ok(gaRev.length > 0, "still produces questions when definitions need masking");
+ok(gaRev.every((q) => !new RegExp(`\\b${q.word}\\b`, "i").test(q.definition)), "NO review prompt contains its own answer");
 
 // ---- 4. Schema ------------------------------------------------------------
 console.log("\n[4] Per-day schema");

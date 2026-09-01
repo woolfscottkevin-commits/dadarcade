@@ -437,6 +437,72 @@ function seededShuffle(arr, seed) {
   return out;
 }
 
+// ----------------------------------------------------------------------------
+// Word-entry hygiene
+// ----------------------------------------------------------------------------
+
+// Some stored days have a `definition` containing the model's own deliberation
+// rather than a definition — e.g. word "tenacious" with definition "Wait, we
+// already used that one! Let's try: 'methodical' means...". In those rows the
+// word and the definition describe different things, so they're unusable as a
+// review item AND unusable as a distractor. Filter them out at read time; the
+// prompt fix below stops new ones, but 40-odd days of history already exist.
+const META_COMMENTARY = [
+  /already used/i,
+  /we already/i,
+  /switching to/i,
+  /let'?s try/i,
+  /checking (the )?list/i,
+  /\bwait\b\s*[—–-]/i,
+  /\bactually,? (let|I)/i,
+];
+
+export function isUsableWordEntry(entry) {
+  const word = String(entry?.word || "").trim();
+  const def = String(entry?.definition || "").trim();
+  if (!word || !def) return false;
+  if (word.split(/\s+/).length > 3) return false; // a sentence, not a word
+  if (def.length < 12) return false;
+  if (META_COMMENTARY.some((re) => re.test(def))) return false;
+  // A quoted single word near the start that ISN'T the entry's own word means
+  // the definition is describing some other word.
+  const quoted = def.slice(0, 80).match(/['"\u2018\u2019\u201c\u201d]([a-z][a-z-]{2,})['"\u2018\u2019\u201c\u201d]/i);
+  if (quoted && quoted[1].toLowerCase() !== word.toLowerCase()) return false;
+  return true;
+}
+
+// Blank the target word out of its own definition. In Word Match the definition
+// IS the prompt, so "Something swift zips past you" hands over the answer.
+// Enumerate inflections rather than wildcarding a stem: a wildcard on a short
+// stem ("act") would blank unrelated words ("actually", "action") and wreck the
+// clue. Only ever applied to the quiz prompt — Words of the Day still shows the
+// definition intact, because there the word is the thing being taught.
+export function maskWordInDefinition(definition, word) {
+  const def = String(definition || "");
+  const w = String(word || "").trim().toLowerCase();
+  if (!w || w.length < 3) return def;
+
+  const base = w.replace(/(e|y)$/, "");
+  const forms = new Set([
+    w, w + "s", w + "es", w + "d", w + "ed", w + "ing", w + "ly", w + "ness",
+    base + "s", base + "es", base + "ed", base + "ing", base + "y", base + "ly",
+    base + "ily", base + "iness", base + "ies", base + "ier", base + "iest",
+  ]);
+  const alternation = [...forms]
+    .filter((f) => f.length >= 3)
+    .sort((a, b) => b.length - a.length) // longest first: "gently" before "gentl"
+    .map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  if (!alternation) return def;
+  return def.replace(new RegExp(`\\b(${alternation})\\b`, "gi"), "_____");
+}
+
+// A definition that's mostly blanks is no longer a usable clue.
+function maskedClueIsUsable(masked) {
+  const words = masked.replace(/_+/g, " ").trim().split(/\s+/).filter(Boolean);
+  return words.length >= 4;
+}
+
 // Pull every word each kid has learned before `beforeDate`, most recent first.
 export async function fetchPriorWords(sb, beforeDate, days = 240) {
   const since = new Date(new Date(beforeDate).getTime() - days * 24 * 3600 * 1000)
@@ -455,7 +521,7 @@ export async function fetchPriorWords(sb, beforeDate, days = 240) {
     if (!w) continue;
     for (const kid of ["claire", "connor"]) {
       const entry = w[kid];
-      if (!entry?.word || !entry?.definition) continue;
+      if (!isUsableWordEntry(entry)) continue;
       const key = entry.word.toLowerCase();
       if (seen[kid].has(key)) continue;
       seen[kid].add(key);
@@ -530,8 +596,19 @@ export function buildVocabReview({ priorWords, stats, kid, dateStr, todaysWord, 
 
   scored.sort((a, b) => b.score - a.score || a.word.localeCompare(b.word));
 
+  // Blank the answer out of its own definition before the definition becomes
+  // the prompt, and skip any candidate whose clue doesn't survive that — walk
+  // further down the queue rather than shipping a gutted question.
+  const candidates = [];
+  for (const target of scored) {
+    if (candidates.length >= count) break;
+    const clue = maskWordInDefinition(target.definition, target.word);
+    if (!maskedClueIsUsable(clue)) continue;
+    candidates.push({ ...target, clue });
+  }
+
   const seed = daySeed(dateStr) + kid.length;
-  return scored.slice(0, count).map((target, i) => {
+  return candidates.map((target, i) => {
     const distractors = seededShuffle(
       pool.filter((w) => w.word.toLowerCase() !== target.word.toLowerCase()),
       seed + i
@@ -539,7 +616,7 @@ export function buildVocabReview({ priorWords, stats, kid, dateStr, todaysWord, 
     const options = seededShuffle([target.word, ...distractors], seed + i * 7);
     return {
       word: target.word,
-      definition: target.definition,
+      definition: target.clue, // masked — never the raw stored definition
       learnedOn: target.learnedOn,
       options,
       correctIndex: options.indexOf(target.word),
@@ -565,7 +642,10 @@ ${lines}`;
 }
 
 const SECTION_INSTRUCTIONS = {
-  wordsOfDay: () => `- **2 Words of the Day** — one Connor-level (Grade ${KIDS.connor.grade}: concrete, encounterable — *enormous*, *sturdy*, *gentle*) and one Claire-level (Grade ${KIDS.claire.grade}: more abstract — *determined*, *vivid*, *peculiar*). Each with a kid-friendly definition and one example sentence. These get quizzed back to them on LATER days, so pick words genuinely worth keeping.`,
+  wordsOfDay: () => `- **2 Words of the Day** — one Connor-level (Grade ${KIDS.connor.grade}: concrete, encounterable — *enormous*, *sturdy*, *gentle*) and one Claire-level (Grade ${KIDS.claire.grade}: more abstract — *determined*, *vivid*, *peculiar*). Each with a kid-friendly definition and one example sentence. These get quizzed back to them on LATER days, so pick words genuinely worth keeping.
+  - The \`definition\` must NOT contain the word itself or any form of it. On a later morning the definition is shown ALONE as a quiz prompt, so "something swift zips past you" hands over the answer. Write it so it still makes sense with the word missing.
+  - The \`example\` sentence SHOULD use the word — that one isn't a quiz.
+  - If a word you were about to choose is on the do-not-repeat list, silently pick a different one. Never narrate that decision, and never put commentary like "already used, switching to..." into any field. \`word\` must be the single word you actually settled on, and \`definition\` must define that same word.`,
 
   bibleVerse: () => `- **Bible verse** — one short verse in ${BIBLE_TRANSLATION}. Give the reference, the verse text, an open question asking what they think it means, then a plain-language \`meaning\`, then the \`story\` behind it (who said it, what was going on, why it mattered). Warm and age-appropriate. Choose verses about kindness, courage, honesty, gratitude, perseverance, forgiveness, friendship — not judgment, punishment, or anything frightening. No violent narrative detail.`,
 
