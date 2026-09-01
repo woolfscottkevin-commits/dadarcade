@@ -45,7 +45,9 @@ for (const kid of ["claire", "connor"]) {
 console.log("\n[3] Vocab review (spaced repetition)");
 const priorWords = { claire: [], connor: [] };
 for (let i = 1; i <= 20; i++) {
-  priorWords.claire.push({ word: `word${i}`, definition: `def ${i}`, learnedOn: `2026-08-${String(i).padStart(2, "0")}` });
+  // Definitions must be realistic: the masked-clue guard drops anything that
+  // would leave fewer than four usable words once the answer is blanked out.
+  priorWords.claire.push({ word: `word${i}`, definition: `Something that means idea number ${i} in a long list.`, learnedOn: `2026-08-${String(i).padStart(2, "0")}` });
 }
 const stats = {
   "claire|word20": { times: 3, misses: 0, lastSeen: "2026-08-27" },
