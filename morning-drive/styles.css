@@ -24,6 +24,13 @@
   --truths: #4f46e5;        /* indigo-deep */
   --riddle: #0891b2;        /* cyan */
   --trait: #ca8a04;         /* dark gold */
+  --grammar: #e11d48;       /* rose-red */
+  --artwork: #9333ea;       /* purple */
+  --landmark: #0284c7;      /* ocean */
+  --flag: #dc2626;          /* red */
+  --animal: #16a34a;        /* green */
+  --spelling: #7c3aed;      /* violet */
+  --spanish: #ea580c;       /* burnt orange */
   --green: #22c55e;
   --green-bg: #f0fdf4;
   --red: #fca5a5;
@@ -147,6 +154,14 @@ body {
 .section.s-truths   { border-color: var(--truths); }
 .section.s-riddle   { border-color: var(--riddle); }
 .section.s-trait    { border-color: var(--trait); }
+.section.s-grammar-claire { border-color: var(--claire); }
+.section.s-grammar-connor { border-color: var(--connor); }
+.section.s-artwork  { border-color: var(--artwork); }
+.section.s-landmark { border-color: var(--landmark); }
+.section.s-flag     { border-color: var(--flag); }
+.section.s-animal   { border-color: var(--animal); }
+.section.s-spelling { border-color: var(--spelling); }
+.section.s-spanish  { border-color: var(--spanish); }
 
 .s-claire .section-header { background: linear-gradient(90deg, var(--claire), var(--claire-2)); }
 .s-connor .section-header { background: linear-gradient(90deg, var(--connor), var(--connor-2)); }
@@ -164,6 +179,14 @@ body {
 .s-truths .section-header { background: var(--truths); }
 .s-riddle .section-header { background: var(--riddle); }
 .s-trait  .section-header { background: var(--trait); color: #1f2937; }
+.s-grammar-claire .section-header { background: linear-gradient(90deg, var(--claire), var(--grammar)); }
+.s-grammar-connor .section-header { background: linear-gradient(90deg, var(--connor), var(--grammar)); }
+.s-artwork  .section-header { background: var(--artwork); }
+.s-landmark .section-header { background: var(--landmark); }
+.s-flag     .section-header { background: var(--flag); }
+.s-animal   .section-header { background: var(--animal); }
+.s-spelling .section-header { background: var(--spelling); }
+.s-spanish  .section-header { background: var(--spanish); }
 
 /* ---------- Math / vocab-match question card ---------- */
 .qcard {
@@ -263,6 +286,11 @@ body {
 .reveal-btn.r-tdih   { background: var(--tdih); }
 .reveal-btn.r-riddle { background: var(--riddle); }
 .reveal-btn.r-trait  { background: var(--trait); color: #1f2937; }
+.reveal-btn.r-artwork  { background: var(--artwork); }
+.reveal-btn.r-landmark { background: var(--landmark); }
+.reveal-btn.r-animal   { background: var(--animal); }
+.reveal-btn.r-spell    { background: var(--spelling); }
+.reveal-btn.r-spanish  { background: var(--spanish); }
 
 .example-line { margin-top: 0.35rem; color: var(--muted); font-style: italic; font-weight: 700; }
 .level-badge {
@@ -415,3 +443,52 @@ body {
   background: #fefce8; border-left: 4px solid var(--trait); border-radius: 8px;
   font-weight: 700; line-height: 1.45;
 }
+
+
+/* ---------- Images ---------- */
+.tile-figure { margin: 0 0 0.7rem; }
+.tile-figure img {
+  display: block; width: 100%; height: auto;
+  border-radius: 14px; background: #f3f4f6;
+}
+/* Flags are wide and flat; boxing them keeps the tile from looking lopsided. */
+.flag-figure img {
+  max-width: 260px; margin: 0 auto;
+  border: 2px solid #e5e7eb; border-radius: 8px;
+}
+/* Most Wikimedia photos are CC-BY-SA — this credit is a licence condition. */
+.img-credit {
+  margin-top: 0.3rem; font-size: 0.68rem; line-height: 1.3;
+  color: var(--muted); text-align: right;
+}
+
+/* ---------- Artwork ---------- */
+.look-for {
+  margin-top: 0.4rem; padding: 0.5rem 0.7rem;
+  background: #faf5ff; border-left: 4px solid var(--artwork); border-radius: 8px;
+  font-weight: 700;
+}
+.artwork-by { font-style: italic; }
+
+/* ---------- Animal facts ---------- */
+.fact-list { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.fact-list li { font-weight: 600; line-height: 1.45; margin-bottom: 0.3rem; }
+
+/* ---------- Spelling ---------- */
+.spell-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.speak-btn {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  margin-top: 0.5rem; padding: 0.5rem 0.9rem;
+  border: 0; border-radius: 999px; background: var(--spelling); color: white;
+  font-family: inherit; font-weight: 800; font-size: 1rem;
+  cursor: pointer; min-height: 44px; touch-action: manipulation;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.12);
+}
+.speak-btn:disabled { background: #d1d5db; color: var(--muted); box-shadow: none; }
+.spell-card { margin-bottom: 0.5rem; }
+.spell-word { letter-spacing: 0.06em; }
+
+/* ---------- Spanish ---------- */
+.spanish-word { color: var(--spanish); font-size: 1.5rem; }
+.pronunciation { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; }
+.translation { color: var(--muted); }

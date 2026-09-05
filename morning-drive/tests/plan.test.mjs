@@ -7,6 +7,7 @@ import {
   pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
   maskWordInDefinition, isUsableWordEntry,
+  assignGrammarPlan, GRAMMAR_TOPICS, ROTATING_PER_DAY, IMAGE_SECTIONS, MAX_IMAGE_SECTIONS_PER_DAY, DAILY_SECTIONS,
 } from "../../api/_morning-drive-shared.js";
 
 let fail = 0;
@@ -16,13 +17,13 @@ const ok = (c, m) => { console.log(`${c ? "  ok  " : "  FAIL"}  ${m}`); if (!c) 
 console.log("\n[1] Section rotation");
 const dates = Array.from({ length: 14 }, (_, i) => `2026-08-${String(i + 15).padStart(2, "0")}`);
 const rots = dates.map(pickRotation);
-ok(rots.every((r) => r.length === 4), "every day picks exactly 4 rotating sections");
+ok(rots.every((r) => r.length === ROTATING_PER_DAY), `every day picks exactly ${ROTATING_PER_DAY} rotating sections`);
 ok(rots.every((r) => new Set(r).size === r.length), "no duplicates within a day");
 ok(JSON.stringify(pickRotation("2026-08-15")) === JSON.stringify(pickRotation("2026-08-15")), "deterministic for a given date");
 const coverage = new Set(rots.flat());
 ok(coverage.size === ROTATING_POOL.length, `all ${ROTATING_POOL.length} rotating sections appear within 14 days (saw ${coverage.size})`);
 const overlaps = rots.slice(1).map((r, i) => r.filter((x) => rots[i].includes(x)).length);
-console.log(`      overlap with previous day: ${overlaps.join(", ")} (of 4)`);
+console.log(`      overlap with previous day: ${overlaps.join(", ")} (of ${ROTATING_PER_DAY})`);
 
 // ---- 2. Math plan variety -------------------------------------------------
 console.log("\n[2] Math plan variety");
@@ -40,6 +41,31 @@ for (const kid of ["claire", "connor"]) {
   ok(reuse <= 14, `${kid}: topic+format scaffold reuse within 14 days stays low (${reuse}/${allPairs.length})`);
   console.log(`      ${kid}: ${new Set(plans.flat().map((q) => q.topic)).size}/${MATH_TOPICS[kid].length} topics used in 14 days`);
 }
+
+// ---- 2b. Grammar plan + image cap -----------------------------------------
+console.log("\n[2b] Grammar plan");
+for (const kid of ["claire", "connor"]) {
+  const plans = dates.map((d) => assignGrammarPlan(d, kid));
+  ok(plans.every((p) => p.length === 3), `${kid}: 3 grammar questions/day`);
+  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === 3), `${kid}: 3 DISTINCT topics within a day`);
+  const topicSets = plans.map((p) => p.map((q) => q.topic).sort().join("~"));
+  ok(new Set(topicSets).size === topicSets.length, `${kid}: no repeated topic set in 14 days`);
+  console.log(`      ${kid}: ${new Set(plans.flat().map((q) => q.topic)).size}/${GRAMMAR_TOPICS[kid].length} topics in 14 days`);
+}
+
+console.log("\n[2c] Image-tile cap (mobile data in a car)");
+const longRun = Array.from({ length: 60 }, (_, i) =>
+  new Date(Date.UTC(2026, 7, 29) + i * 86400000).toISOString().slice(0, 10));
+const imgCounts = longRun.map((d) => pickRotation(d).filter((x) => IMAGE_SECTIONS.includes(x)).length);
+ok(Math.max(...imgCounts) <= MAX_IMAGE_SECTIONS_PER_DAY,
+  `never more than ${MAX_IMAGE_SECTIONS_PER_DAY} image tiles a day (max seen ${Math.max(...imgCounts)})`);
+ok(longRun.every((d) => new Set(pickRotation(d)).size === pickRotation(d).length),
+  "capping never introduces a duplicate section");
+ok(longRun.every((d) => pickRotation(d).length === 5), "still exactly 5 rotating sections after capping");
+const everImage = new Set(longRun.flatMap((d) => pickRotation(d)).filter((x) => IMAGE_SECTIONS.includes(x)));
+ok(everImage.size === IMAGE_SECTIONS.length, `all ${IMAGE_SECTIONS.length} image tiles still appear over 60 days (${everImage.size})`);
+ok(DAILY_SECTIONS.includes("grammarClaire") && DAILY_SECTIONS.includes("grammarConnor"), "grammar runs daily for both kids");
+console.log(`      image tiles/day over 60 days: min ${Math.min(...imgCounts)}, max ${Math.max(...imgCounts)}`);
 
 // ---- 3. Vocab review ------------------------------------------------------
 console.log("\n[3] Vocab review (spaced repetition)");

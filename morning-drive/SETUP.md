@@ -118,26 +118,89 @@ Match is assembled **in code** from previous days' words.
 
 | Section | Every day? | Built by |
 | --- | --- | --- |
-| Claire's Math / Connor's Math | yes | model, against an assigned plan |
+| Claire's / Connor's Math | yes | model, against an assigned plan |
+| Claire's / Connor's Grammar | yes | model, against an assigned plan |
 | Words of the Day | yes | model |
 | Word Match | yes* | **code** — prior days' words |
-| Verse of the Day | yes | model |
-| Quote of the Day | yes | model |
-| Geography (US + World) | yes | model |
-| Jokes, Would You Rather | yes | model |
-| News, Trivia, Fun Facts, On This Day, Riddle, Two Truths, Today's Challenge | rotating | model |
+| Verse of the Day, Quote of the Day | yes | model |
+| Jokes | yes | model |
+| Geography, Would You Rather, News, Trivia, Fun Facts, On This Day, Riddle, Two Truths, Today's Challenge, Spelling, Spanish Word | rotating | model |
+| **Art of the Day, Landmark, Flag, Animal** | rotating | model names it, **code resolves the image** |
 
 \* Word Match sits out until each kid has at least 4 prior words banked.
 
+### Visual tiles: the model never supplies an image URL
+
+This is the rule the whole media pipeline exists to enforce. Ask a language
+model for an image URL and you get something that looks exactly right and 404s.
+So the model supplies only a **subject** — an artwork title and artist, a
+Wikipedia article title, a country name — and
+[`api/_morning-drive-media.js`](../api/_morning-drive-media.js) turns that into
+a real image:
+
+| Tile | Source | Payload |
+| --- | --- | --- |
+| Art of the Day | Met Museum + Art Institute of Chicago | ~100–220 KB |
+| Landmark, Animal | Wikipedia `pageimages` | ~120–235 KB at 600px |
+| Flag | flagcdn.com | 172 B – 2 KB |
+
+Every resolved URL is HEAD-checked before being stored. **A tile that doesn't
+resolve is dropped for that day** and recorded in `meta.droppedForMedia`; the
+drive still ships.
+
+Two things that will bite if you touch this code:
+
+- **Artwork matching is scored, not substring-matched.** The Met holds *"Study
+  for 'A Sunday on La Grande Jatte'"*, which contains the requested title
+  exactly but is a preparatory sketch — the famous painting is in Chicago.
+  Conversely the Met catalogues Hokusai's Great Wave as *"Under the Wave off
+  Kanagawa"*, sharing no leading substring with the name kids know it by. Hence
+  `matchScore()`, the study/sketch penalty, and searching both collections
+  before choosing.
+- **Wikimedia only serves thumbnail widths it has already generated.** Rewriting
+  `/330px-` to `/600px-` in a URL returns HTTP 400 for most files. Use
+  `pithumbsize`, which asks MediaWiki to generate the size properly.
+
+### Image licensing — not optional
+
+Met (CC0) and Art Institute (public domain) images need no credit. **Most
+Wikimedia photos are CC-BY-SA and legally require visible attribution**, so
+`fileCredit()` resolves the licence and author for the exact file being shown,
+and the page renders it under the image in `.img-credit`. Don't delete that
+line to tidy up the layout.
+
+### Content safety for artwork
+
+The Met's collection contains a great deal of classical nudity, and department
+filters do not reliably exclude it. That is why the model names a specific
+famous, kid-appropriate work rather than the code pulling a random object ID —
+the model knows *Wheat Field with Cypresses* is fine for a 7-year-old. Switch
+this to random selection and you will get nudes.
+
+### Bandwidth
+
+This is read on a phone, on mobile data, in a moving car. Image tiles are capped
+at `MAX_IMAGE_SECTIONS_PER_DAY` (2), enforced in `pickRotation()` by swapping
+surplus photo tiles for text tiles, and every image is lazy-loaded with its
+dimensions set so the page doesn't jump. Never use the Met's `primaryImage`:
+those originals run to **8 MB**. `primaryImageSmall` is ~220 KB.
+
 ### Section rotation
 
-Showing all sixteen sections every morning is too long for one drive, so seven
-of them rotate. `ROTATING_PER_DAY` in `api/_morning-drive-shared.js` controls
-how many appear (currently **4** of 7, so each shows roughly 4 mornings a
-week). Set it to `7` to show everything daily.
+Showing every section each morning is far too long for one drive, so most
+rotate. `ROTATING_PER_DAY` in `api/_morning-drive-shared.js` controls how many
+appear (currently **5** of 15). Raise it to show more per day.
 
 The choice is derived from the date alone, so re-opening an old day in **Past
 Days** always replays the exact sections it originally had.
+
+### Grammar
+
+Same assigned-topic machinery as math, for the same reason: left to itself the
+model asks about nouns and verbs every single day. 20 topics per kid and 6
+formats, in `GRAMMAR_TOPICS` / `GRAMMAR_FORMATS`, 3 questions each. Every
+grammar question carries a `why` field stating the rule in one sentence, shown
+however they answered — a wrong answer should still teach the rule.
 
 ### Math variety
 
@@ -191,8 +254,19 @@ stale grade is invisible from the page itself.
 node morning-drive/tests/plan.test.mjs
 ```
 
-Covers rotation determinism and coverage, math topic/format cycling, and the
-Word Match priority ordering. No network or database needed.
+Covers rotation determinism and coverage, math and grammar topic/format
+cycling, the image-tiles-per-day cap, word hygiene (masking and corrupted-entry
+rejection), and Word Match priority ordering. No network or database needed.
+
+The media resolvers hit live third-party APIs, so they get a separate smoke
+check rather than a unit test:
+
+```bash
+node morning-drive/tests/media.check.mjs
+```
+
+It resolves several real artworks, landmarks, animals and flags, and confirms
+that deliberately hallucinated subjects return null rather than a broken tile.
 
 To iterate on the front end without a database, serve the repo and open
 `morning-drive/tests/preview.html` — it stubs the API with a full fake payload

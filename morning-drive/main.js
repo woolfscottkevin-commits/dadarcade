@@ -149,10 +149,18 @@ function renderSections() {
 
   if (p.claireMath?.length) add(renderMathSection("claire", "Claire's Math", "👧", p.claireMath));
   if (p.connorMath?.length) add(renderMathSection("connor", "Connor's Math", "🧒", p.connorMath));
+  if (p.grammarClaire?.length) add(renderGrammarSection("claire", "Claire's Grammar", "\u270F\uFE0F", p.grammarClaire));
+  if (p.grammarConnor?.length) add(renderGrammarSection("connor", "Connor's Grammar", "\u270F\uFE0F", p.grammarConnor));
   if (p.wordsOfDay) add(renderWordsSection(p.wordsOfDay));
   add(renderWordMatchSection(p));
   if (p.bibleVerse) add(renderBibleSection(p.bibleVerse));
   if (p.quote) add(renderQuoteSection(p.quote));
+  if (p.spelling) add(renderSpellingSection(p.spelling));
+  if (p.spanishWord) add(renderSpanishSection(p.spanishWord));
+  if (p.artwork?.image) add(renderArtworkSection(p.artwork));
+  if (p.landmark?.image) add(renderLandmarkSection(p.landmark));
+  if (p.flag?.image) add(renderFlagSection(p.flag));
+  if (p.animal?.image) add(renderAnimalSection(p.animal));
   if (p.geography) add(renderGeographySection(p.geography));
   if (p.thisDayInHistory) add(renderThisDaySection(p.thisDayInHistory));
   if (p.news?.length) add(renderNewsSection(p.news));
@@ -449,6 +457,234 @@ function renderLegacyVocabMatchSection(vocabMatch) {
       correctIndex: vm.correctIndex,
     }));
   }
+  return section;
+}
+
+// ----------------------------------------------------------------------------
+// Images
+// ----------------------------------------------------------------------------
+// Every image is resolved and verified server-side, so by the time it reaches
+// here the URL is known good. Still lazy-loaded: this is read on a phone on
+// mobile data in a moving car, and the tile may be far down the page.
+function renderImage(image, altText) {
+  if (!image?.url) return null;
+  const wrap = document.createElement("figure");
+  wrap.className = "tile-figure";
+  const img = document.createElement("img");
+  img.src = image.url;
+  img.alt = altText || "";
+  img.loading = "lazy";
+  img.decoding = "async";
+  if (image.width && image.height) {
+    // Reserve the space so the page doesn't jump as it loads.
+    img.width = image.width;
+    img.height = image.height;
+  }
+  img.addEventListener("error", () => { wrap.remove(); });
+  wrap.appendChild(img);
+  if (image.credit) {
+    // Most Wikimedia photos are CC-BY-SA: the credit is a licence condition,
+    // not decoration. Do not remove it.
+    const cap = document.createElement("figcaption");
+    cap.className = "img-credit";
+    cap.textContent = image.credit;
+    wrap.appendChild(cap);
+  }
+  return wrap;
+}
+
+// ----------------------------------------------------------------------------
+// Speech (spelling tile)
+// ----------------------------------------------------------------------------
+// iPad Safari returns [] from getVoices() until the voiceschanged event fires,
+// and sometimes never fires it — so wait, with a timeout fallback, exactly as
+// the spelling trainer in /secretspot does.
+let voicesReadyPromise = null;
+function ensureVoices() {
+  if (voicesReadyPromise) return voicesReadyPromise;
+  voicesReadyPromise = new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) return resolve();
+    if (speechSynthesis.getVoices().length) return resolve();
+    const timer = setTimeout(resolve, 1500);
+    speechSynthesis.addEventListener("voiceschanged", () => { clearTimeout(timer); resolve(); }, { once: true });
+  });
+  return voicesReadyPromise;
+}
+
+async function speak(text, { rate = 0.85 } = {}) {
+  if (!("speechSynthesis" in window)) return false;
+  await ensureVoices();
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.rate = rate;
+    u.lang = "en-US";
+    speechSynthesis.speak(u);
+    return true;
+  } catch { return false; }
+}
+
+// ----------------------------------------------------------------------------
+// New section renderers
+// ----------------------------------------------------------------------------
+
+function renderGrammarSection(kid, title, emoji, questions) {
+  const { section, body } = makeSection(`grammar-${kid}`, title, emoji);
+  questions.forEach((q, i) => {
+    const problemKey = `grammar_${kid}_${i + 1}`;
+    body.appendChild(renderMCQuestion({
+      problemKey,
+      kid,
+      kind: "grammar",
+      topic: q.topic || "grammar",
+      prompt: q.question,
+      hint: q.hint,
+      choices: q.choices,
+      correctIndex: q.correctIndex,
+      // The rule matters more than the score — show it however they answered.
+      revealHtml: q.why ? `<p class="rc-body"><strong>The rule:</strong> ${escapeHtml(q.why)}</p>` : "",
+    }));
+  });
+  return section;
+}
+
+function renderArtworkSection(a) {
+  const { section, body } = makeSection("artwork", "Art of the Day", "\u{1F3A8}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  const fig = renderImage(a.image, `${a.title} by ${a.artist}`);
+  if (fig) body.appendChild(fig);
+  card.innerHTML = `
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(a.question)}</p>
+    <p class="look-for">\u{1F50D} <strong>Look for:</strong> ${escapeHtml(a.lookFor || "")}</p>
+    <button type="button" class="reveal-btn r-artwork">What is it? \u2728</button>
+    <div class="rc-hidden">
+      <h3 class="rc-title">${escapeHtml(a.title)}</h3>
+      <p class="rc-sub artwork-by">${escapeHtml(a.artist)}${a.year ? ` \u00b7 ${escapeHtml(a.year)}` : ""}</p>
+      <p class="rc-body">${escapeHtml(a.story)}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderLandmarkSection(l) {
+  const { section, body } = makeSection("landmark", "Landmark of the Day", "\u{1F5FC}");
+  const fig = renderImage(l.image, l.name);
+  if (fig) body.appendChild(fig);
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(l.question)}</p>
+    <button type="button" class="reveal-btn r-landmark">Where is this? \u2728</button>
+    <div class="rc-hidden">
+      <h3 class="rc-title">${escapeHtml(l.name)}</h3>
+      <p class="rc-sub">${escapeHtml(l.country || "")}</p>
+      <p class="rc-body">${escapeHtml(l.context)}</p>
+      <p class="example-line">\u2728 ${escapeHtml(l.funFact || "")}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderFlagSection(f) {
+  const { section, body } = makeSection("flag", "Flag of the Day", "\u{1F6A9}");
+  const fig = renderImage(f.image, "Flag to identify");
+  if (fig) { fig.classList.add("flag-figure"); body.appendChild(fig); }
+  body.appendChild(renderMCQuestion({
+    problemKey: "flag",
+    kind: "flag",
+    topic: "flag",
+    prompt: f.question || "Which country's flag is this?",
+    choices: f.choices,
+    correctIndex: f.correctIndex,
+    logged: false, // shared between both kids
+    revealHtml: `<p class="rc-body">${escapeHtml(f.fact || "")}</p>`,
+  }));
+  return section;
+}
+
+function renderAnimalSection(a) {
+  const { section, body } = makeSection("animal", "Animal of the Day", "\u{1F43E}");
+  const fig = renderImage(a.image, a.name);
+  if (fig) body.appendChild(fig);
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <p class="rc-body think-prompt">\u{1F4AD} ${escapeHtml(a.question)}</p>
+    <button type="button" class="reveal-btn r-animal">Tell me about it \u2728</button>
+    <div class="rc-hidden">
+      <h3 class="rc-title">${escapeHtml(a.name)}</h3>
+      <ul class="fact-list">${(a.facts || []).map((f) => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
+  return section;
+}
+
+function renderSpellingSection(sp) {
+  const { section, body } = makeSection("spelling", "Spelling", "\u{1F5E3}\uFE0F");
+  const note = document.createElement("p");
+  note.className = "rc-sub section-note";
+  note.textContent = "Tap the word to hear it. Spell it out loud, then check.";
+  body.appendChild(note);
+
+  for (const kid of ["connor", "claire"]) {
+    const list = sp[kid] || [];
+    if (!list.length) continue;
+    const label = document.createElement("p");
+    label.className = "rc-sub";
+    label.innerHTML = `<span class="level-badge ${kid === "claire" ? "lc" : "ln"}">${kid === "claire" ? "Claire" : "Connor"}</span>`;
+    body.appendChild(label);
+    list.forEach((item, i) => body.appendChild(renderSpellingCard(kid, item, i)));
+  }
+  return section;
+}
+
+function renderSpellingCard(kid, item, i) {
+  const card = document.createElement("div");
+  card.className = "reveal-card spell-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <div class="spell-row">
+      <button type="button" class="speak-btn" aria-label="Hear the word">\u{1F50A} Hear it</button>
+      <button type="button" class="reveal-btn r-spell">Show spelling \u2728</button>
+    </div>
+    <div class="rc-hidden">
+      <h3 class="rc-title spell-word">${escapeHtml(item.word)}</h3>
+      <p class="example-line">"${escapeHtml(item.sentence || "")}"</p>
+    </div>`;
+  const speakBtn = card.querySelector(".speak-btn");
+  speakBtn.addEventListener("click", async () => {
+    const ok = await speak(`${item.word}. ${item.sentence || ""}`);
+    if (!ok) {
+      // No speech support (or blocked) — fall back to just showing the word
+      // rather than leaving a dead button.
+      card.classList.add("open");
+      speakBtn.textContent = "Speech unavailable";
+      speakBtn.disabled = true;
+    }
+  });
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  return card;
+}
+
+function renderSpanishSection(sw) {
+  const { section, body } = makeSection("spanish", "Spanish Word", "\u{1F1EA}\u{1F1F8}");
+  const card = document.createElement("div");
+  card.className = "reveal-card" + (isReadOnly ? " open" : "");
+  card.innerHTML = `
+    <h3 class="rc-title spanish-word">${escapeHtml(sw.spanish)}</h3>
+    <p class="rc-sub pronunciation">${escapeHtml(sw.pronunciation || "")}</p>
+    <p class="rc-body">Can you guess what it means?</p>
+    <button type="button" class="reveal-btn r-spanish">Reveal \u2728</button>
+    <div class="rc-hidden">
+      <p class="rc-body"><strong>${escapeHtml(sw.english)}</strong></p>
+      <p class="example-line">${escapeHtml(sw.example || "")}</p>
+      <p class="example-line translation">${escapeHtml(sw.exampleEnglish || "")}</p>
+    </div>`;
+  card.querySelector(".reveal-btn").addEventListener("click", () => card.classList.add("open"));
+  body.appendChild(card);
   return section;
 }
 

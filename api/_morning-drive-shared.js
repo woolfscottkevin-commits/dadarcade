@@ -23,16 +23,17 @@ export const KIDS = {
 export const BIBLE_TRANSLATION =
   "NIrV (New International Reader's Version) or ICB (International Children's Bible) — simple, kid-readable wording";
 
-// Sections that appear EVERY day.
+// Sections that appear EVERY day: the skills that benefit from consistency,
+// plus the two reflective tiles and the jokes that close the drive.
 export const DAILY_SECTIONS = [
   "claireMath",
   "connorMath",
+  "grammarClaire",
+  "grammarConnor",
   "wordsOfDay",
   "bibleVerse",
   "quote",
-  "geography",
   "jokes",
-  "wyr",
 ];
 
 // Sections that rotate so the drive doesn't balloon to 17 sections. Each day
@@ -40,6 +41,8 @@ export const DAILY_SECTIONS = [
 // day always replays with the exact same sections it originally had.
 // Raise ROTATING_PER_DAY to 7 to show everything every day.
 export const ROTATING_POOL = [
+  "geography",
+  "wyr",
   "news",
   "trivia",
   "facts",
@@ -47,11 +50,82 @@ export const ROTATING_POOL = [
   "riddle",
   "twoTruths",
   "characterTrait",
+  "artwork",
+  "landmark",
+  "flag",
+  "animal",
+  "spelling",
+  "spanishWord",
 ];
-export const ROTATING_PER_DAY = 4;
+export const ROTATING_PER_DAY = 5;
+
+// Tiles that load a photo. Capped per day because this is read on a phone on
+// mobile data in a moving car — each image is roughly 100-250KB, so three or
+// four at once is a noticeably slower morning.
+export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal"];
+export const MAX_IMAGE_SECTIONS_PER_DAY = 2;
 
 // How many previously-learned words each kid reviews in Word Match.
 export const VOCAB_REVIEW_PER_KID = 3;
+
+
+// Grammar gets the same assigned-topic rotation as math, for the same reason:
+// left to itself the model will ask about nouns and verbs every single day.
+export const GRAMMAR_TOPICS = {
+  claire: [
+    "commas in a series",
+    "commas after introductory phrases",
+    "apostrophes: possessive vs plural",
+    "its vs it's",
+    "their / there / they're",
+    "your / you're",
+    "subject-verb agreement",
+    "past, present and future tense consistency",
+    "common vs proper nouns",
+    "adjectives vs adverbs",
+    "prepositions and prepositional phrases",
+    "conjunctions joining two sentences",
+    "quotation marks in dialogue",
+    "complete sentences vs fragments",
+    "run-on sentences",
+    "pronouns and what they refer to",
+    "comparative and superlative forms",
+    "homophones (to/too/two, here/hear)",
+    "capitalising titles and proper nouns",
+    "singular and plural irregular nouns",
+  ],
+  connor: [
+    "capital letter at the start of a sentence",
+    "capital letters for names and places",
+    "ending a sentence with a period",
+    "question marks",
+    "exclamation marks",
+    "nouns: person, place or thing",
+    "verbs: action words",
+    "adjectives: describing words",
+    "plural nouns with -s and -es",
+    "a vs an",
+    "is vs are",
+    "was vs were",
+    "contractions (do not / don't)",
+    "commas in a list of three",
+    "sentence word order that makes sense",
+    "rhyming and word families",
+    "compound words",
+    "silent letters",
+    "syllables in a word",
+    "opposites (antonyms)",
+  ],
+};
+
+export const GRAMMAR_FORMATS = [
+  "pick the sentence that is written correctly",
+  "choose the word that correctly fills the blank",
+  "find the word in the sentence that is the given part of speech",
+  "spot the mistake in a sentence",
+  "choose the correct punctuation for a sentence",
+  "decide which two sentences join together best",
+];
 
 // ----------------------------------------------------------------------------
 // Math variety engine
@@ -198,7 +272,30 @@ export function pickRotation(dateStr) {
     if (picked.length >= n) break;
     if (!picked.includes(name)) picked.push(name);
   }
-  return picked;
+  return capImageSections(picked, seed);
+}
+
+// Swap surplus photo tiles for text tiles so a single morning never has to pull
+// four images before the kids can start.
+function capImageSections(picked, seed) {
+  const imageCount = picked.filter((s) => IMAGE_SECTIONS.includes(s)).length;
+  if (imageCount <= MAX_IMAGE_SECTIONS_PER_DAY) return picked;
+
+  const textPool = ROTATING_POOL.filter(
+    (s) => !IMAGE_SECTIONS.includes(s) && !picked.includes(s)
+  );
+  const out = [...picked];
+  let surplus = imageCount - MAX_IMAGE_SECTIONS_PER_DAY;
+  // Drop from the end so the highest-priority picks survive, and substitute a
+  // text tile chosen by the same date seed to stay deterministic.
+  for (let i = out.length - 1; i >= 0 && surplus > 0; i--) {
+    if (!IMAGE_SECTIONS.includes(out[i])) continue;
+    const replacement = textPool.shift();
+    if (!replacement) break;
+    out[i] = replacement;
+    surplus--;
+  }
+  return out;
 }
 
 export function activeSectionsFor(dateStr) {
@@ -234,6 +331,23 @@ export function assignMathPlan(dateStr, kid, count = 5) {
     // that's what stops a given topic being welded to the same format every
     // time it comes back around.
     const format = MATH_FORMATS[(seed * 5 + i * 5) % F];
+    plan.push({ topic, format });
+  }
+  return plan;
+}
+
+export function assignGrammarPlan(dateStr, kid, count = 3) {
+  const topics = GRAMMAR_TOPICS[kid] || [];
+  const seed = daySeed(dateStr);
+  const T = topics.length;   // 20
+  const F = GRAMMAR_FORMATS.length; // 6
+  const plan = [];
+  for (let i = 0; i < count; i++) {
+    // Same coprimality rule as the math planner: 7 with 20, and a within-day
+    // step of 3 so the picked SET walks the list instead of being pinned to one
+    // residue class.
+    const topic = topics[(seed * 7 + i * 3) % T];
+    const format = GRAMMAR_FORMATS[(seed * 5 + i) % F];
     plan.push({ topic, format });
   }
   return plan;
@@ -281,6 +395,15 @@ export function extractFingerprints(payload) {
   if (payload.riddle?.riddle) push("riddle", payload.riddle.riddle);
   if (payload.twoTruths?.items?.length) push("two_truths", payload.twoTruths.items.map((i) => i.text).join(" | "));
   if (payload.characterTrait?.trait) push("trait", payload.characterTrait.trait);
+  for (const g of payload.grammarClaire || []) push("grammar", `claire:${g.question}`);
+  for (const g of payload.grammarConnor || []) push("grammar", `connor:${g.question}`);
+  if (payload.artwork?.title) push("artwork", payload.artwork.title);
+  if (payload.landmark?.name) push("landmark", payload.landmark.name);
+  if (payload.flag?.country) push("flag", payload.flag.country);
+  if (payload.animal?.name) push("animal", payload.animal.name);
+  if (payload.spanishWord?.spanish) push("spanish", payload.spanishWord.spanish);
+  for (const w of payload.spelling?.claire || []) push("spelling", `claire:${w.word}`);
+  for (const w of payload.spelling?.connor || []) push("spelling", `connor:${w.word}`);
 
   return out;
 }
@@ -387,9 +510,81 @@ const characterTraitItem = z.object({
   challenge: z.string().describe("One specific 'try this today' action a kid can actually do at school."),
 });
 
+const grammarQ = z.object({
+  question: z.string().describe("The grammar question, written so it can be read aloud in the car."),
+  choices: z.array(z.string()).length(4),
+  correctIndex: z.number().int().min(0).max(3),
+  hint: z.string().describe("One short kid-friendly hint."),
+  topic: z.string().describe("The assigned topic, copied from the plan."),
+  format: z.string().describe("The assigned format, copied from the plan."),
+  why: z.string().describe("One sentence explaining the RULE, so a wrong answer still teaches something."),
+});
+
+// For the visual tiles the model supplies only the SUBJECT. Image URLs are
+// resolved and verified server-side in _morning-drive-media.js — a model-written
+// URL looks plausible and 404s.
+const artworkItem = z.object({
+  title: z.string().describe("Exact title of a famous artwork, e.g. 'Wheat Field with Cypresses'."),
+  artist: z.string().describe("The artist's full name."),
+  question: z.string().describe("An open question inviting the kids to look and describe what they see, before any facts."),
+  lookFor: z.string().describe("One concrete thing to notice in the picture — a colour, a shape, someone's face."),
+  story: z.string().describe("3-4 kid-friendly sentences: who made it, when, and what makes it worth looking at."),
+});
+
+const landmarkItem = z.object({
+  name: z.string().describe("The landmark's common name."),
+  wikiTitle: z.string().describe("The EXACT English Wikipedia article title, e.g. 'Machu Picchu', 'Great Wall of China'."),
+  country: z.string(),
+  question: z.string().describe("A question to ask before revealing anything."),
+  context: z.string().describe("3-4 kid-friendly sentences about the place."),
+  funFact: z.string().describe("One surprising detail a kid would repeat at school."),
+});
+
+const flagItem = z.object({
+  country: z.string().describe("Country name in plain English, matching common usage, e.g. 'Japan', 'Brazil', 'Kenya'."),
+  question: z.string().describe("A question about the flag they are looking at."),
+  choices: z.array(z.string()).length(4).describe("4 country names, including the correct one."),
+  correctIndex: z.number().int().min(0).max(3),
+  fact: z.string().describe("2-3 sentences: what the flag's colours or symbols mean, and one thing about the country."),
+});
+
+const animalItem = z.object({
+  name: z.string().describe("Common name of the animal."),
+  wikiTitle: z.string().describe("The EXACT English Wikipedia article title, e.g. 'Axolotl', 'Blue whale'."),
+  question: z.string().describe("A question to ask while they look at the photo."),
+  facts: z.array(z.string()).length(3).describe("3 short kid-friendly facts, one sentence each."),
+});
+
+const spellingItem = z.object({
+  claire: z.array(z.object({
+    word: z.string().describe(`A Grade ${KIDS.claire.grade} spelling word.`),
+    sentence: z.string().describe("One sentence using the word, read aloud after the word."),
+  })).length(3),
+  connor: z.array(z.object({
+    word: z.string().describe(`A Grade ${KIDS.connor.grade} spelling word.`),
+    sentence: z.string().describe("One sentence using the word, read aloud after the word."),
+  })).length(3),
+});
+
+const spanishWordItem = z.object({
+  spanish: z.string().describe("The Spanish word."),
+  english: z.string().describe("Its English meaning."),
+  pronunciation: z.string().describe("Simple phonetic respelling a parent can read aloud, e.g. 'PEH-rro'."),
+  example: z.string().describe("A short Spanish sentence using the word."),
+  exampleEnglish: z.string().describe("The English translation of that sentence."),
+});
+
 const SECTION_SCHEMAS = {
   claireMath: z.array(mathQ).length(5),
   connorMath: z.array(mathQ).length(5),
+  grammarClaire: z.array(grammarQ).length(3),
+  grammarConnor: z.array(grammarQ).length(3),
+  artwork: artworkItem,
+  landmark: landmarkItem,
+  flag: flagItem,
+  animal: animalItem,
+  spelling: spellingItem,
+  spanishWord: spanishWordItem,
   wordsOfDay: z.object({ connor: wotd, claire: wotd }),
   news: z.array(newsItem).length(2),
   trivia: z.array(triviaQ).length(3),
@@ -641,6 +836,19 @@ format into its \`format\` field verbatim.
 ${lines}`;
 }
 
+function grammarPlanBlock(kid, plan) {
+  const k = KIDS[kid];
+  const lines = plan.map((p, i) =>
+    `  ${i + 1}. topic: **${p.topic}** — format: *${p.format}*`
+  ).join("\n");
+  return `**${k.name}'s grammar (Grade ${k.grade})** — 3 questions, MC with 4 options.
+Each has an ASSIGNED topic and format below; follow both and copy them into the
+question's \`topic\` and \`format\` fields. Every question needs a \`why\` field
+stating the rule in one sentence, so a wrong answer still teaches the rule.
+
+${lines}`;
+}
+
 const SECTION_INSTRUCTIONS = {
   wordsOfDay: () => `- **2 Words of the Day** — one Connor-level (Grade ${KIDS.connor.grade}: concrete, encounterable — *enormous*, *sturdy*, *gentle*) and one Claire-level (Grade ${KIDS.claire.grade}: more abstract — *determined*, *vivid*, *peculiar*). Each with a kid-friendly definition and one example sentence. These get quizzed back to them on LATER days, so pick words genuinely worth keeping.
   - The \`definition\` must NOT contain the word itself or any form of it. On a later morning the definition is shown ALONE as a quiz prompt, so "something swift zips past you" hands over the answer. Write it so it still makes sense with the word missing.
@@ -669,6 +877,18 @@ const SECTION_INSTRUCTIONS = {
 
   twoTruths: () => `- **Two Truths and a Lie** — three kid-friendly statements about animals, space, history, or the human body. Exactly two true, one false, and mark \`lieIndex\`. The lie should be plausible, not silly. Explanation covers all three.`,
 
+  artwork: () => `- **Artwork of the day** — name a genuinely FAMOUS painting or print that is held by the Metropolitan Museum of Art or the Art Institute of Chicago, is out of copyright, and is completely appropriate for a ${KIDS.connor.grade === 2 ? "7" : "young"}-year-old: no nudity, no violence, nothing frightening. Landscapes, animals, boats, dancers, star-filled skies, everyday scenes are ideal. Give the exact title and the artist's full name — the picture itself is looked up and verified from the museum's own collection, so an inexact title means the tile is dropped. Ask them what they SEE before telling them anything, point out one concrete thing to look for, then the story.`,
+
+  landmark: () => `- **Landmark of the day** — one famous place. \`wikiTitle\` must be the EXACT English Wikipedia article title ("Machu Picchu", "Great Wall of China", "Uluru"), because the photo is fetched from that article and the tile is dropped if the title doesn't resolve. Ask a question first, then context and one surprising fact.`,
+
+  flag: () => `- **Flag of the day** — pick a country whose flag is interesting to talk about. \`country\` must be the plain English country name ("Japan", "Brazil", "Kenya"). The kids see the flag and pick which country it belongs to, so the 4 choices are country names. Then explain what the colours or symbols mean.`,
+
+  animal: () => `- **Animal of the day** — one animal worth a photo. \`wikiTitle\` must be the EXACT English Wikipedia article title ("Axolotl", "Blue whale", "Snow leopard"). Three short facts, and a question to ask while they look at the picture.`,
+
+  spelling: () => `- **Spelling** — 3 words per kid, at Grade ${KIDS.claire.grade} for Claire and Grade ${KIDS.connor.grade} for Connor. Each word gets one sentence using it. The words are SPOKEN ALOUD by the phone and the kids spell them out loud, so choose words that sound clear and are not homophones of another word (avoid "there", "pair", "knight") — a kid can't tell which one you mean.`,
+
+  spanishWord: () => `- **Spanish word of the day** — one useful, concrete Spanish word a child would actually say. Give the word, the English meaning, a simple phonetic respelling a parent can read aloud without knowing Spanish (e.g. "PEH-rro"), one short Spanish sentence, and its English translation.`,
+
   characterTrait: () => `- **Character trait of the day** — one trait (patience, courage, honesty, generosity, perseverance…), an emoji, a kid-language definition, 2-3 sentences on why it matters with a concrete everyday example, and one specific "try this today" challenge they could actually do at school.`,
 };
 
@@ -679,6 +899,7 @@ export function buildPrompt({
   recentFormats,
   activeSections,
   mathPlans,
+  grammarPlans,
 }) {
   const ctx = { monthDay: monthDayLabel(dateStr) };
 
@@ -719,6 +940,10 @@ ${mathPlanBlock("connor", mathPlans.connor)}
 - Names other than Claire and Connor are welcome — friends, animals, teachers, shopkeepers.
 - Distractor answers should reflect real mistakes a kid would make (forgot to regroup, off by one, multiplied instead of added), not random numbers.
 - Keep each question to Grade ${KIDS.claire.grade} / Grade ${KIDS.connor.grade} level respectively.
+
+## Grammar — follow the assigned plan exactly
+
+${grammarPlans ? `${grammarPlanBlock("claire", grammarPlans.claire)}\n\n${grammarPlanBlock("connor", grammarPlans.connor)}` : ""}
 
 ## Everything else to generate
 
@@ -815,7 +1040,8 @@ export async function fetchRecentReadable(sb, days = 60) {
   const buckets = {
     math: [], word: [], news: [], trivia: [], fact: [], joke: [], wyr: [],
     bible: [], quote: [], geography: [], thisDayInHistory: [], riddle: [],
-    twoTruths: [], characterTrait: [],
+    twoTruths: [], characterTrait: [], grammar: [], artwork: [], landmark: [],
+    flag: [], animal: [], spelling: [], spanish: [],
   };
   for (const row of data || []) {
     const p = row.payload || {};
@@ -836,6 +1062,15 @@ export async function fetchRecentReadable(sb, days = 60) {
     if (p.riddle?.riddle) buckets.riddle.push(p.riddle.riddle);
     if (p.twoTruths?.items?.length) buckets.twoTruths.push(p.twoTruths.items.map((i) => i.text).join(" / "));
     if (p.characterTrait?.trait) buckets.characterTrait.push(p.characterTrait.trait);
+    for (const g of p.grammarClaire || []) buckets.grammar.push(`(Claire) ${g.question}`);
+    for (const g of p.grammarConnor || []) buckets.grammar.push(`(Connor) ${g.question}`);
+    if (p.artwork?.title) buckets.artwork.push(`${p.artwork.title} — ${p.artwork.artist || ""}`);
+    if (p.landmark?.name) buckets.landmark.push(p.landmark.name);
+    if (p.flag?.country) buckets.flag.push(p.flag.country);
+    if (p.animal?.name) buckets.animal.push(p.animal.name);
+    if (p.spanishWord?.spanish) buckets.spanish.push(p.spanishWord.spanish);
+    for (const w of p.spelling?.claire || []) buckets.spelling.push(`(Claire) ${w.word}`);
+    for (const w of p.spelling?.connor || []) buckets.spelling.push(`(Connor) ${w.word}`);
   }
   return buckets;
 }

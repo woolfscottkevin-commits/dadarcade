@@ -9,6 +9,7 @@
 import { generateText, Output } from "ai";
 import {
   activeSectionsFor,
+  assignGrammarPlan,
   assignMathPlan,
   buildPayloadSchema,
   buildPrompt,
@@ -22,6 +23,7 @@ import {
   getSupabase,
   todayET,
 } from "./_morning-drive-shared.js";
+import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
 
@@ -69,6 +71,10 @@ export async function generateAndStore(dateStr, generatedBy) {
     claire: assignMathPlan(dateStr, "claire"),
     connor: assignMathPlan(dateStr, "connor"),
   };
+  const grammarPlans = {
+    claire: assignGrammarPlan(dateStr, "claire"),
+    connor: assignGrammarPlan(dateStr, "connor"),
+  };
 
   // Everything the prompt needs, plus the raw material for Word Match.
   const [readable, difficultyLines, formatLines, priorWords, vocabStats] =
@@ -87,6 +93,7 @@ export async function generateAndStore(dateStr, generatedBy) {
     recentFormats: formatLines,
     activeSections,
     mathPlans,
+    grammarPlans,
   });
 
   // Schema is built per-day from the active sections, so the model is never
@@ -119,12 +126,24 @@ export async function generateAndStore(dateStr, generatedBy) {
     }),
   };
 
+  // Turn the subjects the model named into real, verified, correctly-credited
+  // images. Anything that fails to resolve is dropped rather than shipped
+  // broken — a 404 in the car at 7am is worse than a missing tile.
+  const media = await resolveMedia(generated);
+
   const payload = {
     ...generated,
+    ...media.patch,
     vocabReview,
     // Recorded so the page (and any later regeneration) knows exactly which
     // sections this day was built with.
-    meta: { sections: activeSections, mathPlans, schemaVersion: 2 },
+    meta: {
+      sections: activeSections.filter((x) => !media.dropped.includes(x)),
+      mathPlans,
+      grammarPlans,
+      droppedForMedia: media.dropped,
+      schemaVersion: 3,
+    },
   };
 
   // Insert the day row.
@@ -156,9 +175,11 @@ export async function generateAndStore(dateStr, generatedBy) {
     ok: true,
     status: "generated",
     date: dateStr,
-    sections: activeSections,
+    sections: activeSections.filter((x) => !media.dropped.includes(x)),
+    droppedForMedia: media.dropped,
     counts: {
       math: (payload.claireMath?.length || 0) + (payload.connorMath?.length || 0),
+      grammar: (payload.grammarClaire?.length || 0) + (payload.grammarConnor?.length || 0),
       words: payload.wordsOfDay ? 2 : 0,
       vocabReview: vocabReview.claire.length + vocabReview.connor.length,
       news: payload.news?.length || 0,
@@ -169,4 +190,81 @@ export async function generateAndStore(dateStr, generatedBy) {
       fingerprintsLogged: fingerprints.length,
     },
   };
+}
+
+
+// ----------------------------------------------------------------------------
+// Media resolution
+// ----------------------------------------------------------------------------
+// The model names a subject; these look it up in a real collection or article
+// and attach a verified image. Returns a patch to merge into the payload plus
+// the list of sections that could not be resolved and must be dropped.
+async function resolveMedia(generated) {
+  const patch = {};
+  const dropped = [];
+
+  const jobs = [];
+
+  if (generated.artwork) {
+    jobs.push(
+      resolveArtwork({ title: generated.artwork.title, artist: generated.artwork.artist })
+        .then((art) => {
+          if (!art) return dropped.push("artwork");
+          // Prefer the museum's own title/artist/date over the model's — the
+          // catalogue is authoritative and the model's title is often shortened.
+          patch.artwork = {
+            ...generated.artwork,
+            title: art.title,
+            artist: art.artist,
+            year: art.year,
+            image: {
+              url: art.imageUrl, credit: art.credit,
+              sourceUrl: art.sourceUrl, source: art.source,
+            },
+          };
+        })
+        .catch(() => dropped.push("artwork"))
+    );
+  }
+
+  for (const [key, titleField] of [["landmark", "wikiTitle"], ["animal", "wikiTitle"]]) {
+    const item = generated[key];
+    if (!item) continue;
+    jobs.push(
+      resolveWikiImage(item[titleField] || item.name)
+        .then((img) => {
+          if (!img) return dropped.push(key);
+          patch[key] = {
+            ...item,
+            image: {
+              url: img.imageUrl, credit: img.credit,
+              sourceUrl: img.sourceUrl, source: img.source,
+              width: img.width, height: img.height,
+            },
+          };
+        })
+        .catch(() => dropped.push(key))
+    );
+  }
+
+  if (generated.flag) {
+    jobs.push(
+      resolveFlag(generated.flag.country)
+        .then((f) => {
+          if (!f) return dropped.push("flag");
+          patch.flag = {
+            ...generated.flag,
+            image: { url: f.imageUrl, credit: f.credit, source: f.source },
+          };
+        })
+        .catch(() => dropped.push("flag"))
+    );
+  }
+
+  await Promise.all(jobs);
+
+  // Strip anything that could not be resolved so the page never sees a
+  // half-built tile.
+  for (const key of dropped) patch[key] = undefined;
+  return { patch, dropped };
 }

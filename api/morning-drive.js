@@ -21,7 +21,7 @@ const MAX_PAST_DAYS = 30;
 // Sections that log a scored attempt. Geography and Two Truths are shared
 // between both kids, so they stay unlogged — `kid` is NOT NULL and guessing an
 // attribution would poison the per-kid difficulty stats.
-const ATTEMPT_KINDS = ["math", "vocab_match"];
+const ATTEMPT_KINDS = ["math", "vocab_match", "grammar"];
 
 function corsHeaders(req) {
   const reqOrigin = req.headers.origin || "";
