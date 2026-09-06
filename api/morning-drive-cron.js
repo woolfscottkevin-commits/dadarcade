@@ -29,7 +29,8 @@ import {
   DAILY_SECTIONS as _DAILY,
 } from "./_morning-drive-shared.js";
 import {
-  assembleFromPool, kindsNeedingTopUp, poolAvailability, releaseItems,
+  POOL_KINDS, assembleFromPool, kindsNeedingTopUp, poolAvailability,
+  releaseItems, upcomingSlotGaps,
 } from "./_morning-drive-pool.js";
 import { generateBatch } from "./_morning-drive-batch.js";
 
@@ -206,6 +207,21 @@ export async function runTopUps(dateStr, maxKinds = 1, existingSb = null) {
   const startedAt = Date.now();
   const counts = await poolAvailability(sb);
   const needed = kindsNeedingTopUp(counts);
+
+  // A date-locked kind is not stocked just because it holds enough rows — those
+  // rows sit on specific calendar dates. On This Day held 30 entries and still
+  // came up empty for 6 September, because 30 dates out of 365 miss almost every
+  // morning. What matters is coverage of the days actually coming up.
+  for (const [kind, spec] of Object.entries(POOL_KINDS)) {
+    if (!spec.slotted) continue;
+    const gaps = await upcomingSlotGaps(sb, kind, dateStr, 30);
+    if (gaps.length < 5) continue;
+    const existing = needed.find((n) => n.kind === kind && !n.kid);
+    if (existing) { existing.slots = gaps; existing.deficit = gaps.length; }
+    else needed.push({ kind, kid: null, have: 30 - gaps.length, min: 30, deficit: gaps.length, slots: gaps });
+  }
+  needed.sort((a, b) => b.deficit - a.deficit);
+
   const generated = [];
   let stoppedEarly = false;
 
@@ -226,7 +242,9 @@ export async function runTopUps(dateStr, maxKinds = 1, existingSb = null) {
 
     const batchStart = Date.now();
     try {
-      generated.push(await generateBatch(sb, { kind: need.kind, kid: need.kid, dateStr }));
+      generated.push(await generateBatch(sb, {
+        kind: need.kind, kid: need.kid, dateStr, slots: need.slots || null,
+      }));
     } catch (err) {
       console.error(`[morning-drive-cron] top-up failed for ${need.kind}:`, err);
       generated.push({ kind: need.kind, kid: need.kid, error: String(err.message || err) });

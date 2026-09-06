@@ -37,7 +37,9 @@ export const POOL_KINDS = {
   characterTrait:   { batch: 25, min: 8 },
   geography:        { batch: 30, min: 8 },
   spanishWord:      { batch: 40, min: 12 },
-  artwork:          { batch: 12, min: 5, media: true },
+  // Only about half of the artworks a model proposes are both in these two
+  // collections and out of copyright, so the batch is sized for the survivors.
+  artwork:          { batch: 30, min: 5, media: true },
   landmark:         { batch: 15, min: 5, media: true },
   flag:             { batch: 20, min: 6, media: true },
   animal:           { batch: 20, min: 6, media: true },
@@ -136,6 +138,28 @@ export function kindsNeedingTopUp(counts) {
     }
   }
   return out.sort((a, b) => b.deficit - a.deficit);
+}
+
+// A date-locked kind (On This Day) is not "stocked" just because it holds 30
+// rows — those rows sit on 30 specific calendar dates out of 365. What matters
+// is whether the days coming up are covered.
+export async function upcomingSlotGaps(sb, kind, dateStr, days = 30) {
+  const { data, error } = await sb
+    .from("morning_drive_pool")
+    .select("slot")
+    .eq("kind", kind)
+    .is("used_on", null)
+    .not("slot", "is", null);
+  if (error) throw error;
+  const have = new Set((data || []).map((r) => r.slot));
+
+  const gaps = [];
+  const start = new Date(`${dateStr}T00:00:00Z`);
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start.getTime() + i * 86400000).toISOString().slice(5, 10);
+    if (!have.has(d)) gaps.push(d);
+  }
+  return gaps;
 }
 
 // ----------------------------------------------------------------------------

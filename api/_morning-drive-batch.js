@@ -46,7 +46,12 @@ const BATCH_INSTRUCTIONS = {
   word: (n, kid) => `Choose ${n} Word-of-the-Day entries for ${KIDS[kid].name} (Grade ${KIDS[kid].grade}). ${kid === "connor" ? "Concrete and encounterable — enormous, sturdy, gentle." : "More abstract — determined, vivid, peculiar."}
 The definition must NOT contain the word or any form of it: weeks later it is shown ALONE as a quiz prompt, so "something swift zips past" gives the answer away. The example sentence SHOULD use the word.`,
   spelling: (n, kid) => `Choose ${n} Grade ${KIDS[kid].grade} spelling words for ${KIDS[kid].name}, each with one sentence using it. The word is SPOKEN ALOUD by the phone and spelled back out loud, so avoid homophones (there/their, pair/pear, knight/night) — a child cannot tell which you mean.`,
-  thisDayInHistory: (n) => `Write ${n} "on this day" entries for ${n} DIFFERENT calendar dates spread across the year. Each must be a well-documented event you are confident about — discovery, invention, exploration, science, a milestone. Nothing violent or frightening. Put the calendar date in the event so it can be filed correctly.`,
+  thisDayInHistory: (n, kid, slots) => `Write one "on this day" entry for EACH of these ${slots?.length || n} calendar dates:
+
+${(slots || []).join(", ")}
+
+Set \`monthDay\` to the date from that list, exactly as written (MM-DD). One entry per date, no extras, no substitutions — a date you skip is a morning with no entry.
+Each must be a well-documented event on that date that you are confident about: a discovery, invention, expedition, scientific first or milestone. Nothing violent or frightening.`,
   artwork: (n) => `Name ${n} different famous artworks.
 Each MUST be: held by the Metropolitan Museum of Art or the Art Institute of Chicago (the only two collections searched — no MoMA, Louvre, Orsay, Rijksmuseum or Uffizi, so no Starry Night or Mona Lisa); out of copyright, which in practice means made before about 1900 (American Gothic and Nighthawks are at the Art Institute but still in copyright); and entirely appropriate for a 7-year-old — no nudity, no violence. Landscapes, animals, boats, dancers, night skies, children and everyday scenes are ideal.
 Give the exact title and the artist's full name. Ask what they SEE before telling them anything.`,
@@ -113,7 +118,7 @@ function planBlock(kind, kid, dateStr, days) {
   return { count: lines.length, text: lines.join("\n") };
 }
 
-export async function generateBatch(sb, { kind, kid = null, dateStr }) {
+export async function generateBatch(sb, { kind, kid = null, dateStr, slots = null }) {
   const spec = POOL_KINDS[kind];
   if (!spec) throw new Error(`Unknown pool kind: ${kind}`);
   const itemSchema = ITEM_SCHEMAS[kind];
@@ -137,7 +142,8 @@ ${plan.text}
 - Never mark the correct option — no tick, no "(correct)", no aside only it carries. All four read the same way.
 - Any working shown inside an option must be arithmetically correct.${kind === "grammar" ? "\n- Every question needs a `why` field stating the rule in one sentence." : ""}`;
   } else {
-    instruction = BATCH_INSTRUCTIONS[kind]?.(count, kid) || `Write ${count} items.`;
+    if (spec.slotted && slots?.length) count = slots.length;
+    instruction = BATCH_INSTRUCTIONS[kind]?.(count, kid, slots) || `Write ${count} items.`;
   }
 
   const avoid = await recentKeys(sb, kind, kid);
@@ -174,14 +180,10 @@ Return all ${count} items.`;
     items = resolved;
   }
 
+  // The model is asked for the date directly rather than having it parsed back
+  // out of the prose, so a differently-worded sentence cannot misfile an entry.
   const slotOf = spec.slotted
-    ? (item) => {
-        // Park each "on this day" entry on the calendar date it describes.
-        const m = String(item.event || "").match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\b/i);
-        if (!m) return null;
-        const months = { january: "01", february: "02", march: "03", april: "04", may: "05", june: "06", july: "07", august: "08", september: "09", october: "10", november: "11", december: "12" };
-        return `${months[m[1].toLowerCase()]}-${String(m[2]).padStart(2, "0")}`;
-      }
+    ? (item) => (/^\d{2}-\d{2}$/.test(String(item.monthDay || "")) ? item.monthDay : null)
     : null;
 
   const { inserted, attempted } = await insertItems(sb, { kind, kid, items, slotOf });

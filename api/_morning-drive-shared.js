@@ -494,6 +494,7 @@ const geoQ = z.object({
 });
 
 const thisDayItem = z.object({
+  monthDay: z.string().describe("The calendar date this happened, as MM-DD, copied exactly from the list of dates you were given."),
   year: z.string().describe("The year it happened."),
   event: z.string().describe("One sentence: what happened on this calendar date."),
   question: z.string().describe("A question inviting them to guess or react before the reveal."),
