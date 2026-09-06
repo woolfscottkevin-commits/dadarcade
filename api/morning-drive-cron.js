@@ -41,8 +41,16 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `https://${req.headers.host || "localhost"}`);
   const dateStr = url.searchParams.get("date") || todayET();
 
+  // `?force=1` regenerates a day that already exists. Without it the run is
+  // idempotent, which is what you want from a nightly cron — but it also means
+  // a day generated before a code change keeps serving the old content forever.
+  // Only reachable with the CRON_SECRET, and it only ever replaces one dated row.
+  const force = ["1", "true", "yes"].includes(
+    (url.searchParams.get("force") || "").toLowerCase()
+  );
+
   try {
-    const result = await generateAndStore(dateStr, "cron");
+    const result = await generateAndStore(dateStr, "cron", { force });
     return res.status(200).json(result);
   } catch (err) {
     console.error("[morning-drive-cron] failed:", err);
@@ -51,16 +59,17 @@ export default async function handler(req, res) {
 }
 
 // Exposed so the on-demand fallback in api/morning-drive.js can reuse it.
-export async function generateAndStore(dateStr, generatedBy) {
+export async function generateAndStore(dateStr, generatedBy, { force = false } = {}) {
   const sb = getSupabase();
 
-  // Idempotency check — if the row already exists, do nothing.
+  // Idempotency check — if the row already exists, do nothing, unless the
+  // caller explicitly asked to overwrite it.
   const { data: existing } = await sb
     .from("morning_drive_days")
     .select("date")
     .eq("date", dateStr)
     .maybeSingle();
-  if (existing) {
+  if (existing && !force) {
     return { ok: true, status: "exists", date: dateStr };
   }
 
@@ -146,10 +155,12 @@ export async function generateAndStore(dateStr, generatedBy) {
     },
   };
 
-  // Insert the day row.
-  const { error: insertDayErr } = await sb
-    .from("morning_drive_days")
-    .insert({ date: dateStr, payload, generated_by: generatedBy });
+  // Write the day row. `date` is the primary key, so an upsert replaces the
+  // existing row when forcing and behaves like an insert otherwise.
+  const row = { date: dateStr, payload, generated_by: generatedBy };
+  const { error: insertDayErr } = force
+    ? await sb.from("morning_drive_days").upsert(row, { onConflict: "date" })
+    : await sb.from("morning_drive_days").insert(row);
   if (insertDayErr) {
     // If the row was inserted by a concurrent run between our check and now,
     // treat as success.
@@ -173,7 +184,7 @@ export async function generateAndStore(dateStr, generatedBy) {
 
   return {
     ok: true,
-    status: "generated",
+    status: force && existing ? "regenerated" : "generated",
     date: dateStr,
     sections: activeSections.filter((x) => !media.dropped.includes(x)),
     droppedForMedia: media.dropped,
