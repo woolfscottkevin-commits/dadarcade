@@ -67,6 +67,24 @@ ok(everImage.size === IMAGE_SECTIONS.length, `all ${IMAGE_SECTIONS.length} image
 ok(DAILY_SECTIONS.includes("grammarClaire") && DAILY_SECTIONS.includes("grammarConnor"), "grammar runs daily for both kids");
 console.log(`      image tiles/day over 60 days: min ${Math.min(...imgCounts)}, max ${Math.max(...imgCounts)}`);
 
+console.log("\n[2d] Rotation fairness");
+// This regressed once already: `seed * 3` over a 15-tile pool has gcd(3,15)=3,
+// so only 5 distinct rotation sets existed and five tiles (spelling, landmark
+// among them) appeared half as often as the rest. Both multipliers must stay
+// coprime with ROTATING_POOL.length.
+const fairRun = Array.from({ length: 150 }, (_, i) =>
+  new Date(Date.UTC(2026, 7, 29) + i * 86400000).toISOString().slice(0, 10));
+const appearances = {};
+for (const d of fairRun) for (const sec of pickRotation(d)) appearances[sec] = (appearances[sec] || 0) + 1;
+const seen = Object.keys(appearances).length;
+const vals = Object.values(appearances);
+const ratio = Math.max(...vals) / Math.min(...vals);
+ok(seen === ROTATING_POOL.length, `every one of the ${ROTATING_POOL.length} rotating tiles appears (saw ${seen})`);
+ok(ratio <= 1.25, `no tile appears disproportionately often (max/min = ${ratio.toFixed(2)}, want <= 1.25)`);
+const distinctSets = new Set(fairRun.map((d) => pickRotation(d).slice().sort().join("~"))).size;
+ok(distinctSets >= ROTATING_POOL.length, `at least ${ROTATING_POOL.length} distinct rotation sets exist (got ${distinctSets})`);
+console.log(`      each tile ~every ${(fairRun.length / (vals[0] || 1)).toFixed(1)} days; ${distinctSets} distinct sets`);
+
 // ---- 3. Vocab review ------------------------------------------------------
 console.log("\n[3] Vocab review (spaced repetition)");
 const priorWords = { claire: [], connor: [] };

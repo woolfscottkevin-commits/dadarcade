@@ -262,8 +262,13 @@ export function pickRotation(dateStr) {
   const n = Math.min(ROTATING_PER_DAY, pool.length);
   const picked = [];
   for (let i = 0; i < n; i++) {
-    // Stride by a number coprime with the pool length for even coverage.
-    const idx = (seed * 3 + i * 2) % pool.length;
+    // BOTH multipliers must be coprime with the pool length. `seed * 3` over a
+    // pool of 15 has gcd(3,15)=3, so only 5 distinct rotation sets ever existed
+    // and they cycled every 5 days — ten tiles landed in two of those sets and
+    // five landed in only one, so spelling and landmark showed up half as often
+    // as everything else. 7 is coprime with 15, giving 15 distinct sets and
+    // exactly even coverage.
+    const idx = (seed * 7 + i * 2) % pool.length;
     const name = pool[idx];
     if (!picked.includes(name)) picked.push(name);
   }
@@ -281,9 +286,13 @@ function capImageSections(picked, seed) {
   const imageCount = picked.filter((s) => IMAGE_SECTIONS.includes(s)).length;
   if (imageCount <= MAX_IMAGE_SECTIONS_PER_DAY) return picked;
 
-  const textPool = ROTATING_POOL.filter(
+  // Rotate the substitution pool by the date too, otherwise every capped day
+  // swaps in whichever text tile happens to sit earliest in ROTATING_POOL.
+  const available = ROTATING_POOL.filter(
     (s) => !IMAGE_SECTIONS.includes(s) && !picked.includes(s)
   );
+  const offset = available.length ? seed % available.length : 0;
+  const textPool = [...available.slice(offset), ...available.slice(0, offset)];
   const out = [...picked];
   let surplus = imageCount - MAX_IMAGE_SECTIONS_PER_DAY;
   // Drop from the end so the highest-priority picks survive, and substitute a
