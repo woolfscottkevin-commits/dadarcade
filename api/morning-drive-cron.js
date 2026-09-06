@@ -35,6 +35,24 @@ import { generateBatch } from "./_morning-drive-batch.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
 
+// Batch generation is slow (a 70-item math batch is tens of seconds), so this
+// function needs materially longer than a typical request. Declared explicitly
+// so it does not silently inherit whatever the platform default happens to be.
+export const config = { maxDuration: 300 };
+
+// Stop starting new batches with this much of the budget gone. The guard cannot
+// interrupt a generation already in flight, so it has to leave room for the
+// longest batch we might begin — see runTopUps().
+const RUN_BUDGET_MS = 200_000;
+
+// Pure so it can be tested without a clock or a network. The guard cannot
+// interrupt a generation already in flight, so it must refuse to START one it
+// does not expect to finish — hence budgeting against the SLOWEST batch seen,
+// not the average.
+export function canStartAnotherBatch(elapsedMs, worstBatchMs, budgetMs = RUN_BUDGET_MS) {
+  return elapsedMs + worstBatchMs <= budgetMs;
+}
+
 export default async function handler(req, res) {
   // Vercel cron sends `Authorization: Bearer <CRON_SECRET>`. Verify when set.
   const expected = process.env.CRON_SECRET;
@@ -56,6 +74,15 @@ export default async function handler(req, res) {
   const force = ["1", "true", "yes"].includes(
     (url.searchParams.get("force") || "").toLowerCase()
   );
+
+  // `?mode=status` reports the bank without generating anything.
+  if (url.searchParams.get("mode") === "status") {
+    try {
+      return res.status(200).json(await poolStatus());
+    } catch (err) {
+      return res.status(500).json({ error: String(err.message || err) });
+    }
+  }
 
   // `?mode=topup` refills the content bank without assembling a day. Used to
   // seed the pool initially, and available if a kind ever runs dry unexpectedly.
@@ -176,23 +203,66 @@ async function buildVocabReviewFor(sb, dateStr, wordsOfDay) {
 // items — this is where essentially all remaining spend lives.
 export async function runTopUps(dateStr, maxKinds = 1, existingSb = null) {
   const sb = existingSb || getSupabase();
+  const startedAt = Date.now();
   const counts = await poolAvailability(sb);
   const needed = kindsNeedingTopUp(counts);
   const generated = [];
+  let stoppedEarly = false;
+
+  // Assume the next batch takes as long as the slowest one so far. Before the
+  // first batch there is nothing to go on, so seed the estimate high enough to
+  // cover a full 70-item math batch.
+  let worstBatchMs = 60_000;
 
   for (const need of needed.slice(0, maxKinds)) {
+    const elapsed = Date.now() - startedAt;
+    if (!canStartAnotherBatch(elapsed, worstBatchMs)) {
+      // Returning a short, honest answer beats being killed mid-batch and
+      // returning nothing at all — the earlier seeding run looked like a
+      // failure purely because the platform cut the response.
+      stoppedEarly = true;
+      break;
+    }
+
+    const batchStart = Date.now();
     try {
       generated.push(await generateBatch(sb, { kind: need.kind, kid: need.kid, dateStr }));
     } catch (err) {
       console.error(`[morning-drive-cron] top-up failed for ${need.kind}:`, err);
       generated.push({ kind: need.kind, kid: need.kid, error: String(err.message || err) });
     }
+    worstBatchMs = Math.max(worstBatchMs, Date.now() - batchStart);
   }
+
+  const done = new Set(generated.map((g) => `${g.kind}:${g.kid || ""}`));
+  const stillLow = needed
+    .filter((n) => !done.has(`${n.kind}:${n.kid || ""}`))
+    .map((n) => `${n.kind}${n.kid ? ":" + n.kid : ""} (${n.have}/${n.min})`);
 
   return {
     checked: Object.keys(counts).length,
-    lowKinds: needed.map((n) => `${n.kind}${n.kid ? ":" + n.kid : ""} (${n.have}/${n.min})`),
+    lowCount: needed.length,
     generated,
+    stillLow,
+    stoppedEarly,
+    elapsedMs: Date.now() - startedAt,
+    // Tells a seeding loop whether another pass is worth making.
+    moreWork: stillLow.length > 0,
+  };
+}
+
+// Read-only view of the bank. No generation, no cost — safe to poll while
+// seeding, and the quickest way to see whether a kind is running dry.
+export async function poolStatus() {
+  const sb = getSupabase();
+  const counts = await poolAvailability(sb);
+  const low = kindsNeedingTopUp(counts);
+  return {
+    ok: true,
+    totalAvailable: Object.values(counts).reduce((a, b) => a + b, 0),
+    byKind: counts,
+    low: low.map((n) => `${n.kind}${n.kid ? ":" + n.kid : ""} (${n.have}/${n.min})`),
+    seeded: low.length === 0,
   };
 }
 

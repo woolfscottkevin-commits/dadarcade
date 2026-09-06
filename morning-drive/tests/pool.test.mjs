@@ -10,6 +10,7 @@ import {
   releaseItems, assembleFromPool,
 } from "../../api/_morning-drive-pool.js";
 import { ITEM_SCHEMAS, activeSectionsFor, DAILY_SECTIONS } from "../../api/_morning-drive-shared.js";
+import { canStartAnotherBatch } from "../../api/morning-drive-cron.js";
 
 let fail = 0;
 const ok = (c, m) => { console.log(`${c ? "  ok  " : "  FAIL"}  ${m}`); if (!c) fail++; };
@@ -178,6 +179,19 @@ const dry = await assembleFromPool(sb6, dateStr, ["jokes", "riddle"]);
 ok(dry.short.includes("jokes"), "a section short of items is reported (jokes needs 2, has 1)");
 ok(dry.short.includes("riddle"), "a section with no items at all is reported");
 ok(dry.payload.jokes === undefined, "a short section is left out rather than half-filled");
+
+console.log("\n[9] Top-up deadline guard");
+// The first seeding run asked for 4 batches, finished 2, and was killed by the
+// platform mid-third — so it returned no JSON at all and looked like a failure
+// even though 140 items had landed.
+ok(canStartAnotherBatch(0, 60_000, 200_000), "starts the first batch on a fresh budget");
+ok(canStartAnotherBatch(100_000, 60_000, 200_000), "starts another when there is comfortably room");
+ok(!canStartAnotherBatch(150_000, 60_000, 200_000), "refuses when the batch would overrun the budget");
+ok(canStartAnotherBatch(140_000, 60_000, 200_000), "allows a batch that fits exactly");
+ok(!canStartAnotherBatch(0, 300_000, 200_000), "refuses a batch longer than the whole budget");
+// It must budget against the SLOWEST batch, not a typical one: a fast joke
+// batch followed by a slow math batch is exactly how the first run died.
+ok(!canStartAnotherBatch(160_000, 50_000, 200_000), "a slow outlier batch keeps the guard conservative");
 
 console.log(fail === 0 ? "\nALL PASS\n" : `\n${fail} FAILURE(S)\n`);
 process.exit(fail ? 1 : 0);
