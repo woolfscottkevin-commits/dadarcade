@@ -407,6 +407,7 @@ export function extractFingerprints(payload) {
   for (const g of payload.grammarClaire || []) push("grammar", `claire:${g.question}`);
   for (const g of payload.grammarConnor || []) push("grammar", `connor:${g.question}`);
   if (payload.artwork?.title) push("artwork", payload.artwork.title);
+  for (const c of payload.artwork?.candidates || []) push("artwork", c.title);
   if (payload.landmark?.name) push("landmark", payload.landmark.name);
   if (payload.flag?.country) push("flag", payload.flag.country);
   if (payload.animal?.name) push("animal", payload.animal.name);
@@ -532,12 +533,21 @@ const grammarQ = z.object({
 // For the visual tiles the model supplies only the SUBJECT. Image URLs are
 // resolved and verified server-side in _morning-drive-media.js — a model-written
 // URL looks plausible and 404s.
-const artworkItem = z.object({
+// Three candidates, not one. Only ~60% of the famous works a model names are
+// both held by the Met/Art Institute AND out of copyright, so a single pick
+// left the tile silently missing on roughly four mornings in ten. Each carries
+// its own commentary because the story has to match whichever one resolves.
+const artworkCandidate = z.object({
   title: z.string().describe("Exact title of a famous artwork, e.g. 'Wheat Field with Cypresses'."),
   artist: z.string().describe("The artist's full name."),
   question: z.string().describe("An open question inviting the kids to look and describe what they see, before any facts."),
   lookFor: z.string().describe("One concrete thing to notice in the picture — a colour, a shape, someone's face."),
   story: z.string().describe("3-4 kid-friendly sentences: who made it, when, and what makes it worth looking at."),
+});
+
+const artworkItem = z.object({
+  candidates: z.array(artworkCandidate).length(3)
+    .describe("Three different artworks in order of preference. The first one that is found in the museum collections is used."),
 });
 
 const landmarkItem = z.object({
@@ -886,7 +896,14 @@ const SECTION_INSTRUCTIONS = {
 
   twoTruths: () => `- **Two Truths and a Lie** — three kid-friendly statements about animals, space, history, or the human body. Exactly two true, one false, and mark \`lieIndex\`. The lie should be plausible, not silly. Explanation covers all three.`,
 
-  artwork: () => `- **Artwork of the day** — name a genuinely FAMOUS painting or print that is held by the Metropolitan Museum of Art or the Art Institute of Chicago, is out of copyright, and is completely appropriate for a ${KIDS.connor.grade === 2 ? "7" : "young"}-year-old: no nudity, no violence, nothing frightening. Landscapes, animals, boats, dancers, star-filled skies, everyday scenes are ideal. Give the exact title and the artist's full name — the picture itself is looked up and verified from the museum's own collection, so an inexact title means the tile is dropped. Ask them what they SEE before telling them anything, point out one concrete thing to look for, then the story.`,
+  artwork: () => `- **Artwork of the day** — name **three different** famous artworks, in order of preference, each with its own question, look-for and story. Only the first one that can be found is used; the others are discarded, so make all three genuinely good choices rather than padding.
+
+    Each must be:
+    - **Held by the Metropolitan Museum of Art or the Art Institute of Chicago.** These are the only two collections searched. Works in MoMA, the Louvre, the Musée d'Orsay, the Rijksmuseum or the Uffizi cannot be used — so no *Starry Night*, no *Mona Lisa*, no *Girl with a Pearl Earring*.
+    - **Out of copyright.** In practice this means created before about 1900. *American Gothic* (1930) and *Nighthawks* (1942) hang in the Art Institute but are still in copyright and cannot be shown.
+    - **Completely appropriate for a ${KIDS.connor.grade === 2 ? "7" : "young"}-year-old**: no nudity, no violence, nothing frightening. Landscapes, animals, boats, dancers, star-filled skies, children, everyday scenes are ideal.
+
+    Give the exact title and the artist's full name — the picture is looked up and verified in the museum's own collection, and an inexact title means that candidate is skipped. Ask what they SEE before telling them anything.`,
 
   landmark: () => `- **Landmark of the day** — one famous place. \`wikiTitle\` must be the EXACT English Wikipedia article title ("Machu Picchu", "Great Wall of China", "Uluru"), because the photo is fetched from that article and the tile is dropped if the title doesn't resolve. Ask a question first, then context and one surprising fact.`,
 

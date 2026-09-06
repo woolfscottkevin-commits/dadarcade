@@ -151,6 +151,7 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
       mathPlans,
       grammarPlans,
       droppedForMedia: media.dropped,
+      mediaAttempts: media.attempts,
       schemaVersion: 3,
     },
   };
@@ -188,6 +189,7 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     date: dateStr,
     sections: activeSections.filter((x) => !media.dropped.includes(x)),
     droppedForMedia: media.dropped,
+    mediaAttempts: media.attempts,
     counts: {
       math: (payload.claireMath?.length || 0) + (payload.connorMath?.length || 0),
       grammar: (payload.grammarClaire?.length || 0) + (payload.grammarConnor?.length || 0),
@@ -213,18 +215,24 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
 async function resolveMedia(generated) {
   const patch = {};
   const dropped = [];
+  // What we actually tried, so a dropped tile is debuggable after the fact
+  // rather than just vanishing.
+  const attempts = {};
 
   const jobs = [];
 
   if (generated.artwork) {
     jobs.push(
-      resolveArtwork({ title: generated.artwork.title, artist: generated.artwork.artist })
-        .then((art) => {
-          if (!art) return dropped.push("artwork");
+      resolveArtworkFromCandidates(generated.artwork)
+        .then(({ art, candidate, attempted }) => {
+          attempts.artwork = attempted;
+          if (!art || !candidate) return dropped.push("artwork");
           // Prefer the museum's own title/artist/date over the model's — the
           // catalogue is authoritative and the model's title is often shortened.
           patch.artwork = {
-            ...generated.artwork,
+            question: candidate.question,
+            lookFor: candidate.lookFor,
+            story: candidate.story,
             title: art.title,
             artist: art.artist,
             year: art.year,
@@ -277,5 +285,25 @@ async function resolveMedia(generated) {
   // Strip anything that could not be resolved so the page never sees a
   // half-built tile.
   for (const key of dropped) patch[key] = undefined;
-  return { patch, dropped };
+  return { patch, dropped, attempts };
+}
+
+// Walk the model's three suggestions in order and keep the first that the
+// museum collections can actually produce. Only ~60% of famous works a model
+// names are both in these two collections and out of copyright, so one pick
+// alone left the tile missing roughly four mornings in ten.
+async function resolveArtworkFromCandidates(artwork) {
+  const candidates = artwork.candidates?.length
+    ? artwork.candidates
+    // Tolerate the older single-artwork shape so a replay of an old day, or a
+    // model response that ignores the array, still works.
+    : [artwork].filter((a) => a?.title);
+
+  const attempted = [];
+  for (const candidate of candidates) {
+    attempted.push(`${candidate.title} — ${candidate.artist || "?"}`);
+    const art = await resolveArtwork({ title: candidate.title, artist: candidate.artist });
+    if (art) return { art, candidate, attempted };
+  }
+  return { art: null, candidate: null, attempted };
 }
