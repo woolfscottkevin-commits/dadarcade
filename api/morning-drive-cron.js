@@ -21,6 +21,7 @@ import {
   fetchRecentReadable,
   fetchVocabStats,
   getSupabase,
+  scrubAnswerTells,
   todayET,
 } from "./_morning-drive-shared.js";
 import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
@@ -135,6 +136,10 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     }),
   };
 
+  // Remove any tick marks or "(correct)" asides the model attached to its own
+  // answer key before this reaches a child who can read them.
+  const tellsCleaned = scrubAnswerTells(generated);
+
   // Turn the subjects the model named into real, verified, correctly-credited
   // images. Anything that fails to resolve is dropped rather than shipped
   // broken — a 404 in the car at 7am is worse than a missing tile.
@@ -152,6 +157,7 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
       grammarPlans,
       droppedForMedia: media.dropped,
       mediaAttempts: media.attempts,
+      answerTellsCleaned: tellsCleaned,
       schemaVersion: 3,
     },
   };
@@ -190,6 +196,7 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     sections: activeSections.filter((x) => !media.dropped.includes(x)),
     droppedForMedia: media.dropped,
     mediaAttempts: media.attempts,
+    answerTellsCleaned: tellsCleaned,
     counts: {
       math: (payload.claireMath?.length || 0) + (payload.connorMath?.length || 0),
       grammar: (payload.grammarClaire?.length || 0) + (payload.grammarConnor?.length || 0),

@@ -6,7 +6,7 @@
 import {
   pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
-  maskWordInDefinition, isUsableWordEntry,
+  maskWordInDefinition, isUsableWordEntry, stripAnswerTells, scrubAnswerTells,
   assignGrammarPlan, GRAMMAR_TOPICS, ROTATING_PER_DAY, IMAGE_SECTIONS, MAX_IMAGE_SECTIONS_PER_DAY, DAILY_SECTIONS,
 } from "../../api/_morning-drive-shared.js";
 
@@ -136,6 +136,26 @@ for (let i = 1; i <= 10; i++) {
 const gaRev = buildVocabReview({ priorWords: giveawayWords, stats: {}, kid: "claire", dateStr: "2026-08-28" });
 ok(gaRev.length > 0, "still produces questions when definitions need masking");
 ok(gaRev.every((q) => !new RegExp(`\\b${q.word}\\b`, "i").test(q.definition)), "NO review prompt contains its own answer");
+
+// ---- 3c. Answer tells -----------------------------------------------------
+console.log("\n[3c] Answer tells");
+ok(stripAnswerTells("um-brel-la — that's 3 syllables \u2705") === "um-brel-la — that's 3 syllables", "strips a tick emoji");
+ok(stripAnswerTells("Japan \u2713") === "Japan", "strips a check mark");
+ok(stripAnswerTells("40 sq ft (correct)") === "40 sq ft", "strips a (correct) aside");
+ok(stripAnswerTells("Shape A — perimeter 30 cm") === "Shape A — perimeter 30 cm", "leaves a legitimate dash clause alone");
+ok(stripAnswerTells("2,477 meters") === "2,477 meters", "leaves an ordinary option untouched");
+const dirty = {
+  grammarConnor: [{ choices: ["um-brel-la — 3 syllables \u2705", "um-brel — 2", "u-m-brel-la — 4", "umb-rella — 2"] }],
+  claireMath: [{ choices: ["12", "14 (correct)", "16", "18"] }],
+  flag: { choices: ["Nepal", "Bhutan \u2714", "Mongolia", "Sri Lanka"] },
+  twoTruths: { items: [{ text: "Octopuses have three hearts" }, { text: "Bananas grow on trees \u274C" }, { text: "Honey never spoils" }] },
+};
+const n = scrubAnswerTells(dirty);
+ok(n === 4, `scrubs every tell across the payload (cleaned ${n}, expected 4)`);
+ok(dirty.grammarConnor[0].choices.every((c) => !/[\u2705\u2713\u2714]/u.test(c)), "grammar choices are clean");
+ok(dirty.claireMath[0].choices[1] === "14", "math (correct) aside removed");
+ok(dirty.flag.choices[1] === "Bhutan", "flag tick removed");
+ok(dirty.twoTruths.items[1].text === "Bananas grow on trees", "two-truths cross removed");
 
 // ---- 4. Schema ------------------------------------------------------------
 console.log("\n[4] Per-day schema");

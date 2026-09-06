@@ -838,6 +838,55 @@ export function buildVocabReview({ priorWords, stats, kid, dateStr, todaysWord, 
   }).filter((q) => q.options.length === 4 && q.correctIndex >= 0);
 }
 
+// ----------------------------------------------------------------------------
+// Answer tells
+// ----------------------------------------------------------------------------
+// A real generation shipped the choice "um-brel-la — that's 3 syllables ✓" for
+// the correct answer and plain text for the others, so the tick mark WAS the
+// answer. Same failure as a definition containing its own word: the model
+// annotates its own key and forgets the child can see it. The prompt now
+// forbids it, but prompts alone did not hold last time, so strip the markers
+// from every multiple-choice option before storing.
+const ANSWER_TELLS = [
+  /[\u2705\u2714\u2713\u2611]/gu,                  // ✅ ✔ ✓ ☑
+  /[\u274C\u2716\u2718\u2717]/gu,                  // ❌ ✖ ✘ ✗
+  /\s*\((?:correct|right|the answer|answer|true|false)\)\s*$/gi,
+  /\s*[-—–]\s*(?:correct|this is correct|the answer)\s*$/gi,
+];
+
+export function stripAnswerTells(choice) {
+  let out = String(choice ?? "");
+  for (const re of ANSWER_TELLS) out = out.replace(re, "");
+  return out.replace(/\s{2,}/g, " ").trim();
+}
+
+// Clean every multiple-choice list in a generated payload, in place.
+// Returns how many options actually had a tell, so it can be reported.
+export function scrubAnswerTells(payload) {
+  let cleaned = 0;
+  const scrub = (item) => {
+    if (!Array.isArray(item?.choices)) return;
+    item.choices = item.choices.map((c) => {
+      const next = stripAnswerTells(c);
+      if (next !== String(c ?? "")) cleaned++;
+      return next;
+    });
+  };
+  for (const key of ["claireMath", "connorMath", "grammarClaire", "grammarConnor"]) {
+    for (const q of payload[key] || []) scrub(q);
+  }
+  scrub(payload.flag);
+  for (const k of ["us", "world"]) scrub(payload.geography?.[k]);
+  if (Array.isArray(payload.twoTruths?.items)) {
+    payload.twoTruths.items = payload.twoTruths.items.map((i) => {
+      const text = stripAnswerTells(i.text);
+      if (text !== String(i.text ?? "")) cleaned++;
+      return { ...i, text };
+    });
+  }
+  return cleaned;
+}
+
 // ============================================================================
 // Prompt builder
 // ============================================================================
@@ -864,6 +913,12 @@ function grammarPlanBlock(kid, plan) {
 Each has an ASSIGNED topic and format below; follow both and copy them into the
 question's \`topic\` and \`format\` fields. Every question needs a \`why\` field
 stating the rule in one sentence, so a wrong answer still teaches the rule.
+
+EXACTLY ONE option may be defensible. "___ the rain stopped, we rushed outside"
+with both "Because" and "Once" available has two right answers and is a broken
+question — check every distractor is genuinely wrong before you use it.
+Never mark the correct option with a tick or an aside: all four must read the
+same way.
 
 ${lines}`;
 }
@@ -965,6 +1020,8 @@ ${mathPlanBlock("connor", mathPlans.connor)}
 - Not every question needs to be a story. When the assigned format is a straight computation or a comparison, just ask it cleanly.
 - Names other than Claire and Connor are welcome — friends, animals, teachers, shopkeepers.
 - Distractor answers should reflect real mistakes a kid would make (forgot to regroup, off by one, multiplied instead of added), not random numbers.
+- NEVER mark the correct option. No tick, no ✓, no "(correct)", no explanatory aside that only the right answer carries. Every option must be written in the same style and at the same length, or the answer is obvious without reading the question.
+- Any working shown inside an option must be arithmetically right. An option labelled "about 4/9 remains" when the true value is 5/9 teaches the wrong thing even when the child taps it.
 - Keep each question to Grade ${KIDS.claire.grade} / Grade ${KIDS.connor.grade} level respectively.
 
 ## Grammar — follow the assigned plan exactly
