@@ -275,3 +275,93 @@ containing every section:
 ```bash
 python3 -m http.server 8899
 ```
+
+
+---
+
+## The content bank (September 2026)
+
+### Why
+
+The nightly prompt had reached **~50,000 input tokens**, and **91% of it was the
+"do not repeat these" block** — every item the model had previously written,
+re-sent every night so it wouldn't say the same thing twice. It grew with
+history, so the cost compounded. Measured against 30 days of real data:
+
+```
+instructions + plans :   9,170 chars   ~2,478 tokens
+do-not-repeat block  :  98,254 chars  ~26,555 tokens   <- 91%
+```
+
+A unique index does that job for free.
+
+### How it works now
+
+Almost every tile is **evergreen**: a joke, a riddle, a verse, a flag question
+about Japan is no worse for having been written six weeks earlier. So:
+
+- **Content is generated in batches** into `morning_drive_pool` — 25 to 70 items
+  of a single kind per call.
+- **The nightly job assembles a day in pure code.** It claims unused rows,
+  stamps `used_on`, and writes `morning_drive_days`. **No model call.**
+- **Top-ups are bounded**: at most **one kind per night**, and only when that
+  kind has dropped below its `min`. Most nights do nothing.
+
+Roughly 15 top-ups a month at ~3.5k tokens each, against 30 nightly calls at
+~50k. About a 30x reduction, and it no longer grows with history.
+
+Batching also produces *better* content: asking for 50 jokes at once lets the
+model see the whole set and vary it, where 50 separate calls each wrote blind.
+
+### The pieces
+
+| File | Role |
+| --- | --- |
+| [`_morning-drive-pool.js`](../api/_morning-drive-pool.js) | `POOL_KINDS` (what to stock), `SECTION_NEEDS` (what a day consumes), claim/insert/assemble |
+| [`_morning-drive-batch.js`](../api/_morning-drive-batch.js) | Per-kind batch prompts, media resolution, insertion |
+| [`morning-drive-cron.js`](../api/morning-drive-cron.js) | Assembles from the pool, tops up one kind, falls back to legacy generation |
+
+### Seeding
+
+The pool starts empty. Apply
+[`003_content_pool.sql`](./migrations/003_content_pool.sql), then run the
+top-up endpoint repeatedly — `kinds=N` caps how many batches one invocation
+attempts, so this stays inside the function timeout:
+
+```bash
+curl "https://dadarcade.com/api/morning-drive-cron?mode=topup&kinds=4" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+**25 batches produce about 874 items** — call it six or seven invocations at
+`kinds=4`. Until it is seeded the cron falls back to the old full-day
+generation, so nothing breaks mid-transition; it just costs what it used to.
+
+### Things worth knowing
+
+- **The pool is service-role only.** Deliberately no anon read policy: it holds
+  unused answers, and a curious kid with the network tab open should not be able
+  to read tomorrow's questions.
+- **Media is resolved at top-up time, not at serve time.** Artwork, landmark,
+  flag and animal items enter the pool with a verified image URL already
+  attached, so a broken link can never reach the page and the nightly assembly
+  never touches the network.
+- **Running dry is reported, not rendered.** A section the pool cannot fill is
+  listed in `meta.shortFromPool` and omitted. If an *everyday* section cannot be
+  filled, the claimed items are released and the legacy generator runs instead.
+- **News is no longer framed as recent.** Pooled items may be served weeks after
+  they are written, so the batch prompt explicitly forbids "this week" framing.
+  This was always the honest position — the stories were never fetched from a
+  live source.
+- **`morning_drive_seen` is not written by the pool path.** The unique index on
+  `(kind, fingerprint)` is the never-repeat guarantee now. That table is still
+  written by the legacy path.
+
+```bash
+node morning-drive/tests/pool.test.mjs
+```
+
+Covers config coherence (every kind has a schema; no kind's minimum is below one
+day's demand), claiming and release, insert dedupe, and assembling a full day —
+all against an in-memory stand-in for Supabase, so no network, credentials or AI
+credit are needed.

@@ -593,6 +593,40 @@ const spanishWordItem = z.object({
   exampleEnglish: z.string().describe("The English translation of that sentence."),
 });
 
+// A single spelling word, for the pool (the daily section groups these by kid).
+const spellingWord = z.object({
+  word: z.string(),
+  sentence: z.string().describe("One sentence using the word, read aloud after it."),
+});
+
+// The schema for ONE item of each pooled kind. Batch generation asks for an
+// array of these; the daily assembly just reads them back out of the database.
+export const ITEM_SCHEMAS = {
+  math: mathQ,
+  grammar: grammarQ,
+  word: wotd,
+  spelling: spellingWord,
+  bible: bibleVerse,
+  quote: quoteItem,
+  joke: jokeItem,
+  wyr: wyrItem,
+  trivia: triviaQ,
+  fact: factItem,
+  news: newsItem,
+  riddle: riddleItem,
+  twoTruths: twoTruthsItem,
+  characterTrait: characterTraitItem,
+  geography: z.object({ us: geoQ, world: geoQ }),
+  spanishWord: spanishWordItem,
+  thisDayInHistory: thisDayItem,
+  // Media kinds are generated as SUBJECTS and resolved to verified images
+  // before they ever enter the pool, so the daily assembly never touches a URL.
+  artwork: artworkCandidate,
+  landmark: landmarkItem,
+  flag: flagItem,
+  animal: animalItem,
+};
+
 const SECTION_SCHEMAS = {
   claireMath: z.array(mathQ).length(5),
   connorMath: z.array(mathQ).length(5),

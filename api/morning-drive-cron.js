@@ -25,6 +25,13 @@ import {
   todayET,
 } from "./_morning-drive-shared.js";
 import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
+import {
+  DAILY_SECTIONS as _DAILY,
+} from "./_morning-drive-shared.js";
+import {
+  assembleFromPool, kindsNeedingTopUp, poolAvailability, releaseItems,
+} from "./_morning-drive-pool.js";
+import { generateBatch } from "./_morning-drive-batch.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
 
@@ -50,6 +57,20 @@ export default async function handler(req, res) {
     (url.searchParams.get("force") || "").toLowerCase()
   );
 
+  // `?mode=topup` refills the content bank without assembling a day. Used to
+  // seed the pool initially, and available if a kind ever runs dry unexpectedly.
+  // `?kinds=N` caps how many kinds one invocation will generate, so a seed run
+  // can be spread over several calls instead of hitting the function timeout.
+  if (url.searchParams.get("mode") === "topup") {
+    const max = Math.max(1, Math.min(8, Number(url.searchParams.get("kinds") || 1)));
+    try {
+      return res.status(200).json(await runTopUps(dateStr, max));
+    } catch (err) {
+      console.error("[morning-drive-cron] top-up failed:", err);
+      return res.status(500).json({ error: String(err.message || err) });
+    }
+  }
+
   try {
     const result = await generateAndStore(dateStr, "cron", { force });
     return res.status(200).json(result);
@@ -60,6 +81,10 @@ export default async function handler(req, res) {
 }
 
 // Exposed so the on-demand fallback in api/morning-drive.js can reuse it.
+//
+// Normal path: assemble the day out of the content bank in pure code — no model
+// call at all. The bank is refilled in large batches by runTopUps(), which is
+// where the (much smaller) cost now lives.
 export async function generateAndStore(dateStr, generatedBy, { force = false } = {}) {
   const sb = getSupabase();
 
@@ -73,6 +98,109 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
   if (existing && !force) {
     return { ok: true, status: "exists", date: dateStr };
   }
+
+  const activeSections = activeSectionsFor(dateStr);
+  const { payload: pooled, short } = await assembleFromPool(sb, dateStr, activeSections);
+
+  // A day is only servable if the everyday sections are covered. If the bank
+  // cannot manage that (first run before seeding, or a kind run dry), hand the
+  // claimed items back and fall through to the original full-generation path so
+  // the kids still get a drive.
+  const coreShort = short.filter((sec) => _DAILY.includes(sec));
+  if (coreShort.length) {
+    await releaseItems(sb, dateStr).catch(() => {});
+    const legacy = await legacyGenerateAndStore(dateStr, generatedBy, { force, sb, reason: coreShort });
+    return legacy;
+  }
+
+  const vocabReview = await buildVocabReviewFor(sb, dateStr, pooled.wordsOfDay);
+  const servedSections = activeSections.filter((sec) => !short.includes(sec));
+
+  const payload = {
+    ...pooled,
+    vocabReview,
+    meta: {
+      sections: servedSections,
+      shortFromPool: short,
+      source: "pool",
+      schemaVersion: 4,
+    },
+  };
+
+  const row = { date: dateStr, payload, generated_by: generatedBy };
+  const { error: writeErr } = force
+    ? await sb.from("morning_drive_days").upsert(row, { onConflict: "date" })
+    : await sb.from("morning_drive_days").insert(row);
+  if (writeErr) {
+    if (writeErr.code === "23505") return { ok: true, status: "race-skipped", date: dateStr };
+    // Do not keep the pool items if the day did not land.
+    await releaseItems(sb, dateStr).catch(() => {});
+    throw writeErr;
+  }
+
+  // Refill at most one kind per night, so the cost is bounded and predictable.
+  const topUp = await runTopUps(dateStr, 1, sb);
+
+  return {
+    ok: true,
+    status: force && existing ? "regenerated" : "assembled",
+    source: "pool",
+    date: dateStr,
+    sections: servedSections,
+    shortFromPool: short,
+    modelCalls: topUp.generated.length,
+    topUp,
+  };
+}
+
+// Word Match is still built in code from earlier days' words — the pool holds
+// today's NEW words, the review comes from what they have already met.
+async function buildVocabReviewFor(sb, dateStr, wordsOfDay) {
+  const [priorWords, vocabStats] = await Promise.all([
+    fetchPriorWords(sb, dateStr),
+    fetchVocabStats(sb),
+  ]);
+  return {
+    claire: buildVocabReview({
+      priorWords, stats: vocabStats, kid: "claire", dateStr,
+      todaysWord: wordsOfDay?.claire?.word,
+    }),
+    connor: buildVocabReview({
+      priorWords, stats: vocabStats, kid: "connor", dateStr,
+      todaysWord: wordsOfDay?.connor?.word,
+    }),
+  };
+}
+
+// Refill the emptiest kinds. One model call per kind, each producing 25-70
+// items — this is where essentially all remaining spend lives.
+export async function runTopUps(dateStr, maxKinds = 1, existingSb = null) {
+  const sb = existingSb || getSupabase();
+  const counts = await poolAvailability(sb);
+  const needed = kindsNeedingTopUp(counts);
+  const generated = [];
+
+  for (const need of needed.slice(0, maxKinds)) {
+    try {
+      generated.push(await generateBatch(sb, { kind: need.kind, kid: need.kid, dateStr }));
+    } catch (err) {
+      console.error(`[morning-drive-cron] top-up failed for ${need.kind}:`, err);
+      generated.push({ kind: need.kind, kid: need.kid, error: String(err.message || err) });
+    }
+  }
+
+  return {
+    checked: Object.keys(counts).length,
+    lowKinds: needed.map((n) => `${n.kind}${n.kid ? ":" + n.kid : ""} (${n.have}/${n.min})`),
+    generated,
+  };
+}
+
+// The original full-day generation. Retained as the fallback for when the bank
+// cannot cover the everyday sections — chiefly the very first run, before the
+// pool has been seeded.
+async function legacyGenerateAndStore(dateStr, generatedBy, { force = false, sb: injected, reason = [] } = {}) {
+  const sb = injected || getSupabase();
 
   // Which sections run today, and what each math question must cover. Both are
   // derived from the date alone, so regenerating an old day reproduces it.
@@ -191,7 +319,9 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
 
   return {
     ok: true,
-    status: force && existing ? "regenerated" : "generated",
+    status: "generated-legacy",
+    source: "legacy",
+    legacyReason: reason,
     date: dateStr,
     sections: activeSections.filter((x) => !media.dropped.includes(x)),
     droppedForMedia: media.dropped,
