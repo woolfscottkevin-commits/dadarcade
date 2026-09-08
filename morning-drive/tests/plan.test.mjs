@@ -169,7 +169,13 @@ console.log("\n[4] Per-day schema");
 const active = activeSectionsFor("2026-08-28");
 const schema = buildPayloadSchema(active);
 const keys = Object.keys(schema.shape);
-ok(keys.length === active.length, `schema has exactly the ${active.length} active sections`);
+// The legacy generator cannot produce every section: video is gathered from
+// channel RSS by code, not written by a model, so it is deliberately absent
+// from the fallback schema.
+const MODEL_CANNOT_MAKE = ["video"];
+const expected = active.filter((s) => !MODEL_CANNOT_MAKE.includes(s));
+ok(keys.length === expected.length, `fallback schema covers the ${expected.length} model-writable sections`);
+ok(!keys.includes("video"), "video is not in the fallback schema — code gathers it, not the model");
 ok(!keys.includes("vocabMatch") && !keys.includes("vocabReview"), "vocab review is NOT in the model schema (built in code)");
 ok(keys.includes("bibleVerse") && keys.includes("quote") && keys.includes("grammarClaire"), "new daily sections present");
 console.log(`      today: ${active.join(", ")}`);

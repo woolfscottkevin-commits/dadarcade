@@ -44,6 +44,9 @@ export const POOL_KINDS = {
   landmark:         { batch: 15, min: 5, media: true },
   flag:             { batch: 20, min: 6, media: true },
   animal:           { batch: 20, min: 6, media: true },
+  // Gathered from channel RSS and verified before storing, so a pulled or
+  // un-embeddable video can never reach the page.
+  video:            { batch: 12, min: 5, media: true },
   thisDayInHistory: { batch: 30, min: 10, slotted: true },
 };
 
@@ -71,6 +74,7 @@ export const SECTION_NEEDS = {
   landmark:         { kind: "landmark", count: 1, as: "single" },
   flag:             { kind: "flag", count: 1, as: "single" },
   animal:           { kind: "animal", count: 1, as: "single" },
+  video:            { kind: "video", count: 1, as: "single" },
   thisDayInHistory: { kind: "thisDayInHistory", count: 1, as: "single", slotted: true },
 };
 
@@ -120,6 +124,7 @@ export function itemKey(kind, item) {
     case "landmark":      return item.name;
     case "flag":          return item.country;
     case "animal":        return item.name;
+    case "video":         return item.videoId;
     case "thisDayInHistory": return item.event;
     default:              return JSON.stringify(item).slice(0, 200);
   }

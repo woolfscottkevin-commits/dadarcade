@@ -31,6 +31,7 @@
   --animal: #16a34a;        /* green */
   --spelling: #7c3aed;      /* violet */
   --spanish: #ea580c;       /* burnt orange */
+  --video: #be123c;         /* deep red */
   --green: #22c55e;
   --green-bg: #f0fdf4;
   --red: #fca5a5;
@@ -162,6 +163,7 @@ body {
 .section.s-animal   { border-color: var(--animal); }
 .section.s-spelling { border-color: var(--spelling); }
 .section.s-spanish  { border-color: var(--spanish); }
+.section.s-video    { border-color: var(--video); }
 
 .s-claire .section-header { background: linear-gradient(90deg, var(--claire), var(--claire-2)); }
 .s-connor .section-header { background: linear-gradient(90deg, var(--connor), var(--connor-2)); }
@@ -187,6 +189,7 @@ body {
 .s-animal   .section-header { background: var(--animal); }
 .s-spelling .section-header { background: var(--spelling); }
 .s-spanish  .section-header { background: var(--spanish); }
+.s-video    .section-header { background: var(--video); }
 
 /* ---------- Math / vocab-match question card ---------- */
 .qcard {
@@ -628,3 +631,27 @@ body.drawer-open, body.fc-open { overflow: hidden; }
 }
 .fc-again { background: var(--green); color: #fff; }
 .fc-new { background: #eef2ff; color: var(--claire); }
+
+
+/* ---------- Video ---------- */
+/* The player is only embedded once the thumbnail is tapped: loading a YouTube
+   iframe on every page view would cost real mobile data in the car and start a
+   third-party frame nobody asked for. */
+.video-thumb {
+  position: relative; display: block; width: 100%; padding: 0;
+  border: 0; border-radius: 14px; overflow: hidden; background: #000;
+  cursor: pointer; line-height: 0; touch-action: manipulation;
+}
+.video-thumb img { width: 100%; height: auto; display: block; opacity: 0.92; }
+.video-play {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 62px; height: 62px; border-radius: 50%;
+  background: rgba(190, 18, 60, 0.92); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; padding-left: 5px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+}
+.video-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; }
+.video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video-title { font-family: 'Fredoka One', cursive; font-size: 1.05rem; margin: 0.6rem 0 0.1rem; color: var(--ink); }
+.video-channel { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }

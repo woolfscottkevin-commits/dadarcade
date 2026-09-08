@@ -1,4 +1,4 @@
-import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260908a";
+import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260908b";
 
 // Morning Drive — page render + attempt logging.
 // All state lives on the page; nothing reactive. We re-render the body when
@@ -205,6 +205,7 @@ function renderSections() {
   if (p.landmark?.image) add(renderLandmarkSection(p.landmark));
   if (p.flag?.image) add(renderFlagSection(p.flag));
   if (p.animal?.image) add(renderAnimalSection(p.animal));
+  if (p.video?.videoId) add(renderVideoSection(p.video));
   if (p.geography) add(renderGeographySection(p.geography));
   if (p.thisDayInHistory) add(renderThisDaySection(p.thisDayInHistory));
   if (p.news?.length) add(renderNewsSection(p.news));
@@ -662,6 +663,43 @@ function renderFlagSection(f) {
     logged: false, // shared between both kids
     revealHtml: `<p class="rc-body">${escapeHtml(f.fact || "")}</p>`,
   }));
+  return section;
+}
+
+function renderVideoSection(v) {
+  const { section, body } = makeSection("video", "Watch This", "\u{1F3AC}");
+
+  const card = document.createElement("div");
+  card.className = "video-card";
+  // The thumbnail stands in for the player until it is tapped. Embedding the
+  // iframe up front would pull the YouTube player onto every page load — a real
+  // cost on mobile data — and start a third-party frame nobody asked for.
+  card.innerHTML = `
+    <button type="button" class="video-thumb" aria-label="Play: ${escapeAttr(v.title)}">
+      <img src="${escapeAttr(v.thumbnail)}" alt="" loading="lazy" decoding="async">
+      <span class="video-play" aria-hidden="true">\u25B6</span>
+    </button>
+    <h3 class="video-title">${escapeHtml(v.title)}</h3>
+    <p class="video-channel">${escapeHtml(v.channel)}</p>
+    ${v.hook ? `<p class="rc-body">${escapeHtml(v.hook)}</p>` : ""}
+    ${v.question ? `<div class="news-question">\u{1F4AC} ${escapeHtml(v.question)}</div>` : ""}`;
+
+  card.querySelector(".video-thumb").addEventListener("click", (e) => {
+    const holder = e.currentTarget;
+    const frame = document.createElement("div");
+    frame.className = "video-frame";
+    const iframe = document.createElement("iframe");
+    iframe.src = `${v.embedUrl}${v.embedUrl.includes("?") ? "&" : "?"}autoplay=1`;
+    iframe.title = v.title;
+    iframe.loading = "lazy";
+    iframe.allow = "accelerometer; encrypted-media; picture-in-picture; web-share";
+    iframe.allowFullscreen = true;
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    frame.appendChild(iframe);
+    holder.replaceWith(frame);
+  });
+
+  body.appendChild(card);
   return section;
 }
 

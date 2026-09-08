@@ -54,6 +54,7 @@ export const ROTATING_POOL = [
   "landmark",
   "flag",
   "animal",
+  "video",
   "spelling",
   "spanishWord",
 ];
@@ -62,7 +63,8 @@ export const ROTATING_PER_DAY = 5;
 // Tiles that load a photo. Capped per day because this is read on a phone on
 // mobile data in a moving car — each image is roughly 100-250KB, so three or
 // four at once is a noticeably slower morning.
-export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal"];
+// Anything with something to look at, video included.
+export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal", "video"];
 // Exactly one visual a day now — the rotation reserves a slot for it, so this
 // is a description of the design rather than a cap applied afterwards.
 export const MAX_IMAGE_SECTIONS_PER_DAY = 1;
@@ -550,6 +552,21 @@ const flagItem = z.object({
   fact: z.string().describe("2-3 sentences: what the flag's colours or symbols mean, and one thing about the country."),
 });
 
+// Video items are assembled by code from verified YouTube RSS entries; the
+// model only supplies hook/question/subject. The schema exists so the pool's
+// coherence checks cover this kind too.
+const videoItem = z.object({
+  videoId: z.string(),
+  title: z.string(),
+  channel: z.string(),
+  url: z.string(),
+  embedUrl: z.string(),
+  thumbnail: z.string(),
+  hook: z.string(),
+  question: z.string(),
+  subject: z.string(),
+});
+
 const animalItem = z.object({
   subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   name: z.string().describe("Common name of the animal."),
@@ -609,6 +626,7 @@ export const ITEM_SCHEMAS = {
   landmark: landmarkItem,
   flag: flagItem,
   animal: animalItem,
+  video: videoItem,
 };
 
 const SECTION_SCHEMAS = {

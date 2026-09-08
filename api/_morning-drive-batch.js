@@ -17,6 +17,7 @@ import {
 } from "./_morning-drive-shared.js";
 import { POOL_KINDS, insertItems, itemKey, usedSubjects } from "./_morning-drive-pool.js";
 import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
+import { buildVideoBatch } from "./_morning-drive-video.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
 
@@ -121,6 +122,14 @@ function planBlock(kind, kid, dateStr, days) {
 export async function generateBatch(sb, { kind, kid = null, dateStr, slots = null }) {
   const spec = POOL_KINDS[kind];
   if (!spec) throw new Error(`Unknown pool kind: ${kind}`);
+
+  // Video runs backwards from every other kind: code gathers and verifies real
+  // videos first, and the model only chooses among them and writes the words.
+  if (kind === "video") {
+    const { items, channelsOk, channelsFailed, verified } = await buildVideoBatch({ count: spec.batch, today: dateStr });
+    const { inserted, attempted } = await insertItems(sb, { kind, items });
+    return { kind, generated: items.length, verified, channelsOk, channelsFailed, attempted, inserted };
+  }
   const itemSchema = ITEM_SCHEMAS[kind];
   if (!itemSchema) throw new Error(`No item schema for kind: ${kind}`);
 
