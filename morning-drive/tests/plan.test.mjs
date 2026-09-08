@@ -6,7 +6,7 @@
 import {
   pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
-  maskWordInDefinition, isUsableWordEntry, stripAnswerTells, scrubAnswerTells,
+  maskWordInDefinition, isUsableWordEntry, stripAnswerTells, scrubAnswerTells, VOCAB_REVIEW_PER_KID,
   assignGrammarPlan, GRAMMAR_TOPICS, ROTATING_PER_DAY, IMAGE_SECTIONS, MAX_IMAGE_SECTIONS_PER_DAY, DAILY_SECTIONS,
 } from "../../api/_morning-drive-shared.js";
 
@@ -105,7 +105,7 @@ const stats = {
   "claire|word19": { times: 1, misses: 1, lastSeen: "2026-08-26" },
 };
 const rev = buildVocabReview({ priorWords, stats, kid: "claire", dateStr: "2026-08-28", todaysWord: "word20" });
-ok(rev.length === 3, `returns 3 review questions (got ${rev.length})`);
+ok(rev.length === VOCAB_REVIEW_PER_KID, `returns ${VOCAB_REVIEW_PER_KID} review questions (got ${rev.length})`);
 ok(rev.every((q) => q.options.length === 4), "each has exactly 4 options");
 ok(rev.every((q) => q.options[q.correctIndex] === q.word), "correctIndex points at the right word");
 ok(rev.every((q) => new Set(q.options).size === 4), "no duplicate options");

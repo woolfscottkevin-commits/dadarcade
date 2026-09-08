@@ -103,23 +103,47 @@ function gcd(a, b) { return b ? gcd(b, a % b) : a; }
 
 // Fractions lead with the picture, because "one half plus one half" means
 // nothing to a 7-year-old until they have seen two half-circles become a whole.
-function fractionsCard() {
-  const denominator = pick([2, 2, 3, 4, 4, 6, 8]);
-  const a = 1 + rnd(denominator - 1);
-  const b = 1 + rnd(denominator - a); // keep the total at or below one whole
-  const sum = a + b;
-  const g = gcd(sum, denominator);
-  const simplified = sum === denominator
-    ? "1 whole"
-    : `${sum / g}/${denominator / g}`;
+//
+// The first version answered "1 whole" 56% of the time. Two causes: b was drawn
+// from 1..(denominator - a), a range whose top value ALWAYS completes the pie
+// and which narrows as a grows; and denominator 2 was in the pool, where
+// 1/2 + 1/2 is the only problem that exists. Now the SUM is chosen first, so
+// how often a card lands on a whole is a decision rather than an accident.
+const FRACTION_DENOMINATORS = [4, 4, 5, 6, 6, 8, 8, 10, 12];
+const WHOLE_RATE = 0.2; // roughly one card in five completes the pie
 
+function fractionsCard() {
+  const denominator = pick(FRACTION_DENOMINATORS);
+  const subtract = Math.random() < 0.4;
+
+  if (subtract) {
+    // a/d − b/d, always leaving something behind: a bare zero is a dull card
+    // and teaches less than a remainder you can see.
+    const a = 2 + rnd(denominator - 1);        // 2..denominator
+    const b = 1 + rnd(a - 1);                  // 1..a-1
+    const diff = a - b;
+    const g = gcd(diff, denominator);
+    return {
+      deck: "fractions",
+      key: `frac:${a}/${denominator}-${b}/${denominator}`,
+      prompt: `${a}/${denominator} − ${b}/${denominator}`,
+      answer: diff === denominator ? "1 whole" : `${diff / g}/${denominator / g}`,
+      visual: { op: "-", a, b, denominator, result: diff },
+    };
+  }
+
+  const sum = Math.random() < WHOLE_RATE
+    ? denominator                              // deliberately a whole
+    : 2 + rnd(denominator - 2);                // 2..denominator-1
+  const a = 1 + rnd(sum - 1);
+  const b = sum - a;
+  const g = gcd(sum, denominator);
   return {
     deck: "fractions",
     key: `frac:${a}/${denominator}+${b}/${denominator}`,
     prompt: `${a}/${denominator} + ${b}/${denominator}`,
-    answer: simplified,
-    // Rendered as pies on both faces of the card.
-    visual: { a, b, denominator, sum },
+    answer: sum === denominator ? "1 whole" : `${sum / g}/${denominator / g}`,
+    visual: { op: "+", a, b, denominator, result: sum },
   };
 }
 
@@ -201,6 +225,7 @@ export function fractionPie(filled, total, size = 96, fill = "var(--claire)") {
 // Two pies for the operands, and on the reveal a third for the total. More than
 // one whole is drawn as a full pie plus the remainder.
 function fractionVisual(v, { showAnswer }) {
+  const op = v.op || "+";
   const one = (f, d) => fractionPie(f, d);
   const label = (f, d) => `<span class="frac-label">${f}/${d}</span>`;
   const operand = (f, d) => `<div class="frac-term">${one(f, d)}${label(f, d)}</div>`;
@@ -208,22 +233,23 @@ function fractionVisual(v, { showAnswer }) {
   if (!showAnswer) {
     return `<div class="frac-row">
       ${operand(v.a, v.denominator)}
-      <span class="frac-op">+</span>
+      <span class="frac-op">${op}</span>
       ${operand(v.b, v.denominator)}
       <span class="frac-op">=</span>
       <span class="frac-q">?</span>
     </div>`;
   }
 
-  const wholes = Math.floor(v.sum / v.denominator);
-  const rest = v.sum % v.denominator;
+  const total = v.result ?? v.sum;
+  const wholes = Math.floor(total / v.denominator);
+  const rest = total % v.denominator;
   const totalPies = wholes > 0
     ? `<div class="frac-term">${fractionPie(v.denominator, v.denominator, 96, "var(--green)")}${rest ? fractionPie(rest, v.denominator, 96, "var(--green)") : ""}</div>`
-    : `<div class="frac-term">${fractionPie(v.sum, v.denominator, 96, "var(--green)")}</div>`;
+    : `<div class="frac-term">${fractionPie(total, v.denominator, 96, "var(--green)")}</div>`;
 
   return `<div class="frac-row">
     ${operand(v.a, v.denominator)}
-    <span class="frac-op">+</span>
+    <span class="frac-op">${op}</span>
     ${operand(v.b, v.denominator)}
     <span class="frac-op">=</span>
     ${totalPies}
@@ -460,3 +486,46 @@ export function renderFlashcardMenu(container, { onStart } = {}) {
   draw();
   return { redraw: draw };
 }
+
+// ----------------------------------------------------------------------------
+// Variety
+// ----------------------------------------------------------------------------
+// The fraction deck once answered "1 whole" on 56% of cards — eight in a round
+// of ten — and every card still looked individually correct. Nothing about a
+// single card reveals that kind of bias; only the distribution does. So the
+// decks are measured, not eyeballed, and the thresholds below are asserted in
+// the test suite.
+
+export function analyzeVariety(cards) {
+  const answers = new Map();
+  const prompts = new Map();
+  const types = new Map();
+  for (const c of cards) {
+    answers.set(c.answer, (answers.get(c.answer) || 0) + 1);
+    prompts.set(c.prompt, (prompts.get(c.prompt) || 0) + 1);
+    // "Type" is the shape of the question, not its content: for fractions that
+    // is add vs subtract; elsewhere it is the deck itself.
+    const type = c.visual?.op ? `${c.deck}:${c.visual.op}` : c.deck;
+    types.set(type, (types.get(type) || 0) + 1);
+  }
+  const top = (m) => [...m.entries()].sort((a, b) => b[1] - a[1])[0] || ["", 0];
+  const [topAnswer, topAnswerCount] = top(answers);
+  const [topPrompt, topPromptCount] = top(prompts);
+  return {
+    n: cards.length,
+    distinctAnswers: answers.size,
+    distinctPrompts: prompts.size,
+    topAnswer, topAnswerShare: topAnswerCount / cards.length,
+    topPrompt, topPromptShare: topPromptCount / cards.length,
+    questionTypes: Object.fromEntries(types),
+  };
+}
+
+// What each deck is expected to manage. Division answers are quotients 1-12, so
+// its ceiling is necessarily higher than multiplication's; fractions have a
+// small answer space by nature. These are the numbers a regression would break.
+export const VARIETY_LIMITS = {
+  multiplication: { maxTopAnswerShare: 0.08, minDistinctAnswers: 40 },
+  division:       { maxTopAnswerShare: 0.14, minDistinctAnswers: 10 },
+  fractions:      { maxTopAnswerShare: 0.22, minDistinctAnswers: 15 },
+};

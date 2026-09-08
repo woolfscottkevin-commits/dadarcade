@@ -70,7 +70,7 @@ export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal", "video"]
 export const MAX_IMAGE_SECTIONS_PER_DAY = 1;
 
 // How many previously-learned words each kid reviews in Word Match.
-export const VOCAB_REVIEW_PER_KID = 3;
+export const VOCAB_REVIEW_PER_KID = 2;
 
 
 // Grammar gets the same assigned-topic rotation as math, for the same reason:
