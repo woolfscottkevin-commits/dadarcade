@@ -180,18 +180,35 @@ export function planRound(deckIds, size = ROUND_SIZE, offset = 0) {
   return plan;
 }
 
+// At most this many cards in one round may share an answer. Deduping only on the
+// PROBLEM is not enough: 2/4 + 1/4 and 1/8 + 3/8 are different questions with
+// the same answer, and a round where six cards all answer "1/2" feels just as
+// repetitive as one where six cards ask the same thing.
+const MAX_SAME_ANSWER_PER_ROUND = 3;
+
 export function buildRound(selection, size = ROUND_SIZE, offset = 0) {
   const plan = planRound(selection.decks, size, offset);
   const cards = [];
-  const seen = new Set();
+  const seenKeys = new Set();
+  const answerCounts = new Map();
+
   for (const deck of plan) {
-    // Try a few times to avoid the same fact twice in one round of ten.
     let card = null;
-    for (let attempt = 0; attempt < 8; attempt++) {
-      card = GENERATORS[deck](selection);
-      if (!seen.has(card.key)) break;
+    let fallback = null;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = GENERATORS[deck](selection);
+      fallback = fallback || candidate;
+      const answerSoFar = answerCounts.get(candidate.answer) || 0;
+      if (seenKeys.has(candidate.key)) continue;
+      if (answerSoFar >= MAX_SAME_ANSWER_PER_ROUND) continue;
+      card = candidate;
+      break;
     }
-    seen.add(card.key);
+    // A deck narrowed to a single table has very few facts, so after enough
+    // tries take what we can get rather than shipping a short round.
+    card = card || fallback;
+    seenKeys.add(card.key);
+    answerCounts.set(card.answer, (answerCounts.get(card.answer) || 0) + 1);
     cards.push(card);
   }
   return cards;

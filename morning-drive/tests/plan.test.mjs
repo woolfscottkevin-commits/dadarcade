@@ -46,8 +46,8 @@ for (const kid of ["claire", "connor"]) {
 console.log("\n[2b] Grammar plan");
 for (const kid of ["claire", "connor"]) {
   const plans = dates.map((d) => assignGrammarPlan(d, kid));
-  ok(plans.every((p) => p.length === 2), `${kid}: 2 grammar questions/day`);
-  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === 2), `${kid}: 2 DISTINCT topics within a day`);
+  ok(plans.every((p) => p.length === 1), `${kid}: 1 grammar question/day`);
+  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === p.length), `${kid}: no repeated topic within a day`);
   const topicSets = plans.map((p) => p.map((q) => q.topic).sort().join("~"));
   ok(new Set(topicSets).size === topicSets.length, `${kid}: no repeated topic set in 14 days`);
   console.log(`      ${kid}: ${new Set(plans.flat().map((q) => q.topic)).size}/${GRAMMAR_TOPICS[kid].length} topics in 14 days`);
@@ -195,7 +195,7 @@ ok(prompt.includes("NIrV"), "Bible translation specified");
 ok(prompt.includes("August 28"), "calendar date passed for On This Day");
 ok(prompt.includes("Verse of the Day") || prompt.includes("Bible verse"), "Bible instructions present");
 const inactive = ROTATING_POOL.filter((x) => !active.includes(x));
-const markers = { riddle: "Riddle", twoTruths: "Two Truths and a Lie", characterTrait: "Character trait of the day", thisDayInHistory: "This Day in History", news: "2 News stories", trivia: "3 History Trivia", facts: "3 Fun Facts" };
+const markers = { riddle: "Riddle", twoTruths: "Two Truths and a Lie", characterTrait: "Character trait of the day", thisDayInHistory: "This Day in History", news: "2 News stories", trivia: "2 History Trivia", facts: "2 Fun Facts" };
 ok(inactive.every((s) => !prompt.includes(markers[s])), `no instructions for today's inactive sections (${inactive.join(", ") || "none"})`);
 ok(active.filter((s) => markers[s]).every((s) => prompt.includes(markers[s])), "instructions present for every active rotating section");
 console.log(`      prompt length: ${prompt.length} chars`);

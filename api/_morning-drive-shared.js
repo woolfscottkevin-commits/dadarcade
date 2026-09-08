@@ -70,7 +70,7 @@ export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal", "video"]
 export const MAX_IMAGE_SECTIONS_PER_DAY = 1;
 
 // How many previously-learned words each kid reviews in Word Match.
-export const VOCAB_REVIEW_PER_KID = 2;
+export const VOCAB_REVIEW_PER_KID = 1;
 
 
 // Grammar gets the same assigned-topic rotation as math, for the same reason:
@@ -325,7 +325,7 @@ export function assignMathPlan(dateStr, kid, count = 5) {
   return plan;
 }
 
-export function assignGrammarPlan(dateStr, kid, count = 2) {
+export function assignGrammarPlan(dateStr, kid, count = 1) {
   const topics = GRAMMAR_TOPICS[kid] || [];
   const seed = daySeed(dateStr);
   const T = topics.length;   // 20
@@ -632,8 +632,8 @@ export const ITEM_SCHEMAS = {
 const SECTION_SCHEMAS = {
   claireMath: z.array(mathQ).length(5),
   connorMath: z.array(mathQ).length(5),
-  grammarClaire: z.array(grammarQ).length(2),
-  grammarConnor: z.array(grammarQ).length(2),
+  grammarClaire: z.array(grammarQ).length(1),
+  grammarConnor: z.array(grammarQ).length(1),
   artwork: artworkItem,
   landmark: landmarkItem,
   flag: flagItem,
@@ -642,10 +642,10 @@ const SECTION_SCHEMAS = {
   spanishWord: spanishWordItem,
   wordsOfDay: z.object({ connor: wotd, claire: wotd }),
   news: z.array(newsItem).length(2),
-  trivia: z.array(triviaQ).length(3),
+  trivia: z.array(triviaQ).length(2),
   facts: z.array(factItem).length(2),
   jokes: z.array(jokeItem).length(2),
-  wyr: z.array(wyrItem).length(4),
+  wyr: z.array(wyrItem).length(2),
   bibleVerse,
   quote: quoteItem,
   geography: z.object({ us: geoQ, world: geoQ }),
@@ -945,7 +945,7 @@ function grammarPlanBlock(kid, plan) {
   const lines = plan.map((p, i) =>
     `  ${i + 1}. topic: **${p.topic}** — format: *${p.format}*`
   ).join("\n");
-  return `**${k.name}'s grammar (Grade ${k.grade})** — 2 questions, MC with 4 options.
+  return `**${k.name}'s grammar (Grade ${k.grade})** — 1 question, MC with 4 options.
 Each has an ASSIGNED topic and format below; follow both and copy them into the
 question's \`topic\` and \`format\` fields. Every question needs a \`why\` field
 stating the rule in one sentence, so a wrong answer still teaches the rule.
@@ -973,13 +973,13 @@ const SECTION_INSTRUCTIONS = {
 
   news: () => `- **2 News stories** — kid-appropriate "cool stuff happening" framed as recent. Topics: space discoveries, animals, science, nature, inventions, archaeology. NO violence, war, crime, disasters, or politics. One discussion question each. Only fill \`sourceUrl\` if you are genuinely confident the URL is real — otherwise leave it blank.`,
 
-  trivia: () => `- **3 History Trivia questions** — mixed difficulty (one Connor can get, one Claire can get, one stretch). Explorers, inventors, ancient civilizations, presidents, scientists. 1-2 sentences of context with each answer.`,
+  trivia: () => `- **2 History Trivia questions** — mixed difficulty (one Connor can get, one Claire can get, one stretch). Explorers, inventors, ancient civilizations, presidents, scientists. 1-2 sentences of context with each answer.`,
 
   facts: () => `- **2 Fun Facts** — animals, space, food science, nature, human body, geography. One emoji and 2-3 kid-friendly sentences each.`,
 
   jokes: () => `- **2 Jokes** — kid-clean (puns, knock-knocks, riddles; no bathroom humor). One Connor-level (visual/concrete), one Claire-level (verbal/punny). Mark each with \`level\`.`,
 
-  wyr: () => `- **4 Would You Rather** — imaginative, fun, kid-appropriate. Both options should be genuinely tempting; avoid one obviously-worse option.`,
+  wyr: () => `- **2 Would You Rather** — imaginative, fun, kid-appropriate. Both options should be genuinely tempting; avoid one obviously-worse option.`,
 
   thisDayInHistory: (ctx) => `- **This Day in History** — something that actually happened on **${ctx.monthDay}** (any year). Give the year, one sentence on what happened, a question inviting a guess, and 3-4 sentences of kid-friendly context. Pick a well-documented event you are confident about — discovery, invention, exploration, science, a milestone. Nothing violent or frightening.`,
 

@@ -143,13 +143,18 @@ for (const deck of ["multiplication", "division", "fractions"]) {
 // A single round of ten should not be dominated by one answer either — that is
 // what a kid actually experiences.
 {
+  // Checked on every deck, not just fractions, and over enough rounds that a
+  // rare bad round would show up — this assertion was flaky at 500 rounds
+  // before round building became answer-aware, which is how the gap was found.
   let worstRun = 0;
-  for (let i = 0; i < 500; i++) {
-    const round = buildRound(sel(["fractions"]));
-    const counts = round.reduce((a, c) => ((a[c.answer] = (a[c.answer] || 0) + 1), a), {});
-    worstRun = Math.max(worstRun, Math.max(...Object.values(counts)));
+  for (const deck of ["fractions", "division", "multiplication"]) {
+    for (let i = 0; i < 800; i++) {
+      const round = buildRound(sel([deck]));
+      const counts = round.reduce((a, c) => ((a[c.answer] = (a[c.answer] || 0) + 1), a), {});
+      worstRun = Math.max(worstRun, Math.max(...Object.values(counts)));
+    }
   }
-  ok(worstRun <= 5, `worst single round repeats one answer at most ${worstRun}/10 times`);
+  ok(worstRun <= 3, `worst single round repeats one answer at most ${worstRun}/10 times`);
 }
 
 console.log(fail === 0 ? "\nALL PASS\n" : `\n${fail} FAILURE(S)\n`);
