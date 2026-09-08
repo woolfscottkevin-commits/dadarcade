@@ -1,3 +1,5 @@
+import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260908a";
+
 // Morning Drive — page render + attempt logging.
 // All state lives on the page; nothing reactive. We re-render the body when
 // the user switches into a past day, but individual section interactions
@@ -42,6 +44,7 @@ async function init() {
 }
 
 function wireUI() {
+  wireMenu();
   pastBtn.addEventListener("click", openPastSheet);
   pastSheet.querySelector(".past-close").addEventListener("click", closePastSheet);
   pastSheet.addEventListener("click", (e) => {
@@ -51,6 +54,46 @@ function wireUI() {
     loadDay({ date: null, readOnly: false }).catch((err) =>
       showError(`Couldn't load today: ${err.message || err}`)
     );
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Hamburger menu
+// ----------------------------------------------------------------------------
+
+function wireMenu() {
+  const btn = document.getElementById("menu-btn");
+  const drawer = document.getElementById("drawer");
+  if (!btn || !drawer) return;
+  const menuHost = document.getElementById("fc-menu");
+
+  const open = () => {
+    drawer.hidden = false;
+    btn.setAttribute("aria-expanded", "true");
+    document.body.classList.add("drawer-open");
+  };
+  const close = () => {
+    drawer.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("drawer-open");
+  };
+
+  btn.addEventListener("click", () => (drawer.hidden ? open() : close()));
+  drawer.querySelector(".drawer-close").addEventListener("click", close);
+  // Tapping the dimmed area outside the panel closes it.
+  drawer.addEventListener("click", (e) => { if (e.target === drawer) close(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !drawer.hidden) close(); });
+
+  renderFlashcardMenu(menuHost, {
+    onStart(selection) {
+      close();
+      openFlashcards(selection, {
+        onExit(result) {
+          // "Practise something new" comes straight back to the deck list.
+          if (result?.chooseNew) open();
+        },
+      });
+    },
   });
 }
 

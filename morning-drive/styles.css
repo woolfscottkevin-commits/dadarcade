@@ -492,3 +492,139 @@ body {
 .spanish-word { color: var(--spanish); font-size: 1.5rem; }
 .pronunciation { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; }
 .translation { color: var(--muted); }
+
+/* ==========================================================================
+   Hamburger menu
+   ========================================================================== */
+.menu-btn {
+  position: fixed; top: 0.6rem; right: 0.7rem; z-index: 60;
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 2px solid #e5e7eb; background: var(--card-bg);
+  font-size: 1.35rem; line-height: 1; color: var(--ink);
+  cursor: pointer; box-shadow: var(--pill-shadow); touch-action: manipulation;
+}
+body.drawer-open, body.fc-open { overflow: hidden; }
+
+.drawer { position: fixed; inset: 0; z-index: 70; background: rgba(15, 23, 42, 0.45); }
+.drawer-panel {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: min(88vw, 380px);
+  background: var(--card-bg);
+  padding: 1rem 1rem 2rem;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.18);
+}
+.drawer-close {
+  position: absolute; top: 0.5rem; right: 0.6rem;
+  width: 40px; height: 40px; border: 0; background: transparent;
+  font-size: 1.7rem; line-height: 1; color: var(--muted); cursor: pointer;
+}
+.drawer-title { font-family: 'Fredoka One', cursive; margin: 0.2rem 0 0.3rem; font-size: 1.3rem; }
+.drawer-note { margin: 0 0 0.9rem; color: var(--muted); font-weight: 600; font-size: 0.86rem; line-height: 1.4; }
+
+/* ---------- Deck list ---------- */
+.fc-deck { border-top: 1px solid #f1f5f9; padding: 0.15rem 0; }
+.fc-deck-head { display: flex; align-items: center; gap: 0.3rem; }
+.fc-caret, .fc-caret-spacer {
+  width: 30px; height: 40px; flex: 0 0 30px;
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 1rem; cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.fc-caret.open { transform: rotate(90deg); color: var(--ink); }
+.fc-deck-title {
+  flex: 1; display: flex; align-items: center; gap: 0.5rem;
+  min-height: 48px; padding: 0.4rem 0.2rem;
+  border: 0; background: transparent; text-align: left;
+  font-family: inherit; font-size: 1.02rem; font-weight: 800; color: var(--ink);
+  cursor: pointer; touch-action: manipulation;
+}
+.fc-deck-title:active { opacity: 0.6; }
+.fc-deck-emoji { font-size: 1.15rem; }
+.fc-check { width: 22px; height: 22px; margin-right: 0.35rem; accent-color: var(--claire); flex: 0 0 auto; }
+
+.fc-tables { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0 0 0.7rem 30px; }
+.fc-chip {
+  min-width: 44px; min-height: 36px; padding: 0.25rem 0.55rem;
+  border: 2px solid #e5e7eb; border-radius: 999px; background: #fff;
+  font-family: inherit; font-weight: 800; font-size: 0.85rem; color: var(--muted);
+  cursor: pointer; touch-action: manipulation;
+}
+.fc-chip.on { background: var(--claire); border-color: var(--claire); color: #fff; }
+
+.fc-start {
+  width: 100%; margin-top: 1rem; padding: 0.85rem 1rem;
+  border: 0; border-radius: 14px; background: var(--claire); color: #fff;
+  font-family: inherit; font-weight: 800; font-size: 1.02rem;
+  cursor: pointer; min-height: 52px; touch-action: manipulation;
+}
+.fc-start:disabled { background: #e5e7eb; color: var(--muted); cursor: default; }
+
+/* ==========================================================================
+   Flashcard mode
+   ========================================================================== */
+.fc-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  background: linear-gradient(160deg, #1e1b4b, #312e81);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.fc-close {
+  position: absolute; top: 0.6rem; right: 0.7rem;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,0.14); color: #fff;
+  font-size: 1.8rem; line-height: 1; cursor: pointer; touch-action: manipulation;
+}
+.fc-progress {
+  position: absolute; top: 1.2rem; left: 0; right: 0;
+  text-align: center; color: rgba(255,255,255,0.75);
+  font-weight: 800; font-size: 0.92rem; letter-spacing: 0.04em;
+}
+.fc-stage { width: min(92vw, 460px); }
+
+/* The flip itself. Height is generous because a fraction card carries three
+   pies and a label, which is much taller than "7 × 8". */
+.fc-card { perspective: 1200px; width: 100%; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fc-inner {
+  position: relative; width: 100%; min-height: 340px;
+  transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.4,.2,.2,1);
+}
+.fc-card.flipped .fc-inner { transform: rotateY(180deg); }
+.fc-face {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.6rem;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background: #fff; border-radius: 24px; padding: 1.2rem;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.3);
+}
+.fc-back { transform: rotateY(180deg); background: var(--green-bg); }
+.fc-prompt { font-family: 'Fredoka One', cursive; font-size: clamp(2.4rem, 12vw, 3.6rem); color: var(--ink); }
+.fc-answer {
+  font-family: 'Fredoka One', cursive; font-size: clamp(2.2rem, 11vw, 3.2rem);
+  color: #15803d;
+}
+.fc-hint {
+  position: absolute; bottom: 0.9rem; left: 0; right: 0; text-align: center;
+  font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.05em;
+}
+
+/* ---------- Fraction pictures ---------- */
+.frac-row { display: flex; align-items: center; justify-content: center; gap: 0.35rem; flex-wrap: wrap; }
+.frac-term { display: flex; align-items: center; flex-direction: column; gap: 0.15rem; }
+.frac-pie { width: 74px; height: 74px; }
+.frac-label { font-weight: 800; font-size: 1rem; color: var(--ink); }
+.frac-op { font-family: 'Fredoka One', cursive; font-size: 1.7rem; color: var(--muted); }
+.frac-q { font-family: 'Fredoka One', cursive; font-size: 2.4rem; color: var(--claire); }
+
+/* ---------- Round end ---------- */
+.fc-done .fc-inner { min-height: 340px; }
+.fc-done-title { font-family: 'Fredoka One', cursive; font-size: 1.9rem; color: var(--ink); }
+.fc-done-sub { color: var(--muted); font-weight: 700; margin-bottom: 0.6rem; }
+.fc-done-actions { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; padding: 0 0.6rem; }
+.fc-btn {
+  width: 100%; padding: 0.85rem 1rem; border: 0; border-radius: 14px;
+  font-family: inherit; font-weight: 800; font-size: 1rem; cursor: pointer;
+  min-height: 52px; touch-action: manipulation;
+}
+.fc-again { background: var(--green); color: #fff; }
+.fc-new { background: #eef2ff; color: var(--claire); }

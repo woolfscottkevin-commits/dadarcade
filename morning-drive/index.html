@@ -25,6 +25,17 @@
 <body>
   <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
 
+  <button type="button" id="menu-btn" class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
+
+  <div id="drawer" class="drawer" hidden>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Menu">
+      <button type="button" class="drawer-close" aria-label="Close menu">×</button>
+      <h2 class="drawer-title">🎴 Flashcards</h2>
+      <p class="drawer-note">Tap a deck to practice it, or tick several for a mixed round.</p>
+      <div id="fc-menu" class="fc-menu"></div>
+    </div>
+  </div>
+
   <main id="app" aria-live="polite">
     <header class="app-header">
       <h1>Morning Drive</h1>
