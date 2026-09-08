@@ -34,7 +34,11 @@ Everything is read aloud in the car to a ${KIDS.claire.name} (Grade ${KIDS.clair
 const BATCH_INSTRUCTIONS = {
   joke: (n) => `Write ${n} kid-clean jokes — puns, knock-knocks, riddles. Mark each 'connor' (younger, visual) or 'claire' (older, wordplay). No bathroom humour.`,
   wyr: (n) => `Write ${n} Would-You-Rather pairs. Both options genuinely tempting — never one obviously worse.`,
-  trivia: (n) => `Write ${n} history trivia questions across explorers, inventors, ancient civilisations, presidents and scientists. Mixed difficulty — some a 7-year-old can get, some that stretch a 9-year-old. 1-2 sentences of context with each answer.`,
+  trivia: (n, kid) => `Write ${n} history trivia questions for ${KIDS[kid].name}, who is in Grade ${KIDS[kid].grade}. Topics: explorers, inventors, ancient civilisations, presidents, scientists.
+${kid === "connor"
+  ? "Grade 2: concrete, famous and picture-able — the first aeroplane, the pyramids, a well-known explorer. A 7-year-old should have a fair chance of guessing, and always learn something from the answer."
+  : "Grade 4: a real stretch is fine, as long as the answer is satisfying rather than obscure."}
+1-2 sentences of context with each answer.`,
   fact: (n) => `Write ${n} fun facts across animals, space, food science, nature, the human body and geography. One emoji and 2-3 sentences each.`,
   news: (n) => `Write ${n} short "cool thing in science and nature" stories — space, animals, oceans, inventions, archaeology. Do NOT frame them as breaking news or say "this week": they are read weeks apart. Leave sourceUrl blank unless you are certain the URL is real. One discussion question each.`,
   riddle: (n) => `Write ${n} kid-solvable riddles or lateral-thinking puzzles, with the answer and a one-line explanation of the trick.`,

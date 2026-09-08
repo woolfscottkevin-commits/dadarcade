@@ -30,7 +30,8 @@ export const POOL_KINDS = {
   // One joke each, so the pool is stocked per kid rather than shared.
   joke:             { perKid: true, batch: 26, min: 8 },
   wyr:              { batch: 60, min: 24 },
-  trivia:           { batch: 45, min: 15 },
+  // One history question each, pitched at that child's grade.
+  trivia:           { perKid: true, batch: 24, min: 8 },
   fact:             { batch: 45, min: 15 },
   news:             { batch: 30, min: 10 },
   riddle:           { batch: 30, min: 8 },
@@ -63,7 +64,7 @@ export const SECTION_NEEDS = {
   jokes:            { kind: "joke", perKid: 1, as: "byKidList" },
   wyr:              { kind: "wyr", count: 2, as: "list" },
   news:             { kind: "news", count: 2, as: "list" },
-  trivia:           { kind: "trivia", count: 2, as: "list" },
+  trivia:           { kind: "trivia", perKid: 1, as: "byKidList" },
   facts:            { kind: "fact", count: 2, as: "list" },
   riddle:           { kind: "riddle", count: 1, as: "single" },
   twoTruths:        { kind: "twoTruths", count: 1, as: "single" },

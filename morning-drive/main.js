@@ -209,7 +209,7 @@ function renderSections() {
   if (p.geography) add(renderGeographySection(p.geography));
   if (p.thisDayInHistory) add(renderThisDaySection(p.thisDayInHistory));
   if (p.news?.length) add(renderNewsSection(p.news));
-  if (p.trivia?.length) add(renderTriviaSection(p.trivia));
+  if (p.trivia && (p.trivia.length || p.trivia.claire || p.trivia.connor)) add(renderTriviaSection(p.trivia));
   if (p.facts?.length) add(renderFactsSection(p.facts));
   if (p.twoTruths) add(renderTwoTruthsSection(p.twoTruths));
   if (p.riddle) add(renderRiddleSection(p.riddle));
@@ -938,10 +938,17 @@ function renderNewsSection(news) {
 
 function renderTriviaSection(trivia) {
   const { section, body } = makeSection("trivia", "History Trivia", "🏺");
-  trivia.forEach((t) => {
+  // One question per kid now: { connor: [...], claire: [...] }. Older days
+  // stored a flat array, so accept both.
+  const list = Array.isArray(trivia)
+    ? trivia.map((t) => ({ ...t, kid: null }))
+    : ["connor", "claire"].flatMap((kid) => (trivia?.[kid] || []).map((t) => ({ ...t, kid })));
+  list.forEach((t) => {
     const card = document.createElement("div");
     card.className = "reveal-card" + (isReadOnly ? " open" : "");
+    const who = t.kid === "claire" ? "Claire" : t.kid === "connor" ? "Connor" : null;
     card.innerHTML = `
+      ${who ? `<p class="rc-sub"><span class="level-badge ${t.kid === "claire" ? "lc" : "ln"}">${who}</span></p>` : ""}
       <p class="rc-body"><strong>${escapeHtml(t.question)}</strong></p>
       <button type="button" class="reveal-btn r-trivia">Reveal answer ✨</button>
       <div class="rc-hidden">

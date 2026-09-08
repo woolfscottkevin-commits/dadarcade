@@ -321,6 +321,19 @@ model see the whole set and vary it, where 50 separate calls each wrote blind.
 | [`_morning-drive-batch.js`](../api/_morning-drive-batch.js) | Per-kind batch prompts, media resolution, insertion |
 | [`morning-drive-cron.js`](../api/morning-drive-cron.js) | Assembles from the pool, tops up one kind, falls back to legacy generation |
 
+### When a kind becomes per-kid
+
+Two kinds started shared and later split per child: jokes (migration 004) and
+history trivia (migration 005). Both needed the rows already in the pool dealt
+with, because a row with `kid = null` is never claimed once its kind is per-kid.
+
+They were handled differently on purpose. Jokes carry a `level` field saying
+which child they were written for, so 004 backfills `kid` from it and nothing is
+lost. Trivia was written as one deliberately mixed set with no record of which
+question suited whom, so 005 retires those rows — stamped used on a past date
+rather than deleted, so it can be undone — and lets fresh per-kid batches
+generate.
+
 ### Seeding
 
 The pool starts empty. Apply
