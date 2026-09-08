@@ -302,7 +302,13 @@ export async function runTopUps(dateStr, maxKinds = 1, existingSb = null) {
     worstBatchMs = Math.max(worstBatchMs, Date.now() - batchStart);
   }
 
-  const done = new Set(generated.map((g) => `${g.kind}:${g.kid || ""}`));
+  // Only a batch that actually inserted something counts as handled. Treating a
+  // failed batch as "done" reported stillLow: [] after inserting nothing, which
+  // would have hidden a kind failing every night.
+  const done = new Set(
+    generated.filter((g) => !g.error && (g.inserted || 0) > 0)
+      .map((g) => `${g.kind}:${g.kid || ""}`)
+  );
   const stillLow = needed
     .filter((n) => !done.has(`${n.kind}:${n.kid || ""}`))
     .map((n) => `${n.kind}${n.kid ? ":" + n.kid : ""} (${n.have}/${n.min})`);

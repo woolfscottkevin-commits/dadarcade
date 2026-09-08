@@ -29,7 +29,8 @@ export const POOL_KINDS = {
   quote:            { batch: 30, min: 10 },
   // One joke each, so the pool is stocked per kid rather than shared.
   joke:             { perKid: true, batch: 26, min: 8 },
-  wyr:              { batch: 60, min: 24 },
+  // 60 in one response failed schema validation; 40 is comfortably within reach.
+  wyr:              { batch: 40, min: 24 },
   // One history question each, pitched at that child's grade.
   trivia:           { perKid: true, batch: 24, min: 8 },
   fact:             { batch: 45, min: 15 },
