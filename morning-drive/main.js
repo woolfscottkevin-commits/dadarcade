@@ -38,6 +38,7 @@ async function init() {
     showError(`Couldn't load today's questions: ${err.message || err}`);
   }
   wireUI();
+  warmVoices();
 }
 
 function wireUI() {
@@ -169,7 +170,7 @@ function renderSections() {
   if (p.twoTruths) add(renderTwoTruthsSection(p.twoTruths));
   if (p.riddle) add(renderRiddleSection(p.riddle));
   if (p.characterTrait) add(renderCharacterTraitSection(p.characterTrait));
-  if (p.jokes?.length) add(renderJokesSection(p.jokes));
+  if (p.jokes && (p.jokes.length || p.jokes.claire || p.jokes.connor)) add(renderJokesSection(p.jokes));
   if (p.wyr?.length) add(renderWyrSection(p.wyr));
 
   show(sectionsEl);
@@ -496,32 +497,48 @@ function renderImage(image, altText) {
 // ----------------------------------------------------------------------------
 // Speech (spelling tile)
 // ----------------------------------------------------------------------------
-// iPad Safari returns [] from getVoices() until the voiceschanged event fires,
-// and sometimes never fires it — so wait, with a timeout fallback, exactly as
-// the spelling trainer in /secretspot does.
-let voicesReadyPromise = null;
-function ensureVoices() {
-  if (voicesReadyPromise) return voicesReadyPromise;
-  voicesReadyPromise = new Promise((resolve) => {
-    if (!("speechSynthesis" in window)) return resolve();
-    if (speechSynthesis.getVoices().length) return resolve();
-    const timer = setTimeout(resolve, 1500);
-    speechSynthesis.addEventListener("voiceschanged", () => { clearTimeout(timer); resolve(); }, { once: true });
-  });
-  return voicesReadyPromise;
+// iOS Safari will only start speech from inside a real user gesture, and only
+// if speechSynthesis.speak() is reached SYNCHRONOUSLY. The first version of this
+// awaited voice loading first — which falls back to a 1500ms timer — so by the
+// time it called speak() the gesture was long over and iOS silently refused.
+// Desktop Chrome does not enforce that, which is why it passed local testing and
+// failed on the actual phone in the car.
+//
+// So: warm the voice list in the background at load, and never await anything on
+// the tap path.
+let cachedVoices = [];
+function warmVoices() {
+  if (!("speechSynthesis" in window)) return;
+  const load = () => { cachedVoices = window.speechSynthesis.getVoices() || []; };
+  load();
+  if (!cachedVoices.length) {
+    window.speechSynthesis.addEventListener("voiceschanged", load, { once: true });
+    setTimeout(load, 1200);
+  }
 }
 
-async function speak(text, { rate = 0.85 } = {}) {
-  if (!("speechSynthesis" in window)) return false;
-  await ensureVoices();
+// Fully synchronous. Returns false if speech is unavailable so the caller can
+// fall back to showing the word rather than leaving a dead button.
+function speak(text, { rate = 0.85 } = {}) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return false;
   try {
-    speechSynthesis.cancel();
+    // Only cancel when something is actually in flight: on iOS an unconditional
+    // cancel() immediately before speak() can swallow the new utterance.
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel();
+    }
     const u = new SpeechSynthesisUtterance(String(text));
     u.rate = rate;
-    u.lang = "en-US";
-    speechSynthesis.speak(u);
+    u.volume = 1;
+    const voices = cachedVoices.length ? cachedVoices : (window.speechSynthesis.getVoices() || []);
+    const voice = voices.find((v) => /^en[-_]US/i.test(v.lang)) || voices.find((v) => /^en/i.test(v.lang));
+    if (voice) u.voice = voice;
+    u.lang = voice ? voice.lang : "en-US";
+    window.speechSynthesis.speak(u);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -655,8 +672,8 @@ function renderSpellingCard(kid, item, i) {
       <p class="example-line">"${escapeHtml(item.sentence || "")}"</p>
     </div>`;
   const speakBtn = card.querySelector(".speak-btn");
-  speakBtn.addEventListener("click", async () => {
-    const ok = await speak(`${item.word}. ${item.sentence || ""}`);
+  speakBtn.addEventListener("click", () => {
+    const ok = speak(`${item.word}. ${item.sentence || ""}`);
     if (!ok) {
       // No speech support (or blocked) — fall back to just showing the word
       // rather than leaving a dead button.
@@ -874,11 +891,18 @@ function renderFactsSection(facts) {
 
 function renderJokesSection(jokes) {
   const { section, body } = makeSection("jokes", "Jokes of the Day", "🤣");
-  jokes.forEach((j) => {
+  // The bank serves one joke per kid as { connor: [...], claire: [...] }; older
+  // days stored a flat array of two. Accept both shapes.
+  const list = Array.isArray(jokes)
+    ? jokes
+    : ["connor", "claire"].flatMap((kid) => (jokes?.[kid] || []).map((j) => ({ ...j, level: j.level || kid })));
+  list.forEach((j) => {
     const card = document.createElement("div");
     card.className = "reveal-card" + (isReadOnly ? " open" : "");
+    // Name the child rather than labelling the joke with their "level" — a kid
+    // reading "Connor-level" next to an easier joke draws the obvious conclusion.
     const levelClass = j.level === "claire" ? "lc" : "ln";
-    const levelLabel = j.level === "claire" ? "Claire-level" : "Connor-level";
+    const levelLabel = j.level === "claire" ? "Claire's joke" : "Connor's joke";
     card.innerHTML = `
       <p class="rc-sub"><span class="level-badge ${levelClass}">${levelLabel}</span></p>
       <p class="rc-body"><strong>${escapeHtml(j.setup)}</strong></p>

@@ -46,22 +46,22 @@ for (const kid of ["claire", "connor"]) {
 console.log("\n[2b] Grammar plan");
 for (const kid of ["claire", "connor"]) {
   const plans = dates.map((d) => assignGrammarPlan(d, kid));
-  ok(plans.every((p) => p.length === 3), `${kid}: 3 grammar questions/day`);
-  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === 3), `${kid}: 3 DISTINCT topics within a day`);
+  ok(plans.every((p) => p.length === 2), `${kid}: 2 grammar questions/day`);
+  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === 2), `${kid}: 2 DISTINCT topics within a day`);
   const topicSets = plans.map((p) => p.map((q) => q.topic).sort().join("~"));
   ok(new Set(topicSets).size === topicSets.length, `${kid}: no repeated topic set in 14 days`);
   console.log(`      ${kid}: ${new Set(plans.flat().map((q) => q.topic)).size}/${GRAMMAR_TOPICS[kid].length} topics in 14 days`);
 }
 
-console.log("\n[2c] Image-tile cap (mobile data in a car)");
+console.log("\n[2c] One visual every morning");
 const longRun = Array.from({ length: 60 }, (_, i) =>
   new Date(Date.UTC(2026, 7, 29) + i * 86400000).toISOString().slice(0, 10));
 const imgCounts = longRun.map((d) => pickRotation(d).filter((x) => IMAGE_SECTIONS.includes(x)).length);
 ok(Math.max(...imgCounts) <= MAX_IMAGE_SECTIONS_PER_DAY,
-  `never more than ${MAX_IMAGE_SECTIONS_PER_DAY} image tiles a day (max seen ${Math.max(...imgCounts)})`);
+  `never more than ${MAX_IMAGE_SECTIONS_PER_DAY} image tile a day (max seen ${Math.max(...imgCounts)})`);
 ok(longRun.every((d) => new Set(pickRotation(d)).size === pickRotation(d).length),
-  "capping never introduces a duplicate section");
-ok(longRun.every((d) => pickRotation(d).length === 5), "still exactly 5 rotating sections after capping");
+  "no duplicate section within a day");
+ok(longRun.every((d) => pickRotation(d).length === 5), "still exactly 5 rotating sections");
 const everImage = new Set(longRun.flatMap((d) => pickRotation(d)).filter((x) => IMAGE_SECTIONS.includes(x)));
 ok(everImage.size === IMAGE_SECTIONS.length, `all ${IMAGE_SECTIONS.length} image tiles still appear over 60 days (${everImage.size})`);
 ok(DAILY_SECTIONS.includes("grammarClaire") && DAILY_SECTIONS.includes("grammarConnor"), "grammar runs daily for both kids");
@@ -77,13 +77,20 @@ const fairRun = Array.from({ length: 150 }, (_, i) =>
 const appearances = {};
 for (const d of fairRun) for (const sec of pickRotation(d)) appearances[sec] = (appearances[sec] || 0) + 1;
 const seen = Object.keys(appearances).length;
-const vals = Object.values(appearances);
-const ratio = Math.max(...vals) / Math.min(...vals);
+// One slot is reserved for a visual, so visuals and text tiles are on different
+// cadences on purpose. Fairness must be judged inside each group — comparing
+// across them would only measure the reservation.
+const visualCounts = IMAGE_SECTIONS.map((k) => appearances[k] || 0);
+const textCounts = ROTATING_POOL.filter((k) => !IMAGE_SECTIONS.includes(k)).map((k) => appearances[k] || 0);
+const spread = (a) => Math.max(...a) / Math.min(...a);
+const ratio = Math.max(spread(visualCounts), spread(textCounts));
 ok(seen === ROTATING_POOL.length, `every one of the ${ROTATING_POOL.length} rotating tiles appears (saw ${seen})`);
-ok(ratio <= 1.25, `no tile appears disproportionately often (max/min = ${ratio.toFixed(2)}, want <= 1.25)`);
+ok(spread(visualCounts) <= 1.15, `visual tiles share their reserved slot evenly (max/min ${spread(visualCounts).toFixed(2)})`);
+ok(spread(textCounts) <= 1.15, `text tiles share their slots evenly (max/min ${spread(textCounts).toFixed(2)})`);
+ok(imgCounts.every((n) => n >= 1), "and every single morning has something to look at");
 const distinctSets = new Set(fairRun.map((d) => pickRotation(d).slice().sort().join("~"))).size;
 ok(distinctSets >= ROTATING_POOL.length, `at least ${ROTATING_POOL.length} distinct rotation sets exist (got ${distinctSets})`);
-console.log(`      each tile ~every ${(fairRun.length / (vals[0] || 1)).toFixed(1)} days; ${distinctSets} distinct sets`);
+console.log(`      visual every ${(fairRun.length / visualCounts[0]).toFixed(1)} days, text every ${(fairRun.length / textCounts[0]).toFixed(1)} days; ${distinctSets} sets`);
 
 // ---- 3. Vocab review ------------------------------------------------------
 console.log("\n[3] Vocab review (spaced repetition)");
@@ -164,7 +171,7 @@ const schema = buildPayloadSchema(active);
 const keys = Object.keys(schema.shape);
 ok(keys.length === active.length, `schema has exactly the ${active.length} active sections`);
 ok(!keys.includes("vocabMatch") && !keys.includes("vocabReview"), "vocab review is NOT in the model schema (built in code)");
-ok(keys.includes("bibleVerse") && keys.includes("quote") && keys.includes("geography"), "new daily sections present");
+ok(keys.includes("bibleVerse") && keys.includes("quote") && keys.includes("grammarClaire"), "new daily sections present");
 console.log(`      today: ${active.join(", ")}`);
 
 // ---- 5. Prompt ------------------------------------------------------------

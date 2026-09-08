@@ -22,12 +22,13 @@ import { fingerprint } from "./_morning-drive-shared.js";
 // and vary it.
 export const POOL_KINDS = {
   math:             { perKid: true,  batchDays: 14, perDay: 5, min: 30 },
-  grammar:          { perKid: true,  batchDays: 14, perDay: 3, min: 18 },
+  grammar:          { perKid: true,  batchDays: 14, perDay: 2, min: 12 },
   word:             { perKid: true,  batch: 30, min: 10 },
   spelling:         { perKid: true,  batch: 24, min: 9 },
   bible:            { batch: 30, min: 10 },
   quote:            { batch: 30, min: 10 },
-  joke:             { batch: 50, min: 16 },
+  // One joke each, so the pool is stocked per kid rather than shared.
+  joke:             { perKid: true, batch: 26, min: 8 },
   wyr:              { batch: 60, min: 24 },
   trivia:           { batch: 45, min: 15 },
   fact:             { batch: 45, min: 15 },
@@ -50,17 +51,17 @@ export const POOL_KINDS = {
 export const SECTION_NEEDS = {
   claireMath:       { kind: "math", kid: "claire", count: 5, as: "list" },
   connorMath:       { kind: "math", kid: "connor", count: 5, as: "list" },
-  grammarClaire:    { kind: "grammar", kid: "claire", count: 3, as: "list" },
-  grammarConnor:    { kind: "grammar", kid: "connor", count: 3, as: "list" },
+  grammarClaire:    { kind: "grammar", kid: "claire", count: 2, as: "list" },
+  grammarConnor:    { kind: "grammar", kid: "connor", count: 2, as: "list" },
   wordsOfDay:       { kind: "word", perKid: 1, as: "byKid" },
-  spelling:         { kind: "spelling", perKid: 3, as: "byKidList" },
+  spelling:         { kind: "spelling", perKid: 2, as: "byKidList" },
   bibleVerse:       { kind: "bible", count: 1, as: "single" },
   quote:            { kind: "quote", count: 1, as: "single" },
-  jokes:            { kind: "joke", count: 2, as: "list" },
+  jokes:            { kind: "joke", perKid: 1, as: "byKidList" },
   wyr:              { kind: "wyr", count: 4, as: "list" },
   news:             { kind: "news", count: 2, as: "list" },
   trivia:           { kind: "trivia", count: 3, as: "list" },
-  facts:            { kind: "fact", count: 3, as: "list" },
+  facts:            { kind: "fact", count: 2, as: "list" },
   riddle:           { kind: "riddle", count: 1, as: "single" },
   twoTruths:        { kind: "twoTruths", count: 1, as: "single" },
   characterTrait:   { kind: "characterTrait", count: 1, as: "single" },
@@ -76,6 +77,25 @@ export const SECTION_NEEDS = {
 // The text a fingerprint is taken from, per kind. Picking the identifying line
 // rather than the whole object means a reworded story doesn't sneak the same
 // artwork or joke back into the pool.
+// Subjects are compared loosely — "Octopus blood" and "octopus blood!" are the
+// same topic and must not both be served.
+export function normaliseSubject(subject) {
+  const s = String(subject || "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  return s || null;
+}
+
+// Every subject the pool has ever held, so a batch can be told what is already
+// covered regardless of which kind covered it.
+export async function usedSubjects(sb, limit = 400) {
+  const { data } = await sb
+    .from("morning_drive_pool")
+    .select("subject")
+    .not("subject", "is", null)
+    .order("id", { ascending: false })
+    .limit(limit);
+  return [...new Set((data || []).map((r) => r.subject).filter(Boolean))];
+}
+
 export function itemKey(kind, item) {
   switch (kind) {
     case "math":
@@ -193,7 +213,17 @@ export async function claimItems(sb, { kind, kid = null, count = 1, slot = null,
     .in("id", ids);
   if (markErr) throw markErr;
 
-  return data.map((r) => r.payload);
+  // Carry the row id on the payload so a caller can hand back exactly the items
+  // it decided not to use.
+  return data.map((r) => ({ ...r.payload, __poolId: r.id }));
+}
+
+// Put specific items back on the shelf (used when a subject clash means we
+// claimed more than we kept).
+async function unclaim(sb, items, dateStr) {
+  const keys = items.map((i) => i && i.__poolId).filter(Boolean);
+  if (!keys.length) return;
+  await sb.from("morning_drive_pool").update({ used_on: null }).in("id", keys);
 }
 
 // Hand items back if the day ends up not being written (a later failure), so a
@@ -225,6 +255,7 @@ export async function insertItems(sb, { kind, kid = null, items, slotOf = null }
     rows.push({
       kind, kid, payload: item, fingerprint: fp,
       slot: slotOf ? slotOf(item) : null,
+      subject: normaliseSubject(item.subject),
     });
   }
   if (!rows.length) return { inserted: 0, attempted: 0 };
@@ -248,6 +279,9 @@ export async function assembleFromPool(sb, dateStr, activeSections) {
   const payload = {};
   const short = [];
   const monthDay = dateStr.slice(5); // 'MM-DD'
+  // Subjects already spoken for this morning. Octopus blood appeared in both
+  // News and Fun Facts on the same day because nothing tracked this.
+  const daySubjects = new Set();
 
   for (const section of activeSections) {
     const need = SECTION_NEEDS[section];
@@ -266,15 +300,28 @@ export async function assembleFromPool(sb, dateStr, activeSections) {
       continue;
     }
 
-    const items = await claimItems(sb, {
+    // Over-claim slightly so a subject clash can be skipped without a second
+    // round trip, then hand back whatever is not used.
+    const pulled = await claimItems(sb, {
       kind: need.kind,
       kid: need.kid || null,
-      count: need.count,
+      count: need.count + 3,
       slot: need.slotted ? monthDay : null,
       dateStr,
     });
-    if (items.length < need.count) { short.push(section); continue; }
-    payload[section] = need.as === "single" ? items[0] : items;
+
+    const keep = [];
+    const giveBack = [];
+    for (const item of pulled) {
+      const subj = normaliseSubject(item.subject);
+      if (keep.length >= need.count || (subj && daySubjects.has(subj))) { giveBack.push(item); continue; }
+      if (subj) daySubjects.add(subj);
+      keep.push(item);
+    }
+    if (giveBack.length) await unclaim(sb, giveBack, dateStr);
+
+    if (keep.length < need.count) { short.push(section); continue; }
+    payload[section] = need.as === "single" ? keep[0] : keep;
   }
 
   return { payload, short };

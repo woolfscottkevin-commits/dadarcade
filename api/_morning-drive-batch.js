@@ -15,7 +15,7 @@ import {
   ITEM_SCHEMAS, KIDS, BIBLE_TRANSLATION,
   assignGrammarPlan, assignMathPlan,
 } from "./_morning-drive-shared.js";
-import { POOL_KINDS, insertItems, itemKey } from "./_morning-drive-pool.js";
+import { POOL_KINDS, insertItems, itemKey, usedSubjects } from "./_morning-drive-pool.js";
 import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
@@ -151,8 +151,21 @@ ${plan.text}
     ? `\n\n## Already used — do not repeat or closely rework these\n${avoid.map((a) => `- ${a}`).join("\n")}`
     : "";
 
+  // Subjects are tracked across ALL kinds, not just this one. "Octopuses have
+  // blue blood" appeared in Today's News and in Fun Facts on the same morning
+  // because each kind only ever checked itself.
+  const SUBJECT_KINDS = ["fact", "news", "trivia", "twoTruths", "animal"];
+  let subjectBlock = "";
+  if (SUBJECT_KINDS.includes(kind)) {
+    const subjects = await usedSubjects(sb);
+    if (subjects.length) {
+      subjectBlock = `\n\n## Subjects already covered elsewhere — pick different ones\nThese have been used by some tile already. Do not write about them again, in any tile.\n${subjects.map((x) => `- ${x}`).join("\n")}`;
+    }
+    subjectBlock += `\n\nGive every item a short lowercase \`subject\` tag naming its topic, and make all ${count} subjects distinct from each other as well.`;
+  }
+
   const prompt = `${instruction}
-${HOUSE_RULES}${avoidBlock}
+${HOUSE_RULES}${avoidBlock}${subjectBlock}
 
 Return all ${count} items.`;
 

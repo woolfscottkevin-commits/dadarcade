@@ -101,14 +101,14 @@ ok(underStocked.length === 0, `no kind's minimum is below one day's demand${unde
 
 // ---------------------------------------------------------------------------
 console.log("\n[2] Availability + top-up selection");
-const sb1 = fakeSb([...mkItems("joke", 3), ...mkItems("wyr", 40), ...mkItems("math", 5, "claire")]);
+const sb1 = fakeSb([...mkItems("joke", 3, "claire"), ...mkItems("wyr", 40), ...mkItems("math", 5, "claire")]);
 const counts = await poolAvailability(sb1);
-ok(counts.joke === 3, `counts shared kinds (joke=${counts.joke})`);
+ok(counts["joke:claire"] === 3, `counts per-kid kinds (joke:claire=${counts["joke:claire"]})`);
 ok(counts["math:claire"] === 5, `counts per-kid kinds (math:claire=${counts["math:claire"]})`);
 const low = kindsNeedingTopUp(counts);
 const lowNames = low.map((l) => `${l.kind}${l.kid ? ":" + l.kid : ""}`);
 ok(!lowNames.includes("wyr"), "a well-stocked kind is not flagged (wyr has 40)");
-ok(lowNames.includes("joke"), "an empty-ish kind is flagged (joke has 3)");
+ok(lowNames.includes("joke:claire"), "an empty-ish kind is flagged (joke:claire has 3)");
 ok(low[0].deficit >= low[low.length - 1].deficit, "worst deficit is ordered first");
 ok(lowNames.includes("math:claire") && lowNames.includes("math:connor"), "both kids flagged independently");
 

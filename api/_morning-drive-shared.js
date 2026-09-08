@@ -63,7 +63,9 @@ export const ROTATING_PER_DAY = 5;
 // mobile data in a moving car — each image is roughly 100-250KB, so three or
 // four at once is a noticeably slower morning.
 export const IMAGE_SECTIONS = ["artwork", "landmark", "flag", "animal"];
-export const MAX_IMAGE_SECTIONS_PER_DAY = 2;
+// Exactly one visual a day now — the rotation reserves a slot for it, so this
+// is a description of the design rather than a cap applied afterwards.
+export const MAX_IMAGE_SECTIONS_PER_DAY = 1;
 
 // How many previously-learned words each kid reviews in Word Match.
 export const VOCAB_REVIEW_PER_KID = 3;
@@ -256,55 +258,31 @@ export function monthDayLabel(dateStr) {
 
 // Deterministically choose which rotating sections run on a given date. Walks
 // the pool with a stride so consecutive days share as few sections as possible.
+// Every morning gets exactly one picture-or-video tile and four text tiles.
+//
+// The first attempt picked five from one pool and then swapped a visual in on
+// days that happened to have none. That skewed the distribution badly (some
+// tiles 1.45x others), because the swap both over-served visuals and robbed
+// whichever tile it displaced. Reserving the slot up front is fair by
+// construction and needs no correction afterwards.
+//
+// It also fixes the bandwidth question for free: exactly one image a day rather
+// than a cap of two.
 export function pickRotation(dateStr) {
   const seed = daySeed(dateStr);
-  const pool = ROTATING_POOL;
-  const n = Math.min(ROTATING_PER_DAY, pool.length);
-  const picked = [];
-  for (let i = 0; i < n; i++) {
-    // BOTH multipliers must be coprime with the pool length. `seed * 3` over a
-    // pool of 15 has gcd(3,15)=3, so only 5 distinct rotation sets ever existed
-    // and they cycled every 5 days — ten tiles landed in two of those sets and
-    // five landed in only one, so spelling and landmark showed up half as often
-    // as everything else. 7 is coprime with 15, giving 15 distinct sets and
-    // exactly even coverage.
-    const idx = (seed * 7 + i * 2) % pool.length;
-    const name = pool[idx];
-    if (!picked.includes(name)) picked.push(name);
-  }
-  // Backfill if the stride collided, so we always return exactly n sections.
-  for (const name of pool) {
-    if (picked.length >= n) break;
-    if (!picked.includes(name)) picked.push(name);
-  }
-  return capImageSections(picked, seed);
-}
+  const visuals = ROTATING_POOL.filter((s) => IMAGE_SECTIONS.includes(s));
+  const texts = ROTATING_POOL.filter((s) => !IMAGE_SECTIONS.includes(s));
 
-// Swap surplus photo tiles for text tiles so a single morning never has to pull
-// four images before the kids can start.
-function capImageSections(picked, seed) {
-  const imageCount = picked.filter((s) => IMAGE_SECTIONS.includes(s)).length;
-  if (imageCount <= MAX_IMAGE_SECTIONS_PER_DAY) return picked;
+  // gcd(3, 4) = 1, so the visual walks all four rather than sticking on some.
+  const picked = [visuals[(seed * 3) % visuals.length]];
 
-  // Rotate the substitution pool by the date too, otherwise every capped day
-  // swaps in whichever text tile happens to sit earliest in ROTATING_POOL.
-  const available = ROTATING_POOL.filter(
-    (s) => !IMAGE_SECTIONS.includes(s) && !picked.includes(s)
-  );
-  const offset = available.length ? seed % available.length : 0;
-  const textPool = [...available.slice(offset), ...available.slice(0, offset)];
-  const out = [...picked];
-  let surplus = imageCount - MAX_IMAGE_SECTIONS_PER_DAY;
-  // Drop from the end so the highest-priority picks survive, and substitute a
-  // text tile chosen by the same date seed to stay deterministic.
-  for (let i = out.length - 1; i >= 0 && surplus > 0; i--) {
-    if (!IMAGE_SECTIONS.includes(out[i])) continue;
-    const replacement = textPool.shift();
-    if (!replacement) break;
-    out[i] = replacement;
-    surplus--;
+  // texts.length is 11 (prime), so every multiplier is coprime with it: the
+  // day-offset visits all 11 and the within-day step gives 4 distinct picks.
+  const wanted = Math.max(0, ROTATING_PER_DAY - 1);
+  for (let i = 0; i < wanted; i++) {
+    picked.push(texts[(seed * 7 + i * 3) % texts.length]);
   }
-  return out;
+  return picked;
 }
 
 export function activeSectionsFor(dateStr) {
@@ -345,7 +323,7 @@ export function assignMathPlan(dateStr, kid, count = 5) {
   return plan;
 }
 
-export function assignGrammarPlan(dateStr, kid, count = 3) {
+export function assignGrammarPlan(dateStr, kid, count = 2) {
   const topics = GRAMMAR_TOPICS[kid] || [];
   const seed = daySeed(dateStr);
   const T = topics.length;   // 20
@@ -439,6 +417,7 @@ const wotd = z.object({
 });
 
 const newsItem = z.object({
+  subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   headline: z.string(),
   summary: z.string().describe("2-3 sentence kid-friendly summary."),
   question: z.string().describe("One discussion question — open-ended is great for the car."),
@@ -446,12 +425,14 @@ const newsItem = z.object({
 });
 
 const triviaQ = z.object({
+  subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   question: z.string(),
   answer: z.string(),
   context: z.string().describe("1-2 sentences of cool context revealed alongside the answer."),
 });
 
 const factItem = z.object({
+  subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   emoji: z.string().describe("One emoji that matches the fact topic."),
   title: z.string().describe("Short fact headline, e.g., 'Octopus blood is blue'."),
   fact: z.string().describe("2-3 kid-friendly sentences."),
@@ -508,6 +489,7 @@ const riddleItem = z.object({
 });
 
 const twoTruthsItem = z.object({
+  subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   items: z.array(z.object({ text: z.string() })).length(3).describe("Three kid-friendly statements — two true, one false."),
   lieIndex: z.number().int().min(0).max(2).describe("Index of the false statement."),
   explanation: z.string().describe("2-3 sentences covering all three: why two are true and why the lie is false."),
@@ -569,6 +551,7 @@ const flagItem = z.object({
 });
 
 const animalItem = z.object({
+  subject: z.string().describe("Two or three words naming the SUBJECT, lowercase, e.g. \"octopus blood\", \"saturn rings\", \"great wall\". Used to stop the same topic appearing twice — in different tiles on the same day, or weeks apart."),
   name: z.string().describe("Common name of the animal."),
   wikiTitle: z.string().describe("The EXACT English Wikipedia article title, e.g. 'Axolotl', 'Blue whale'."),
   question: z.string().describe("A question to ask while they look at the photo."),
@@ -579,11 +562,11 @@ const spellingItem = z.object({
   claire: z.array(z.object({
     word: z.string().describe(`A Grade ${KIDS.claire.grade} spelling word.`),
     sentence: z.string().describe("One sentence using the word, read aloud after the word."),
-  })).length(3),
+  })).length(2),
   connor: z.array(z.object({
     word: z.string().describe(`A Grade ${KIDS.connor.grade} spelling word.`),
     sentence: z.string().describe("One sentence using the word, read aloud after the word."),
-  })).length(3),
+  })).length(2),
 });
 
 const spanishWordItem = z.object({
@@ -631,8 +614,8 @@ export const ITEM_SCHEMAS = {
 const SECTION_SCHEMAS = {
   claireMath: z.array(mathQ).length(5),
   connorMath: z.array(mathQ).length(5),
-  grammarClaire: z.array(grammarQ).length(3),
-  grammarConnor: z.array(grammarQ).length(3),
+  grammarClaire: z.array(grammarQ).length(2),
+  grammarConnor: z.array(grammarQ).length(2),
   artwork: artworkItem,
   landmark: landmarkItem,
   flag: flagItem,
@@ -642,7 +625,7 @@ const SECTION_SCHEMAS = {
   wordsOfDay: z.object({ connor: wotd, claire: wotd }),
   news: z.array(newsItem).length(2),
   trivia: z.array(triviaQ).length(3),
-  facts: z.array(factItem).length(3),
+  facts: z.array(factItem).length(2),
   jokes: z.array(jokeItem).length(2),
   wyr: z.array(wyrItem).length(4),
   bibleVerse,
@@ -944,7 +927,7 @@ function grammarPlanBlock(kid, plan) {
   const lines = plan.map((p, i) =>
     `  ${i + 1}. topic: **${p.topic}** — format: *${p.format}*`
   ).join("\n");
-  return `**${k.name}'s grammar (Grade ${k.grade})** — 3 questions, MC with 4 options.
+  return `**${k.name}'s grammar (Grade ${k.grade})** — 2 questions, MC with 4 options.
 Each has an ASSIGNED topic and format below; follow both and copy them into the
 question's \`topic\` and \`format\` fields. Every question needs a \`why\` field
 stating the rule in one sentence, so a wrong answer still teaches the rule.
@@ -974,7 +957,7 @@ const SECTION_INSTRUCTIONS = {
 
   trivia: () => `- **3 History Trivia questions** — mixed difficulty (one Connor can get, one Claire can get, one stretch). Explorers, inventors, ancient civilizations, presidents, scientists. 1-2 sentences of context with each answer.`,
 
-  facts: () => `- **3 Fun Facts** — animals, space, food science, nature, human body, geography. One emoji and 2-3 kid-friendly sentences each.`,
+  facts: () => `- **2 Fun Facts** — animals, space, food science, nature, human body, geography. One emoji and 2-3 kid-friendly sentences each.`,
 
   jokes: () => `- **2 Jokes** — kid-clean (puns, knock-knocks, riddles; no bathroom humor). One Connor-level (visual/concrete), one Claire-level (verbal/punny). Mark each with \`level\`.`,
 
@@ -1001,7 +984,7 @@ const SECTION_INSTRUCTIONS = {
 
   animal: () => `- **Animal of the day** — one animal worth a photo. \`wikiTitle\` must be the EXACT English Wikipedia article title ("Axolotl", "Blue whale", "Snow leopard"). Three short facts, and a question to ask while they look at the picture.`,
 
-  spelling: () => `- **Spelling** — 3 words per kid, at Grade ${KIDS.claire.grade} for Claire and Grade ${KIDS.connor.grade} for Connor. Each word gets one sentence using it. The words are SPOKEN ALOUD by the phone and the kids spell them out loud, so choose words that sound clear and are not homophones of another word (avoid "there", "pair", "knight") — a kid can't tell which one you mean.`,
+  spelling: () => `- **Spelling** — 2 words per kid, at Grade ${KIDS.claire.grade} for Claire and Grade ${KIDS.connor.grade} for Connor. Each word gets one sentence using it. The words are SPOKEN ALOUD by the phone and the kids spell them out loud, so choose words that sound clear and are not homophones of another word (avoid "there", "pair", "knight") — a kid can't tell which one you mean.`,
 
   spanishWord: () => `- **Spanish word of the day** — one useful, concrete Spanish word a child would actually say. Give the word, the English meaning, a simple phonetic respelling a parent can read aloud without knowing Spanish (e.g. "PEH-rro"), one short Spanish sentence, and its English translation.`,
 
