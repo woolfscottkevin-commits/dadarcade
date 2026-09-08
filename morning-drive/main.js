@@ -846,6 +846,7 @@ function renderNewsSection(news) {
       : "";
     card.innerHTML = `
       <h3 class="news-headline">${escapeHtml(n.headline)}</h3>
+      ${n.source ? `<p class="news-byline">${escapeHtml(n.source)}${n.published ? ` \u00b7 ${escapeHtml(friendlyDate(n.published))}` : ""}</p>` : ""}
       <p class="news-summary">${escapeHtml(n.summary)}</p>
       <div class="news-question">💬 ${escapeHtml(n.question)}</div>
       ${link}`;
