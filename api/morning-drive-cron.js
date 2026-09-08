@@ -33,6 +33,8 @@ import {
   releaseItems, upcomingSlotGaps,
 } from "./_morning-drive-pool.js";
 import { generateBatch } from "./_morning-drive-batch.js";
+import { fetchNewsCandidates, retellNews } from "./_morning-drive-news.js";
+import { insertItems, usedSubjects } from "./_morning-drive-pool.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
 
@@ -141,6 +143,14 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     return legacy;
   }
 
+  // News is the one tile that must not come from the bank: banked news is not
+  // news. Fetched live from published feeds, with the bank as a fallback so a
+  // feed outage does not cost the tile.
+  let newsMeta = null;
+  if (activeSections.includes("news")) {
+    newsMeta = await attachLiveNews(sb, dateStr, pooled);
+  }
+
   const vocabReview = await buildVocabReviewFor(sb, dateStr, pooled.wordsOfDay);
   const servedSections = activeSections.filter((sec) => !short.includes(sec));
 
@@ -151,6 +161,7 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
       sections: servedSections,
       shortFromPool: short,
       source: "pool",
+      news: newsMeta,
       schemaVersion: 4,
     },
   };
@@ -179,6 +190,45 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     modelCalls: topUp.generated.length,
     topUp,
   };
+}
+
+// Replace the banked news items with real, dated, linked articles. Returns a
+// small report for meta; on any failure the banked items are simply left alone.
+async function attachLiveNews(sb, dateStr, pooled) {
+  try {
+    const { candidates, feedsOk, feedsFailed } = await fetchNewsCandidates(dateStr);
+    if (!candidates.length) return { live: false, reason: "no candidates", feedsFailed };
+
+    const subjects = await usedSubjects(sb).catch(() => []);
+    const items = await retellNews({ candidates, avoidSubjects: subjects });
+    if (!items?.length) return { live: false, reason: "retell failed", feedsOk, feedsFailed };
+
+    // Give back whatever the bank had handed over for this tile.
+    if (Array.isArray(pooled.news)) {
+      await releaseItemsById(sb, pooled.news).catch(() => {});
+    }
+    pooled.news = items;
+
+    // Record the articles so the same story cannot return under a new headline.
+    await insertItems(sb, { kind: "news", items, usedOn: dateStr }).catch(() => {});
+
+    return {
+      live: true,
+      count: items.length,
+      sources: items.map((i) => i.source),
+      candidates: candidates.length,
+      feedsOk, feedsFailed,
+    };
+  } catch (err) {
+    console.error("[morning-drive-cron] live news failed:", err);
+    return { live: false, reason: String(err.message || err) };
+  }
+}
+
+async function releaseItemsById(sb, items) {
+  const ids = (items || []).map((i) => i?.__poolId).filter(Boolean);
+  if (!ids.length) return;
+  await sb.from("morning_drive_pool").update({ used_on: null }).in("id", ids);
 }
 
 // Word Match is still built in code from earlier days' words — the pool holds

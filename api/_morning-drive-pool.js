@@ -108,7 +108,9 @@ export function itemKey(kind, item) {
     case "wyr":           return `${item.a} || ${item.b}`;
     case "trivia":        return item.question;
     case "fact":          return item.title || item.fact;
-    case "news":          return item.headline;
+    // Fingerprint the ARTICLE, not the retelling: the same story rewritten
+    // with a different headline must not come round again.
+    case "news":          return item.sourceUrl || item.headline;
     case "riddle":        return item.riddle;
     case "twoTruths":     return (item.items || []).map((i) => i.text).join(" | ");
     case "characterTrait":return item.trait;
@@ -243,7 +245,7 @@ export async function releaseItems(sb, dateStr) {
 // Insert a generated batch. Duplicates collide on (kind, fingerprint) and are
 // skipped silently — that unique index IS the never-repeat guarantee that used
 // to cost 26,000 prompt tokens a night.
-export async function insertItems(sb, { kind, kid = null, items, slotOf = null }) {
+export async function insertItems(sb, { kind, kid = null, items, slotOf = null, usedOn = null }) {
   const rows = [];
   const seen = new Set();
   for (const item of items || []) {
@@ -256,6 +258,10 @@ export async function insertItems(sb, { kind, kid = null, items, slotOf = null }
       kind, kid, payload: item, fingerprint: fp,
       slot: slotOf ? slotOf(item) : null,
       subject: normaliseSubject(item.subject),
+      // Live news is inserted already-consumed: it is fetched for one specific
+      // morning, and its only job afterwards is to stop the same article
+      // returning.
+      used_on: usedOn,
     });
   }
   if (!rows.length) return { inserted: 0, attempted: 0 };
