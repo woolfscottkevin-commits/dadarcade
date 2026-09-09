@@ -3,6 +3,7 @@
 //
 // These cover the things that break silently: rotation determinism, math topic
 // and format cycling, and the spaced-repetition ordering in Word Match.
+import { artworkSubjectIsSuitable } from "../../api/_morning-drive-media.js";
 import {
   pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
@@ -199,6 +200,28 @@ const markers = { riddle: "Riddle", twoTruths: "Two Truths and a Lie", character
 ok(inactive.every((s) => !prompt.includes(markers[s])), `no instructions for today's inactive sections (${inactive.join(", ") || "none"})`);
 ok(active.filter((s) => markers[s]).every((s) => prompt.includes(markers[s])), "instructions present for every active rotating section");
 console.log(`      prompt length: ${prompt.length} chars`);
+
+console.log("\n[6] Artwork subject safety");
+// Copley's "Watson and the Shark" reached a live morning: a naked boy being
+// attacked by a shark. Famous, out of copyright, held by the Met — exactly what
+// the prompt asked for, which is why a prompt alone was not enough.
+for (const [title, allowed] of [
+  ["Watson and the Shark", false],
+  ["The Death of Socrates", false],
+  ["Venus and Adonis", false],
+  ["The Rape of Europa", false],
+  ["Judith Slaying Holofernes", false],
+  ["The Hunt in the Forest", false],
+  ["Bathers at Asnieres", false],
+  ["Wheat Field with Cypresses", true],
+  ["A Sunday on La Grande Jatte", true],
+  ["The Horse Fair", true],
+  ["Water Lilies", true],
+  ["Paris Street; Rainy Day", true],
+]) {
+  ok(artworkSubjectIsSuitable(title) === allowed,
+    `${allowed ? "allows" : "blocks"} "${title}"`);
+}
 
 console.log(fail === 0 ? "\nALL PASS\n" : `\n${fail} FAILURE(S)\n`);
 process.exit(fail ? 1 : 0);

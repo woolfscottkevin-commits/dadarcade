@@ -178,7 +178,8 @@ Rules:
 - Report the article by its number. Do not write about anything that is not on this list.
 - Retell only what the article says. Do not add facts, figures or claims of your own — a parent may open the link and read the original.
 - Choose things that actually happened recently. Skip anything that is a general fact rather than an event, and skip anything sad, frightening, violent or political.
-- Prefer discovery, space, animals, archaeology, science and record-breaking. Two different subjects, not two of the same kind.${avoid}
+- Prefer discovery, space, animals, archaeology, science and record-breaking. Two different subjects, not two of the same kind.
+- Pick them from TWO DIFFERENT outlets where the list allows it, so the morning is not one publication's front page.${avoid}
 
 Return exactly two picks.`;
 

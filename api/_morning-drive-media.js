@@ -75,6 +75,27 @@ function matchScore(candTitle, wantTitle, candArtist, wantArtist) {
 
 const MIN_MATCH = 45;
 
+// A second line of defence on artwork subject matter. The prompt said "no
+// violence, nothing frightening" and the model still chose Copley's "Watson and
+// the Shark" — a naked boy being attacked by a shark — because it IS a famous,
+// out-of-copyright painting in the Met, which is what it was asked for.
+//
+// Matched against the museum's own catalogue title, so it filters on what the
+// collection says the picture is, not on what the model claimed.
+const UNSUITABLE_ARTWORK = new RegExp([
+  "shark", "attack", "battle", "war", "soldier", "warrior", "combat", "siege",
+  "death", "dying", "dead", "martyr", "crucifix", "christ on", "execution",
+  "slaughter", "sacrifice", "massacre", "murder", "suicide", "hell", "demon",
+  "torture", "wound", "blood", "corpse", "skull", "skeleton", "funeral", "tomb",
+  "nude", "naked", "venus", "bather", "odalisque", "lucretia", "susanna",
+  "rape of", "abduction", "judith", "salome", "medusa", "prometheus",
+  "hunt", "hunting", "slain", "shipwreck", "drowning",
+].join("|"), "i");
+
+export function artworkSubjectIsSuitable(title) {
+  return !UNSUITABLE_ARTWORK.test(String(title || ""));
+}
+
 // ----------------------------------------------------------------------------
 // Artwork — searches the Met (CC0) and the Art Institute of Chicago together
 // ----------------------------------------------------------------------------
@@ -91,6 +112,7 @@ async function metCandidates(title, artist) {
     // NEVER primaryImage — the originals run to 8MB, brutal on a phone in a car.
     const img = o.primaryImageSmall || o.primaryImage;
     if (!img) continue;
+    if (!artworkSubjectIsSuitable(o.title)) continue;
     out.push({
       score: matchScore(o.title, title, o.artistDisplayName, artist),
       imageUrl: img,
@@ -114,6 +136,7 @@ async function articCandidates(title, artist) {
   const out = [];
   for (const a of search?.data || []) {
     if (!a?.is_public_domain || !a?.image_id) continue;
+    if (!artworkSubjectIsSuitable(a.title)) continue;
     out.push({
       score: matchScore(a.title, title, a.artist_title, artist),
       // IIIF lets us choose the width; 600 keeps it near 100KB.
