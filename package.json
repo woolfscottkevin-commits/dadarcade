@@ -8,8 +8,9 @@
     "dev": "vercel dev"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.78",
     "@supabase/supabase-js": "^2.45.4",
-    "ai": "^6.0.180",
-    "zod": "^3.23.8"
+    "ai": "^7.0.97",
+    "zod": "^3.25.76"
   }
 }
