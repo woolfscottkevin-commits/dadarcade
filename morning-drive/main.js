@@ -1,4 +1,4 @@
-import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260909a";
+import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260909b";
 
 // Morning Drive — page render + attempt logging.
 // All state lives on the page; nothing reactive. We re-render the body when
@@ -133,6 +133,7 @@ async function loadDay({ date, readOnly }) {
   // and solved questions stay solved even if the page reloaded mid-session.
   dayProgress = isReadOnly ? {} : loadProgressForDay(activeDate);
   renderHeader();
+  renderRadio(activePayload.radio);
   renderSections();
   // Analytics ping
   try {
@@ -180,6 +181,43 @@ function renderHeader() {
   } else {
     hide(readOnlyBanner);
   }
+}
+
+// ----------------------------------------------------------------------------
+// Radio
+// ----------------------------------------------------------------------------
+// The show is a plain MP3 rendered overnight. A native <audio> element is the
+// most dependable player there is in a car: play, pause, scrub and lock-screen
+// controls all come for free, and it keeps playing when the screen locks.
+function renderRadio(radio) {
+  const wrap = document.getElementById("radio");
+  const btn = document.getElementById("radio-btn");
+  const player = document.getElementById("radio-player");
+  const audio = document.getElementById("radio-audio");
+  const meta = document.getElementById("radio-meta");
+  if (!wrap || !btn || !audio) return;
+
+  const url = radio?.url;
+  if (!url) { wrap.hidden = true; return; }
+
+  wrap.hidden = false;
+  player.hidden = true;
+  btn.hidden = false;
+  audio.src = url;
+  const mins = radio.durationSec ? Math.max(1, Math.round(radio.durationSec / 60)) : null;
+  meta.textContent = mins ? `\u00b7 about ${mins} min` : "";
+
+  // play() has to happen inside the tap itself — the same iOS rule that broke
+  // the spelling button — so nothing here is awaited before it.
+  btn.onclick = () => {
+    btn.hidden = true;
+    player.hidden = false;
+    const p = audio.play();
+    if (p && p.catch) p.catch(() => { /* controls are visible; the kid can press play */ });
+    try {
+      if (typeof gtag === "function") gtag("event", "morning_drive_radio_play", { date: activeDate });
+    } catch {}
+  };
 }
 
 function renderSections() {

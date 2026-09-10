@@ -34,6 +34,7 @@ import {
 } from "./_morning-drive-pool.js";
 import { generateBatch } from "./_morning-drive-batch.js";
 import { fetchNewsCandidates, retellNews } from "./_morning-drive-news.js";
+import { buildRadio, RADIO_ENABLED } from "./_morning-drive-radio.js";
 import { insertItems, usedSubjects } from "./_morning-drive-pool.js";
 
 const MODEL = "anthropic/claude-sonnet-4.6";
@@ -83,6 +84,18 @@ export default async function handler(req, res) {
     try {
       return res.status(200).json(await poolStatus());
     } catch (err) {
+      return res.status(500).json({ error: String(err.message || err) });
+    }
+  }
+
+  // `?mode=radio` (re)renders only the radio show for an existing day and
+  // patches it onto the stored payload. Used to test a voice, or to redo a
+  // show that rendered badly, without regenerating the day's content.
+  if (url.searchParams.get("mode") === "radio") {
+    try {
+      return res.status(200).json(await renderRadioForDay(dateStr));
+    } catch (err) {
+      console.error("[morning-drive-cron] radio failed:", err);
       return res.status(500).json({ error: String(err.message || err) });
     }
   }
@@ -177,6 +190,10 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     throw writeErr;
   }
 
+  // The show is rendered only once the day is safely written: it takes ~30s of
+  // speech synthesis, and a failure there must cost the show, never the drive.
+  const radio = await attachRadio(sb, dateStr, payload);
+
   // Refill at most one kind per night, so the cost is bounded and predictable.
   const topUp = await runTopUps(dateStr, 1, sb);
 
@@ -187,9 +204,41 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
     date: dateStr,
     sections: servedSections,
     shortFromPool: short,
-    modelCalls: topUp.generated.length,
+    modelCalls: topUp.generated.length + (radio?.ok ? 2 : 0),
+    radio,
     topUp,
   };
+}
+
+// Render the day's show, store it, and patch the URL onto the stored day.
+async function attachRadio(sb, dateStr, payload) {
+  if (!RADIO_ENABLED) return { ok: false, reason: "disabled" };
+  try {
+    const info = await buildRadio(sb, { payload, dateStr });
+    const { error } = await sb
+      .from("morning_drive_days")
+      .update({ payload: { ...payload, radio: info } })
+      .eq("date", dateStr);
+    if (error) throw error;
+    return { ok: true, ...info };
+  } catch (err) {
+    console.error("[morning-drive-cron] radio failed:", err);
+    return { ok: false, reason: String(err.message || err) };
+  }
+}
+
+// `?mode=radio` — render for a day that already exists.
+async function renderRadioForDay(dateStr) {
+  const sb = getSupabase();
+  const { data: row, error } = await sb
+    .from("morning_drive_days")
+    .select("date, payload")
+    .eq("date", dateStr)
+    .maybeSingle();
+  if (error) throw error;
+  if (!row) return { ok: false, reason: "no day stored for " + dateStr };
+  const radio = await attachRadio(sb, dateStr, row.payload || {});
+  return { date: dateStr, ...radio };
 }
 
 // Replace the banked news items with real, dated, linked articles. Returns a

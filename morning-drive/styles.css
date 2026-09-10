@@ -698,3 +698,31 @@ body.lightbox-open { overflow: hidden; }
 }
 .lightbox-hint { top: max(1.2rem, env(safe-area-inset-top)); }
 .lightbox-credit { bottom: max(0.8rem, env(safe-area-inset-bottom)); }
+
+
+/* ==========================================================================
+   Morning Drive Radio
+   ========================================================================== */
+.radio { margin: 0.7rem auto 0; max-width: 560px; }
+.radio-btn {
+  display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+  width: 100%; min-height: 54px; padding: 0.7rem 1rem;
+  border: 0; border-radius: 16px;
+  background: linear-gradient(90deg, #1e1b4b, #4c1d95);
+  color: #fff; font-family: inherit; font-weight: 800; font-size: 1.02rem;
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 6px 20px rgba(76, 29, 149, 0.35);
+}
+.radio-btn:active { transform: translateY(1px); }
+.radio-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(255,255,255,0.18); font-size: 0.85rem; padding-left: 2px;
+}
+.radio-player {
+  padding: 0.7rem 0.8rem;
+  border: 2px solid #ddd6fe; border-radius: 16px; background: #f5f3ff;
+}
+.radio-now { margin: 0 0 0.45rem; font-weight: 700; color: var(--ink); }
+.radio-meta { color: var(--muted); font-weight: 700; font-size: 0.85rem; }
+#radio-audio { width: 100%; }

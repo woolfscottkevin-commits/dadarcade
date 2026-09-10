@@ -20,7 +20,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌅</text></svg>">
   <link rel="manifest" href="/manifest.json">
   <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260909a">
+  <link rel="stylesheet" href="styles.css?v=20260909b">
 </head>
 <body>
   <a class="back-link" href="/" aria-label="Back to Dad Arcade">← Dad Arcade</a>
@@ -44,6 +44,16 @@
         <span class="score-badge score-claire">Claire <strong id="score-claire">0</strong> / 5 ⭐</span>
         <span class="score-badge score-connor">Connor <strong id="score-connor">0</strong> / 5 ⭐</span>
       </div>
+      <div id="radio" class="radio" hidden>
+        <button type="button" id="radio-btn" class="radio-btn">
+          <span class="radio-icon" aria-hidden="true">▶</span>
+          <span class="radio-label">Listen to Morning Drive Radio</span>
+        </button>
+        <div id="radio-player" class="radio-player" hidden>
+          <p class="radio-now">🎙️ <strong>Morning Drive Radio</strong> <span id="radio-meta" class="radio-meta"></span></p>
+          <audio id="radio-audio" controls preload="none" playsinline></audio>
+        </div>
+      </div>
       <div id="read-only-banner" class="read-only-banner" hidden>
         <span>Reviewing <strong id="ro-date"></strong></span>
         <button type="button" id="back-to-today">Back to today</button>
@@ -66,6 +76,6 @@
     </div>
   </div>
 
-  <script type="module" src="main.js?v=20260909a"></script>
+  <script type="module" src="main.js?v=20260909b"></script>
 </body>
 </html>
