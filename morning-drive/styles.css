@@ -655,3 +655,46 @@ body.drawer-open, body.fc-open { overflow: hidden; }
 .video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 .video-title { font-family: 'Fredoka One', cursive; font-size: 1.05rem; margin: 0.6rem 0 0.1rem; color: var(--ink); }
 .video-channel { margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+
+
+/* ==========================================================================
+   Full-screen picture viewer
+   ========================================================================== */
+.tile-figure img.zoomable { cursor: zoom-in; }
+body.lightbox-open { overflow: hidden; }
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 100;
+  background: #000;
+  display: flex; flex-direction: column;
+  /* The viewer owns every gesture on this surface; the browser must not
+     scroll or bounce the page behind it. */
+  touch-action: none; overscroll-behavior: contain;
+  -webkit-user-select: none; user-select: none;
+}
+.lightbox-stage {
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.lightbox-img {
+  max-width: 100%; max-height: 100%;
+  width: auto; height: auto;
+  object-fit: contain;
+  transform-origin: center center;
+  will-change: transform;
+  -webkit-user-drag: none;
+}
+.lightbox-close {
+  position: absolute; top: max(0.6rem, env(safe-area-inset-top)); right: 0.7rem; z-index: 2;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,0.16); color: #fff;
+  font-size: 1.8rem; line-height: 1; cursor: pointer; touch-action: manipulation;
+}
+.lightbox-hint, .lightbox-credit {
+  position: absolute; left: 0; right: 0; text-align: center;
+  color: rgba(255,255,255,0.7); font-size: 0.72rem; font-weight: 700;
+  padding: 0 1rem; pointer-events: none;
+}
+.lightbox-hint { top: max(1.2rem, env(safe-area-inset-top)); }
+.lightbox-credit { bottom: max(0.8rem, env(safe-area-inset-bottom)); }

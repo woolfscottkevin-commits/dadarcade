@@ -1,4 +1,4 @@
-import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260908b";
+import { renderFlashcardMenu, openFlashcards } from "./flashcards.js?v=20260909a";
 
 // Morning Drive — page render + attempt logging.
 // All state lives on the page; nothing reactive. We re-render the body when
@@ -526,6 +526,15 @@ function renderImage(image, altText) {
     img.height = image.height;
   }
   img.addEventListener("error", () => { wrap.remove(); });
+  // Tap to see it properly: full screen, either orientation, pinch to zoom.
+  // The page sets user-scalable=no, so the viewer handles the pinch itself.
+  img.classList.add("zoomable");
+  img.setAttribute("role", "button");
+  img.setAttribute("tabindex", "0");
+  img.setAttribute("aria-label", `${altText || "Picture"} — tap to view full screen`);
+  const open = () => openLightbox({ src: image.url, alt: altText || "", credit: image.credit || "" });
+  img.addEventListener("click", open);
+  img.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
   wrap.appendChild(img);
   if (image.credit) {
     // Most Wikimedia photos are CC-BY-SA: the credit is a licence condition,
@@ -536,6 +545,155 @@ function renderImage(image, altText) {
     wrap.appendChild(cap);
   }
   return wrap;
+}
+
+// ----------------------------------------------------------------------------
+// Full-screen picture viewer
+// ----------------------------------------------------------------------------
+// A painting on a phone is a postage stamp. This opens it edge to edge, follows
+// the phone into landscape (position:fixed + object-fit:contain, so rotating
+// just reflows), and lets the kids pinch in on a detail — the horses' hooves,
+// the brushstrokes in the sky.
+//
+// Pinch, pan and double-tap are implemented here because the page carries
+// user-scalable=no, which switches off the browser's own pinch zoom. Zoom is
+// applied about the fingers' midpoint, not the image centre, so the thing they
+// pinched at is the thing that grows.
+
+function openLightbox({ src, alt = "", credit = "" }) {
+  const overlay = document.createElement("div");
+  overlay.className = "lightbox";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", alt || "Picture");
+  overlay.innerHTML = `
+    <button type="button" class="lightbox-close" aria-label="Close">×</button>
+    <div class="lightbox-stage"><img class="lightbox-img" alt=""></div>
+    <div class="lightbox-hint">pinch to zoom · double-tap to zoom in</div>
+    ${credit ? `<div class="lightbox-credit">${escapeHtml(credit)}</div>` : ""}`;
+
+  const stage = overlay.querySelector(".lightbox-stage");
+  const img = overlay.querySelector(".lightbox-img");
+  img.src = src;
+  img.alt = alt;
+
+  const MIN = 1, MAX = 6;
+  let scale = 1, tx = 0, ty = 0;
+  const apply = () => { img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`; };
+
+  // Keep the picture from being panned entirely off screen once zoomed.
+  const clamp = () => {
+    const r = stage.getBoundingClientRect();
+    const w = img.clientWidth * scale, h = img.clientHeight * scale;
+    const maxX = Math.max(0, (w - r.width) / 2), maxY = Math.max(0, (h - r.height) / 2);
+    tx = Math.min(maxX, Math.max(-maxX, tx));
+    ty = Math.min(maxY, Math.max(-maxY, ty));
+  };
+
+  // Zoom so that the point under (px, py) — in stage coordinates, relative to
+  // its centre — stays under the fingers.
+  const zoomAbout = (next, px, py) => {
+    const s1 = Math.min(MAX, Math.max(MIN, next));
+    const k = s1 / scale;
+    tx = px - (px - tx) * k;
+    ty = py - (py - ty) * k;
+    scale = s1;
+    if (scale <= MIN + 0.01) { scale = 1; tx = 0; ty = 0; }
+    clamp(); apply();
+  };
+
+  const stagePoint = (clientX, clientY) => {
+    const r = stage.getBoundingClientRect();
+    return { x: clientX - r.left - r.width / 2, y: clientY - r.top - r.height / 2 };
+  };
+
+  // ---- touch: pinch and pan ----
+  let pinch = null;   // { dist, scale, mid }
+  let pan = null;     // { x, y, tx, ty }
+  let lastTap = 0;
+
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const mid = (t) => stagePoint((t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2);
+
+  stage.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      pinch = { dist: dist(e.touches), scale, mid: mid(e.touches) };
+      pan = null;
+    } else if (e.touches.length === 1) {
+      const t = e.touches[0];
+      pan = { x: t.clientX, y: t.clientY, tx, ty };
+      // Double-tap: zoom in on the spot, or back out if already zoomed.
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        const p = stagePoint(t.clientX, t.clientY);
+        zoomAbout(scale > 1.2 ? 1 : 2.5, p.x, p.y);
+        pan = null;
+      }
+      lastTap = now;
+    }
+  }, { passive: true });
+
+  stage.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2 && pinch) {
+      e.preventDefault();
+      const m = mid(e.touches);
+      const next = pinch.scale * (dist(e.touches) / pinch.dist);
+      // Zoom about the current midpoint and also follow it as the fingers move.
+      zoomAbout(next, m.x, m.y);
+      tx += m.x - pinch.mid.x; ty += m.y - pinch.mid.y; pinch.mid = m;
+      clamp(); apply();
+    } else if (e.touches.length === 1 && pan && scale > 1) {
+      e.preventDefault();
+      const t = e.touches[0];
+      tx = pan.tx + (t.clientX - pan.x);
+      ty = pan.ty + (t.clientY - pan.y);
+      clamp(); apply();
+    }
+  }, { passive: false });
+
+  stage.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) pinch = null;
+    if (e.touches.length === 0) pan = null;
+  });
+
+  // ---- desktop: wheel to zoom, drag to pan, double-click ----
+  stage.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const p = stagePoint(e.clientX, e.clientY);
+    zoomAbout(scale * (e.deltaY < 0 ? 1.15 : 1 / 1.15), p.x, p.y);
+  }, { passive: false });
+  stage.addEventListener("dblclick", (e) => {
+    const p = stagePoint(e.clientX, e.clientY);
+    zoomAbout(scale > 1.2 ? 1 : 2.5, p.x, p.y);
+  });
+  let drag = null;
+  stage.addEventListener("mousedown", (e) => { if (scale > 1) drag = { x: e.clientX, y: e.clientY, tx, ty }; });
+  window.addEventListener("mousemove", (e) => {
+    if (!drag) return;
+    tx = drag.tx + (e.clientX - drag.x); ty = drag.ty + (e.clientY - drag.y); clamp(); apply();
+  });
+  window.addEventListener("mouseup", () => { drag = null; });
+
+  // Rotating the phone changes the stage size; start the fit fresh.
+  const onOrient = () => { scale = 1; tx = 0; ty = 0; apply(); };
+  window.addEventListener("orientationchange", onOrient);
+  window.addEventListener("resize", onOrient);
+
+  const close = () => {
+    document.removeEventListener("keydown", onKey);
+    window.removeEventListener("orientationchange", onOrient);
+    window.removeEventListener("resize", onOrient);
+    overlay.remove();
+    document.body.classList.remove("lightbox-open");
+  };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  overlay.querySelector(".lightbox-close").addEventListener("click", close);
+  document.addEventListener("keydown", onKey);
+
+  document.body.classList.add("lightbox-open");
+  document.body.appendChild(overlay);
+  apply();
+  return { close };
 }
 
 // ----------------------------------------------------------------------------
