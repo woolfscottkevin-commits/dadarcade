@@ -93,7 +93,10 @@ export default async function handler(req, res) {
   // show that rendered badly, without regenerating the day's content.
   if (url.searchParams.get("mode") === "radio") {
     try {
-      return res.status(200).json(await renderRadioForDay(dateStr));
+      return res.status(200).json(await renderRadioForDay(dateStr, {
+        voice: url.searchParams.get("voice") || undefined,
+        model: url.searchParams.get("speech") || undefined,
+      }));
     } catch (err) {
       console.error("[morning-drive-cron] radio failed:", err);
       return res.status(500).json({ error: String(err.message || err) });
@@ -211,10 +214,10 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
 }
 
 // Render the day's show, store it, and patch the URL onto the stored day.
-async function attachRadio(sb, dateStr, payload) {
+async function attachRadio(sb, dateStr, payload, options = {}) {
   if (!RADIO_ENABLED) return { ok: false, reason: "disabled" };
   try {
-    const info = await buildRadio(sb, { payload, dateStr });
+    const info = await buildRadio(sb, { payload, dateStr, ...options });
     const { error } = await sb
       .from("morning_drive_days")
       .update({ payload: { ...payload, radio: info } })
@@ -228,7 +231,7 @@ async function attachRadio(sb, dateStr, payload) {
 }
 
 // `?mode=radio` — render for a day that already exists.
-async function renderRadioForDay(dateStr) {
+async function renderRadioForDay(dateStr, options = {}) {
   const sb = getSupabase();
   const { data: row, error } = await sb
     .from("morning_drive_days")
@@ -237,7 +240,7 @@ async function renderRadioForDay(dateStr) {
     .maybeSingle();
   if (error) throw error;
   if (!row) return { ok: false, reason: "no day stored for " + dateStr };
-  const radio = await attachRadio(sb, dateStr, row.payload || {});
+  const radio = await attachRadio(sb, dateStr, row.payload || {}, options);
   return { date: dateStr, ...radio };
 }
 

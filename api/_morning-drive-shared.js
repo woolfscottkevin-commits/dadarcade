@@ -14,8 +14,8 @@ import { z } from "zod";
 // Bump these each August when school starts. Everything downstream (math
 // topics, reading level, vocab difficulty) keys off `grade`.
 export const KIDS = {
-  claire: { name: "Claire", grade: 4, blurb: "older, sharp, reads well" },
-  connor: { name: "Connor", grade: 2, blurb: "younger, concrete thinker" },
+  claire: { name: "Claire", grade: 4, age: 9, blurb: "older, sharp, reads well" },
+  connor: { name: "Connor", grade: 2, age: 7, blurb: "younger, concrete thinker" },
 };
 
 // Bible translation for the daily verse. NIrV / ICB sit at roughly a 3rd-grade

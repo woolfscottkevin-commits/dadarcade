@@ -1,10 +1,18 @@
-// Morning Drive Radio — a short spoken show built from the day's content.
+// Morning Drive Radio — a short spoken show for the rest of the drive.
 //
-// The DJ has nothing of their own to say. Every line is a retelling of
-// something already on the page: the two real news stories (with their
-// outlets named), the words of the day, the jokes, and whichever fact, trivia
-// answer or On-This-Day event ran. That is the point — it is the same morning,
-// heard instead of read, for after the tiles are done.
+// The first version was built entirely out of the day's tiles, and it landed the
+// way a recap lands: Connor had just done all of it. The note back was exact —
+// "I was looking more for them telling Connor fun, culture, interesting things
+// like, hey Connor, did you know the NFL started last night."
+//
+// So the DJ now has their own material, gathered by code in _morning-drive-buzz:
+// real finished games with real scores, and stories from feeds the page does not
+// read. The morning's lesson is still in there, but as a nod near the end rather
+// than the body of the show.
+//
+// The safety rule is unchanged and is what makes any of this printable: the
+// model never supplies a score, a team, a date or an outlet. It picks from what
+// code fetched and says it out loud.
 //
 // Cost per show, roughly: one small text call for the script (~$0.01) and
 // openai/tts-1 for the voice ($0.015 per thousand characters, so ~$0.06 for a
@@ -15,6 +23,7 @@ import { generateText, Output, experimental_generateSpeech as generateSpeech } f
 import { gateway } from "@ai-sdk/gateway";
 import { z } from "zod";
 import { KIDS } from "./_morning-drive-shared.js";
+import { gatherBuzz } from "./_morning-drive-buzz.js";
 
 const SCRIPT_MODEL = "anthropic/claude-sonnet-4.6";
 const SPEECH_MODEL = "openai/tts-1";
@@ -67,45 +76,60 @@ export function radioMaterial(payload) {
 
 const scriptSchema = z.object({
   segments: z.array(z.object({
-    id: z.enum(["intro", "news", "words", "jokes", "learned", "signoff"]),
-    text: z.string().describe("Exactly what the DJ says, as spoken prose. No headings, no bullet points, no URLs."),
+    id: z.enum(["intro", "sports", "world", "jokes", "lesson", "signoff"]),
+    text: z.string().describe("Exactly what the DJ says, as spoken prose. No headings, no bullet points, no URLs. Write <beat> where the delivery should stop for half a second — before a punchline, or before a big reveal."),
   })).min(4).max(8),
 });
 
-export async function writeRadioScript({ payload, dateStr }) {
+export async function writeRadioScript({ payload, dateStr, buzz = null }) {
   const m = radioMaterial(payload);
   const dayLabel = new Date(`${dateStr}T00:00:00Z`).toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
   });
 
-  const prompt = `You are the host of "Morning Drive Radio", a short show for ${KIDS.claire.name} (age 9) and ${KIDS.connor.name} (age 7), played in the car after they have finished their morning activities. Today is ${dayLabel}.
+  const sports = (buzz?.sports || []).slice(0, 8).map((g, i) =>
+    `${i}. [${g.context}] ${g.winner} beat ${g.loser} ${g.score}${g.overtime ? " in overtime" : ""}.` +
+    (g.standout ? ` Best game from ${g.standout}.` : "")
+  ).join("\n");
 
-Write the show as segments of spoken prose. Everything you say must come from the material below — you are retelling the morning, not adding to it.
+  const stories = (buzz?.stories || []).map((c, i) =>
+    `${i}. [${c.source}, ${c.published || "this week"}] ${c.title}\n   ${c.summary.slice(0, 300)}`
+  ).join("\n\n");
 
-## Material
+  const prompt = `You are the host of "Morning Drive Radio", a few minutes of radio for ${KIDS.claire.name} (age ${KIDS.claire.age}) and ${KIDS.connor.name} (age ${KIDS.connor.age}), played in the car on the way to school. Today is ${dayLabel}.
 
-NEWS (name the outlet each time, e.g. "Smithsonian Magazine reported…"):
-${JSON.stringify(m.news, null, 1)}
+You are not a teacher and this is not a recap. They have already done their morning activities. Your job is to tell them what is going on out in the world — the things they would want to repeat to a friend at lunch.
 
-WORDS OF THE DAY:
-${JSON.stringify(m.words, null, 1)}
+## What happened in sport
+${sports || "(nothing finished in the last couple of days — skip the sport segment entirely)"}
 
-JOKES (tell each one — setup, a beat, punchline):
+## What else is going on
+${stories || "(no stories available — skip the world segment entirely)"}
+
+## Their jokes for today (tell each one properly)
 ${JSON.stringify(m.jokes, null, 1)}
 
-THINGS THEY LEARNED TODAY (pick the two or three best):
-${JSON.stringify(m.learned, null, 1)}
+## From this morning's activities — for a short nod near the end, NOT the body of the show
+Words they learned: ${JSON.stringify(m.words)}
+${m.learned.length ? `Things they read about: ${JSON.stringify(m.learned.slice(0, 3))}` : ""}
+${m.trait ? `Today's challenge: ${m.trait.trait} — ${m.trait.challenge}` : ""}
 
-${m.quote ? `QUOTE: "${m.quote.text}" — ${m.quote.author}` : ""}
-${m.trait ? `TODAY'S CHALLENGE: ${m.trait.trait} — ${m.trait.challenge}` : ""}
+## The show
+- Segments in this order, each one its own entry: intro, sports, world, jokes, lesson, signoff.
+- Skip "sports" or "world" only if the material above says to.
+- 550 to 800 words in total, and most of those words belong to sport and the world — the "lesson" segment is four or five sentences at most.
+- "sports": pick the one or two results they would find most interesting and say who played, who won and the score. Say what it means if the material tells you — the first week of a season, a playoff game, an overtime finish.
+- "world": pick two or three stories and tell them like a friend telling you something great. Name the outlet once per story. A new dinosaur, an animal, something in the sky tonight — those beat a study about scientific method.
+- "lesson": one quick "and nice work this morning" — name a word they learned or one thing they read, then today's challenge if there is one. Four or five sentences. Do not re-teach it.
 
-## Rules
-- Segments in this order: intro, news, words, jokes, learned, signoff. Skip a segment only if there is no material for it.
-- 550 to 800 words in total. It is read aloud at a natural pace, so that is four to five minutes.
-- Warm, upbeat radio-host energy — not shouty, not sing-song. Talk to them by name once or twice, not every sentence.
-- Say only what the material says. Do not add facts, numbers or claims. If a story mentions a number, say it in words a child can follow.
-- Written for the ear: contractions, short sentences, no lists, no headings, no web addresses, no emoji. Spell out abbreviations.
-- Nothing frightening, sad or violent. Nothing that talks down to them.
+## How to say it
+- Warm drive-time radio energy. Talk to them by name when you hand them something new: "Connor, listen to this one."
+- Say ONLY what the material says. Every score, team, date and outlet is given to you above — copy it exactly. Never add a number, a result, a name or a claim of your own. If you are not sure, leave it out.
+- You may make a size or a weight mean something by comparing it to one familiar object, but only where it is true with plenty of room to spare — a twenty-metre dinosaur is "longer than a school bus", not "longer than two school buses". If the comparison needs arithmetic to check, do not make it; say the number instead.
+- Scores are already written in words. Use them exactly as written and never turn them back into digits.
+- Write <beat> where the delivery should stop for half a second: right before every punchline, and before a big reveal. Nowhere else.
+- Written for the ear: contractions, short sentences, no lists, no headings, no web addresses, no emoji, no stage directions other than <beat>.
+- Nothing frightening, sad, violent or political. Nothing that talks down to them.
 - Close by telling them to have a great day at school.`;
 
   const { output } = await generateText({
@@ -114,13 +138,89 @@ ${m.trait ? `TODAY'S CHALLENGE: ${m.trait.trait} — ${m.trait.challenge}` : ""}
     prompt,
   });
   const segments = (output.segments || []).filter((s) => s.text && s.text.trim());
-  const words = segments.reduce((n, s) => n + s.text.split(/\s+/).length, 0);
+  const words = segments.reduce((n, s) => n + s.text.replace(/<beat>/g, " ").split(/\s+/).filter(Boolean).length, 0);
   return { segments, words };
 }
 
 // ----------------------------------------------------------------------------
 // Voice
 // ----------------------------------------------------------------------------
+
+// A punchline landed on top of its own setup in the first show. The voice model
+// has no control for timing, so the pause is made here instead: real silence,
+// spliced between two separate pieces of speech.
+//
+// The silence has to match the speech it sits between, and that is not a
+// constant — openai/tts-1 and Grok return 24 kHz, fish-audio returns 44.1 kHz.
+// So the frame is read off the audio that came back rather than assumed. A
+// Layer III frame whose side info is all zeros carries no audio data and decodes
+// to silence; ffmpeg reads a run of them as -91 dB for exactly the right length.
+
+const MPEG_RATES = { 3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000] };
+const L3_BITRATES = {
+  3: [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],   // MPEG-1
+  2: [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],       // MPEG-2 / 2.5
+};
+
+// Read the first MPEG audio frame header in a buffer.
+export function frameSpec(bytes) {
+  for (let i = 0; i + 4 <= bytes.length && i < 8192; i++) {
+    if (bytes[i] !== 0xff || (bytes[i + 1] & 0xe0) !== 0xe0) continue;
+    const version = (bytes[i + 1] >> 3) & 0x03;      // 3 = MPEG-1, 2 = MPEG-2, 0 = MPEG-2.5
+    const layer = (bytes[i + 1] >> 1) & 0x03;        // 1 = Layer III
+    if (layer !== 1 || version === 1) continue;      // reserved values: not a real header
+    const rates = MPEG_RATES[version];
+    const bitrates = L3_BITRATES[version === 3 ? 3 : 2];
+    const bitrate = bitrates[(bytes[i + 2] >> 4) & 0x0f] * 1000;
+    const sampleRate = rates?.[(bytes[i + 2] >> 2) & 0x03];
+    if (!bitrate || !sampleRate) continue;
+    const samples = version === 3 ? 1152 : 576;
+    return {
+      header: [bytes[i], bytes[i + 1], bytes[i + 2] & 0xfd, bytes[i + 3]], // padding bit cleared
+      frameBytes: Math.floor((samples / 8) * bitrate / sampleRate),
+      frameMs: (samples / sampleRate) * 1000,
+      sampleRate, bitrate,
+    };
+  }
+  return null;
+}
+
+// The format openai/tts-1 has always returned, used when nothing is available to
+// read — an empty show, or a model that returns something unparseable.
+const DEFAULT_SPEC = { header: [0xff, 0xf3, 0xc4, 0xc0], frameBytes: 384, frameMs: (576 / 24000) * 1000, sampleRate: 24000, bitrate: 128000 };
+
+export const BEAT_MS = 550;        // before a punchline
+export const SEGMENT_GAP_MS = 400; // between segments, so it breathes like radio
+
+export function silentFrames(ms, spec = DEFAULT_SPEC) {
+  const { header, frameBytes, frameMs } = spec || DEFAULT_SPEC;
+  const n = Math.max(1, Math.round(ms / frameMs));
+  const out = new Uint8Array(frameBytes * n);
+  for (let i = 0; i < n; i++) out.set(header, i * frameBytes);
+  return out;
+}
+
+// Respellings applied to the microphone only — never to anything on the page.
+// tts-1 stumbles over "Connor"; which spelling fixes it is a question for an ear,
+// not for me, so this stays empty until someone has listened to the samples.
+export const PRONUNCIATION = [
+  // [/\bConnor\b/g, "Conner"],
+];
+
+// Everything between the script and the voice: markers out, respellings in.
+export function sayable(text) {
+  let out = String(text || "").replace(/<beat>/g, " ").replace(/\s+/g, " ").trim();
+  for (const [pattern, replacement] of PRONUNCIATION) out = out.replace(pattern, replacement);
+  return out;
+}
+
+// A segment becomes the pieces of speech it is made of, with the beats marked.
+export function splitOnBeats(text) {
+  return String(text || "")
+    .split("<beat>")
+    .map((part) => sayable(part))
+    .filter(Boolean);
+}
 
 // Break text into pieces under the TTS limit, on sentence boundaries so a
 // chunk never ends mid-word.
@@ -163,22 +263,43 @@ export function concatMp3(parts) {
   return out;
 }
 
-export async function renderRadioAudio(segments, { voice = RADIO_VOICE } = {}) {
+export async function renderRadioAudio(segments, { voice = RADIO_VOICE, model = SPEECH_MODEL } = {}) {
   const parts = [];
   let chars = 0;
-  for (const seg of segments) {
-    for (const chunk of chunkForTts(seg.text)) {
-      const { audio } = await generateSpeech({
-        model: gateway.speechModel(SPEECH_MODEL),
-        text: chunk,
-        voice,
-        outputFormat: "mp3",
-      });
-      parts.push(audio.uint8Array ?? new Uint8Array(Buffer.from(audio.base64, "base64")));
-      chars += chunk.length;
+  let spoken = 0;   // pieces of speech
+  let pauses = 0;   // silences spliced in
+  let spec = null;  // learned from the first piece that comes back
+
+  // Silences are queued rather than pushed, because until the first piece of
+  // speech arrives there is nothing to match their sample rate to.
+  const pending = [];
+  const flush = () => {
+    for (const ms of pending.splice(0)) { parts.push(silentFrames(ms, spec)); pauses++; }
+  };
+
+  for (const [segmentIndex, seg] of segments.entries()) {
+    const beats = splitOnBeats(seg.text);
+    for (const [beatIndex, piece] of beats.entries()) {
+      if (beatIndex > 0) pending.push(BEAT_MS);
+      for (const chunk of chunkForTts(piece)) {
+        const { audio } = await generateSpeech({
+          model: gateway.speechModel(model),
+          text: chunk,
+          voice,
+          outputFormat: "mp3",
+        });
+        const bytes = audio.uint8Array ?? new Uint8Array(Buffer.from(audio.base64, "base64"));
+        spec ??= frameSpec(stripId3(bytes));
+        flush();
+        parts.push(bytes);
+        chars += chunk.length;
+        spoken++;
+      }
     }
+    if (segmentIndex < segments.length - 1) pending.push(SEGMENT_GAP_MS);
   }
-  return { bytes: concatMp3(parts), chars, pieces: parts.length };
+
+  return { bytes: concatMp3(parts), chars, pieces: spoken, pauses, sampleRate: spec?.sampleRate ?? null, bitrate: spec?.bitrate ?? null };
 }
 
 // ----------------------------------------------------------------------------
@@ -212,25 +333,39 @@ export async function pruneRadio(sb, today, keepDays = KEEP_DAYS) {
 // The whole thing
 // ----------------------------------------------------------------------------
 
-// Rough speaking pace for openai/tts-1 at default speed.
-const CHARS_PER_SECOND = 15;
+// The stream is constant bitrate, so its length is arithmetic rather than a
+// guess. The first version estimated from character count and was twenty seconds
+// long over a four-minute show.
 
-export async function buildRadio(sb, { payload, dateStr, voice = RADIO_VOICE }) {
+export async function buildRadio(sb, { payload, dateStr, voice = RADIO_VOICE, model = SPEECH_MODEL, buzz = null }) {
   const t0 = Date.now();
-  const script = await writeRadioScript({ payload, dateStr });
+
+  // Gathered here rather than passed in, so a caller cannot forget it and
+  // quietly get the old recap show back. Sport and stories are best-effort:
+  // if both come back empty the script still runs, on jokes and the lesson.
+  const material = buzz ?? await gatherBuzz(dateStr, {
+    avoidSubjects: (payload?.news || []).map((n) => n.subject).filter(Boolean),
+  }).catch(() => null);
+
+  const script = await writeRadioScript({ payload, dateStr, buzz: material });
   if (!script.segments.length) throw new Error("radio: empty script");
-  const audio = await renderRadioAudio(script.segments, { voice });
+  const audio = await renderRadioAudio(script.segments, { voice, model });
   const url = await uploadRadio(sb, dateStr, audio.bytes);
   const prune = await pruneRadio(sb, dateStr).catch(() => ({ removed: 0 }));
   return {
     url,
     voice,
+    model,
     words: script.words,
     chars: audio.chars,
     pieces: audio.pieces,
+    pauses: audio.pauses,
+    sampleRate: audio.sampleRate,
     bytes: audio.bytes.length,
-    durationSec: Math.round(audio.chars / CHARS_PER_SECOND),
+    durationSec: Math.round(audio.bytes.length / ((audio.bitrate || 128_000) / 8)),
     segments: script.segments.map((s) => s.id),
+    sports: (material?.sports || []).length,
+    stories: (material?.stories || []).length,
     renderedAt: new Date().toISOString(),
     pruned: prune.removed,
     elapsedMs: Date.now() - t0,

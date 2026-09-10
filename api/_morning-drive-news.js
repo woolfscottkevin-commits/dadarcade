@@ -36,7 +36,7 @@ const NOT_A_STORY = [
 // or a shooting must never reach a tile a 7-year-old reads on the way to school.
 // The model is told to skip anything unsuitable as well — this is the first of
 // two filters, not the only one.
-const UNSUITABLE = new RegExp([
+export const UNSUITABLE = new RegExp([
   "war", "killed", "kills", "killing", "dead", "death", "died", "fatal", "murder",
   "shooting", "shot dead", "gun", "stabb", "terror", "bomb", "missile", "strike",
   "invasion", "troops", "hostage", "abuse", "assault", "rape", "suicide",
@@ -47,7 +47,7 @@ const UNSUITABLE = new RegExp([
   "layoff", "bankrupt", "recession",
 ].join("|"), "i");
 
-async function fetchText(url) {
+export async function fetchText(url) {
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/rss+xml, application/xml, text/xml" },
@@ -79,7 +79,7 @@ const tag = (xml, name) => {
 
 // Deliberately hand-rolled: one regex pass over well-formed RSS beats adding a
 // dependency to a project with three of them.
-function parseFeed(xml, source) {
+export function parseFeed(xml, source) {
   const out = [];
   for (const block of xml.match(/<item[ >][\s\S]*?<\/item>/gi) || []) {
     const title = tag(block, "title");

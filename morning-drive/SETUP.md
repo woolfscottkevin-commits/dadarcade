@@ -385,14 +385,47 @@ credit are needed.
 ## Morning Drive Radio (September 2026)
 
 A button under the header — **Listen to Morning Drive Radio** — plays a four-
-to-five-minute spoken show for after the tiles are done: intro, the two real
-news stories with their outlets named on air, the words of the day, both jokes,
-two or three things they learned, sign-off.
+to-five-minute spoken show for the rest of the drive: intro, sport, what else is
+going on in the world, both jokes, a short nod to the morning's activities,
+sign-off.
 
-**The DJ has nothing of their own to say.** [`radioMaterial()`](../api/_morning-drive-radio.js)
-flattens the day's payload into the only facts the script may use — no answer
-keys, no Word Match answers, no URLs (they would be read aloud) — and the prompt
-tells the model it is retelling the morning, not adding to it.
+### The recap problem
+
+The first version was built entirely out of the day's tiles, and it landed the
+way a recap lands — Connor had just done all of it. The note back was exact:
+
+> It's okay if they reference an item or two from their lesson but I was looking
+> more for them telling Connor fun, culture, interesting things like — hey
+> Connor, did you know the NFL started last night with the x team beating the y
+> team forty-five to nothing.
+
+So the DJ now has **their own material**, gathered by code in
+[`_morning-drive-buzz.js`](../api/_morning-drive-buzz.js):
+
+| Source | What it gives | Key needed |
+| --- | --- | --- |
+| ESPN public scoreboards — NFL, college football, MLB, NBA, WNBA, NHL, MLS | finished games in the last 48h: teams, score, overtime, one standout line, and whether it is opening week or the playoffs | none |
+| Science Daily (dinosaurs, animals), Smithsonian *Smart News*, Space.com, EarthSky | the stories a seven-year-old repeats at lunch | none |
+
+The lesson is still in there, but as four or five sentences near the end rather
+than the body of the show.
+
+**The safety rule is unchanged, and it is what makes any of this printable.**
+The model never supplies a score, a team, a date or an outlet — code fetches
+those and the model only says them aloud. Scores are spelled into words
+(`spellNumber`) while they are still numbers, so "13" cannot come out of the
+speaker as "thirty-one". Feeds the news tile already read are deliberately *not*
+in the radio's list, and subjects the page used that morning are filtered out,
+so the radio is not a recap by another route.
+
+Two filters that exist because something got through: `UNSUITABLE_FOR_RADIO`
+(a Renoir museum theft reads as adventure to an adult and as a crime story to a
+seven-year-old) and a rule against invented comparisons — the model called a
+twenty-metre dinosaur "longer than two school buses", which is both made up and
+wrong.
+
+`radioMaterial()` still governs what the lesson segment may use: no answer keys,
+no Word Match answers, no URLs (they would be read aloud).
 
 ### How it is made
 
@@ -411,6 +444,25 @@ response under `radio`.
 sentence boundaries (`TTS_CHUNK_CHARS = 3500`) and the MP3 pieces are laid end
 to end with ID3 headers stripped from all but the first.
 
+### Timing
+
+The first show rushed its punchlines, because a voice model has no control for
+timing. The pause is made here instead. The script writes `<beat>` where the
+delivery should stop — before every punchline, before a reveal — and
+`renderRadioAudio` splits there, rendering each side as its own piece of speech
+and splicing **real silence** between them (`BEAT_MS = 550`, plus
+`SEGMENT_GAP_MS = 400` between segments so it breathes like radio).
+
+The silence is Layer III frames whose side info is all zeros: no audio data,
+decodes to silence, `-91 dB` under `ffmpeg -af volumedetect`. It has to match
+the speech it sits between and **that is not a constant** — openai/tts-1 and
+Grok return 24 kHz, fish-audio returns 44.1 kHz — so `frameSpec()` reads the
+header off the first piece that comes back rather than assuming one.
+
+Show length is now arithmetic off the byte count at the measured bitrate, not an
+estimate from character count. The old estimate was twenty seconds long on a
+four-minute show.
+
 ### Trying a voice, or redoing a bad render
 
 ```bash
@@ -419,9 +471,32 @@ curl "https://dadarcade.com/api/morning-drive-cron?mode=radio&date=2026-09-09" \
 ```
 
 Re-renders only the show for a day that already exists and patches the URL onto
-the stored payload. `RADIO_VOICE` in `_morning-drive-radio.js` is the voice
-(`alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`); `RADIO_ENABLED = false`
-switches the whole thing off.
+the stored payload — no content is regenerated. Add `&voice=` and `&speech=` to
+try a voice or a different model without touching code:
+
+```bash
+curl ".../api/morning-drive-cron?mode=radio&date=2026-09-10&speech=openai/tts-1-hd&voice=nova" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+`RADIO_VOICE` and `SPEECH_MODEL` in `_morning-drive-radio.js` are the defaults;
+`RADIO_ENABLED = false` switches the whole thing off.
+
+### What is available to speak with
+
+There is **no ElevenLabs on the Vercel AI Gateway** — using it would mean a
+separate account, key and bill. What the gateway does have (`type: "speech"`):
+
+| Model | Rate | Voices | Notes |
+| --- | --- | --- | --- |
+| `openai/tts-1` | $0.015 / 1k chars | alloy, echo, fable, onyx, nova, shimmer | the current default |
+| `openai/tts-1-hd` | $0.030 / 1k chars | same six | same voices, higher-quality render |
+| `spacexai/grok-tts` | $0.015 / 1k chars | Ara, Eve, Rex, Gork, Sal, Leo, Grok | advertises speech tags |
+| `fish-audio/s1`, `s2-pro`, `s2.1-pro` | free tier | default reference voice | returns 44.1 kHz, not 24 kHz |
+
+`PRONUNCIATION` in `_morning-drive-radio.js` applies respellings to the
+microphone only, never to anything on the page. It is empty: tts-1 stumbles over
+"Connor", but which spelling fixes it is a question for an ear.
 
 ### Why the SDK was upgraded for this
 
