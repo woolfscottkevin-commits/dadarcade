@@ -378,3 +378,70 @@ Covers config coherence (every kind has a schema; no kind's minimum is below one
 day's demand), claiming and release, insert dedupe, and assembling a full day —
 all against an in-memory stand-in for Supabase, so no network, credentials or AI
 credit are needed.
+
+
+---
+
+## Morning Drive Radio (September 2026)
+
+A button under the header — **Listen to Morning Drive Radio** — plays a four-
+to-five-minute spoken show for after the tiles are done: intro, the two real
+news stories with their outlets named on air, the words of the day, both jokes,
+two or three things they learned, sign-off.
+
+**The DJ has nothing of their own to say.** [`radioMaterial()`](../api/_morning-drive-radio.js)
+flattens the day's payload into the only facts the script may use — no answer
+keys, no Word Match answers, no URLs (they would be read aloud) — and the prompt
+tells the model it is retelling the morning, not adding to it.
+
+### How it is made
+
+| Step | What | Cost |
+| --- | --- | --- |
+| Script | one `generateText` call, `Output.object` | ~$0.01 |
+| Voice | `openai/tts-1` via **the AI Gateway already in use** — no new account | $0.015 / 1k chars, ~$0.06 a show |
+| Storage | public Supabase bucket `morning-drive-audio`, `YYYY-MM-DD.mp3`, pruned after 14 days | free tier |
+| Playback | native `<audio>`; `play()` called synchronously inside the tap (the iOS rule the spelling button taught) | nothing |
+
+The show renders **after** the day is written, so speech synthesis failing can
+only ever cost the show, never the drive. Its outcome is recorded in the cron
+response under `radio`.
+
+`openai/tts-1` refuses inputs over 4096 characters, so segments are cut at
+sentence boundaries (`TTS_CHUNK_CHARS = 3500`) and the MP3 pieces are laid end
+to end with ID3 headers stripped from all but the first.
+
+### Trying a voice, or redoing a bad render
+
+```bash
+curl "https://dadarcade.com/api/morning-drive-cron?mode=radio&date=2026-09-09" \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Re-renders only the show for a day that already exists and patches the URL onto
+the stored payload. `RADIO_VOICE` in `_morning-drive-radio.js` is the voice
+(`alloy`, `echo`, `fable`, `onyx`, `nova`, `shimmer`); `RADIO_ENABLED = false`
+switches the whole thing off.
+
+### Why the SDK was upgraded for this
+
+Speech goes through the AI SDK's own provider protocol — the gateway has no
+OpenAI-compatible `/v1/audio/speech` route — and the provider package the
+project had predated `gateway.speechModel()`. `ai` moved to v7 and
+`@ai-sdk/gateway` to v4, verified first in an isolated install that the cron's
+`generateText` + `Output.object` convention was unchanged.
+
+### Not yet: music
+
+The show is talk only. Nothing on the gateway makes music; songs would come
+from a separate service with its own pricing and licensing, and "provided they
+sound good" is a judgment to make by ear before committing the format to it.
+Songs are reusable, so a banked library of ~20 would be a one-off cost.
+
+```bash
+node morning-drive/tests/radio.test.mjs
+```
+
+Covers what the DJ is allowed to use, the sentence-boundary chunking (including
+a single sentence longer than the limit — the first version of that loop never
+terminated), and joining the audio pieces.
