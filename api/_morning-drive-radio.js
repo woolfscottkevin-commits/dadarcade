@@ -364,6 +364,9 @@ export async function buildRadio(sb, { payload, dateStr, voice = RADIO_VOICE, mo
     bytes: audio.bytes.length,
     durationSec: Math.round(audio.bytes.length / ((audio.bitrate || 128_000) / 8)),
     segments: script.segments.map((s) => s.id),
+    // Kept so what the DJ said is readable without listening to four minutes of
+    // it — the fastest way to tell whether a prompt change did what was wanted.
+    transcript: script.segments.map((s) => ({ id: s.id, text: s.text })),
     sports: (material?.sports || []).length,
     stories: (material?.stories || []).length,
     renderedAt: new Date().toISOString(),
