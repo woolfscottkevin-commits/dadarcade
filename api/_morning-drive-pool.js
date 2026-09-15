@@ -10,7 +10,7 @@
 // generated in BATCHES into morning_drive_pool, and the nightly job assembles a
 // day from it in pure code. Most mornings cost nothing at all.
 
-import { fingerprint } from "./_morning-drive-shared.js";
+import { fingerprint, MATH_PER_KID } from "./_morning-drive-shared.js";
 
 // ----------------------------------------------------------------------------
 // What lives in the pool
@@ -21,7 +21,7 @@ import { fingerprint } from "./_morning-drive-shared.js";
 // BETTER jokes than 50 separate calls, because the model can see the whole set
 // and vary it.
 export const POOL_KINDS = {
-  math:             { perKid: true,  batchDays: 14, perDay: 5, min: 30 },
+  math:             { perKid: true,  batchDays: 14, perDay: MATH_PER_KID, min: 30 },
   grammar:          { perKid: true,  batchDays: 14, perDay: 1, min: 8 },
   word:             { perKid: true,  batch: 30, min: 10 },
   spelling:         { perKid: true,  batch: 24, min: 9 },
@@ -54,8 +54,8 @@ export const POOL_KINDS = {
 
 // How each rendered section is filled from the pool.
 export const SECTION_NEEDS = {
-  claireMath:       { kind: "math", kid: "claire", count: 5, as: "list" },
-  connorMath:       { kind: "math", kid: "connor", count: 5, as: "list" },
+  claireMath:       { kind: "math", kid: "claire", count: MATH_PER_KID, as: "list" },
+  connorMath:       { kind: "math", kid: "connor", count: MATH_PER_KID, as: "list" },
   grammarClaire:    { kind: "grammar", kid: "claire", count: 1, as: "list" },
   grammarConnor:    { kind: "grammar", kid: "connor", count: 1, as: "list" },
   wordsOfDay:       { kind: "word", perKid: 1, as: "byKid" },

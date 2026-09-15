@@ -22,6 +22,7 @@ import {
   fetchVocabStats,
   getSupabase,
   scrubAnswerTells,
+  spreadAnswerPositions,
   todayET,
 } from "./_morning-drive-shared.js";
 import { resolveArtwork, resolveFlag, resolveWikiImage } from "./_morning-drive-media.js";
@@ -181,6 +182,13 @@ export async function generateAndStore(dateStr, generatedBy, { force = false } =
       schemaVersion: 4,
     },
   };
+
+  // Both of these ran only on the legacy path before, which is the path that
+  // almost never runs — so the tick-mark scrub had been protecting nothing, and
+  // a batch of seventy maths items with the answer always first went straight to
+  // Connor, who noticed before anyone else did.
+  payload.meta.answerTellsCleaned = scrubAnswerTells(payload);
+  payload.meta.answerPositions = spreadAnswerPositions(payload, dateStr);
 
   const row = { date: dateStr, payload, generated_by: generatedBy };
   const { error: writeErr } = force
@@ -485,6 +493,10 @@ async function legacyGenerateAndStore(dateStr, generatedBy, { force = false, sb:
       schemaVersion: 3,
     },
   };
+
+  // Where the right answer sits is decided here, not by whichever way the model
+  // happened to list the choices.
+  payload.meta.answerPositions = spreadAnswerPositions(payload, dateStr);
 
   // Write the day row. `date` is the primary key, so an upsert replaces the
   // existing row when forcing and behaves like an insert otherwise.

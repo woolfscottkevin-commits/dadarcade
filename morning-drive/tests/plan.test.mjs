@@ -5,7 +5,7 @@
 // and format cycling, and the spaced-repetition ordering in Word Match.
 import { artworkSubjectIsSuitable } from "../../api/_morning-drive-media.js";
 import {
-  pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema,
+  pickRotation, activeSectionsFor, assignMathPlan, buildPayloadSchema, MATH_PER_KID,
   buildVocabReview, buildPrompt, MATH_TOPICS, ROTATING_POOL,
   maskWordInDefinition, isUsableWordEntry, stripAnswerTells, scrubAnswerTells, VOCAB_REVIEW_PER_KID,
   assignGrammarPlan, GRAMMAR_TOPICS, ROTATING_PER_DAY, IMAGE_SECTIONS, MAX_IMAGE_SECTIONS_PER_DAY, DAILY_SECTIONS,
@@ -30,9 +30,9 @@ console.log(`      overlap with previous day: ${overlaps.join(", ")} (of ${ROTAT
 console.log("\n[2] Math plan variety");
 for (const kid of ["claire", "connor"]) {
   const plans = dates.map((d) => assignMathPlan(d, kid));
-  ok(plans.every((p) => p.length === 5), `${kid}: 5 questions/day`);
-  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === 5), `${kid}: 5 DISTINCT topics within a day`);
-  ok(plans.every((p) => new Set(p.map((q) => q.format)).size === 5), `${kid}: 5 DISTINCT formats within a day`);
+  ok(plans.every((p) => p.length === MATH_PER_KID), `${kid}: ${MATH_PER_KID} questions/day`);
+  ok(plans.every((p) => new Set(p.map((q) => q.topic)).size === MATH_PER_KID), `${kid}: ${MATH_PER_KID} DISTINCT topics within a day`);
+  ok(plans.every((p) => new Set(p.map((q) => q.format)).size === MATH_PER_KID), `${kid}: ${MATH_PER_KID} DISTINCT formats within a day`);
   const dayKeys = plans.map((p) => p.map((q) => `${q.topic}|${q.format}`).sort().join("~"));
   ok(new Set(dayKeys).size === dayKeys.length, `${kid}: no two of 14 days share the same full plan`);
   const topicSets = plans.map((p) => p.map((q) => q.topic).sort().join("~"));

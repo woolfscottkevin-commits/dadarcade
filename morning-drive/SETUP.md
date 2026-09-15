@@ -210,7 +210,10 @@ This was the fix for "different names and numbers in the same problem":
 text-level dedupe can't detect that twenty questions share one skeleton.
 
 - 20 topics per kid × 12 formats, in `MATH_TOPICS` / `MATH_FORMATS`.
-- 5 distinct topics and 5 distinct formats per kid per day.
+- `MATH_PER_KID` distinct topics and formats per kid per day — **3**, lowered
+  from 5 in September 2026 because the drive is about fifteen minutes and there
+  was no time to finish the rest of the page. It is one constant: the plan, the
+  payload schema, the pool's day-size and how much bank a batch buys all read it.
 - Topic sets cycle over 20 days; full plans over 60.
 - `fetchRecentFormats()` feeds the last 21 days of *shapes* back into the
   prompt, so the model can see which skeletons are over-used.
@@ -219,6 +222,49 @@ The multipliers in `assignMathPlan()` must stay **coprime with the pool
 lengths**. This is easy to break: a step of 4 over 20 topics looks fine per-day
 but silently pins every day to one residue class, giving only 4 distinct topic
 sets ever. `morning-drive/tests/plan.test.mjs` guards this.
+
+### Where the right answer sits
+
+Connor stopped reading the questions. He had worked out the answer was always in
+the same box, and he was right — one batch of **seventy** maths items, generated
+in a single call on 8 September, put the correct choice first in all seventy, and
+he had been working through that block for a week.
+
+```
+connor math, correctIndex in creation order, by insertion batch
+  2026-09-06T05:31  n=70  {0:11, 1:37, 2:17, 3:5}
+  2026-09-08T17:44  n=70  {0:70}          <- this one
+  2026-09-08T17:46  n=67  {0:11, 1:41, 2:13, 3:2}
+```
+
+Where a model puts the right answer is not a property to depend on, and no prompt
+line repairs items already in the bank. So `spreadAnswerPositions()` assigns the
+position in code, after the day is assembled and before it is stored. It covers
+every answer shape on the page — `choices`/`correctIndex`, `options`/`correctIndex`
+and Two Truths' `items`/`lieIndex`.
+
+Three things it has to get right, all of them measured in
+`morning-drive/tests/answers.test.mjs`:
+
+- **Even over time.** Each box lands ~25%. In the bank, box 3 held 5%.
+- **No replacement pattern.** Slots are dealt from a bag — a shuffled permutation,
+  reshuffled when it empties — not counted off. A plain counter spreads evenly but
+  leaves "each answer one box right of the last", which is the same trick in a
+  different coat.
+- **One bag per section.** A shared bag let Claire's three questions decide which
+  box Connor's first answer was in, which starved box 0 for a month. The test
+  caught that during the fix.
+
+`seededShuffle()` is **not** good enough for this and is not used for it. It
+drives an LCG and takes `s % n`; the low two bits of an LCG have a period of
+four, so a four-element shuffle is nearly a function of the seed's low bits.
+Fine for picking three distractors out of fifty words, fatal for picking one box
+out of four. The spread uses a splitmix32 finalizer instead.
+
+The same wiring fixed a quieter bug: `scrubAnswerTells()` had only ever run on
+the **legacy** generation path, which almost never runs. The tick-mark scrub had
+been protecting nothing since the content bank landed. Both now run on the pool
+path, and both report into `payload.meta`.
 
 ### Word Match — spaced repetition
 

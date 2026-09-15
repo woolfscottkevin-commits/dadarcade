@@ -72,6 +72,12 @@ export const MAX_IMAGE_SECTIONS_PER_DAY = 1;
 // How many previously-learned words each kid reviews in Word Match.
 export const VOCAB_REVIEW_PER_KID = 1;
 
+// How many maths questions each kid gets. Five was too many to finish before
+// school — the drive is about fifteen minutes and there is a whole page after
+// this. Change it here: the plan, the schema, the pool's day-size and how much
+// bank a batch buys all read from this one number.
+export const MATH_PER_KID = 3;
+
 
 // Grammar gets the same assigned-topic rotation as math, for the same reason:
 // left to itself the model will ask about nouns and verbs every single day.
@@ -295,7 +301,7 @@ export function activeSectionsFor(dateStr) {
 // Math planning — assign each question an explicit (topic, format)
 // ============================================================================
 
-export function assignMathPlan(dateStr, kid, count = 5) {
+export function assignMathPlan(dateStr, kid, count = MATH_PER_KID) {
   const topics = MATH_TOPICS[kid] || [];
   const seed = daySeed(dateStr);
   const T = topics.length;        // 20
@@ -630,8 +636,8 @@ export const ITEM_SCHEMAS = {
 };
 
 const SECTION_SCHEMAS = {
-  claireMath: z.array(mathQ).length(5),
-  connorMath: z.array(mathQ).length(5),
+  claireMath: z.array(mathQ).length(MATH_PER_KID),
+  connorMath: z.array(mathQ).length(MATH_PER_KID),
   grammarClaire: z.array(grammarQ).length(1),
   grammarConnor: z.array(grammarQ).length(1),
   artwork: artworkItem,
@@ -872,6 +878,128 @@ export function buildVocabReview({ priorWords, stats, kid, dateStr, todaysWord, 
       correctIndex: options.indexOf(target.word),
     };
   }).filter((q) => q.options.length === 4 && q.correctIndex >= 0);
+}
+
+// ----------------------------------------------------------------------------
+// Answer position
+// ----------------------------------------------------------------------------
+// Connor stopped reading the questions. He had worked out that the answer was
+// always in the same box, and he was right: one batch of seventy maths items,
+// generated in a single call on 8 September, put the correct choice first in
+// every one of the seventy. He had been working through that block for a week.
+//
+// Where a model puts the right answer is not a property anything should depend
+// on, and no prompt line fixes the items already in the bank. So the position is
+// assigned here, after the day is assembled and before it is stored: the choices
+// are shuffled, then the correct one is moved to a slot taken from a rotating
+// counter. Within a day the slots cycle, so two questions in a row cannot share
+// one; the day's seed sets where the cycle starts, so it is not the same shape
+// every morning either.
+
+// The answer-bearing shapes across every tile: an array of choices and the index
+// of the right one.
+const ANSWER_SHAPES = [
+  { list: "choices", index: "correctIndex" },
+  { list: "options", index: "correctIndex" },
+  { list: "items",   index: "lieIndex" },   // Two Truths and a Lie
+];
+
+// A proper avalanche hash, because `seededShuffle` is not good enough for this.
+// It drives a linear congruential generator and takes `s % n`: the low two bits
+// of an LCG have a period of four, so for a four-element shuffle the result is
+// very nearly a function of the seed's low bits. That is invisible when picking
+// three distractors out of fifty words, and fatal when picking one box out of
+// four — the first attempt at this starved box 0 for a month and the test caught
+// it. splitmix32's finalizer spreads every input bit across all thirty-two.
+function hash32(a, b = 0) {
+  let x = (Math.imul(a, 0x9e3779b1) ^ Math.imul(b + 1, 0x85ebca6b)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x21f0aaad) >>> 0;
+  x = Math.imul(x ^ (x >>> 15), 0x735a2d97) >>> 0;
+  return (x ^ (x >>> 15)) >>> 0;
+}
+
+function hashString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+function shuffledRange(len, seed) {
+  const out = Array.from({ length: len }, (_, i) => i);
+  for (let i = len - 1; i > 0; i--) {
+    const j = hash32(seed, i) % (i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+export function spreadAnswerPositions(payload, dateStr) {
+  // Hashed, not the raw day number. Any straight function of the date steps the
+  // starting slot by a constant, and "today the answer is one box further right
+  // than yesterday" is the same kind of pattern as the one being fixed.
+  const daySalt = hash32(daySeed(dateStr));
+  let moved = 0;
+  const positions = {};
+
+  // Slots are dealt from a bag rather than counted off. A plain counter spreads
+  // them evenly but leaves its own pattern — each answer one box right of the
+  // last — which is the same trick in a different coat. Dealing a shuffled
+  // permutation and reshuffling when it runs out keeps every box equally likely
+  // and equally frequent with no order to learn.
+  //
+  // One bag per section, not one for the day: a shared bag makes Claire's three
+  // questions decide which box Connor's first answer is in, which both couples
+  // them and starves a box. Each kid gets their own deal.
+  const bags = new Map();
+  const nextSlot = (len, group) => {
+    const key = `${group}:${len}`;
+    let bag = bags.get(key);
+    if (!bag?.length) {
+      bag = { slots: [], refills: bag ? bag.refills + 1 : 0 };
+      bag.slots = shuffledRange(len, hash32(daySalt ^ hashString(key), bag.refills));
+      bags.set(key, bag);
+    }
+    return bag.slots.pop();
+  };
+
+  const place = (node, shape, group) => {
+    const list = node[shape.list];
+    const correct = node[shape.index];
+    if (!Array.isArray(list) || list.length < 2) return;
+    if (!Number.isInteger(correct) || correct < 0 || correct >= list.length) return;
+
+    const target = nextSlot(list.length, group);
+    // Shuffle first, so the wrong answers do not keep their own running order
+    // either, then put the right one where the bag said.
+    const answer = list[correct];
+    const shuffled = seededShuffle(list, hash32(daySalt ^ hashString(group), positions.__n = (positions.__n || 0) + 1));
+    const at = shuffled.indexOf(answer);
+    [shuffled[at], shuffled[target]] = [shuffled[target], shuffled[at]];
+
+    node[shape.list] = shuffled;
+    node[shape.index] = target;
+    positions[target] = (positions[target] || 0) + 1;
+    if (target !== correct) moved++;
+  };
+
+  // Sorted keys, so the same day always assigns the same slots whatever order
+  // the sections were written into the payload. `group` is the top-level section
+  // the question was found under — that is what gives each kid their own bag.
+  const walk = (node, group) => {
+    if (Array.isArray(node)) { node.forEach((n) => walk(n, group)); return; }
+    if (!node || typeof node !== "object") return;
+    for (const shape of ANSWER_SHAPES) {
+      if (Array.isArray(node[shape.list]) && Number.isInteger(node[shape.index])) {
+        place(node, shape, group);
+        return; // one shape per node; do not re-sort what was just placed
+      }
+    }
+    for (const key of Object.keys(node).sort()) walk(node[key], group ? `${group}.${key}` : key);
+  };
+  walk(payload, "");
+
+  delete positions.__n;
+  return { moved, questions: Object.values(positions).reduce((a, b) => a + b, 0), positions };
 }
 
 // ----------------------------------------------------------------------------

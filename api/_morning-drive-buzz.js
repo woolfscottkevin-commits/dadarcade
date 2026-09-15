@@ -192,11 +192,15 @@ export const BUZZ_FEEDS = [
 ];
 
 // The tile's UNSUITABLE list is written for news wires and does not cover what
-// turns up here. A museum burglary — the Renoir theft in the first live run —
-// reads as adventure to an adult and as a crime story to a seven-year-old.
+// turns up here. Property crime is deliberately NOT on this list: the Renoir
+// museum theft was blocked in the first pass and that was too cautious — a
+// break-in at an art gallery where nobody is hurt is a heist story, and a
+// nine-year-old is allowed a heist story. Violence is already covered by the
+// tile's list (killed, shot, stabbed and so on), so a robbery that hurt someone
+// still never arrives here. What is left is harm to animals, which lands badly
+// on a seven-year-old and is not what any of this is for.
 const UNSUITABLE_FOR_RADIO = new RegExp([
-  "thieves", "thief", "stole", "stolen", "theft", "robbery", "burgl", "looted",
-  "smuggl", "poach", "trafficking", "extinct forever", "euthan", "slaughter",
+  "poach", "trafficking", "euthan", "slaughter", "culled", "cruelty",
 ].join("|"), "i");
 
 // Gear reviews and shopping guides run through these feeds and are not stories.

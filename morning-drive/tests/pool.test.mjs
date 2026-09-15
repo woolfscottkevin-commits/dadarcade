@@ -9,7 +9,7 @@ import {
   kindsNeedingTopUp, poolAvailability, claimItems, insertItems,
   releaseItems, assembleFromPool,
 } from "../../api/_morning-drive-pool.js";
-import { ITEM_SCHEMAS, activeSectionsFor, DAILY_SECTIONS } from "../../api/_morning-drive-shared.js";
+import { ITEM_SCHEMAS, activeSectionsFor, DAILY_SECTIONS, MATH_PER_KID } from "../../api/_morning-drive-shared.js";
 import { canStartAnotherBatch } from "../../api/morning-drive-cron.js";
 
 let fail = 0;
@@ -164,7 +164,7 @@ const sb5 = fakeSb(stocked);
 const { payload, short } = await assembleFromPool(sb5, dateStr, active);
 ok(short.length === 0, `every active section filled from the bank${short.length ? " — short: " + short : ""}`);
 ok(DAILY_SECTIONS.every((d) => payload[d] !== undefined), "all everyday sections present");
-ok(Array.isArray(payload.claireMath) && payload.claireMath.length === 5, "Claire's math is a list of 5");
+ok(Array.isArray(payload.claireMath) && payload.claireMath.length === MATH_PER_KID, `Claire's math is a list of ${MATH_PER_KID}`);
 ok(payload.wordsOfDay?.claire && payload.wordsOfDay?.connor, "words of the day resolved per kid");
 ok(!Array.isArray(payload.bibleVerse), "single-item sections are objects, not arrays");
 const usedNow = sb5.rows.filter((r) => r.used_on === dateStr).length;
