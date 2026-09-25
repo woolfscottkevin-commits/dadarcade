@@ -13,6 +13,15 @@
 <title>Balloon Uncle Bop — Dad Arcade</title>
 <meta name="description" content="A gentle tap-and-math game for little kids. Puff up the floating family balloons, then solve a quick addition or subtraction problem (numbers to 10) to POP each one! Touch-only tappable answers, confetti, silly faces, and three easy levels — great for a 6-year-old on an iPad.">
 <meta name="theme-color" content="#1a0b2e">
+<!-- Home Screen app (Add to Home Screen on iPad): name, icon, full-screen launch.
+     The offline worker is registered at the end of <body>; see /balloon-uncle-bop-sw.js. -->
+<link rel="manifest" href="/balloon-uncle-bop/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/balloon-uncle-bop/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Balloon Bop">
+<script>try{if(navigator.standalone||matchMedia('(display-mode: standalone)').matches)document.documentElement.classList.add('bub-app');}catch(e){}</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><ellipse cx='50' cy='44' rx='30' ry='34' fill='%23ff5d8f'/><circle cx='40' cy='40' r='5' fill='%23fff'/><circle cx='60' cy='40' r='5' fill='%23fff'/><circle cx='40' cy='41' r='2.5' fill='%23222'/><circle cx='60' cy='41' r='2.5' fill='%23222'/><path d='M38 56 Q50 66 62 56' stroke='%23222' stroke-width='4' fill='none' stroke-linecap='round'/><path d='M50 78 l-5 14 10 0 z' fill='%23ff5d8f'/></svg>">
 
 <!-- Open Graph -->
@@ -99,6 +108,8 @@ html,body{height:100%;width:100%;overflow:hidden;background:#1a0b2e;color:#fff;
   padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.18)}
 .home-link:active{color:#fff}
 .overlay.show ~ .home-link{display:block}
+/* Launched from the Home Screen: it's his app, so no door out to the rest of the site. */
+html.bub-app .home-link{display:none!important}
 
 /* ---------- Win-screen Oliver hero ---------- */
 #screen-end{justify-content:flex-start;gap:12px;overflow-y:auto;
@@ -1495,6 +1506,15 @@ refreshStartScreen();
 updateHUD();
 fetchLeaderboard();          // warm the board so it's ready on the win screen
 checkPendingSubmission();    // retry any score that failed to save last time
+</script>
+<script>
+// Offline support for the Home Screen app. The worker lives at the site root so it
+// can control this page's no-trailing-slash URL (see /balloon-uncle-bop-sw.js).
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('/balloon-uncle-bop-sw.js',{scope:'/balloon-uncle-bop'}).catch(function(){});
+  });
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,17 @@
+{
+  "id": "/balloon-uncle-bop",
+  "name": "Balloon Uncle Bop",
+  "short_name": "Balloon Bop",
+  "description": "Puff up the family balloons, then solve a quick add or subtract problem to POP each one!",
+  "start_url": "/balloon-uncle-bop",
+  "scope": "/balloon-uncle-bop",
+  "display": "standalone",
+  "background_color": "#1a0b2e",
+  "theme_color": "#1a0b2e",
+  "categories": ["games", "kids", "education"],
+  "icons": [
+    { "src": "/balloon-uncle-bop/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/balloon-uncle-bop/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/balloon-uncle-bop/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
