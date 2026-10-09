@@ -1,0 +1,240 @@
+/* Top 10 (owned by app/pages/top10.js): the countdown list and one page per thing to try.
+   Rank colours: magenta for 10 to 4, then bronze, silver and gold for the top 3. Decorative motion is
+   all at the bottom of this file, behind the reduced-motion and Calm guards. */
+
+.t10-band,.t10-card,.t10-rank,.t10-art{--rk:var(--c-top10);--rk-dk:#8e2468;--rk-xdk:#5c1442;--rk-lt:#e66aab}
+.t10-bronze{--rk:#d4884a;--rk-dk:#975521;--rk-xdk:#5f330f;--rk-lt:#f0b07a}
+.t10-silver{--rk:#9fadbf;--rk-dk:#5f6c7e;--rk-xdk:#3c4655;--rk-lt:#d3dce7}
+.t10-gold{--rk:#f2c230;--rk-dk:#b88600;--rk-xdk:#6f5100;--rk-lt:#ffe07a}
+
+/* ---------------------------------------------------------------- shared bits */
+/* the rank tile: a chunky block with the number on it */
+.t10-rank{--sz:118px;position:relative;flex:none;width:var(--sz);height:var(--sz);border-radius:calc(var(--sz) * .16);display:grid;place-items:center;
+  background:var(--rk);color:#fff;font-family:var(--display);font-size:calc(var(--sz) * .56);line-height:1;
+  box-shadow:inset calc(var(--sz) * -.06) calc(var(--sz) * -.07) 0 rgba(0,0,0,.2),inset calc(var(--sz) * .045) calc(var(--sz) * .045) 0 rgba(255,255,255,.22)}
+.t10-rank-n{display:block;text-shadow:0 calc(var(--sz) * .035) 0 var(--rk-xdk);-webkit-text-stroke:calc(var(--sz) * .025) var(--rk-xdk);paint-order:stroke fill;
+  transform:translateY(calc(var(--sz) * -.02))}
+.t10-rank-n small{font-size:.5em;vertical-align:.62em;margin-right:.04em;opacity:.9}
+/* the crown sits on top of the tile with a dark outline, so it never melts into the gold tile */
+.t10-rank .t10-crown{position:absolute;top:calc(var(--sz) * -.28);left:50%;width:calc(var(--sz) * .42);translate:-50% 0;rotate:-6deg;color:var(--gold);
+  filter:drop-shadow(1.5px 0 0 var(--rk-xdk)) drop-shadow(-1.5px 0 0 var(--rk-xdk)) drop-shadow(0 -1.5px 0 var(--rk-xdk)) drop-shadow(0 2.5px 0 var(--rk-xdk))}
+
+/* the danger meter: five blocks that step up like stairs */
+.t10-meter{--bw:11px;--bh:4px;display:inline-flex;align-items:flex-end;gap:3px;vertical-align:middle;flex:none}
+.t10-meter i{width:var(--bw);height:calc(var(--bw) * .55 + var(--k) * var(--bh));border-radius:2px;background:#e9e1d1;box-shadow:inset 0 0 0 1.5px #d6cab3}
+.t10-meter i.on{background:var(--dc);box-shadow:inset -2px -3px 0 rgba(0,0,0,.24),inset 2px 2px 0 rgba(255,255,255,.25)}
+.t10-d1{--dc:#16955a}.t10-d2{--dc:#76a514}.t10-d3{--dc:#e09a00}.t10-d4{--dc:#e2650f}.t10-d5{--dc:#d0342c}
+.t10-meter.t10-big{--bw:clamp(30px,5vw,40px);--bh:11px;gap:6px}
+.t10-meter.t10-big i{border-radius:5px}
+.t10-meter.t10-big i.on{box-shadow:inset -4px -6px 0 rgba(0,0,0,.24),inset 4px 4px 0 rgba(255,255,255,.25)}
+
+.t10-level .pips i{width:10px;height:10px}
+
+/* ---------------------------------------------------------------- the band */
+.t10-band-in{display:flex;gap:24px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.t10-band-copy{flex:1 1 420px;min-width:0}
+.t10-band-side{display:flex;flex-direction:column;align-items:flex-start;gap:12px;flex:0 1 330px}
+.t10-key{background:rgba(255,255,255,.96);color:var(--ink);border-radius:14px;padding:10px 14px;box-shadow:inset -3px -4px 0 rgba(0,0,0,.08)}
+.t10-band .t10-key p{margin:0;font-weight:800;opacity:1;max-width:none;font-size:1em}
+.t10-key p>b{display:block;font-family:var(--display);font-weight:400;font-size:1.1em;color:var(--rk-dk);margin-bottom:2px}
+.t10-key-row{display:flex;align-items:center;gap:10px;min-height:30px}
+.t10-key-row .t10-meter{min-width:67px}
+#t10-jump svg{width:24px;height:18px}
+
+/* ---------------------------------------------------------------- the countdown list */
+.t10-list-wrap{padding-top:40px}
+.t10-list{display:flex;flex-direction:column;gap:20px;max-width:940px;margin:0 auto}
+.t10-card{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:22px;align-items:center;background:var(--card);
+  border-radius:22px;padding:18px 20px 18px 18px;box-shadow:0 0 0 3px var(--line),5px 6px 0 var(--line);transition:translate .2s var(--ease-out),box-shadow .2s}
+/* hover only where there is a mouse, so a tapped card doesn't stay lifted on an iPad */
+@media (hover:hover){
+  .t10-card:hover{translate:0 -3px;box-shadow:0 0 0 3px var(--rk),6px 9px 0 var(--line)}
+  .t10-card:hover .t10-go{background:var(--rk);color:#fff}
+  .t10-card.t10-first:hover{box-shadow:0 0 0 4px var(--gold-dk),6px 10px 0 #e8cf7c}
+}
+.t10-card:has(.t10-link:focus-visible){box-shadow:0 0 0 4px var(--blueprint),6px 9px 0 var(--line)}
+.t10-title{margin:0 0 6px;font-size:clamp(23px,2.7vw,30px)}
+.t10-link{text-decoration:none;color:inherit;outline:none}
+/* the whole card is the link, so the target is huge */
+.t10-link::after{content:'';position:absolute;inset:0;border-radius:inherit;z-index:1}
+.t10-tt{display:block}
+.t10-why{margin:0 0 10px;color:var(--ink-2);font-weight:700;max-width:60ch}
+.t10-facts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:0}
+.t10-danger{display:inline-flex;align-items:center;gap:8px;font-weight:900}
+.t10-danger b{font-weight:900}
+.t10-lab{font-weight:900;letter-spacing:.1em;text-transform:uppercase;font-size:14px;color:var(--muted)}
+.t10-go{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--paper-2);color:var(--rk-dk)}
+.t10-go svg{width:24px;height:24px}
+
+/* the top three get bigger, and number 1 the biggest */
+.t10-card.t10-bronze,.t10-card.t10-silver{padding-block:22px}
+.t10-card.t10-bronze .t10-rank,.t10-card.t10-silver .t10-rank{--sz:136px}
+.t10-card.t10-first{padding:44px 24px 26px 22px;background:linear-gradient(135deg,#fffbe9,#fff 55%);box-shadow:0 0 0 4px var(--gold),6px 8px 0 #e8cf7c}
+.t10-card.t10-first .t10-rank{--sz:164px}
+.t10-card.t10-first .t10-title{font-size:clamp(28px,3.6vw,40px)}
+.t10-best{font-family:var(--display);font-size:17px;letter-spacing:.04em;color:#3a2a00;background:var(--gold);display:inline-block;padding:2px 10px;border-radius:8px;
+  margin-bottom:8px;transform:rotate(-2deg)}
+.t10-drum{display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--display);font-size:clamp(24px,3.2vw,32px);
+  color:var(--rk-dk,#8e2468);margin:22px 0 4px;line-height:1.15;text-wrap:balance}
+/* three little blocks (bronze, top 10 pink, gold) each side; the shadows draw the outer two */
+.t10-drum::before,.t10-drum::after{content:'';flex:none;width:14px;height:14px;background:var(--c-top10);margin:0 36px;
+  box-shadow:inset -3px -3px 0 rgba(0,0,0,.2),22px 0 0 var(--gold),-22px 0 0 #d4884a}
+.t10-end{text-align:center;font-weight:800;color:var(--muted);margin:30px auto 0;max-width:46ch;text-wrap:balance}
+
+/* ---------------------------------------------------------------- one thing to try */
+.t10-item-band .t10-band-in{align-items:center;flex-wrap:nowrap;justify-content:flex-start}
+.t10-badge{--sz:112px;box-shadow:0 0 0 4px #fff,6px 8px 0 rgba(0,0,0,.2),inset -7px -8px 0 rgba(0,0,0,.2),inset 5px 5px 0 rgba(255,255,255,.22)}
+.t10-band p.t10-band-chips{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 0;font-size:1em;opacity:1;max-width:none}
+.t10-band .t10-band-chips .chip{background:rgba(0,0,0,.2);color:#fff;font-size:.85em;padding:5px 12px}
+.t10-band .t10-band-chips .pips i{background:#fff}
+.t10-band .t10-band-chips .pips i.off{background:rgba(255,255,255,.35)}
+
+.t10-page{padding-top:34px;padding-bottom:40px}
+.t10-hero{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr);gap:22px;align-items:start}
+.t10-side-facts{display:flex;flex-direction:column;gap:18px}
+.t10-side-facts .card,.t10-need-card{padding:16px 18px}
+.t10-side-facts h2,.t10-need-card h2{font-size:clamp(22px,2.6vw,27px)}
+.t10-risk{background:linear-gradient(180deg,#fff,#fffaf3)}
+.t10-gauge{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.t10-gauge-word{margin:0;display:flex;flex-direction:column;line-height:1.15;padding-bottom:2px}
+.t10-gauge-word b{font-family:var(--display);font-weight:400;font-size:clamp(26px,3.2vw,34px);color:var(--ink)}
+.t10-gauge-word span:last-child{font-weight:800;color:var(--muted);margin-top:4px}
+.t10-where p{margin:0;font-weight:700}
+/* source links are small words, so give each a taller tap area. The roomier line keeps the
+   taller areas from overlapping when the list wraps. */
+.t10-page .sources{margin-top:22px;line-height:2.4}
+.t10-page .sources a{display:inline-block;padding:6px 0;line-height:1.5}
+
+/* the scene: a 3D figure when one exists, else the big rank art */
+.t10-scene{min-width:0}
+.t10-stage{position:relative;border-radius:20px;overflow:hidden}
+.t10-stage.fig-stage{aspect-ratio:4/3}
+.t10-stage-tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.t10-stage-tools .btn{min-height:48px}
+
+.t10-art{position:relative;aspect-ratio:4/3;border-radius:20px;overflow:hidden;isolation:isolate;display:grid;place-items:center;
+  background:repeating-conic-gradient(from -6deg at 50% 56%,rgba(255,255,255,.14) 0 12deg,transparent 12deg 24deg),
+    radial-gradient(circle at 50% 56%,var(--rk-lt) 0,var(--rk) 42%,var(--rk-dk) 100%);
+  box-shadow:0 0 0 3px var(--line),0 14px 30px -16px rgba(27,33,48,.45)}
+.t10-art-num{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-size:clamp(120px,19vw,210px);line-height:.82;
+  color:#fff;-webkit-text-stroke:.045em var(--rk-xdk);paint-order:stroke fill;
+  text-shadow:0 .04em 0 var(--rk-xdk),0 .08em 0 var(--rk-xdk),0 .12em 0 rgba(0,0,0,.25),0 .2em .25em rgba(0,0,0,.25);margin-top:-6%}
+.t10-art-num small{font-size:.45em;vertical-align:.95em;margin-right:.1em}
+.t10-art-crown{width:.5em;color:var(--gold);margin-bottom:.08em;filter:drop-shadow(0 .03em 0 var(--rk-xdk)) drop-shadow(0 .06em 0 rgba(0,0,0,.2))}
+.t10-gold .t10-art-crown{color:#fff6c8}
+.t10-art-tag{position:absolute;z-index:2;left:18px;top:16px;font-family:var(--display);font-size:clamp(18px,2.2vw,24px);background:#fff;color:var(--rk-dk);
+  padding:3px 12px;border-radius:10px;transform:rotate(-4deg);box-shadow:4px 4px 0 var(--rk-xdk)}
+/* a row of blocks along the bottom, with the stepped edge from the bands */
+.t10-art-ground{position:absolute;left:0;right:0;bottom:0;height:17%;z-index:1;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.16) 0 3px,transparent 3px 48px),linear-gradient(var(--rk-dk) 0 40%,var(--rk-xdk) 40%)}
+.t10-art-ground::before{content:'';position:absolute;left:0;right:0;top:-14px;height:14px;
+  background:linear-gradient(90deg,var(--rk-dk) 0 25%,transparent 25% 50%,var(--rk-dk) 50% 75%,transparent 75%) 0 0/96px 14px}
+.t10-cube{position:absolute;z-index:1;color:#fff;opacity:.42}
+.t10-cube svg{width:100%;height:100%}
+.t10-cube-a{width:13%;left:9%;top:34%;transform:rotate(-12deg)}
+.t10-cube-b{width:8%;right:12%;top:16%;transform:rotate(14deg)}
+.t10-cube-c{width:10%;right:9%;bottom:27%;transform:rotate(-6deg)}
+
+.t10-cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr);gap:22px;margin-top:30px;align-items:start}
+.t10-how h2{margin-bottom:14px}
+.t10-how ol.steps>li{font-weight:700;margin-bottom:16px;max-width:60ch}
+.t10-aside .tip{margin:16px 0 0}
+.t10-need{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+.t10-pill{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 14px 6px 9px;border-radius:22px;background:var(--paper-2);font-weight:800;line-height:1.2}
+.t10-pill .ii{--isz:28px}
+.t10-pill .ico{width:22px;height:22px;color:var(--c-top10)}
+
+/* previous on the left, the whole list in the middle, next on the right (any of them can be missing) */
+.t10-pager{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;margin-top:36px;align-items:stretch}
+.t10-pager .btn{min-height:64px}
+.t10-pg-prev{grid-column:1;justify-self:start}
+.t10-pg-all{grid-column:2}
+.t10-pg-next{grid-column:3;justify-self:end}
+/* on number 1 there is no next, so the way back to the list takes the "forward" spot */
+.t10-pg-all.t10-pg-last{grid-column:3;justify-self:end}
+.t10-pg{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;min-width:0}
+.t10-pg small{font-size:.8em;font-weight:900}
+.t10-pg b{max-width:28ch;white-space:normal;text-wrap:balance}
+.t10-pg-next .t10-pg{align-items:flex-end;text-align:right}
+
+/* ---------------------------------------------------------------- iPad portrait and phones */
+@media (max-width:820px){
+  .t10-cols{grid-template-columns:1fr}
+  /* Until an item has a 3D scene the art is only decoration, so it shares the row with the danger
+     and "where to go" cards instead of pushing them a whole screen down. A real scene gets the full width. */
+  .t10-hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+  .t10-hero.t10-has-scene{grid-template-columns:1fr}
+  .t10-has-scene .t10-art{aspect-ratio:16/9}
+  .t10-has-scene .t10-art-num{font-size:clamp(110px,24vw,190px)}
+  .t10-band-side{flex-basis:100%;flex-direction:row;align-items:center;flex-wrap:wrap}
+}
+@media (max-width:640px){
+  .t10-list-wrap{padding-top:30px}
+  .t10-list{gap:16px}
+  /* the rank sits beside the title; the words get the full width underneath */
+  .t10-card{grid-template-columns:auto minmax(0,1fr);gap:10px 14px;padding:14px;align-items:center}
+  .t10-body{display:contents}
+  .t10-rank,.t10-card.t10-bronze .t10-rank,.t10-card.t10-silver .t10-rank{--sz:76px}
+  .t10-card.t10-first .t10-rank{--sz:92px}
+  .t10-card.t10-first{padding:32px 16px 18px}
+  .t10-card .t10-rank{grid-row:1}
+  .t10-card.t10-first .t10-rank{grid-row:1 / span 2}
+  .t10-best{grid-column:2;align-self:end;justify-self:start;margin:0}
+  .t10-title{grid-column:2;align-self:center;margin:0}
+  .t10-card.t10-first .t10-title{align-self:start}
+  .t10-why,.t10-facts{grid-column:1 / -1}
+  .t10-why{margin:4px 0 0}
+  .t10-go{display:none}
+  /* the drum roll's blocks sit above the words, so a narrow line doesn't squeeze them */
+  .t10-drum{flex-direction:column}
+  .t10-drum::before{margin:0 0 12px}
+  .t10-drum::after{display:none}
+  .t10-hero{grid-template-columns:1fr}
+  .t10-art{aspect-ratio:16/9}
+  .t10-art-num{font-size:clamp(110px,24vw,190px)}
+  /* the badge sits beside the kicker and title; the paragraph and level get the full width below */
+  .t10-item-band .t10-band-in{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;align-items:center}
+  .t10-item-band .t10-band-copy{display:contents}
+  .t10-badge{--sz:78px;grid-row:1 / span 2}
+  .t10-item-band .kicker{grid-column:2;align-self:end}
+  .t10-item-band h1{grid-column:2;align-self:start}
+  .t10-item-band .t10-band-copy>p{grid-column:1 / -1}
+  /* one button per row: Next first, then Previous, then the list. Words start next to the arrow. */
+  .t10-pager{grid-template-columns:1fr}
+  .t10-pager .btn{grid-column:1;justify-self:stretch}
+  .t10-pg-next{grid-row:1;justify-content:space-between}
+  .t10-pager .t10-pg-last{grid-row:1}
+  .t10-pg-next .t10-pg{align-items:flex-start;text-align:left}
+  .t10-pg-prev{justify-content:flex-start;gap:14px}
+  .t10-pager .t10-pg-all{justify-content:center}
+  .t10-pg b{max-width:none}
+}
+
+/* ---------------------------------------------------------------- decorative motion (Top 10 only)
+   The countdown reveal: each card rises in as it enters from the bottom of the screen, its number
+   flips up a moment later and its danger blocks stack one by one. It all finishes in the bottom
+   170px of the screen, with only a short rise, so nothing moves while a kid is reading it. Browsers without
+   scroll-driven animations, Calm mode and reduced motion get the same page standing still. */
+@media screen and (prefers-reduced-motion:no-preference){
+  @supports (animation-timeline:view()){
+    /* Ranges are measured from the moment a card peeks in: done 170px later, even on a tall phone card.
+       The percent line before each is the fallback for engines that only take percentages there. */
+    html:not([data-calm]) .t10-card{view-timeline:--t10card block;animation:t10-rise linear both;animation-timeline:--t10card;
+      animation-range:entry 0% entry 100%;animation-range:entry 0px entry 160px}
+    html:not([data-calm]) .t10-card .t10-rank{animation:t10-flip linear both;animation-timeline:--t10card;
+      animation-range:entry 25% entry 100%;animation-range:entry 30px entry 170px}
+    html:not([data-calm]) .t10-card .t10-meter i.on{animation:t10-stack linear both;animation-timeline:--t10card;
+      animation-range:entry calc(30% + var(--k) * 10%) entry calc(50% + var(--k) * 10%);
+      animation-range:entry calc(60px + var(--k) * 14px) entry calc(100px + var(--k) * 14px)}
+    html:not([data-calm]) .t10-drum{animation:t10-pop linear both;animation-timeline:view();animation-range:entry 0% entry 100%}
+  }
+  /* item page: the big number lands once, and the danger blocks stack up */
+  html:not([data-calm]) .t10-art-num{animation:t10-land .7s var(--ease-spring) both .1s}
+  html:not([data-calm]) .t10-risk .t10-meter i.on{animation:t10-stack-in .45s var(--ease-spring) both;animation-delay:calc(.25s + var(--k) * .11s)}
+}
+@keyframes t10-rise{from{opacity:0;transform:translateY(36px) scale(.97)}}
+@keyframes t10-flip{from{opacity:0;transform:perspective(500px) rotateX(-85deg) scale(.75)}}
+@keyframes t10-stack{from{opacity:0;transform:translateY(-22px)}}
+@keyframes t10-pop{from{opacity:0;transform:scale(.7)}}
+@keyframes t10-land{from{opacity:0;transform:translateY(-70px) scale(.85)}}
+@keyframes t10-stack-in{from{opacity:0;transform:translateY(-26px)}}

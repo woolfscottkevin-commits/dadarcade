@@ -1,0 +1,266 @@
+/* My Builder Log (.lg-), For Grown-ups (.gu-) and How to Use This Book (.ht-).
+   Calm pages: no decorative motion here, only the small hover lift every card in the book has. */
+
+/* ================================================================ My Builder Log */
+.lg-top{padding-bottom:4px}
+.lg-sum{display:flex;gap:18px;align-items:flex-start;padding:20px}
+.lg-sum-mark{width:72px;height:72px;border-radius:18px;background:var(--c-log);color:#fff;display:grid;place-items:center;flex:none;
+  box-shadow:inset -4px -5px 0 rgba(0,0,0,.2)}
+.lg-sum-mark svg{width:42px;height:42px}
+.lg-sum-text{min-width:0}
+.lg-big{font-family:var(--display);font-size:clamp(25px,3.2vw,32px);line-height:1.15;margin:4px 0 .35em;text-wrap:balance}
+.lg-blocks{font-weight:800;color:var(--ink-2)}
+.lg-skills{margin:0;line-height:2.1}
+.lg-skills b{margin-right:4px}
+.lg-sum .btn{margin-top:4px}
+
+/* keep building */
+.lg-keep h2{margin-bottom:.15em}
+.lg-keep-list{display:grid;gap:12px;margin-top:12px}
+.lg-keep-item{display:grid;grid-template-columns:104px minmax(0,1fr) auto;gap:16px;align-items:center}
+.lg-keep-art{width:104px;aspect-ratio:4/3;border-radius:12px;background:linear-gradient(180deg,#8fd0ff,#e4f4ff 75%);display:grid;place-items:center;padding:5px;overflow:hidden}
+.lg-keep-art:hover img{transform:scale(1.04)}
+.lg-keep-art img{transition:transform .2s var(--ease-out)}
+.lg-keep-art img{max-height:100%;max-width:100%;object-fit:contain}
+.lg-keep-text h3{margin:0 0 2px}
+.lg-keep-text p{margin:0 0 8px;font-weight:800;color:var(--ink-2)}
+.lg-meter{height:10px;border-radius:999px;background:var(--paper-2);overflow:hidden;max-width:300px;box-shadow:inset 0 0 0 1px var(--line)}
+.lg-meter i{display:block;height:100%;background:var(--c-log);border-radius:999px}
+.lg-keep-go{min-height:56px}
+@media (max-width:520px){
+  .lg-sum{gap:14px;padding:16px}
+  .lg-sum-mark{width:52px;height:52px;border-radius:14px}
+  .lg-sum-mark svg{width:30px;height:30px}
+}
+@media (max-width:640px){
+  .lg-keep-item{grid-template-columns:84px minmax(0,1fr);gap:12px}
+  .lg-keep-art{width:84px}
+  .lg-keep-go{grid-column:1 / -1}
+}
+
+/* the shelf: built tiles are solid and coloured, not-yet tiles faded with a dashed edge */
+.lg-shelf-sec .section-head{margin-bottom:6px}
+.lg-shelf-note{margin:0}
+.lg-sub{font-size:1.2em;color:var(--ink-2);margin:16px 0 10px}
+.lg-shelf{list-style:none;margin:0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.lg-tile a{display:flex;flex-direction:column;height:100%;border-radius:16px;overflow:hidden;text-decoration:none;transition:transform .2s var(--ease-out)}
+.lg-tile a:hover,.lg-tile a:focus-visible{transform:translateY(-3px)}
+.lg-tile.is-built a{background:var(--card);border:3px solid var(--c-log);box-shadow:3px 4px 0 var(--line)}
+.lg-tile.is-todo a{background:rgba(255,255,255,.45);border:3px dashed var(--line-2)}
+.lg-art{aspect-ratio:4/3;background:linear-gradient(180deg,#8fd0ff,#e4f4ff 75%);display:grid;place-items:center;padding:8px;overflow:hidden}
+.lg-art img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 6px 5px rgba(0,40,80,.16))}
+.is-todo .lg-art{background:var(--paper-2)}
+.is-todo .lg-art img{filter:grayscale(1);opacity:.42}
+.lg-tile-body{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px;flex:1}
+.lg-name{font-weight:900;line-height:1.2}
+.lg-state{display:flex;flex-wrap:wrap;align-items:center;gap:2px 5px;font-weight:900;font-size:.86em;line-height:1.25}
+.lg-state svg{width:17px;height:17px}
+.lg-state.built{color:#5b37a3}
+.lg-state.todo{color:var(--muted)}
+.lg-state small{flex-basis:100%;font-size:.95em;font-weight:800;color:var(--ink-2)}
+@media (max-width:420px){.lg-shelf{gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* lessons and gadgets tried */
+.lg-tried-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));margin-top:12px}
+.lg-tried-card{box-shadow:inset 0 7px 0 var(--tc),0 0 0 3px var(--line),4px 5px 0 var(--line);padding-top:20px}
+.lg-tried-card h3{display:flex;align-items:center;gap:10px;margin-bottom:.3em}
+.lg-tried-card h3 svg{width:38px;height:38px;padding:7px;border-radius:10px;background:var(--tc);color:#fff}
+.lg-tried-list{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+.lg-tried-list a{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border-radius:12px;background:var(--paper-2);font-weight:900;
+  text-decoration:none;box-shadow:inset 5px 0 0 var(--tc)}
+.lg-tried-list a:hover{background:var(--paper)}
+
+/* for grown-ups: move and clear */
+.lg-move{padding:20px}
+.lg-move .kicker{color:#5b37a3}
+.lg-move h2{margin-bottom:.3em}
+.lg-move-cols{display:grid;gap:18px 24px;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));margin-top:14px}
+.lg-move-step h3{display:flex;align-items:center;gap:8px;font-size:1.2em}
+.lg-num{width:32px;height:32px;border-radius:8px;background:var(--c-log);color:#fff;display:grid;place-items:center;font-size:18px;flex:none}
+.lg-code{display:block;width:100%;min-height:100px;margin:0 0 10px;padding:10px 12px;border-radius:12px;border:3px solid var(--line);background:var(--paper);color:var(--ink);
+  font:16px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:0;word-break:break-all;resize:vertical}
+.lg-code:focus{border-color:var(--c-log)}
+.lg-code[readonly]{color:var(--ink-2)}
+.lg-msg{margin:10px 0 0;font-weight:800}
+.lg-msg:empty{display:none}
+.lg-clear{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;margin-top:20px;padding-top:18px;border-top:2px dashed var(--line)}
+.lg-clear .btn{color:#a3261f}
+.lg-clear .btn svg{width:18px;height:18px}
+.lg-clear p{margin:0;flex:1 1 260px;font-size:.92em;font-weight:700;color:var(--ink-2);max-width:60ch}
+
+/* ================================================================ For Grown-ups */
+.gu-wrap{max-width:920px}
+.gu-top{padding-bottom:10px}
+.gu-promise{list-style:none;margin:0;padding:14px;display:grid;gap:8px 14px;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))}
+.gu-promise li{display:flex;align-items:center;gap:12px;font-weight:900;line-height:1.2;padding:6px}
+.gu-promise svg{width:46px;height:46px;padding:10px;border-radius:12px;background:var(--c-front);color:#fff;box-shadow:inset -3px -4px 0 rgba(0,0,0,.2)}
+@media (max-width:420px){.gu-promise{padding:10px}.gu-promise li{gap:8px;padding:4px}.gu-promise svg{width:40px;height:40px;padding:8px}}
+.gu-promise-note{margin:12px 4px 0;font-weight:800;color:var(--ink-2)}
+.gu-jump{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 20px}
+.gu-jump-btn{border:0;background:var(--card);border-radius:999px;padding:9px 16px;min-height:44px;font-weight:900;cursor:pointer;box-shadow:0 0 0 3px var(--line) inset}
+.gu-jump-btn:hover{background:var(--paper-2)}
+/* phones: one row you can swipe, so eight buttons don't push the reading down the page */
+@media (max-width:600px){
+  .gu-jump{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:calc(var(--gutter) * -1);padding:3px var(--gutter)}
+  .gu-jump::-webkit-scrollbar{display:none}
+  .gu-jump-btn{flex:none;white-space:nowrap}
+}
+.gu-secs{display:grid;gap:20px}
+.gu-sec{padding:20px 22px}
+.gu-sec h2{margin-bottom:.45em}
+.gu-sec h3{font-size:1.25em;margin:1em 0 .5em}
+.gu-sec p{max-width:68ch}
+.gu-sec h2:focus{outline:none}
+.gu-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 4px}
+.gu-clear{color:#a3261f}
+.gu-clear svg{width:18px;height:18px}
+
+/* install on iPad: the steps beside a little Home Screen drawn in CSS */
+.gu-install{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:22px;align-items:start;margin:16px 0;padding:16px 18px;border-radius:14px;
+  background:var(--paper);box-shadow:0 0 0 2px var(--line) inset}
+.gu-install .kicker{color:var(--c-front)}
+.gu-install h3{margin-top:.15em}
+.gu-ipad{width:220px;padding:12px;border-radius:24px;background:#1b2130;box-shadow:inset 0 0 0 2px #3a4560,4px 5px 0 var(--line);margin-top:6px}
+.gu-screen{aspect-ratio:4/3;border-radius:11px;background:linear-gradient(160deg,#8fd0ff,#c9bdf6);display:grid;grid-template-columns:repeat(4,1fr);
+  gap:9px 6px;padding:12px 10px;align-content:start;justify-items:center}
+.gu-app{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.gu-app-icon{position:relative;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.55)}
+.gu-app.is-book .gu-app-icon{background:#1b2130;box-shadow:0 0 0 3px var(--gold)}
+.gu-app.is-book i{position:absolute;left:5px;width:20px;height:6px;border-radius:2px;box-shadow:inset -2px -2px 0 rgba(0,0,0,.25)}
+.gu-app.is-book i:nth-child(1){top:5px;left:9px;width:16px;background:var(--blueprint)}
+.gu-app.is-book i:nth-child(2){top:12px;background:#e6a23c}
+.gu-app.is-book i:nth-child(3){top:19px;background:var(--grass)}
+.gu-app-name{font-size:9px;font-weight:900;line-height:1;color:#1b2130;white-space:nowrap}
+@media (max-width:680px){
+  .gu-install{grid-template-columns:1fr}
+  .gu-ipad{justify-self:center;order:-1}
+}
+.gu-save{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin-top:8px}
+.gu-save .btn svg{width:26px;height:26px}
+.gu-save .btn.is-busy{opacity:.6;cursor:progress}
+.gu-bar{flex:1 1 220px;max-width:360px;height:14px;border-radius:999px;background:var(--paper-2);box-shadow:inset 0 0 0 2px var(--line);overflow:hidden}
+.gu-bar i{display:block;width:0;height:100%;background:var(--grass);border-radius:999px;transition:width .3s}
+.gu-status{margin:0;font-weight:800;color:var(--ink-2);max-width:40ch}
+.gu-status:empty{display:none}
+.gu-more{margin:24px 0 36px;padding:20px 22px}
+.gu-more-actions{display:flex;flex-wrap:wrap;gap:10px}
+
+/* ================================================================ How to Use This Book */
+.ht-lead{font-weight:700;font-size:1.05em;max-width:62ch}
+.ht-steps>li{max-width:68ch}
+
+/* plan pictures: one block = one square of --s pixels, cut from the same tile sheet the plans use */
+.ht-tex{display:block;background-color:var(--tc,#b8945f);background-image:url(../../data/tiles.png);background-repeat:no-repeat;
+  background-size:calc(var(--s) * var(--cols,16)) auto;background-position:calc(var(--tx,0) * var(--s) * -1) calc(var(--ty,0) * var(--s) * -1);
+  image-rendering:pixelated;position:relative}
+.ht-badge{position:absolute;left:1px;top:1px;z-index:2;min-width:calc(var(--s) * .4);height:calc(var(--s) * .4);padding:0 2px;border-radius:3px;
+  background:rgba(27,33,48,.82);color:#fff;font:900 calc(var(--s) * .3)/calc(var(--s) * .4) var(--body);letter-spacing:0;text-align:center}
+.ht-below{background:rgba(120,130,145,.22)}
+
+/* picture above the words in a 2-column grid on a portrait iPad (one column on a phone), and
+   picture beside the words once there is room for both */
+.ht-plans{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.ht-plan{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.ht-pic{flex:none;min-height:184px;display:grid;place-items:center;padding:12px;background:var(--paper);border-radius:12px}
+.ht-words h3{margin:0 0 .25em}
+.ht-words p{margin:0}
+@media (min-width:1000px){
+  .ht-plans{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ht-plan{flex-direction:row;align-items:center;gap:18px}
+  .ht-pic{width:244px;min-height:160px}
+}
+
+/* a tiny plan: numbers along the top and left, grid lines over the blocks, thick every 5 */
+.ht-mini{--s:30px;display:inline-grid;grid-template-columns:auto auto;grid-template-areas:". nx" "nz g";gap:3px}
+.ht-grid{grid-area:g;position:relative;display:grid;grid-template-columns:repeat(var(--w),var(--s));grid-auto-rows:var(--s);background:#fbfaf5}
+.ht-grid>span{position:relative}
+.ht-grid::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset -1px -1px 0 #b9c0c8;
+  background:linear-gradient(90deg,#5f6a7d 2.5px,transparent 0) 0 0/calc(var(--s) * 5) 100%,
+    linear-gradient(#5f6a7d 2.5px,transparent 0) 0 0/100% calc(var(--s) * 5),
+    linear-gradient(90deg,#b9c0c8 1px,transparent 0) 0 0/var(--s) 100%,
+    linear-gradient(#b9c0c8 1px,transparent 0) 0 0/100% var(--s)}
+.ht-mini.wide{--s:28px}
+.ht-nx{grid-area:nx;display:grid;grid-template-columns:repeat(var(--w),var(--s))}
+.ht-nz{grid-area:nz;display:grid;grid-auto-rows:var(--s)}
+.ht-nx span,.ht-nz span{display:grid;place-items:center;font-weight:900;font-size:13px;color:var(--muted)}
+.ht-nz span{padding-right:3px}
+.ht-north{grid-area:nx;justify-self:center;display:flex;align-items:center;gap:3px;font-family:var(--display);font-size:22px;line-height:1;padding-bottom:3px}
+.ht-north svg{width:20px;height:20px;fill:var(--ink)}
+
+/* side view for "Layer 1 sits on the grass" */
+.ht-side{--s:22px;display:grid}
+.ht-srow{display:flex;align-items:center;gap:8px}
+.ht-scells{display:grid;grid-template-columns:repeat(5,var(--s));grid-auto-rows:var(--s)}
+.ht-scells .ht-tex{width:var(--s);height:var(--s)}
+.ht-slabel{font-weight:900;font-size:15px;color:var(--ink-2);white-space:nowrap}
+
+/* repeat badge and its stack of identical layers */
+.ht-repeat{--s:26px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.ht-rep{font-weight:900;font-size:.85em;background:#fff3c4;box-shadow:0 0 0 2px var(--gold) inset;padding:2px 9px;border-radius:7px;color:#5d4300;white-space:nowrap}
+.ht-stack{display:flex;flex-direction:column;gap:2px}
+.ht-srow-mini{display:flex}
+.ht-srow-mini .ht-tex{width:var(--s);height:var(--s)}
+
+/* letters and the legend beside them */
+.ht-letters{display:flex;flex-direction:column;align-items:center;gap:10px}
+.ht-legend{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:15px}
+.ht-legend li{display:flex;align-items:center;gap:6px;font-weight:800}
+.ht-legend .ht-badge{--s:52px;position:static;display:inline-block}
+.ht-legend .ii{--isz:22px}
+.ht-legend em{font-style:normal;font-weight:900;color:var(--muted)}
+
+/* the symbol legend: one plan square per symbol, drawn the way the plans draw it */
+/* two roomy columns on an iPad. Two-square symbols stack, so every picture is one square wide
+   and the words get the room */
+.ht-syms{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));margin-top:12px}
+.ht-sym{display:flex;gap:14px;align-items:center;background:var(--card);border-radius:14px;padding:12px 14px;box-shadow:0 0 0 3px var(--line)}
+.ht-sym h3{margin:0 0 .15em;font-size:1.15em}
+.ht-sym p{margin:0;line-height:1.4}
+.ht-sym-pic{--s:58px;display:flex;flex-direction:column;gap:6px;flex:none;width:var(--s)}
+.ht-cell{position:relative;width:var(--s);height:var(--s);background:#fbfaf5;box-shadow:0 0 0 1.5px #7d8796;overflow:hidden;flex:none}
+.ht-cell>.ht-tex{position:absolute;inset:0}
+.ht-fade{position:absolute;left:0;right:0;height:50%;background:rgba(255,255,255,.6)}
+.ht-fade.top{top:0;border-bottom:2px dashed rgba(27,33,48,.4)}
+.ht-fade.bottom{bottom:0;border-top:2px dashed rgba(27,33,48,.4)}
+.ht-arrow{position:absolute;left:18%;top:18%;width:64%;height:64%;overflow:visible}
+.ht-arrow path{fill:#fff;stroke:rgba(0,0,0,.6);stroke-width:1.4;stroke-linejoin:round}
+.ht-arrow.hollow path{fill:none;stroke:#fff;stroke-width:2.6;filter:drop-shadow(0 0 1px rgba(0,0,0,.9))}
+.ht-logline{position:absolute;left:12%;right:12%;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:rgba(27,33,48,.8);box-shadow:0 0 0 1px rgba(255,255,255,.5)}
+.ht-shine{position:absolute;inset:14%;background:linear-gradient(135deg,transparent 38%,rgba(255,255,255,.95) 38% 46%,transparent 46%)}
+.ht-arm{position:absolute;left:0;right:0;top:50%;height:12%;transform:translateY(-50%);background:#b8945f;box-shadow:0 0 0 1.5px #5d4630}
+.ht-post{position:absolute;left:34%;top:34%;width:32%;height:32%;background:#b8945f;box-shadow:inset -3px -3px 0 rgba(0,0,0,.22),0 0 0 2px #5d4630}
+.ht-pane{position:absolute;left:0;right:0;top:50%;height:10%;transform:translateY(-50%);background:#bfe3ee;box-shadow:0 0 0 1.5px #4f6f7c}
+.ht-bar{position:absolute;left:0;right:0;background:#b8945f;box-shadow:0 0 0 1.5px #5d4630}
+.ht-bar.door{bottom:0;height:24%}
+.ht-bar.trap{top:0;height:12%}
+.ht-shut{position:absolute;inset:14%;border:2px solid #5d4630;
+  background:linear-gradient(#5d4630 0 0) 0 33%/100% 2px no-repeat,linear-gradient(#5d4630 0 0) 0 67%/100% 2px no-repeat,#d9b98a}
+.ht-light{position:absolute;left:50%;top:50%;width:30%;height:30%;transform:translate(-50%,-50%);border-radius:50%;background:#ffcf5a;box-shadow:0 0 0 2px #6b4e10}
+.ht-light.hang::after{content:'';position:absolute;inset:-60%;border:2px dashed #6b4e10;border-radius:50%}
+.ht-flower{position:absolute;left:50%;top:50%;width:34%;height:34%;transform:translate(-50%,-50%);border-radius:50%;background:#d42a2a;box-shadow:0 0 0 3.5px #3a9d4a}
+.ht-dust{position:absolute;inset:0;background:radial-gradient(circle,#c81e1e 0 13%,transparent 14%),
+  linear-gradient(#c81e1e 0 0) center/100% 12% no-repeat,linear-gradient(#c81e1e 0 0) 50% 100%/12% 50% no-repeat}
+.ht-cell.ht-small{background:rgba(255,255,255,.95)}
+.ht-cell.ht-small .ii{position:absolute;left:12%;top:12%;--isz:calc(var(--s) * .76)}
+.ht-ring{position:absolute;inset:6%;border:2px dashed #6b4e10;border-radius:50%}
+@media (max-width:420px){.ht-sym-pic{--s:50px}}
+
+/* the 3D player and Build Mode tips */
+.ht-feats{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));margin-top:12px}
+.ht-feat{display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:14px;padding:14px;box-shadow:0 0 0 3px var(--line)}
+.ht-feat>svg{width:44px;height:44px;padding:9px;border-radius:12px;background:var(--c);color:#fff;box-shadow:inset -3px -3px 0 rgba(0,0,0,.2)}
+.ht-feat h3{margin:0 0 .15em;font-size:1.15em}
+.ht-feat p{margin:0;line-height:1.45}
+
+/* Starter, Pro, Legend: each size is a taller stack, and named in words too */
+.ht-tiers{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));margin-top:12px}
+/* words top-aligned in every card; each stack sits in the same 3-block box and grows upward */
+.ht-tier{display:flex;gap:16px;align-items:flex-start;box-shadow:0 0 0 3px var(--tc),4px 5px 0 var(--tcd)}
+.ht-tier.t1{--tc:#3fb27a;--tcd:#2f8f5b}.ht-tier.t2{--tc:#4f8fe8;--tcd:#2f6fd0}.ht-tier.t3{--tc:#f2a530;--tcd:#b86a00}
+.ht-tier h3{color:var(--tcd);margin:0 0 .2em}
+.ht-tier p{margin:0}
+.ht-tier-pic{--s:26px;flex:none;display:flex;flex-direction:column-reverse;height:calc(var(--s) * 3);margin-top:4px}
+.ht-tier-pic .ht-tex{width:var(--s);height:var(--s)}
+
+.ht-tips{max-width:860px;padding-top:6px}
+.ht-go{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding-top:6px}

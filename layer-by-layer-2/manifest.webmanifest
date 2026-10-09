@@ -1,0 +1,18 @@
+{
+  "id": "/layer-by-layer-2",
+  "name": "Layer by Layer 2: The Living Build Book",
+  "short_name": "Layer by Layer",
+  "description": "A free Minecraft Bedrock build book for kids. Watch every build assemble in 3D, then build it layer by layer.",
+  "start_url": "/layer-by-layer-2",
+  "scope": "/layer-by-layer-2",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbf7ee",
+  "theme_color": "#1b2130",
+  "categories": ["books", "kids", "education", "games"],
+  "icons": [
+    { "src": "/layer-by-layer-2/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/layer-by-layer-2/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/layer-by-layer-2/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

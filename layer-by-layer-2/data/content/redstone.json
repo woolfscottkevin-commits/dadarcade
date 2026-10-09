@@ -1,0 +1,538 @@
+{
+ "intro": "Tap the control under each gadget, then watch the power move. Every gadget here works in Minecraft: Bedrock Edition, game version 26.50.",
+ "gadgets": [
+  {
+   "id": "copper-doorbell",
+   "order": 1,
+   "title": "Copper Trumpet Doorbell",
+   "lead": "Press the button by your door, and a Note Block on copper plays a trumpet. As the copper turns green, the tune changes!",
+   "figure": "copper-doorbell",
+   "input": "button",
+   "states": [
+    {
+     "label": "Waiting",
+     "power": false,
+     "text": "The doorbell is ready. The Block of Copper under the Note Block is shiny and new."
+    },
+    {
+     "label": "Toot!",
+     "power": true,
+     "text": "You press the button. Power runs along the dust, and the Note Block plays a trumpet."
+    },
+    {
+     "label": "Copper ages",
+     "power": true,
+     "text": "Time passes, and the copper turns green. Press again. Now it plays the Weathered Trumpet, which sounds like a trombone."
+    },
+    {
+     "label": "All green",
+     "power": true,
+     "text": "Fully green copper plays the Oxidized Trumpet. It sounds like a big, buzzy trombone."
+    }
+   ],
+   "parts": [
+    [
+     "Note Block",
+     1
+    ],
+    [
+     "Block of Copper",
+     1
+    ],
+    [
+     "Stone Button",
+     1
+    ],
+    [
+     "Redstone Dust",
+     3
+    ],
+    [
+     "Stone Bricks",
+     3
+    ]
+   ],
+   "steps": [
+    "Find the corner of your house next to the door.",
+    "Place 3 Stone Bricks in a row on the ground, right next to that corner.",
+    "Put a Block of Copper at the end of the row.",
+    "Put a Note Block on top of the copper. Keep the space above it empty.",
+    "Put Redstone Dust on top of each Stone Brick.",
+    "Put a Stone Button on the front of the corner block, level with the dust. Press it!"
+   ],
+   "how": "A Stone Button powers the block it is on for 1 second. That block powers the dust beside it. The power runs along the dust into the Note Block, and it plays. The block under a Note Block picks its sound, and copper makes a trumpet.",
+   "tips": [
+    [
+     "warn",
+     "Leave room on top",
+     "A Note Block only plays if the space right above it is empty."
+    ],
+    [
+     "pro",
+     "Keep your tune",
+     "Each copper stage plays a different trumpet. Wax the copper with a Honeycomb, and it stays the same forever."
+    ],
+    [
+     "pro",
+     "Pick your note",
+     "Use the Note Block to make its note one step higher. There are 25 notes. After the highest one, it goes back to the lowest."
+    ],
+    [
+     "know",
+     "New in 2026",
+     "Copper trumpets came to Minecraft in the Tiny Takeover drop in March 2026."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Note_Block",
+    "https://www.minecraft.net/en-us/updates/tiny-takeover-drop",
+    "https://minecraft.wiki/w/Block_of_Copper",
+    "https://minecraft.wiki/w/Button",
+    "https://minecraft.wiki/w/Redstone_Dust"
+   ]
+  },
+  {
+   "id": "copper-bulb-switch",
+   "order": 2,
+   "title": "Copper Bulb Light Switch",
+   "lead": "Press once and the lamp comes on. Press again and it goes off. A Copper Bulb remembers!",
+   "figure": "copper-bulb-switch",
+   "input": "button",
+   "states": [
+    {
+     "label": "Off",
+     "power": false,
+     "text": "The Copper Bulb is dark, and the button is ready."
+    },
+    {
+     "label": "Press: on!",
+     "power": true,
+     "text": "You press the button. Power runs along the dust, and the bulb switches on."
+    },
+    {
+     "label": "Still on",
+     "power": false,
+     "text": "The button pops back out, and the dust goes dark. The bulb stays lit! It does not need power to keep shining."
+    },
+    {
+     "label": "Press: off",
+     "power": true,
+     "text": "Press the button again. This new pulse of power switches the bulb off."
+    }
+   ],
+   "parts": [
+    [
+     "Copper Bulb",
+     1
+    ],
+    [
+     "Stone Button",
+     1
+    ],
+    [
+     "Redstone Dust",
+     3
+    ],
+    [
+     "Tuff Bricks",
+     3
+    ],
+    [
+     "Tuff Brick Wall",
+     1
+    ],
+    [
+     "Polished Deepslate",
+     2
+    ],
+    [
+     "Polished Deepslate Slab",
+     1
+    ],
+    [
+     "Copper Trapdoor",
+     1
+    ]
+   ],
+   "steps": [
+    "Build a post from 2 Polished Deepslate blocks. Add a Polished Deepslate Slab on top. A dark post makes the button easy to see.",
+    "Place 3 Tuff Bricks in a row on the ground, next to the post.",
+    "Put a Tuff Brick Wall at the end of the row. Put the Copper Bulb on top of it.",
+    "Add a Copper Trapdoor on top of the bulb as a lamp cap.",
+    "Put Redstone Dust on top of each Tuff Brick.",
+    "Put a Stone Button on the front of the post, at the same height as the dust. Press it once, then press it again."
+   ],
+   "how": "A Stone Button sends power for 1 second, then stops. A short burst like this is called a pulse. Each pulse that reaches a Copper Bulb flips it: off to on, or on to off. The bulb keeps shining with no power, so it remembers what the last pulse did.",
+   "tips": [
+    [
+     "warn",
+     "You need a Blaze Rod",
+     "Crafting Copper Bulbs takes 3 Blocks of Copper, 1 Blaze Rod and 1 Redstone Dust. You get 4 bulbs. Blaze Rods come from the Nether. Get a grown-up to help, or build this one in Creative."
+    ],
+    [
+     "know",
+     "Watch for the red dot",
+     "While power reaches a Copper Bulb, a small red dot shows in its middle."
+    ],
+    [
+     "pro",
+     "Keep it bright",
+     "A new Copper Bulb gives light level 15. As it turns green, that drops to 12, then 8, then 4. Wax it with a Honeycomb to keep it bright."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Blaze_Rod",
+    "https://minecraft.wiki/w/Blaze",
+    "https://minecraft.wiki/w/Button",
+    "https://minecraft.wiki/w/Redstone_Dust"
+   ]
+  },
+  {
+   "id": "piston-door",
+   "order": 3,
+   "title": "Hidden Piston Door",
+   "lead": "Flip a lever, and a wall of bookshelves slides apart. Hide it in a bookcase, and it is hard to spot.",
+   "figure": "piston-door",
+   "input": "lever",
+   "states": [
+    {
+     "label": "Closed",
+     "power": false,
+     "text": "The lever is off. The Redstone Torch is on, so all 4 Sticky Pistons push. The bookshelves fill the doorway."
+    },
+    {
+     "label": "Open",
+     "power": true,
+     "text": "You flip the lever on. The torch goes out, and the pistons pull the bookshelves into the wall. Walk right through!"
+    }
+   ],
+   "parts": [
+    [
+     "Sticky Piston",
+     4
+    ],
+    [
+     "Bookshelf",
+     4
+    ],
+    [
+     "Redstone Dust",
+     8
+    ],
+    [
+     "Redstone Torch",
+     1
+    ],
+    [
+     "Lever",
+     1
+    ],
+    [
+     "Tuff Bricks",
+     9
+    ],
+    [
+     "Polished Deepslate",
+     5
+    ]
+   ],
+   "steps": [
+    "Stack 2 Sticky Pistons with their sticky faces pointing right. Leave a gap 4 blocks wide. Then stack 2 more facing left.",
+    "Put a Bookshelf against the sticky face of each piston. These 4 bookshelves are your door.",
+    "Behind each piston stack, on the side away from your base, place a block. Put Redstone Dust on top.",
+    "Join the two sides with a bridge of blocks behind the doorway. Step up, go over the top, then step down.",
+    "Put Redstone Dust on top of every bridge block.",
+    "To the right of the right pistons, place a block, and one more behind it. Put dust on both.",
+    "Place one more block to the right, with a Redstone Torch on top. The door slides shut.",
+    "Put a Lever on the front of the torch's block. Flip it to open the door!"
+   ],
+   "how": "A Redstone Torch stays on until the block under it gets power. While the lever is off, the torch powers the dust. The dust powers all 4 Sticky Pistons, and they push the bookshelves together. Flip the lever on, and it powers the torch's block. The torch turns off, so the pistons pull the bookshelves back.",
+   "tips": [
+    [
+     "warn",
+     "Use Sticky Pistons",
+     "A normal Piston can push the door shut, but it cannot pull it open again."
+    ],
+    [
+     "know",
+     "Bedrock dust helps",
+     "In Bedrock, Redstone Dust turns to point at a piston's back or side by itself. The dust powers the top piston, and the block under the dust powers the bottom one."
+    ],
+    [
+     "warn",
+     "Keep the lever away",
+     "Do not let the lever's block touch a piston. A piston turns on when a block next to it has power."
+    ],
+    [
+     "pro",
+     "Hide it",
+     "Build a wall of Bookshelves on the outside, in front of the redstone. Leave the 2 by 2 doorway open."
+    ],
+    [
+     "pro",
+     "Make a Sticky Piston",
+     "Put a Slimeball on top of a Piston in the crafting grid."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Piston",
+    "https://minecraft.wiki/w/Sticky_Piston",
+    "https://minecraft.wiki/w/Redstone_Torch",
+    "https://minecraft.wiki/w/Redstone_Dust",
+    "https://minecraft.wiki/w/Lever"
+   ]
+  },
+  {
+   "id": "shelf-armory",
+   "order": 4,
+   "title": "Shelf Quick-Swap Armory",
+   "lead": "Flip a lever and tap a shelf. Your whole hotbar swaps from building blocks to adventure gear.",
+   "figure": "shelf-armory",
+   "input": "lever",
+   "states": [
+    {
+     "label": "Gear on the wall",
+     "power": false,
+     "text": "The lever is off. Each shelf holds 3 items and works on its own. Your hotbar is full of building blocks."
+    },
+    {
+     "label": "Power on",
+     "power": true,
+     "text": "You flip the lever. Power runs along the dust and into all 3 shelves. Their fronts change, and they join up like one long shelf. Next, use any shelf."
+    },
+    {
+     "label": "Swap!",
+     "power": true,
+     "text": "You use one shelf. All 9 items swap with your hotbar at once. Your gear is in your hands, and your blocks are on the wall."
+    },
+    {
+     "label": "Swap back",
+     "power": true,
+     "text": "Use any shelf again. Everything swaps back, so you are ready to build. Flip the lever off to use the shelves one slot at a time."
+    }
+   ],
+   "parts": [
+    [
+     "Spruce Shelf",
+     3
+    ],
+    [
+     "Stone Bricks",
+     10
+    ],
+    [
+     "Redstone Dust",
+     5
+    ],
+    [
+     "Lever",
+     1
+    ]
+   ],
+   "steps": [
+    "Build a wall of Stone Bricks, 5 blocks long and 2 blocks high.",
+    "Stand in front of the wall. Put 3 Spruce Shelves on the front of its top row. Start at the left end.",
+    "Hold an item and use a shelf slot to put it there. Fill all 9 slots with your gear.",
+    "Put a Lever on the front of the wall's top row, at the right end.",
+    "Put Redstone Dust on top of all 5 wall blocks.",
+    "Flip the lever. Then use any shelf to swap all 9 items."
+   ],
+   "how": "The Lever powers the block it is fixed to. That block powers the Redstone Dust on top of it. The dust powers every wall block under it. Each wall block powers the shelf in front of it. Three powered shelves in a row join up. Then one tap swaps all 9 items with your hotbar.",
+   "tips": [
+    [
+     "pro",
+     "One, two or three shelves",
+     "One powered shelf swaps with the 3 slots on the right of your hotbar. Two joined shelves swap 6. Three swap all 9."
+    ],
+    [
+     "know",
+     "Any wood works",
+     "In Bedrock, powered shelves join up even when they are made of different woods."
+    ],
+    [
+     "warn",
+     "Creative mode is different",
+     "In Creative, using a shelf with no power puts your item on it. You do not get the old item back."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Shelf",
+    "https://minecraft.wiki/w/Redstone_Dust",
+    "https://minecraft.wiki/w/Lever"
+   ]
+  },
+  {
+   "id": "metro-stop",
+   "order": 5,
+   "title": "Metro Station Stop",
+   "lead": "Your minecart rolls in, waits at the platform, and leaves when you press the button.",
+   "figure": "metro-stop",
+   "input": "minecart",
+   "states": [
+    {
+     "label": "Waiting",
+     "power": false,
+     "text": "The station is empty. The Copper Bulb is off, and the Powered Rail at the end has no power."
+    },
+    {
+     "label": "Train coming!",
+     "power": true,
+     "text": "The cart rolls over the Detector Rail. The rail sends out power, and the Copper Bulb turns on."
+    },
+    {
+     "label": "At the platform",
+     "power": false,
+     "text": "The Powered Rail has no power, so it works like a brake. The cart stops by the red buffer. The bulb stays on while it waits."
+    },
+    {
+     "label": "All aboard!",
+     "power": true,
+     "text": "You press the button. The Powered Rail gets power and pushes the cart away from the buffer."
+    },
+    {
+     "label": "Off it goes",
+     "power": true,
+     "text": "The cart rolls back over the Detector Rail. One more pulse, and the bulb turns off."
+    }
+   ],
+   "parts": [
+    [
+     "Rail",
+     3
+    ],
+    [
+     "Detector Rail",
+     1
+    ],
+    [
+     "Powered Rail",
+     1
+    ],
+    [
+     "Red Concrete",
+     1
+    ],
+    [
+     "Copper Bulb",
+     1
+    ],
+    [
+     "Smooth Stone",
+     1
+    ],
+    [
+     "Stone Button",
+     1
+    ]
+   ],
+   "steps": [
+    "Lay a straight track 5 blocks long: Rail, Rail, Detector Rail, Rail, Powered Rail.",
+    "Put a block of Red Concrete right after the Powered Rail. This is the buffer at the end of the line.",
+    "Put a Copper Bulb beside the Detector Rail, touching its side.",
+    "Put a Smooth Stone block beside the Powered Rail. Put a Stone Button on top of it.",
+    "Build your platform around the bulb and the button.",
+    "Join the open end of the track to your metro line. Then ride a Minecart in!"
+   ],
+   "how": "A Detector Rail sends out power while a minecart is on it. Each time it does, the Copper Bulb flips on or off. A Powered Rail with no power works like a brake. So the cart stops by the buffer. The button powers the block under it. That block powers the Powered Rail, and the rail pushes the cart away from the buffer.",
+   "tips": [
+    [
+     "warn",
+     "Leave a gap",
+     "Keep a plain Rail between the Detector Rail and the Powered Rail. If they touch, the Detector Rail powers the Powered Rail. Then the cart bounces right back out."
+    ],
+    [
+     "pro",
+     "A light that remembers",
+     "A Copper Bulb stays the same until the next pulse. So it stays lit for as long as the cart waits."
+    ],
+    [
+     "know",
+     "Brake or booster",
+     "A Powered Rail with power speeds a cart up. With no power, it slows the cart down and stops it."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Detector_Rail",
+    "https://minecraft.wiki/w/Powered_Rail",
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Button"
+   ]
+  },
+  {
+   "id": "crafter-baker",
+   "order": 6,
+   "title": "Crafter Auto-Baker",
+   "lead": "Press a button and a loaf of bread pops out. A hopper keeps the crafter full of wheat.",
+   "figure": "crafter-baker",
+   "input": "button",
+   "states": [
+    {
+     "label": "Ready",
+     "power": false,
+     "text": "The Hopper has filled the Crafter's top row with Wheat. Nothing happens until the Crafter gets power."
+    },
+    {
+     "label": "Click!",
+     "power": true,
+     "text": "You press the button. The Crafter gets a pulse of power and starts to craft."
+    },
+    {
+     "label": "Fresh bread!",
+     "power": false,
+     "text": "A moment later, one loaf of Bread pops out of the front. Press the button again for another loaf."
+    }
+   ],
+   "parts": [
+    [
+     "Crafter",
+     1
+    ],
+    [
+     "Hopper",
+     1
+    ],
+    [
+     "Chest",
+     1
+    ],
+    [
+     "Stone Button",
+     1
+    ]
+   ],
+   "steps": [
+    "Place a Crafter. The Bread comes out of its front, so make the front face the room.",
+    "Open the Crafter. Click the 6 slots in the middle and bottom rows to switch them off.",
+    "Crouch and put a Hopper on the Crafter's left side. It points into the Crafter.",
+    "Crouch and put a Chest on top of the Hopper. Fill the Chest with Wheat.",
+    "Crouch and put a Stone Button on the right side of the Crafter.",
+    "Press the button. A loaf of Bread pops out!"
+   ],
+   "how": "The Hopper pulls Wheat out of the Chest and pushes it into the Crafter. Only the top row is switched on, so the Wheat makes a row of 3. That is the recipe for Bread. When you press the button, the Crafter gets power. It uses one Wheat from each slot and pushes one loaf out of its front.",
+   "tips": [
+    [
+     "warn",
+     "No Hopper underneath",
+     "A Hopper under a Crafter pulls the Wheat back out. Feed it from the side or the top instead."
+    ],
+    [
+     "pro",
+     "Catch the bread",
+     "Put a Chest in front of the Crafter. The Bread goes straight into the Chest."
+    ],
+    [
+     "know",
+     "It can bake cake too",
+     "A Crafter can make Cake. It pushes out the empty Buckets right after the Cake."
+    ]
+   ],
+   "sources": [
+    "https://minecraft.wiki/w/Crafter",
+    "https://minecraft.wiki/w/Bread",
+    "https://minecraft.wiki/w/Hopper",
+    "https://minecraft.wiki/w/Button"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,278 @@
+{
+  "title": "Layer by Layer",
+  "volume": "Volume 2",
+  "subtitle": "The Living Build Book",
+  "tagline": "Spin it. Slice it. Watch it build. Then build it yourself.",
+  "edition": "An unofficial guide for Minecraft: Bedrock Edition · Updated October 2026 (game version 26.50)",
+  "disclaimer": "This is an unofficial fan-made guide. It is not an official Minecraft product and is not approved by or connected to Mojang or Microsoft. Minecraft is a trademark of Mojang Synergies AB. Every picture and 3D build in this book was made for this book. Creators and projects named in the Showcase are described from their own pages and from news reports. They did not make or approve this book.",
+
+  "home": {
+    "hello": "Hi, builder, and welcome to Volume 2! Every build here is alive. Spin it, slice it, and watch it build itself.",
+    "promise": [
+      "Watch every build drop into place in 3D, one layer at a time.",
+      "Prop your iPad next to the TV and use Build Mode while you play.",
+      "Pick your size: Starter, Pro or Legend.",
+      "Tap the speaker button at the top, and the book reads to you.",
+      "Switch a build to night and watch the lanterns really light up.",
+      "Save the book once, then build with no Wi-Fi."
+    ]
+  },
+
+  "howto": {
+    "title": "How to Use This Book",
+    "lead": "Every build has a 3D model, a block list and a plan for every layer. Build one layer at a time, from the ground up, and you can't get lost.",
+    "steps": [
+      {"title": "Pick a build", "text": "Tap any build card. It shows how tricky the build is and how long it takes."},
+      {"title": "Pick your size", "text": "Choose Starter, Pro or Legend. You can start small and add more later."},
+      {"title": "Spin it and explore", "text": "Turn the build around, look inside, and tap blocks to learn their names."},
+      {"title": "Gather your blocks", "text": "Check the block list. Big counts come in stacks of 64, like your inventory. In Survival, collect everything first."},
+      {"title": "Build layer by layer", "text": "Follow the plans from the bottom up. Tap Next for each new layer."},
+      {"title": "Mark it done", "text": "Tap “I built it!” to add the build to your Builder Log."}
+    ],
+
+    "plans_title": "How to read a layer plan",
+    "plans": [
+      {"title": "Each square is one block", "text": "You are looking down from above, like a bird."},
+      {"title": "North is at the top", "text": "Stand on the south side of your build and face north. Now the plan matches what you see."},
+      {"title": "Count the squares", "text": "Use the numbers along the edges. Thick lines come every 5 blocks, so counting is quick."},
+      {"title": "The gray shadow is the layer below", "text": "It shows where your last layer was, so you know where the new blocks go."},
+      {"title": "Letters name the blocks", "text": "Each block has a letter. The key under the plan says which block it is. You never need colors to read a plan."},
+      {"title": "Repeat badges", "text": "A badge like build ×3 means you build that layer 3 times. Stack them up."},
+      {"title": "Layer 1 sits on the grass", "text": "Some builds also have a Ground layer. To build it, dig out the grass and put those blocks in. A few builds have Dig layers even deeper down. Always start with the lowest layer."}
+    ],
+    "symbols_title": "Plan symbols",
+    "symbols": [
+      {"shape": "full", "title": "Full block", "text": "Place one whole block."},
+      {"shape": "log", "title": "Log on its side", "text": "The line shows which way the log lies."},
+      {"shape": "glass", "title": "Glass", "text": "Glass blocks have a white shine line."},
+      {"shape": "slab-bottom", "title": "Bottom slab", "text": "The bottom half of the square is colored."},
+      {"shape": "slab-top", "title": "Top slab", "text": "The top half of the square is colored. Aim at the top half of a block to place it."},
+      {"shape": "stairs", "title": "Stairs", "text": "The arrow points to the tall back of the stairs, like walking uphill."},
+      {"shape": "stairs-top", "title": "Upside-down stairs", "text": "A hollow arrow. Aim at the top half of a block to place them."},
+      {"shape": "fence", "title": "Small things", "text": "Small things show their own picture on a white square. That means fences, walls, panes, bars, flowers and redstone dust."},
+      {"shape": "door", "title": "Door", "text": "A thick bar on the side the door sits on. Doors are 2 blocks tall."},
+      {"shape": "trapdoor", "title": "Trapdoor", "text": "An open trapdoor has a bar on the side it folds against. A closed one shows just its picture."},
+      {"shape": "lantern", "title": "Lantern or torch", "text": "Its own picture on a white square. A dashed ring means a hanging lantern."}
+    ],
+
+    "player_title": "The 3D build player",
+    "player": [
+      {"title": "Drag to spin", "text": "Drag one finger to turn the build around. On a keyboard, the arrow keys turn it too."},
+      {"title": "Pinch to zoom", "text": "Pinch with two fingers to zoom in and out. On a keyboard, press plus or minus."},
+      {"title": "Tap a block", "text": "Tap any block to see its name, how many you need, and its layer."},
+      {"title": "Watch it build", "text": "Tap the Watch it build button. The blocks drop into place, one layer at a time."},
+      {"title": "The layer slider", "text": "Drag the slider to the left. Everything above that layer disappears, so you can see inside."},
+      {"title": "The ghost layer", "text": "The next layer shows as a see-through ghost. It shows you what to build next."},
+      {"title": "Front, Side, Top", "text": "Tap a view button to jump straight to that side of the build."},
+      {"title": "Day, sunset or night", "text": "Tap the sun button to change the time of day. At night, you can see which lights really glow."},
+      {"title": "Pull it apart", "text": "Tap the pull-apart button. The layers spread out, so you can see each one. Tap it again to put them back."},
+      {"title": "Take a picture", "text": "Tap the camera button to take a picture of the build. Then tap Save picture to keep it."},
+      {"title": "Walk through the build", "text": "Tap the walk button to explore the build at player size. Use the thumb stick and Jump button, or W A S D and Space. Tap X to stop."}
+    ],
+
+    "buildmode_title": "Build Mode",
+    "buildmode_lead": "Build Mode is for building in the game. Prop your iPad next to the TV or your computer.",
+    "buildmode": [
+      {"title": "One layer at a time", "text": "Big words show your layer, like Layer 6. Under them, you see your step, like step 7 of 22."},
+      {"title": "New blocks glow", "text": "The blocks for this layer get a gold edge. The next layer shows as a see-through ghost."},
+      {"title": "Count and tick", "text": "Each layer lists the blocks it needs and how many. Tick each one as you place it."},
+      {"title": "Big tap zones", "text": "Tap the big Next layer button to go on. Tap Back to go back one layer."},
+      {"title": "The screen stays on", "text": "Your iPad stays awake while you build. Build Mode starts dark, for dim rooms. The sun button makes it light."},
+      {"title": "It remembers", "text": "Stop any time. Next time, Build Mode tells you which layer you were on."},
+      {"title": "Keys and pedals", "text": "On a keyboard, use the arrow keys or the space bar. Page-turner pedals work too."},
+      {"title": "Hear each layer", "text": "Tap the speaker button, and Build Mode reads each layer out loud."}
+    ],
+
+    "tiers_title": "Starter, Pro or Legend?",
+    "tiers_lead": "Every big build comes in 3 sizes. Each size builds on the one before, so you can start small and level up later.",
+    "tiers": [
+      {"key": "starter", "tier": 1, "name": "Starter", "text": "The main building. It looks finished, and it is the quickest size: about 15 to 35 minutes in Creative."},
+      {"key": "pro", "tier": 2, "name": "Pro", "text": "The full build. It adds deeper walls, trim, and an inside to explore."},
+      {"key": "legend", "tier": 3, "name": "Legend", "text": "Show-off extras, like towers, lights, landscaping and secrets."}
+    ],
+
+    "tips": [
+      ["start", "Make a building world", "Make a new world in Creative mode with Flat World turned on. You get every block and lots of flat space."],
+      ["warn", "Keep a separate world", "Creative mode, cheats and Flat World all turn off achievements in that world for good. That's why builders keep a world just for building."],
+      ["pro", "What does tap mean?", "In the game, tap means tap the screen. On a computer, right-click. On a controller, press the use button."]
+    ],
+    "sources": [
+      "https://minecraft.wiki/w/Achievement"
+    ]
+  },
+
+  "grownups": {
+    "title": "For Grown-ups",
+    "lead": "Here's what this book is, what it saves, and how to share it.",
+    "sections": [
+      {
+        "key": "what",
+        "title": "What this is",
+        "body": [
+          "Layer by Layer, Volume 2 is a free Minecraft build book on the web. It is made for kids aged 8 to 11 and the grown-ups who build with them.",
+          "It has builds you can spin in 3D, building lessons, redstone gadgets and Minecraft news.",
+          "It is part of Dad Arcade, a free site of games for kids and families. A dad makes it, with help from Claude, an AI assistant.",
+          "There are no ads and nothing to buy.",
+          "It is a fan-made guide, not an official Minecraft product. Mojang and Microsoft did not make or approve it.",
+          "We check every game fact against minecraft.net or the Minecraft Wiki. Showcase stories also use Guinness World Records and news reports. Each section lists its sources.",
+          "Spot a mistake? Tap “Found a Glitch? Report It!” on the Dad Arcade home page."
+        ]
+      },
+      {
+        "key": "privacy",
+        "title": "Privacy",
+        "body": [
+          "There are no accounts, no chat and no uploads. Nothing your child types in this book leaves this device.",
+          "Progress, checkmarks, the Builder Log and settings are saved only on this device. We can't see them.",
+          "The Home Screen app and Safari may keep separate progress. So add the book to your Home Screen before your child starts. Already started? Tap Move progress to another device to carry it over.",
+          "To clear everything, tap Clear My Progress on this page. You can also clear this website's data in your browser settings.",
+          "Dad Arcade uses Google Analytics to count visits. It shows how many visits each page gets, and roughly which countries visitors are in. The book also counts taps on a few buttons, like opening a build or Watch it build.",
+          "Google Analytics keeps a cookie with a random ID on this device. That is how it tells one visit from the next.",
+          "We only look at totals. We never send it names, email addresses or anything your child types.",
+          "The Dad Arcade home page has a form for reporting glitches. Anything typed there is sent to us, so please help your child with it."
+        ],
+        "sources": [
+          "https://support.google.com/analytics/answer/11397207"
+        ]
+      },
+      {
+        "key": "links",
+        "title": "Outside links",
+        "body": [
+          "Some pages link to other websites, mostly minecraft.net and the Minecraft Wiki. Showcase stories also link to news and video pages.",
+          "Every outside link opens an “Ask a grown-up” box first. It names the website. A grown-up can tap to open it, or stay in the book.",
+          "We don't control other websites. Video sites may show ads or suggest other videos."
+        ]
+      },
+      {
+        "key": "screen",
+        "title": "Screen time and Build Mode",
+        "body": [
+          "Build Mode is made to sit next to the TV while your child plays. It keeps the screen awake, so the iPad won't lock mid-build.",
+          "The screen can sleep again as soon as you leave Build Mode.",
+          "Some older iPads may still dim, especially when the book is opened from the Home Screen. If that happens, set a longer time in Settings > Display & Brightness > Auto-Lock. Remember to change it back afterward.",
+          "There are no streaks, timers or “come back tomorrow” messages. Build Mode remembers the layer, so stopping is easy."
+        ],
+        "steps_title": "Tips for setting limits",
+        "steps": [
+          "Agree on a goal before you start, like one Starter build or 10 layers.",
+          "Stop at the end of a layer. It makes a natural break.",
+          "Screen Time in your iPad's Settings can set daily limits and quiet hours."
+        ],
+        "sources": [
+          "https://bugs.webkit.org/show_bug.cgi?id=254545",
+          "https://support.apple.com/guide/ipad/keep-the-ipad-display-on-longer-ipad11dbabaf/26/ipados/26",
+          "https://support.apple.com/en-us/108806"
+        ]
+      },
+      {
+        "key": "offline",
+        "title": "Use it with no Wi-Fi",
+        "body": [
+          "Tap Save the Whole Book to download every page, build and picture onto this device. A bar shows how far along it is.",
+          "After that, the book works with no Wi-Fi, like on a long car ride. The download is about 10 MB, so use Wi-Fi for it."
+        ],
+        "steps_title": "Add the book to an iPad Home Screen",
+        "steps": [
+          "Open the book in Safari.",
+          "Tap the Share button.",
+          "Tap More, then tap Add to Home Screen. On iPadOS 27, tap View More.",
+          "Keep Open as Web App turned on.",
+          "Tap Add. The icon appears only on this iPad.",
+          "Open the book from the new icon, then tap Save the Whole Book."
+        ],
+        "after": [
+          "Why bother? Safari can clear a site's saved data after 7 days of Safari use without a visit. A Home Screen app keeps its own count, so the saved book is safer there."
+        ],
+        "sources": [
+          "https://support.apple.com/guide/ipad/ipadc602b75b/ipados",
+          "https://support.apple.com/guide/ipad/open-as-web-app-ipad8f1f7a29/26/ipados/26",
+          "https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/"
+        ]
+      },
+      {
+        "key": "versions",
+        "title": "Game versions",
+        "body": [
+          "This book is built for Minecraft: Bedrock Edition 26.50, the Wilderness Bound update from September 2026. Bedrock is the version on iPad, phones, Xbox, PlayStation, Switch and Windows.",
+          "Every build shows a badge with the oldest game version it needs.",
+          "In 2026, version numbers started following the year. So any 26 version is newer than every 1.21 version.",
+          "Builds that use Wilderness Bound blocks need 26.50 or later. Those blocks include poplar wood, cushions, straw beds, red shrubs and shelf mushrooms. Wool and concrete also got stairs and slabs.",
+          "Other builds work in older versions. They use blocks from earlier updates, like pale oak, copper lanterns and shelves. Each badge shows the version a build needs.",
+          "We never use experimental blocks, so you don't need to turn on Experiments.",
+          "Your game version is shown at the bottom of the Minecraft title screen. On iPad, update Minecraft in the App Store."
+        ],
+        "sources": [
+          "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+          "https://www.minecraft.net/en-us/article/minecraft-new-version-numbering-system",
+          "https://minecraft.wiki/w/Wilderness_Bound",
+          "https://minecraft.wiki/w/The_Garden_Awakens",
+          "https://minecraft.wiki/w/The_Copper_Age",
+          "https://minecraft.wiki/w/Title_screen",
+          "https://minecraft.wiki/w/Bedrock_Edition"
+        ]
+      },
+      {
+        "key": "access",
+        "title": "Accessibility",
+        "body": [
+          "Read to Me is the speaker button at the top. It reads the page out loud and highlights the words as it goes. Tap a sentence to start from there.",
+          "In Settings, tap A, A+ or A++ to make the words bigger. Spacey letters adds room between letters and lines.",
+          "Calm mode turns off extra motion, like camera swoops and spinning. The book also follows the iPad's Reduce Motion setting.",
+          "Plans never rely on color. Every block has a letter, and the key under each plan gives its name.",
+          "You never have to drag or pinch. View buttons jump to the Front, Side or Top. On a keyboard, arrow keys turn a build, and plus and minus zoom.",
+          "You can use a keyboard. In Build Mode, arrow keys and the space bar change layers. Bluetooth page-turner pedals work too."
+        ]
+      },
+      {
+        "key": "together",
+        "title": "Reading together",
+        "body": [
+          "Many kids build best with a partner. Try Caller and Builder.",
+          "The Caller reads the plan out loud, like “3 Oak Planks, starting at square 2.” The Builder places them in the game. Swap jobs every few layers.",
+          "Being the Caller is good reading practice. Being the Builder is good counting practice.",
+          "Every build has a Dad's Corner: a question or a small job for the grown-up. Use it to start a chat, not a quiz.",
+          "Praise what you see. “Your roof uses 3 kinds of stairs” means more than “Good job.”",
+          "Let your child pick the build and the size. Any build works in any order."
+        ]
+      }
+    ]
+  },
+
+  "parts": [
+    {"key": "builds", "title": "Step-by-Step Builds", "nav": "Builds", "blurb": "Big builds in Starter, Pro and Legend sizes, with a plan for every layer.", "accent": "#3a9d4a"},
+    {"key": "minis", "title": "Mini Builds", "nav": "Minis", "blurb": "Quick little builds you can finish in one go.", "accent": "#2a9d8f"},
+    {"key": "secrets", "title": "Master Builder Secrets", "nav": "Secrets", "blurb": "Tricks that make any build look better, shown step by step in 3D.", "accent": "#e67e22"},
+    {"key": "redstone", "title": "Redstone Workshop", "nav": "Redstone", "blurb": "Flip the switch and watch the power move through each gadget.", "accent": "#d64545"},
+    {"key": "showcase", "title": "Master Build Showcase", "nav": "Showcase", "blurb": "Giant builds, world records and big news from the Minecraft world.", "accent": "#1f2340"},
+    {"key": "top10", "title": "Top 10 Coolest Things to Do", "nav": "Top 10", "blurb": "A countdown of the best new things to try in your own world.", "accent": "#c2378f"},
+    {"key": "log", "title": "My Builder Log", "nav": "My Log", "blurb": "Check off the builds you finish. Your log stays on this device.", "accent": "#7b4fc9"}
+  ],
+
+  "strings": {
+    "tips": {"pro": "PRO TIP", "warn": "WATCH OUT", "know": "DID YOU KNOW?", "start": "START HERE"},
+    "tiers": {"1": "Starter", "2": "Pro", "3": "Legend"},
+    "diff": {"1": "Easy", "2": "Medium", "3": "Tricky"},
+    "danger": {"1": "Totally safe", "2": "A little risky", "3": "Be careful", "4": "Dangerous", "5": "Very dangerous"},
+    "needs": "Needs Bedrock {v} or later",
+    "new_blocks": "New blocks",
+    "layer_of": "Layer {n} of {total}",
+    "ground": "Ground layer",
+    "repeat": "build ×{n}",
+    "resume": "You were on layer {n}. Keep going?",
+    "done": "I built it!",
+    "watch": "Watch it build",
+    "read": "Read to Me",
+    "calm": "Calm mode",
+    "save": "Save the Whole Book",
+    "saved": "Saved! The whole book now works with no Wi-Fi.",
+    "clear": "Clear My Progress",
+    "clear_confirm": "Clear all checkmarks, your Builder Log and your settings on this device? You can't undo this.",
+    "ask_grownup": {
+      "title": "Ask a grown-up",
+      "text": "This link goes to another website. Get a grown-up to check it with you first.",
+      "go": "Grown-up: tap to open",
+      "back": "Stay in the book"
+    }
+  }
+}

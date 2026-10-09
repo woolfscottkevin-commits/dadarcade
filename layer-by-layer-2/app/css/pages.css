@@ -1,0 +1,92 @@
+/* Home and the builds list. Other section pages have their own files (secrets.css, redstone.css, ...). */
+
+/* ---------------------------------------------------------------- hero */
+.hero{position:relative;min-height:min(84vh,760px);overflow:hidden;isolation:isolate;color:#fff;display:flex;align-items:center}
+.hero-sky{position:absolute;inset:0;z-index:-2;transition:background 1s}
+.hero-stage{position:absolute;inset:0;z-index:-1}
+.hero-poster{position:absolute;right:2%;bottom:4%;width:min(62%,780px);z-index:-1}
+.hero::after{content:'';position:absolute;inset:auto 0 0 0;height:22%;background:linear-gradient(transparent,var(--paper));z-index:-1;pointer-events:none}
+/* a soft shade on the sky behind the words (under the 3D build), so white text stays readable on a
+   pale day sky or an orange sunset */
+.hero::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,rgba(12,18,40,.62) 0,rgba(12,18,40,.56) 46%,rgba(12,18,40,0) 68%)}
+.hero-copy{width:100%;padding-block:56px 80px;pointer-events:none}
+.hero-copy>*{pointer-events:auto;max-width:560px}
+.hero-badge{display:inline-block;background:var(--gold);color:#3a2a00;font-family:var(--display);font-size:20px;padding:4px 14px;border-radius:10px;transform:rotate(-3deg);
+  box-shadow:4px 4px 0 #b88600}
+.hero-title{font-size:clamp(58px,10vw,118px);line-height:.88;margin:14px 0 6px;letter-spacing:.01em;-webkit-text-stroke:3px #1d5a29;paint-order:stroke fill;
+  text-shadow:0 5px 0 #1d5a29,0 10px 0 #143f1d,0 16px 24px rgba(0,0,0,.25)}
+.hero-title{display:flex;flex-direction:column;align-items:flex-start}
+.hero-title span{display:block}
+/* the words stack like layers: "by" is a thin gold layer between two big ones */
+.hero-title span:nth-child(2){font-size:.4em;line-height:1;margin:.1em 0 .14em .55em;color:var(--gold);-webkit-text-stroke:2px #6b4a00;
+  text-shadow:0 3px 0 #6b4a00,0 8px 12px rgba(0,0,0,.25)}
+.hero-title span:nth-child(3){margin-left:.32em}
+html:not([data-calm]) .hero-title span{animation:drop-in .7s var(--ease-spring) both}
+html:not([data-calm]) .hero-title span:nth-child(2){animation-delay:.12s}
+html:not([data-calm]) .hero-title span:nth-child(3){animation-delay:.24s}
+@keyframes drop-in{from{opacity:0;transform:translateY(-60px) scale(.9)}}
+.hero-sub{font-family:var(--display);font-size:clamp(22px,3vw,32px);margin:0 0 10px;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.hero-for{display:block;font-family:var(--body);font-weight:900;font-size:max(17px,.56em);letter-spacing:.02em;text-shadow:0 2px 6px rgba(0,30,80,.5)}
+.hero-hello{font-size:1.1em;font-weight:800;text-shadow:0 2px 8px rgba(0,30,80,.45);max-width:40ch}
+.hero-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.hero-cta .btn.ghost{background:rgba(255,255,255,.92)}
+.hero-caption{position:absolute;right:18px;bottom:16%;font-weight:900;font-size:.85em;background:rgba(27,33,48,.55);padding:5px 12px;border-radius:999px;backdrop-filter:blur(4px)}
+@media (max-width:900px){
+  .hero{min-height:auto;flex-direction:column;align-items:stretch}
+  .hero-stage{position:relative;inset:auto;height:min(62vw,420px);order:2}
+  .hero-copy{padding-block:30px 6px;order:1}
+  .hero-caption{display:none}
+  .hero::before{background:linear-gradient(180deg,rgba(12,18,40,.6) 0,rgba(12,18,40,.55) 55%,rgba(12,18,40,0) 75%)}
+}
+
+/* ---------------------------------------------------------------- promises */
+.promise{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+@media (min-width:560px){.promise{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.pcard{background:var(--card);border-radius:16px;padding:14px;box-shadow:0 0 0 3px var(--line);display:flex;gap:10px;align-items:flex-start}
+.pcard svg{width:30px;height:30px;color:var(--grass);flex:none}
+.pcard p{margin:0;font-weight:800;line-height:1.3;font-size:.95em}
+
+/* ---------------------------------------------------------------- build cards */
+.builds-grid{--min:250px}
+.minis-grid{--min:210px}
+/* even rows on an iPad (no card left on its own): 10 big builds in rows of 4 or 2, 6 minis in rows of 3 or 2 */
+@media (min-width:980px){.builds-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.builds-grid.minis-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:560px) and (max-width:979px){.builds-grid,.builds-grid.minis-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.bcard{display:flex;flex-direction:column;background:var(--card);border-radius:20px;overflow:hidden;text-decoration:none;
+  box-shadow:0 0 0 3px var(--line),4px 6px 0 var(--line);transition:transform .2s var(--ease-out),box-shadow .2s}
+.bcard:hover,.bcard:focus-visible{transform:translateY(-4px);box-shadow:0 0 0 3px var(--c),6px 10px 0 var(--line)}
+.bcard-art{aspect-ratio:4/3;background:linear-gradient(180deg,#8fd0ff,#e4f4ff 75%);display:grid;place-items:center;padding:10px;overflow:hidden}
+.bcard.mini .bcard-art{background:linear-gradient(180deg,#9ee8de,#ecfbf8 75%)}
+.bcard-art img{max-height:100%;max-width:100%;object-fit:contain;filter:drop-shadow(0 8px 6px rgba(0,40,80,.18));transition:transform .35s var(--ease-out)}
+.bcard:hover .bcard-art img{transform:scale(1.05) translateY(-3px)}
+.bcard-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
+.bcard-top{display:flex;gap:6px;min-height:0}
+.bcard-top:empty{display:none}
+.bcard h3{margin:0;font-size:1.35em}
+.bcard p{margin:0;color:var(--ink-2);font-weight:700;font-size:.92em;line-height:1.35}
+.bcard-meta{margin-top:auto;padding-top:6px;display:flex;gap:8px;align-items:center;font-weight:800;font-size:.82em;color:var(--muted)}
+.chip.done{background:#d9f2df;color:#1f6b33}
+.chip.done svg{width:14px;height:14px}
+
+/* filters */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.filter{border:0;background:var(--card);border-radius:999px;padding:9px 16px;font-weight:900;cursor:pointer;box-shadow:0 0 0 3px var(--line) inset;min-height:44px}
+.filter[aria-pressed="true"]{background:var(--ink);color:#fff;box-shadow:none}
+.list-h{margin-top:22px;color:var(--c)}
+
+/* parts and grown-ups */
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+@media (min-width:980px){.parts{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:500px) and (max-width:979px){.parts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.part-card{background:var(--pc);color:#fff;border-radius:20px;padding:18px;text-decoration:none;display:flex;flex-direction:column;gap:6px;min-height:180px;
+  box-shadow:inset -5px -6px 0 rgba(0,0,0,.18),4px 6px 0 var(--line);transition:transform .2s var(--ease-out)}
+.part-card:hover{transform:translateY(-4px) rotate(-.4deg)}
+.part-card svg{width:36px;height:36px}
+.part-card h3{margin:0;font-size:1.45em}
+.part-card p{margin:0;font-weight:700;opacity:.92;font-size:.92em}
+/* a darker chip, not a lighter one: white text on a lightened card colour fell under 4.5:1 */
+.part-card .chip{margin-top:auto;align-self:flex-start;background:rgba(0,0,0,.22);color:#fff}
+.grown-card{display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.grown-card h2{margin:4px 0}
+.grown-actions{display:flex;gap:8px;flex-wrap:wrap}

@@ -1,0 +1,5 @@
+/* Reading: read-to-me highlights and long-form text. */
+::highlight(lbl-sentence){background-color:#fff1b8;color:#1b2130}
+::highlight(lbl-word){background-color:#ffd24a;color:#1b2130}
+.reading-now{background:#fff1b8;color:#1b2130;border-radius:6px}
+html.is-reading [data-readable] p,html.is-reading [data-readable] li{cursor:pointer}

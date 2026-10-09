@@ -1,0 +1,434 @@
+{
+ "intro": "Master builders use a few simple tricks to make any build look better. Step through each secret in 3D, then try it in your own world.",
+ "lessons": [
+  {
+   "id": "soft-curves",
+   "order": 1,
+   "title": "Soft Curves with Wool Stairs",
+   "lead": "Wool now comes as stairs and slabs, in all 16 colors. Use them to round off the sharp corners on balloons, sails and tents.",
+   "figure": "soft-curves",
+   "steps": [
+    {
+     "title": "Start blocky",
+     "text": "Build the balloon from full wool blocks, one ring on top of another. Make the middle rings the widest. Right now it looks like a lumpy box."
+    },
+    {
+     "title": "Stairs on the top edges",
+     "text": "Swap each block on the top edge of a ring for a wool stair. Point the tall side toward the middle. The steps turn into a smooth slope."
+    },
+    {
+     "title": "Slabs for the gentle parts",
+     "text": "Some spots are too flat for a stair. Use a wool slab there. The lid on top and the little corners are all slabs."
+    },
+    {
+     "title": "Flip stairs for the bottom",
+     "text": "Under the balloon, use upside-down stairs. To place one, aim at the top half of a block's side. Now the bottom curves in too."
+    },
+    {
+     "title": "Hang the basket",
+     "text": "Build a basket from Spruce Planks, with open Spruce Trapdoors for sides. Iron Chains hold it on. A campfire in the middle is the burner."
+    }
+   ],
+   "body": [
+    "Wool Stairs and Wool Slabs arrived in Wilderness Bound, game version 26.50. Concrete got stairs and slabs in the same update.",
+    "The trick works on anything round. Ship sails, tent roofs, mushroom caps and clouds all look softer this way.",
+    "Think of it like this. Stairs go where the shape steps in by one block. Slabs go where it only needs a little bump."
+   ],
+   "tips": [
+    [
+     "pro",
+     "Corners bend by themselves",
+     "Put two stairs side by side at a corner, and they change shape to meet. That makes round corners easy."
+    ],
+    [
+     "warn",
+     "Flipped stairs stay apart",
+     "Upside-down stairs never join right-side-up stairs. Build the top half and the bottom half as two separate jobs."
+    ],
+    [
+     "know",
+     "Shears are fastest",
+     "You can break wool stairs with any tool. Shears break them fastest."
+    ]
+   ],
+   "challenge": "Build a sail on a mast with wool stairs and slabs. Make it bulge out like it is full of wind.",
+   "sources": [
+    "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+    "https://minecraft.wiki/w/Wool_Stairs",
+    "https://minecraft.wiki/w/Wool_Slab",
+    "https://minecraft.wiki/w/Stairs"
+   ]
+  },
+  {
+   "id": "cushion-furniture",
+   "order": 2,
+   "title": "Real Furniture with Cushions",
+   "lead": "Cushions let you really sit down in Minecraft. Build a cozy sofa nook around them.",
+   "figure": "cushion-furniture",
+   "steps": [
+    {
+     "title": "Start with a seat",
+     "text": "Place three wool blocks in a row. Leave one block of space behind them. This is the seat of your sofa. On its own, it is just a hard bench."
+    },
+    {
+     "title": "Add a back and arms",
+     "text": "Behind the seat, put wool blocks with wool stairs on top. Keep the tall side at the back. Blocks topped with wool slabs make soft arms."
+    },
+    {
+     "title": "Drop on the cushions",
+     "text": "Place one cushion on each seat block. Use a cushion to sit on it. Each one is crafted from 3 wool slabs of the same color."
+    },
+    {
+     "title": "Cushions on the floor",
+     "text": "A cushion fits on any flat surface, even the floor. Make a low table from two trapdoors, and put floor cushions next to it."
+    },
+    {
+     "title": "Make it cozy",
+     "text": "Set a wool rug into the floor. Add shelves, a potted plant and a lantern on a fence post. Now it feels like home."
+    }
+   ],
+   "body": [
+    "A cushion is not a block. It is an entity, like a painting or a boat. That is why it follows its own rules.",
+    "A cushion sits on whatever is under it. That even works on slabs, stairs and thin snow. Only one cushion fits in each spot.",
+    "To pick a cushion up, hit it once. It pops off as an item you can grab."
+   ],
+   "tips": [
+    [
+     "warn",
+     "Keep the block under it",
+     "If you break the block under a cushion, the cushion breaks too. A piston pushing it breaks it as well."
+    ],
+    [
+     "pro",
+     "Floating tabletops",
+     "Place a trapdoor on the top half of a block's side. Then break that block. The trapdoor stays put, like a little table."
+    ],
+    [
+     "pro",
+     "Change the color",
+     "Craft any cushion with a dye to change its color. All 16 colors work."
+    ],
+    [
+     "know",
+     "200 million seats",
+     "Cushions stack to 16. Players placed 200 million cushions in the Camp Out challenge. It took one week, from September 26 to October 2, 2026."
+    ]
+   ],
+   "challenge": "Build a campfire circle with four cushions around it. Give each friend their own color.",
+   "sources": [
+    "https://minecraft.wiki/w/Cushion",
+    "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+    "https://minecraft.wiki/w/Trapdoor",
+    "https://www.minecraft.net/en-us/article/camp-out-community-challenge"
+   ]
+  },
+  {
+   "id": "copper-palette",
+   "order": 3,
+   "title": "Paint with Copper's Four Colors",
+   "lead": "Copper slowly changes from shiny orange to blue-green. Pick the colors you like, then wax them so they stay.",
+   "figure": "copper-palette",
+   "steps": [
+    {
+     "title": "Meet the four stages",
+     "text": "Copper has four stages. New copper turns Exposed, then Weathered, then Oxidized. These four blocks are waxed, so they will never change."
+    },
+    {
+     "title": "Build in new copper",
+     "text": "Here is a little tower made of new copper. The walls are Cut Copper. The windows are Copper Grates."
+    },
+    {
+     "title": "Wait, and it all turns green",
+     "text": "Leave copper alone and it ages by itself, bit by bit. Rain does not speed it up. Covering it does not stop it."
+    },
+    {
+     "title": "Mix the stages on purpose",
+     "text": "Now use the stages like paint. Keep the walls orange, and make the corners green. Let the roof get greener near the top. Then wax every block."
+    },
+    {
+     "title": "Add copper details",
+     "text": "Finish with a Lightning Rod on top and Copper Lanterns by the door. Copper Lanterns burn with a green flame."
+    }
+   ],
+   "body": [
+    "To wax copper, use a honeycomb on it. Waxed copper looks the same as plain copper. Check the name: it starts with Waxed.",
+    "Changed your mind? Use an axe. The first scrape takes off the wax. Each scrape after that takes away one stage.",
+    "Copper looks extra good in Vibrant Visuals. Metal blocks like copper reflect sunlight and the glow of lights."
+   ],
+   "tips": [
+    [
+     "pro",
+     "Get honeycomb safely",
+     "Shear a full bee nest or beehive to get 3 honeycomb. Put a lit campfire under it first, so the bees stay calm."
+    ],
+    [
+     "warn",
+     "Wax keeps it as it is",
+     "Wax stops copper from changing. It does not turn green copper orange again. Scrape first, then wax."
+    ],
+    [
+     "know",
+     "Bulbs get dimmer",
+     "A lit Copper Bulb gets dimmer as it ages. Its light level goes 15, 12, 8, then 4. Wax it to keep it bright."
+    ],
+    [
+     "know",
+     "Lightning cleans copper",
+     "When lightning hits copper that is not waxed, it wipes away all the green."
+    ]
+   ],
+   "challenge": "Build a well with a copper roof. Make it fade from orange at the bottom to green at the top. Wax it when it looks just right.",
+   "sources": [
+    "https://minecraft.wiki/w/Oxidation",
+    "https://minecraft.wiki/w/Honeycomb",
+    "https://minecraft.wiki/w/Waxing",
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Copper_Lantern",
+    "https://minecraft.wiki/w/Vibrant_Visuals"
+   ]
+  },
+  {
+   "id": "vibrant-light",
+   "order": 4,
+   "title": "Light for Vibrant Visuals",
+   "lead": "Vibrant Visuals gives Bedrock real sunshine and shadows. Build so your house looks its best in that light.",
+   "figure": "vibrant-light",
+   "steps": [
+    {
+     "title": "Face the sunrise",
+     "text": "The sun comes up in the east. Put your door, your best windows and your path on the east side. Your front will glow every morning."
+    },
+    {
+     "title": "Push the windows in",
+     "text": "Move the glass one block in, so it sits behind the wall. Now every window has edges that throw shadows. Flat walls look flat, but deep walls look real."
+    },
+    {
+     "title": "Let the roof hang over",
+     "text": "Make the roof stick out one block past the walls. Add log corners and a log beam. The overhang throws shade, so the house looks solid."
+    },
+    {
+     "title": "Add glowing blocks",
+     "text": "Hang lanterns from the edge of the roof. Put more on fence posts by the path. Add candles in the windows and Firefly Bushes in the garden."
+    }
+   ],
+   "body": [
+    "Vibrant Visuals is the new look for Bedrock. It is on by default on many devices. That includes iPhones and iPads with an A12 or M1 chip or newer.",
+    "With it, every block casts a shadow. The shadows move as the sun crosses the sky. Mojang says it makes you want to turn every build to face the sunrise.",
+    "You can try this in the book too. Open any build and tap the sun button to change the time of day. At night, you can see which lights really glow."
+   ],
+   "tips": [
+    [
+     "pro",
+     "Pale walls show shadows",
+     "Shadows are easiest to see on pale blocks like Smooth Quartz Block. In Vibrant Visuals, smooth quartz even reflects sunlight."
+    ],
+    [
+     "know",
+     "How bright is it?",
+     "A Lantern gives light level 15, the brightest there is. One candle gives 3, and four candles in one spot give 12."
+    ],
+    [
+     "know",
+     "It only changes the look",
+     "Vibrant Visuals changes how the game looks, not how it works. Farms and crops work just the same."
+    ]
+   ],
+   "challenge": "Build a porch that faces east. Visit it at sunrise and again at night. Which light do you like best?",
+   "sources": [
+    "https://www.minecraft.net/en-us/vibrant-visuals-update",
+    "https://www.minecraft.net/en-us/article/minecraft-vibrant-visuals",
+    "https://minecraft.wiki/w/Sun",
+    "https://minecraft.wiki/w/Vibrant_Visuals",
+    "https://minecraft.wiki/w/Lantern",
+    "https://minecraft.wiki/w/Candle",
+    "https://minecraft.wiki/w/Firefly_Bush"
+   ]
+  },
+  {
+   "id": "draining-water",
+   "order": 5,
+   "title": "Dry Rooms Under the Sea",
+   "lead": "You cannot just dig water away. This trick turns a patch of sea into a dry room.",
+   "figure": "draining-water",
+   "steps": [
+    {
+     "title": "Pick your spot",
+     "text": "Find a patch of shallow sea. Start here while you learn. It is quicker, and you can swim up for air."
+    },
+    {
+     "title": "Build the walls",
+     "text": "Build a ring of walls from the sea floor up. Make them poke one block out of the water. Use glass for some walls so you can see the sea."
+    },
+    {
+     "title": "Fill it with sand",
+     "text": "Drop Sand or Gravel into the water inside the walls. Each block sinks and takes the place of the water. Keep going until the sand reaches the top of the water."
+    },
+    {
+     "title": "Dig it all out",
+     "text": "Now dig out the sand from the top down. The water is gone, so the room stays dry. Check the corners for any water you missed."
+    },
+    {
+     "title": "Soak up the rest",
+     "text": "Place a Sponge next to the last bit of water. It soaks the water up and turns into a Wet Sponge. Break it and take it with you."
+    },
+    {
+     "title": "Finish your room",
+     "text": "Add a floor, a glass roof and Sea Lanterns for light. Put a trapdoor in the roof over a ladder. Then you can climb in and out."
+    }
+   ],
+   "body": [
+    "Why sand? Sand and Gravel fall when nothing holds them up. Dropped into water, they sink and pile up. When you dig them out, only air is left.",
+    "A Sponge only soaks up the water close to it. So use the sand trick for the big job. Then you only need a sponge for the puddles.",
+    "You can make a deep room the same way. Practice in shallow water first, and you will learn the trick fast."
+   ],
+   "tips": [
+    [
+     "start",
+     "Practice in Creative",
+     "Try this in a Creative world first. You get all the Sand and Sponges you need."
+    ],
+    [
+     "pro",
+     "Dry your sponge",
+     "Smelt a Wet Sponge in a furnace to dry it. Then you can use it again."
+    ],
+    [
+     "know",
+     "Deserts dry sponges",
+     "In Bedrock, a Wet Sponge in a desert dries by itself in a few minutes. In the Nether, it dries at once."
+    ],
+    [
+     "warn",
+     "Add stairs when it is dry",
+     "Stairs, slabs and fences can hold water inside them. Place them after the room is dry, so they stay dry too."
+    ]
+   ],
+   "challenge": "Build a small glass room on the sea floor. Can you get it dry with only one Sponge?",
+   "sources": [
+    "https://minecraft.wiki/w/Tutorial:Underwater_home",
+    "https://minecraft.wiki/w/Sponge",
+    "https://minecraft.wiki/w/Water",
+    "https://minecraft.wiki/w/Waterlogging",
+    "https://minecraft.wiki/w/Falling_Block"
+   ]
+  },
+  {
+   "id": "shelf-walls",
+   "order": 6,
+   "title": "Shelf Walls and the Quick-Swap Trick",
+   "lead": "Shelves show off your best stuff, 3 items on each one. Give them power, and one tap swaps your whole hotbar.",
+   "figure": "shelf-walls",
+   "steps": [
+    {
+     "title": "Build a frame",
+     "text": "Put a row of Dark Oak Planks along a wall. Leave a gap 2 blocks high above it. Then add a ledge of upside-down Dark Oak Stairs on top."
+    },
+    {
+     "title": "Hang the shelves",
+     "text": "Place 6 Birch Shelves in the gap, in 2 rows of 3. The dark frame around them makes the pale shelves stand out."
+    },
+    {
+     "title": "Fill them up",
+     "text": "Hold an item and use a shelf slot. The item goes on the shelf. Each shelf holds 3 items, so this wall shows 18."
+    },
+    {
+     "title": "Power the bottom row",
+     "text": "Swap the 3 blocks under the bottom row for Blocks of Redstone. Now those shelves have power, and their fronts change. Three powered shelves side by side join up."
+    },
+    {
+     "title": "Swap!",
+     "text": "Use any shelf in the powered row. All 9 items swap with your 9 hotbar slots at once. Use it again to swap back."
+    }
+   ],
+   "body": [
+    "A shelf holds 3 stacks of items and shows them on the front. Use shelves for trophy walls, shops, kitchens and libraries.",
+    "With no power, each slot works on its own. Using a slot swaps the item in your hand with the item on the shelf.",
+    "With power, the shelf swaps with your hotbar instead. One shelf swaps 3 slots. Two joined shelves swap 6. Three swap all 9.",
+    "Want a switch to turn the swap on and off? Build the Shelf Quick-Swap Armory in the Redstone Workshop."
+   ],
+   "tips": [
+    [
+     "pro",
+     "Craft six at once",
+     "Put 6 stripped logs of one wood in a crafting table. Fill the top row and the bottom row. You get 6 shelves."
+    ],
+    [
+     "know",
+     "Mix your woods",
+     "In Bedrock, powered shelves join up even when they are made of different woods. Just make them face the same way."
+    ],
+    [
+     "know",
+     "No numbers shown",
+     "A shelf shows the item but not how many there are. A full stack looks just like one."
+    ],
+    [
+     "warn",
+     "No torches on shelves",
+     "In Bedrock, you cannot put a torch, button or lever on a shelf. Power it from the block underneath instead."
+    ]
+   ],
+   "challenge": "Make a powered row of 3 shelves by your front door. Fill it with a building kit, and swap it in whenever you start a build.",
+   "sources": [
+    "https://minecraft.wiki/w/Shelf",
+    "https://minecraft.wiki/w/Block_of_Redstone"
+   ]
+  },
+  {
+   "id": "level-up",
+   "order": 7,
+   "title": "Level Up a Build: Starter to Legend",
+   "lead": "Every big build in this book comes in Starter, Pro and Legend sizes. Watch one little house level up, one move at a time.",
+   "figure": "level-up",
+   "steps": [
+    {
+     "title": "Starter: a box with a roof",
+     "text": "Start simple: four walls, a door, some windows and a roof. It is quick to build, and it already looks like a home."
+    },
+    {
+     "title": "Pro move: add depth",
+     "text": "Flat walls look like cardboard. Put Spruce Logs on the corners and Cobblestone along the bottom. Add Cobblestone Stairs around the outside. Now the walls step in and out."
+    },
+    {
+     "title": "Pro move: a second roof",
+     "text": "Build a small roof over the front door, held up by two fence posts. Pave under it with Stone Bricks. Two roofs give your build a much more interesting shape."
+    },
+    {
+     "title": "Legend move: details",
+     "text": "Open trapdoors make shutters. A closed trapdoor with a Flower Pot on top makes a flower box. Add a chimney and a little window up high."
+    },
+    {
+     "title": "Legend move: lights and a garden",
+     "text": "Hang a lantern under the porch beam. Put lanterns on fence posts by the path. Plant flowers and bushes. Now it is a Legend build!"
+    }
+   ],
+   "body": [
+    "Starter builds are quick, and they look finished. Pro builds add depth and a better shape. Legend builds add details, lights and a garden.",
+    "You can level up any build this way, even one you made last year. Do one move at a time. Then step back and look.",
+    "Most of these moves cost only a few extra blocks. Logs, trapdoors and lanterns make a big difference."
+   ],
+   "tips": [
+    [
+     "start",
+     "Pick your blocks first",
+     "Choose 3 or 4 main blocks before you start. This house uses Birch Planks, Dark Oak Stairs, Spruce Logs and Cobblestone."
+    ],
+    [
+     "pro",
+     "Walk all the way around",
+     "Look at your build from far away and from every side. Fix any side that still looks flat."
+    ],
+    [
+     "know",
+     "Flower boxes need pots",
+     "Flowers can only be planted on blocks like grass and dirt. In Bedrock, a Flower Pot can sit on a closed trapdoor. Open the trapdoor and the pot breaks."
+    ]
+   ],
+   "challenge": "Pick one of your old builds. Give it one move from each step: depth, a second roof, a detail and a light.",
+   "sources": [
+    "https://minecraft.wiki/w/Flower",
+    "https://minecraft.wiki/w/Flower_Pot"
+   ]
+  }
+ ]
+}

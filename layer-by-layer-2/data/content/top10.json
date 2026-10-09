@@ -1,0 +1,374 @@
+{
+  "intro": "Ten fresh adventures for Minecraft Bedrock, counting down to the coolest. Each one works in game version 26.50 (Wilderness Bound). None of them were in Volume 1.",
+  "items": [
+    {
+      "rank": 10,
+      "id": "firefly-garden",
+      "title": "Plant a Firefly Garden",
+      "why": "Firefly bushes fill the dark with tiny glowing bugs. Plant your own garden, and your base will twinkle every evening.",
+      "danger": 1,
+      "level": "Beginner",
+      "where": "On grass near water in most of the Overworld, and anywhere in swamps. Wandering traders sometimes sell them too.",
+      "steps": [
+        "Find a firefly bush near water or in a swamp. Look for tiny glowing dots on its leaves.",
+        "Break it with your hand. It always drops itself.",
+        "Plant it on grass, dirt or moss next to your home.",
+        "Use bone meal on the bush. It spreads to the blocks around it.",
+        "Keep lanterns at least 2 blocks away. Fireflies only come out where it is dim.",
+        "Wait for dusk, then watch the fireflies drift up into the air."
+      ],
+      "need": [
+        "Bone Meal",
+        "Grass, dirt or moss blocks",
+        "Emeralds (if you buy a bush from a wandering trader)"
+      ],
+      "wow_title": "Listen closely",
+      "wow": "At night, firefly bushes give off a soft buzz. They only buzz if nothing solid sits on top of them.",
+      "note_kind": "pro",
+      "note_title": "Room to fly",
+      "note": "In Bedrock, fireflies can appear up to 10 blocks away from their bush. Leave open space around your garden.",
+      "sources": [
+        "https://minecraft.wiki/w/Firefly_Bush",
+        "https://minecraft.wiki/w/Lantern"
+      ],
+      "scene": "t10-firefly-garden",
+      "scene_idea": "A small pond at night with Coarse Dirt, Moss Block and Podzol banks, a row of Firefly Bushes, Sugar Cane and an oak tree, plus one Lantern on an Oak Fence post well away from the bushes."
+    },
+    {
+      "rank": 9,
+      "id": "golden-hour",
+      "title": "Take a Golden-Hour Photo Tour",
+      "why": "Vibrant Visuals gives Minecraft real shadows, shining water and sunlight that glows through leaves. When the sun is low, shadows stretch long across your builds.",
+      "danger": 1,
+      "level": "Beginner",
+      "where": "Anywhere in the Overworld, at dawn or sunset. The sun rises in the east and sets in the west.",
+      "steps": [
+        "Check your device. On iPad, Vibrant Visuals needs an A12 or M1 chip or newer.",
+        "Open Settings, then Video. Set Graphics Mode to Vibrant Visuals.",
+        "Sleep in a bed. You wake at dawn, with the sun low in the east.",
+        "Visit water, leaves and copper. Water reflects the sky, sunlight glows through leaves, and copper shines.",
+        "Come back at sunset and face west, when the sunlight turns orange. Snap a screenshot of your favorite build."
+      ],
+      "need": [
+        "A device that runs Vibrant Visuals",
+        "A bed",
+        "A build to show off"
+      ],
+      "wow_title": "The slow sun",
+      "wow": "In Minecraft, the sun moves more slowly at sunrise and sunset. That gives you extra time for photos.",
+      "note_kind": "warn",
+      "note_title": "No split-screen",
+      "note": "Playing split-screen with a friend? The game switches back to Fancy or Simple graphics.",
+      "sources": [
+        "https://www.minecraft.net/en-us/vibrant-visuals-update",
+        "https://minecraft.wiki/w/Vibrant_Visuals",
+        "https://minecraft.wiki/w/Daylight_cycle",
+        "https://minecraft.wiki/w/Sun",
+        "https://minecraft.wiki/w/Bed"
+      ],
+      "scene": "t10-golden-hour",
+      "scene_idea": "A small Cherry Planks cottage at sunset with a Cut Copper roof, Glass Pane windows and Cherry Trapdoor shutters, beside a 3 x 3 pool with a Smooth Stone rim and a cherry tree."
+    },
+    {
+      "rank": 8,
+      "id": "disc-wall",
+      "title": "Build a Music Disc Trophy Wall",
+      "why": "Music discs are hidden all over the world. Hunt them down and show them off on shelves, like trophies.",
+      "danger": 3,
+      "level": "Explorer",
+      "where": "On a wall in your base. The discs come from ruins, caves and one very silly mob.",
+      "steps": [
+        "Strip 6 logs of the same wood with an axe. They craft into 6 shelves.",
+        "Put the shelves in a row on a wall. Each shelf holds 3 discs.",
+        "Brush suspicious gravel in buried trail ruins. One of the prizes is the Relic disc.",
+        "Search minecart chests in mineshafts inside sulfur caves. That is where the Bounce disc hides.",
+        "Lava Chicken comes from a chicken jockey, a baby zombie riding a chicken. Win against the tiny rider while it is still on the chicken. The chicken can go free.",
+        "Hold a disc and use a shelf slot to put it on show. Add a jukebox to play your favorite."
+      ],
+      "need": [
+        "Axe",
+        "6 logs of one wood",
+        "Brush",
+        "Jukebox"
+      ],
+      "wow_title": "Villagers sing along",
+      "wow": "About 46 seconds into Lava Chicken, villager sounds start playing the tune.",
+      "note_kind": "know",
+      "note_title": "Collect them all",
+      "note": "There are 22 music discs. Eight shelves can hold all of them, with 2 spots to spare.",
+      "sources": [
+        "https://minecraft.wiki/w/Shelf",
+        "https://minecraft.wiki/w/Music_Disc",
+        "https://minecraft.wiki/w/Music_Disc_Lava_Chicken",
+        "https://minecraft.wiki/w/Music_Disc_Bounce",
+        "https://minecraft.wiki/w/Trail_Ruins",
+        "https://minecraft.wiki/w/Brush",
+        "https://minecraft.wiki/w/Music_Disc_Relic",
+        "https://minecraft.wiki/w/Jukebox"
+      ],
+      "scene": "t10-disc-wall",
+      "scene_idea": "A slice of a cozy room: a Birch Planks wall between Stripped Spruce Log pillars, six Spruce Shelves in a row, two Copper Lanterns, and a red rug with two cushions on a Spruce Slab floor."
+    },
+    {
+      "rank": 7,
+      "id": "trumpet-band",
+      "title": "Start a Copper Trumpet Band",
+      "why": "Put copper under a note block and it plays a trumpet. As the copper turns green, the horn changes its sound.",
+      "danger": 1,
+      "level": "Beginner",
+      "where": "Anywhere you like. Build a stage at your base or in a village square.",
+      "steps": [
+        "Craft note blocks: 8 planks around 1 redstone dust.",
+        "Put a Block of Copper under each note block. Keep the space above the note block empty.",
+        "Use a note block to raise it by one note. Each one has 25 notes, two full octaves.",
+        "Mix copper ages. Exposed copper sounds different, and weathered and oxidized copper play an octave lower.",
+        "Use honeycomb on each copper block to wax it. Now its sound will never change.",
+        "Put a button on the side of each note block, then play a tune!"
+      ],
+      "need": [
+        "Note Block",
+        "Block of Copper (one for each note block)",
+        "Honeycomb",
+        "Stone Button"
+      ],
+      "wow_title": "Heard across town",
+      "wow": "Note blocks can be heard up to 48 blocks away. Your whole village will hear the band.",
+      "note_kind": "pro",
+      "note_title": "Turn back time",
+      "note": "Copper too green? Scrape it with an axe. The first scrape takes off any wax. Each scrape after that removes one stage of green.",
+      "sources": [
+        "https://www.minecraft.net/en-us/updates/tiny-takeover-drop",
+        "https://minecraft.wiki/w/Note_Block",
+        "https://minecraft.wiki/w/Block_of_Copper",
+        "https://minecraft.wiki/w/Oxidation",
+        "https://minecraft.wiki/w/Honeycomb",
+        "https://minecraft.wiki/w/Button"
+      ],
+      "scene": "t10-trumpet-band",
+      "scene_idea": "A Polished Andesite stage with four Note Blocks in a row, standing on Waxed Block of Copper, Waxed Exposed Copper, Waxed Weathered Copper and Waxed Oxidized Copper, with a Stone Button on the front of each."
+    },
+    {
+      "rank": 6,
+      "id": "pale-garden-night",
+      "title": "Watch the Pale Garden Wake Up",
+      "why": "When night falls, the eyeblossoms in the pale garden open their glowing eyes. It is quiet, spooky and very pretty.",
+      "danger": 3,
+      "level": "Explorer",
+      "where": "Pale gardens are rare gray forests next to dark forests, high on hills and mountain slopes. A Pale Garden Camp Map from an abandoned camp leads to one.",
+      "steps": [
+        "Before sunset, build a little hut with glass windows at the edge of the garden.",
+        "When night falls, watch the eyeblossoms open. Each one tells its neighbors, so they open in a wave.",
+        "Pick a few open eyeblossoms to take home. Use bone meal on one, and more grow on the grass around it.",
+        "For resin, tap a creaking once at night. It can't be hurt, but resin clumps grow on logs near its heart.",
+        "Collect the resin clumps. Smelt them in a furnace to make resin bricks.",
+        "Put 4 resin bricks together to craft a block of orange Resin Bricks."
+      ],
+      "need": [
+        "Glass",
+        "Building blocks",
+        "Bone Meal",
+        "Furnace and fuel"
+      ],
+      "wow_title": "The silent forest",
+      "wow": "Music fades away when you walk into a pale garden. It comes back when you leave.",
+      "note_kind": "warn",
+      "note_title": "Eyes on the creaking",
+      "note": "A creaking only moves when you look away from it. Walk back into your hut while facing it.",
+      "sources": [
+        "https://minecraft.wiki/w/Eyeblossom",
+        "https://minecraft.wiki/w/Pale_Garden",
+        "https://minecraft.wiki/w/Creaking_Heart",
+        "https://minecraft.wiki/w/Resin_Clump",
+        "https://minecraft.wiki/w/Resin_Bricks",
+        "https://minecraft.wiki/w/Explorer_Map",
+        "https://minecraft.wiki/w/Creaking",
+        "https://minecraft.wiki/w/Resin_Brick"
+      ],
+      "scene": "t10-pale-garden-night",
+      "scene_idea": "A corner of pale garden at night: Pale Moss Block ground, two pale oak trees hung with Pale Hanging Moss, a patch of Open Eyeblossoms, and a tiny Glass hut with a Pale Oak roof and a Resin Brick Slab step."
+    },
+    {
+      "rank": 5,
+      "id": "camp-out",
+      "title": "Camp Out Under the Stars",
+      "why": "Wilderness Bound added cushions to sit on and straw beds to sleep on. Now you can camp out all over the Overworld.",
+      "danger": 2,
+      "level": "Beginner",
+      "where": "Anywhere in the Overworld. Abandoned camps also have straw beds and cushions you can borrow.",
+      "steps": [
+        "Turn 3 wool into 6 wool slabs. Then 3 matching wool slabs make 1 cushion.",
+        "Craft straw beds: 3 hay bales make 4 straw beds.",
+        "Craft a campfire from 3 sticks, 1 coal or charcoal, and 3 logs.",
+        "Place cushions around the fire. They sit on the ground, on slabs or on stairs. Use one to sit down.",
+        "At night, sleep on a straw bed. In the morning it is gone, and your spawn point stays at home."
+      ],
+      "need": [
+        "Wool",
+        "Hay Bale",
+        "Sticks",
+        "Coal or Charcoal",
+        "Logs"
+      ],
+      "wow_title": "200 million cushions",
+      "wow": "From September 26 to October 2, 2026, Bedrock players placed 200 million cushions. They placed 50 million straw beds too. It was a community challenge, and they did it!",
+      "note_kind": "warn",
+      "note_title": "One night only",
+      "note": "A straw bed breaks after one night and does not set your spawn point. Keep a real bed at home.",
+      "sources": [
+        "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+        "https://minecraft.wiki/w/Cushion",
+        "https://minecraft.wiki/w/Straw_Bed",
+        "https://minecraft.wiki/w/Wool_Slab",
+        "https://minecraft.wiki/w/Campfire",
+        "https://www.minecraft.net/en-us/article/camp-out-community-challenge"
+      ],
+      "scene": "t10-camp-out",
+      "scene_idea": "A Campfire at night on Coarse Dirt and Dirt Path, ringed by four colored Cushions on Oak Slabs, with two Straw Beds under a White Wool Stairs tent and a pile of firewood logs."
+    },
+    {
+      "rank": 4,
+      "id": "camp-maps",
+      "title": "Follow the Camp Map Trail",
+      "why": "Abandoned camps hide chests that can hold maps. Each camp map leads to another camp, so one find can start a long adventure.",
+      "danger": 2,
+      "level": "Explorer",
+      "where": "On the surface in 18 kinds of biomes, like forests, taigas, meadows, swamps and cherry groves.",
+      "steps": [
+        "Explore forests, taigas, meadows and swamps. Look for a white tent made of wool stairs.",
+        "Open the chests and barrels. Camp chests can hold a camp map.",
+        "Hold the map and walk toward the camp marker. It always leads to a camp in a different biome.",
+        "Look closely around the tent. Some camps hide an old green copper chest under blocks, with better loot.",
+        "Keep going! Camp chests can also hold maps to mineshafts, desert pyramids, warm ocean ruins and ancient cities."
+      ],
+      "need": [
+        "Food",
+        "Torches",
+        "A shovel",
+        "A bed"
+      ],
+      "wow_title": "8,820 camps",
+      "wow": "Abandoned camps can be put together in 8,820 different ways.",
+      "note_kind": "pro",
+      "note_title": "Keep a camp log",
+      "note": "Turn on Show Coordinates in your world settings. Write down where each camp is.",
+      "sources": [
+        "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+        "https://minecraft.wiki/w/Abandoned_Camp",
+        "https://minecraft.wiki/w/Explorer_Map",
+        "https://minecraft.wiki/w/Settings"
+      ],
+      "scene": "t10-camp-maps",
+      "scene_idea": "An abandoned camp corner: a White Wool Stairs tent on Spruce Fence poles, Barrels, a Chest and a Cartography Table, a Dirt Path trail, and an Oxidized Copper Chest half dug out of Coarse Dirt and Gravel."
+    },
+    {
+      "rank": 3,
+      "id": "tiny-forever",
+      "title": "Keep a Baby Animal Tiny Forever",
+      "why": "A golden dandelion stops a baby animal from growing up. Your calf or lamb can stay little for as long as you like.",
+      "danger": 1,
+      "level": "Beginner",
+      "where": "Any farm or pen where you keep animals.",
+      "steps": [
+        "Feed wheat to two cows. A baby appears, and you unlock the golden dandelion recipe.",
+        "Turn a gold ingot into 9 gold nuggets.",
+        "Place 8 gold nuggets around 1 dandelion to craft a golden dandelion.",
+        "Use it on the baby. Green sparkles pop out, and it stops growing.",
+        "Changed your mind? Give it a second golden dandelion, and it starts growing again."
+      ],
+      "need": [
+        "Wheat",
+        "Gold Ingot",
+        "Dandelion"
+      ],
+      "wow_title": "The grow-up clock",
+      "wow": "Most baby animals grow up in 20 minutes. Snifflets, the baby sniffers, take 40 minutes.",
+      "note_kind": "know",
+      "note_title": "Not every baby",
+      "note": "Golden dandelions do not work on baby villagers or baby zombie horses.",
+      "sources": [
+        "https://www.minecraft.net/en-us/updates/tiny-takeover-drop",
+        "https://minecraft.wiki/w/Golden_Dandelion",
+        "https://minecraft.wiki/w/Breeding",
+        "https://minecraft.wiki/w/Gold_Nugget",
+        "https://minecraft.wiki/w/Zombie_Horse"
+      ],
+      "scene": "t10-tiny-forever",
+      "scene_idea": "A small Oak Fence pen with an Oak Fence Gate, a Cauldron and a Hay Bale under a little shelter, an empty spot for the baby animal, and two planters of Golden Dandelions by the path."
+    },
+    {
+      "rank": 2,
+      "id": "zombie-horse",
+      "title": "Tame a Zombie Horse",
+      "why": "Zombie horses gallop out at night with a zombie rider. Unseat the rider like a jousting knight, and the horse can be yours.",
+      "danger": 3,
+      "level": "Explorer",
+      "where": "Plains, savannas and snowy plains, at night. A zombie with an iron spear rides each one.",
+      "steps": [
+        "Before dark, craft a saddle (3 leather, 1 iron ingot) and leather horse armor (7 leather).",
+        "At night, look across plains and savannas for a zombie riding a horse. They don't appear on Peaceful.",
+        "Unseat the rider, like a knight at a joust. Then beat the zombie before it climbs back on.",
+        "On its own, the zombie horse is calm. Climb on again and again until it stops bucking you off.",
+        "Hearts mean it is tamed! Put the saddle on so you can steer.",
+        "Add the horse armor. It keeps your zombie horse safe in sunlight."
+      ],
+      "need": [
+        "Saddle",
+        "Leather Horse Armor",
+        "Red Mushroom",
+        "Your own armor and a shield"
+      ],
+      "wow_title": "Mushroom snacks",
+      "wow": "Red mushrooms heal a tamed zombie horse. Hold one up and it will follow you.",
+      "note_kind": "know",
+      "note_title": "One of a kind",
+      "note": "Zombie horses can't be bred, so every one you tame is special.",
+      "sources": [
+        "https://www.minecraft.net/en-us/updates/mounts-of-mayhem-drop",
+        "https://minecraft.wiki/w/Zombie_Horse",
+        "https://minecraft.wiki/w/Horse",
+        "https://minecraft.wiki/w/Saddle",
+        "https://minecraft.wiki/w/Horse_Armor"
+      ],
+      "scene": "t10-zombie-horse",
+      "scene_idea": "A small jousting yard: a Dirt Path lane split by an Oak Fence rail, Red and White Wool posts at each end, and a Spruce Planks stable with two stalls, one left empty for the horse."
+    },
+    {
+      "rank": 1,
+      "id": "nautilus",
+      "title": "Ride a Nautilus Underwater",
+      "why": "A tamed nautilus is an underwater horse. While you ride, your air stops running out. Explore the seafloor for ages!",
+      "danger": 2,
+      "level": "Explorer",
+      "where": "In every kind of ocean, a little below the waves, between Y 38 and Y 58.",
+      "steps": [
+        "Craft a saddle from 3 leather and 1 iron ingot.",
+        "Catch pufferfish with a fishing rod. Or scoop one into a water bucket in a warm ocean.",
+        "Swim down to find a grown-up nautilus. Hold a fish and it swims over to you.",
+        "Feed it pufferfish. Each one has a 1 in 3 chance to tame it.",
+        "Once it is tamed, put the saddle on and climb aboard.",
+        "Hold jump to charge a dash. It zooms you up to about 12 blocks forward."
+      ],
+      "need": [
+        "Saddle",
+        "Pufferfish",
+        "Fishing Rod",
+        "Water Bucket"
+      ],
+      "wow_title": "Leap from the sea",
+      "wow": "Dash up near the surface, and you both leap out of the water. The jump is about 6 blocks!",
+      "note_kind": "warn",
+      "note_title": "Mind your bubbles",
+      "note": "Don't hit a wild nautilus, or it dashes back at you. Riding only pauses your air, so check your bubbles before you hop off.",
+      "sources": [
+        "https://www.minecraft.net/en-us/updates/mounts-of-mayhem-drop",
+        "https://minecraft.wiki/w/Nautilus",
+        "https://minecraft.wiki/w/Saddle",
+        "https://minecraft.wiki/w/Pufferfish",
+        "https://minecraft.wiki/w/Fishing",
+        "https://minecraft.wiki/w/Taming"
+      ],
+      "scene": "t10-nautilus",
+      "scene_idea": "A seafloor patch of Sand and Gravel under clear water, with Kelp along the back, a coral reef in five colors with Sea Pickles, and a small Prismarine Bricks arch with Sea Lanterns. The open water in the middle is where the nautilus swims."
+    }
+  ]
+}

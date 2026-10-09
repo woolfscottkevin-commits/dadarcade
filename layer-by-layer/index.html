@@ -258,6 +258,10 @@ code{background:#f1ecdf;padding:2px 5px;border-radius:4px;font-size:.92em;word-b
   .read .lead{font-size:17px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.v2link{display:inline-flex;align-items:center;gap:8px;margin:14px auto 0;background:#1f2430;color:#fff;font-weight:900;text-decoration:none;padding:8px 14px;border-radius:10px;box-shadow:4px 4px 0 rgba(0,0,0,.18);max-width:calc(100% - 32px)}
+.v2link b{background:#f2c230;color:#3a2a00;padding:1px 7px;border-radius:5px;font-size:13px}
+.v2link:hover{transform:translateY(-2px)}
+.hero .wrap>.v2link{display:flex;width:fit-content}
 .backda{color:#9fb3c8;font-weight:800;font-size:13px;text-decoration:none;margin-left:14px;white-space:nowrap}.backda:hover{color:#fff}
 </style>
 
@@ -318,6 +322,7 @@ function home(){
     <div class="eyebrow">${esc(BOOK.subtitle.toUpperCase())}</div>
     <h1>${esc(t1)}<br>${esc(t2)}</h1>
     <div class="pill">${esc(BOOK.tagline)}</div>
+    <a class="v2link" href="/layer-by-layer-2"><b>NEW</b> Volume 2: The Living Build Book. Watch every build put itself together in 3D →</a>
     <div class="scene"><img class="s1" src="${c.wizard}" alt="Wizard's Tower build"><img class="s2" src="${c.castle}" alt="Castle Gatehouse build"><img class="s3" src="${c.rocket}" alt="Rocket Launch Pad build"></div>
   </div></section>
   <div class="wrap">

@@ -1,0 +1,184 @@
+/* Redstone Workshop (owned by the redstone page): the gadget shelf and the live workbench.
+   Every class starts with rs-. The 3D stage itself (.fig-stage, .tool, .stage-hint) is shared. */
+:root{--rs:var(--c-redstone);--rs-dk:#a92f2f;--rs-ink:#5c1717;--rs-paper:#fff7f4;--rs-line:#f1d3cb}
+
+/* band: a faint trail of dust under the title */
+.rs-band{background:var(--rs) radial-gradient(circle at 12px 12px,rgba(255,255,255,.07) 2px,transparent 2.5px) 0 0/24px 24px}
+.rs-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+/* a dark tint, not a white one: white text on red-plus-white falls under 3.5:1 */
+.rs-band .chip{background:rgba(70,10,10,.28);color:#fff;font-size:.82em;padding:4px 11px}
+.rs-band .chip.done{background:var(--gold);color:#3a2a00}
+.rs-band .chip svg{width:18px;height:18px}
+.rs-gband{padding:20px 0 24px}
+.rs-gband h1{font-size:clamp(34px,5.4vw,56px)}
+
+/* ---------------------------------------------------------------- the shelf */
+.rs-shelf{padding-top:34px}
+.rs-list-h{color:var(--rs-dk)}
+.rs-grid{--min:260px}
+.rs-card{display:flex;flex-direction:column;background:var(--card);border-radius:20px;overflow:hidden;text-decoration:none;
+  box-shadow:0 0 0 3px var(--line),4px 6px 0 var(--line);transition:transform .2s var(--ease-out),box-shadow .2s}
+.rs-card:hover,.rs-card:focus-visible{transform:translateY(-4px);box-shadow:0 0 0 3px var(--rs),6px 10px 0 var(--line)}
+.rs-card-art{position:relative;aspect-ratio:4/3;display:grid;place-items:center;padding:12px;overflow:hidden;
+  background:linear-gradient(180deg,#ffd9cf,#fff3ef 78%)}
+.rs-card-art img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 6px rgba(90,20,20,.18))}
+img[data-rs-poster]{opacity:0;transition:opacity .2s}
+img[data-rs-poster].rs-ok{opacity:1}
+.rs-noart{display:grid;place-items:center;width:96px;height:96px;border-radius:22px;background:#fff;color:var(--rs);box-shadow:0 0 0 3px var(--rs-line)}
+.rs-noart svg{width:58px;height:58px}
+.rs-tag{position:absolute;left:10px;top:10px;display:inline-flex;align-items:center;gap:6px;background:#fff;color:var(--rs-ink);font-weight:900;font-size:.8em;
+  padding:4px 11px 4px 5px;border-radius:999px;box-shadow:0 2px 6px rgba(90,20,20,.15)}
+.rs-tag svg,.rs-chips svg{width:24px;height:24px}
+.rs-card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:4px;flex:1}
+.rs-card-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rs-num{font-weight:900;font-size:.75em;letter-spacing:.12em;text-transform:uppercase;color:var(--rs-dk)}
+.rs-card h3{margin:0;font-size:1.35em}
+.rs-card p{margin:0;color:var(--ink-2);font-weight:700;font-size:.95em;line-height:1.4}
+.rs-card-meta{margin-top:auto;padding-top:8px;display:flex;gap:6px;align-items:center;font-weight:900;font-size:.85em;color:var(--rs-dk)}
+.rs-card-meta svg{width:18px;height:18px}
+.rs-sample{margin-top:20px}
+
+/* ---------------------------------------------------------------- the workbench */
+.rs-wrap{padding-top:28px;padding-bottom:40px}
+.rs-bench{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,1fr);grid-template-rows:auto 1fr;grid-template-areas:"stage panel" "hint panel";
+  gap:12px 16px;align-items:start}
+.rs-stage{grid-area:stage;position:relative;min-width:0}
+.rs-fig{width:100%;max-height:72vh}
+.rs-stage .stage-tools{position:absolute;z-index:2}
+/* no figure yet and no poster either: the redstone mark and one line saying so */
+.rs-fig-none{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:12px;padding:20px;text-align:center}
+.rs-fig-none p{margin:0;max-width:28ch;font-weight:800;color:var(--ink-2);background:rgba(255,255,255,.85);padding:6px 12px;border-radius:12px}
+/* the shared canvas hides its own outline; show where keyboard focus is (arrows turn the gadget) */
+.rs-fig:has(canvas:focus-visible){outline:3px solid var(--blueprint);outline-offset:3px}
+
+/* a red-framed bench panel: title and power light on the bar, the control and the story below */
+.rs-panel{grid-area:panel;background:var(--rs-paper);border-radius:20px;overflow:hidden;box-shadow:0 0 0 4px var(--rs-dk),5px 7px 0 var(--rs-line)}
+.rs-panel-top{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--rs-dk);color:#fff;padding:10px 10px 10px 16px;
+  background-image:linear-gradient(180deg,rgba(255,255,255,.08),transparent)}
+.rs-panel-top h2{margin:0;font-size:1.6em;text-shadow:0 2px 0 rgba(0,0,0,.2)}
+.rs-power{display:inline-flex;align-items:center;gap:8px;background:rgba(0,0,0,.3);border-radius:999px;padding:5px 16px 5px 6px;line-height:1}
+.rs-power-txt small{display:block;font-weight:900;font-size:.7em;letter-spacing:.14em;text-transform:uppercase;opacity:.8;margin-bottom:2px}
+.rs-power-txt b{font-family:var(--display);font-weight:400;font-size:1.45em;letter-spacing:.06em}
+/* OFF: a dark hollow lamp. ON: a filled lamp with rays. The word says it too. */
+.rs-lamp{width:40px;height:40px;flex:none;overflow:visible}
+.rs-bulb{fill:#3b2626;stroke:#8c6b6b;stroke-width:2.5;transition:fill .2s}
+.rs-rays path{stroke:#ffe27a;stroke-width:3;stroke-linecap:round;fill:none}
+.rs-rays{opacity:0;transition:opacity .2s}
+.rs-power[data-on] .rs-bulb{fill:#ffd84a;stroke:#fff3b8;filter:drop-shadow(0 0 5px rgba(255,214,70,.9))}
+.rs-power[data-on] .rs-rays{opacity:1}
+.rs-power[data-on] .rs-power-txt b{color:#ffe27a}
+
+.rs-panel-body{padding:16px}
+/* the big control: the one thing to tap */
+.rs-input{width:100%;min-height:100px;display:flex;align-items:center;gap:14px;padding:12px 18px 12px 12px;border:0;border-radius:18px;cursor:pointer;
+  background:var(--rs);color:#fff;font-family:var(--display);font-size:clamp(22px,2.5vw,28px);line-height:1.05;text-align:left;touch-action:manipulation;
+  box-shadow:inset -4px -6px 0 rgba(0,0,0,.22),0 5px 0 var(--rs-ink);transition:transform .1s var(--ease-out),box-shadow .1s,filter .12s;
+  -webkit-user-select:none;user-select:none}
+.rs-input:hover{filter:brightness(1.06)}
+.rs-input:active,.rs-input.is-pressing{transform:translateY(4px);box-shadow:inset -3px -3px 0 rgba(0,0,0,.22),0 1px 0 var(--rs-ink)}
+.rs-input:focus-visible{outline:4px solid var(--blueprint);outline-offset:3px}
+.rs-dev{width:76px;height:76px;flex:none;display:grid;place-items:center;background:#fff;border-radius:14px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.rs-dev svg{width:60px;height:60px}
+.rs-verb{flex:1;min-width:0;text-shadow:0 2px 0 rgba(0,0,0,.18)}
+
+/* the drawings (shared by the control, the shelf tags and the band chips) */
+.rs-devsvg{overflow:visible}
+.rs-devsvg .d-block{fill:#9c9c9c;stroke:#6e6e6e;stroke-width:2}
+.rs-devsvg .d-cap{fill:#c3c3c3;stroke:#7a7a7a;stroke-width:2}
+.rs-devsvg .d-lip{fill:#6e6e6e}
+.rs-devsvg .d-stick{fill:#9b7240;stroke:#5e4322;stroke-width:1.5}
+.rs-devsvg .d-knob{fill:#6f5130;stroke:#3f2c16;stroke-width:1.5}
+.rs-devsvg .d-ground{fill:#7d5b3a}
+.rs-devsvg .d-rail{stroke:#8f8f8f;stroke-width:3;fill:none}
+.rs-devsvg .d-tie{stroke:#8a6338;stroke-width:3}
+.rs-devsvg .d-cart{fill:#7c7c7c;stroke:#4d4d4d;stroke-width:2}
+.rs-devsvg .d-wheel{fill:#3d3d3d}
+.rs-devsvg .d-bolt{fill:var(--rs);stroke:var(--rs-ink);stroke-width:2;stroke-linejoin:round}
+.rs-devsvg .d-move{transform-box:view-box;transition:transform .22s var(--ease-spring)}
+/* springy controls dip when tapped */
+.rs-input[data-kind="button"].is-pressing .d-move{transform:translateY(4px) scale(.97);transform-origin:32px 40px}
+.rs-input[data-kind="plate"] .d-move{transform-origin:32px 50px}
+.rs-input[data-kind="plate"].is-pressing .d-move{transform:scaleY(.45)}
+/* latching controls show where they are: the lever leans, the cart sits at the end of the track */
+.rs-input[data-kind="lever"] .d-move{transform-origin:32px 50px;transform:rotate(-32deg)}
+.rs-input[data-kind="lever"][data-on] .d-move{transform:rotate(32deg)}
+.rs-input[data-kind="rail"][data-on] .d-move{transform:translateX(22px)}
+
+/* what is happening now (read out by screen readers when it changes) */
+.rs-status{padding:16px 2px 0}
+.rs-stepno{font-weight:900;font-size:.78em;letter-spacing:.12em;text-transform:uppercase;color:var(--rs-dk);margin:0 0 4px}
+.rs-label{font-size:clamp(26px,3vw,34px);margin:0 0 .25em;color:var(--ink)}
+.rs-text{font-size:1.05em;font-weight:700;margin:0;max-width:46ch}
+
+.rs-changed{grid-area:hint;margin:0;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 0 0 2px var(--rs-line) inset;font-weight:700;line-height:1.5}
+.rs-changed>b{font-weight:900;color:var(--rs-dk);margin-right:2px}
+.rs-chg{display:inline-flex;align-items:center;gap:5px;margin:2px 4px 2px 0;padding:2px 9px 2px 3px;border-radius:9px;background:var(--paper-2);vertical-align:middle;white-space:nowrap}
+.rs-chg .ii{--isz:24px}
+.rs-chg .rs-noicon{width:24px;height:24px}
+.rs-chg-name{font-weight:900}
+.rs-chg em{font-style:normal;font-weight:900;font-size:.85em;text-transform:uppercase;letter-spacing:.06em;color:var(--rs-dk)}
+.rs-more{color:var(--muted);font-weight:800}
+
+/* the stages as one row of numbered buttons; the current one is filled and framed */
+/* --cols is set by the page: all stages in one row up to 4, then two even rows (never a lonely last one) */
+.rs-strip{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:8px;margin-top:14px}
+.rs-dot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:64px;min-width:0;padding:6px 6px 7px;border:0;border-radius:12px;cursor:pointer;
+  background:var(--card);font-weight:900;font-size:.88em;line-height:1.15;box-shadow:0 0 0 2px var(--line) inset;touch-action:manipulation}
+.rs-dot b{width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:8px;background:var(--paper-2);color:var(--ink-2);font-family:var(--display);font-weight:400;font-size:1.2em}
+/* labels wrap to two lines rather than end in "..." a kid can't read */
+.rs-dot span{max-width:100%;overflow:hidden;color:var(--ink-2);text-align:center;overflow-wrap:break-word;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.rs-dot:hover{background:#fff}
+.rs-dot[aria-current="step"]{box-shadow:0 0 0 3px var(--rs-dk) inset;background:#fff}
+.rs-dot[aria-current="step"] b{background:var(--rs-dk);color:#fff}
+.rs-dot[aria-current="step"] span{color:var(--ink)}
+
+/* ---------------------------------------------------------------- parts, steps and how it works */
+.rs-cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr);grid-template-areas:"about parts";gap:24px;margin-top:34px;align-items:start}
+.rs-about{grid-area:about;min-width:0}
+.rs-about h2{margin-top:.2em}
+.rs-about ol.steps{margin-bottom:22px}
+.rs-how{font-size:1.06em;font-weight:700;max-width:60ch}
+.rs-parts-card{grid-area:parts;position:sticky;top:calc(var(--top) + 12px);box-shadow:0 0 0 3px var(--rs-line),4px 5px 0 var(--rs-line)}
+.rs-parts-card h2{margin:0 0 4px}
+.rs-parts{list-style:none;padding:0;margin:0}
+.rs-parts li{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:2px dashed var(--line);font-weight:800}
+.rs-parts li:last-child{border-bottom:0}
+.rs-parts .ii{--isz:36px}
+/* an item the icon sheet lacks: a plain block outline, never an empty box */
+.rs-noicon{display:inline-grid;place-items:center;flex:none;width:var(--isz,36px);height:var(--isz,36px);border-radius:8px;background:var(--paper-2);color:var(--muted)}
+.rs-noicon svg{width:70%;height:70%}
+.rs-parts .rs-noicon{--isz:36px}
+.rs-pname{flex:1;min-width:0;line-height:1.2}
+.rs-pn{font-weight:900;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.rs-pn small{display:block;font-size:.72em;color:var(--muted);font-weight:800}
+
+.rs-pager{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:36px;flex-wrap:wrap}
+.rs-pager .btn span{max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------------------------------------------------------------- smaller screens */
+@media (max-width:900px){
+  .rs-bench{grid-template-columns:1fr;grid-template-rows:none;grid-template-areas:"stage" "panel" "hint"}
+  /* stacked: a shorter stage and a slimmer panel bar keep the control above the tab bar on an
+     upright iPad, measured with Safari's own bars showing (svh), not just a bare 1024px window */
+  .rs-fig{max-height:40vh;max-height:40svh}
+  .rs-panel-top{padding:6px 8px 6px 16px}
+  .rs-panel-top h2{font-size:1.4em}
+  .rs-power{padding:3px 14px 3px 4px}
+  .rs-lamp{width:34px;height:34px}
+  .rs-cols{grid-template-columns:1fr;grid-template-areas:"parts" "about"}
+  .rs-parts-card{position:static}
+}
+@media (max-width:640px){
+  /* keep the control on screen under the 3D on a phone */
+  .rs-gband{padding:14px 0 20px}
+  .rs-gband p{font-size:1em}
+  .rs-chips{margin-top:8px}
+  .rs-wrap{padding-top:22px}
+  .rs-fig{aspect-ratio:5/4;min-height:220px;border-radius:16px}
+  .rs-panel-top h2{font-size:1.35em}
+  .rs-panel-body{padding:12px}
+  .rs-input{min-height:88px;gap:12px}
+  .rs-dev{width:64px;height:64px}.rs-dev svg{width:50px;height:50px}
+  .rs-pager{justify-content:center}
+  .rs-pager>span:empty{display:none}
+}

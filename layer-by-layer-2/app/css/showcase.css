@@ -1,0 +1,250 @@
+/* Master Build Showcase: the magazine cover (#/showcase) and one feature spread (#/showcase/<id>).
+   Every story brings its own colour. showcase.js turns it into tokens on the story's element:
+   --ac (the colour), --on (text on it, always 4.5:1 or better), --deep (the colour dark enough to
+   read on paper), --tint (a pale wash), --ac-lt and --ac-dk (lighter and darker shades). */
+
+/* ---------------------------------------------------------------- shared bits */
+.sc-tag{display:inline-block;font-family:var(--display);font-weight:400;font-size:17px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2;
+  padding:5px 11px 4px;border-radius:7px;background:var(--on);color:var(--ac);margin:0}
+
+/* a little pile of blocks for a header corner (positions come from showcase.js) */
+.sc-pile{--s:48px;position:relative;width:calc(var(--s) * 4);height:calc(var(--s) * 3);flex:none;pointer-events:none}
+.sc-pile i{position:absolute;left:calc(var(--x) * var(--s));bottom:calc(var(--y) * var(--s));width:var(--s);height:var(--s);background:var(--b);
+  box-shadow:inset -5px -6px 0 rgba(0,0,0,.22),inset 5px 5px 0 rgba(255,255,255,.2)}
+
+/* a stepped block edge under a coloured header, like .band */
+.sc-mast::after,.sc-head::after{content:'';position:absolute;left:0;right:0;bottom:-12px;height:12px;
+  background:linear-gradient(90deg,var(--edge) 0 25%,transparent 25% 50%,var(--edge) 50% 75%,transparent 75%) 0 0/48px 12px}
+
+/* ---------------------------------------------------------------- the cover */
+.sc-mast{--edge:var(--c-showcase);position:relative;color:#fff;padding:34px 0 40px;
+  background:linear-gradient(rgba(255,255,255,.045) 2px,transparent 2px) 0 0/32px 32px,linear-gradient(90deg,rgba(255,255,255,.045) 2px,transparent 2px) 0 0/32px 32px,var(--c-showcase)}
+.sc-mast-in{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.sc-mast-copy{min-width:0}
+/* Every item carries a gold square in front of it. The line starts 32px to the left and clips those
+   32px, so whichever item begins a line (the first, or one that wrapped on a phone) loses its square:
+   no stray square ever starts a line. */
+.sc-mast-line{display:flex;flex-wrap:wrap;gap:6px 0;margin:0 0 10px -32px;clip-path:inset(0 0 0 32px);font-weight:900;font-size:17px;letter-spacing:.1em;
+  text-transform:uppercase;color:#d9def5}
+.sc-mast-line span::before{content:'';display:inline-block;width:8px;height:8px;background:var(--gold);margin:0 12px 2px;vertical-align:middle}
+.sc-mast-title{margin:0;line-height:.9}
+.sc-mast-pre{display:block;font-size:clamp(26px,4vw,42px);color:var(--gold);margin-bottom:2px}
+.sc-mast-big{display:block;font-size:clamp(64px,13vw,148px);line-height:.86;letter-spacing:.01em;
+  text-shadow:0 5px 0 #171b47,0 10px 0 #0f1233,0 18px 26px rgba(0,0,0,.3)}
+.sc-mast-intro{font-size:1.12em;font-weight:800;max-width:46ch;margin:18px 0 0;color:#eef0fb}
+.sc-mast-pile{--s:50px;margin-bottom:4px}
+
+.sc-cover-in{padding-block:36px 46px}
+.sc-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));margin-top:18px}
+
+/* headline cards: each story in its own colour, with a blocky corner */
+.sc-card{position:relative;display:flex;flex-direction:column;gap:12px;min-height:310px;padding:20px 20px 18px;border-radius:22px;text-decoration:none;color:var(--on);
+  background:linear-gradient(rgba(255,255,255,.22) 0 0) right 0 top 0/26px 26px no-repeat,linear-gradient(rgba(255,255,255,.12) 0 0) right 26px top 0/26px 26px no-repeat,
+    linear-gradient(rgba(255,255,255,.12) 0 0) right 0 top 26px/26px 26px no-repeat,linear-gradient(rgba(0,0,0,.07) 0 0) right 52px top 0/26px 26px no-repeat,var(--ac);
+  box-shadow:inset -6px -7px 0 rgba(0,0,0,.16),4px 6px 0 var(--line);transition:transform .2s var(--ease-out),box-shadow .2s}
+.sc-card:hover,.sc-card:focus-visible{transform:translateY(-4px) rotate(-.5deg);box-shadow:inset -6px -7px 0 rgba(0,0,0,.16),6px 10px 0 var(--line-2)}
+.sc-card-text{display:flex;flex-direction:column;gap:10px}
+.sc-card-tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-right:44px}
+.sc-tag-inv{background:#fff;color:var(--ink);rotate:-3deg;box-shadow:3px 3px 0 rgba(0,0,0,.22)}
+.sc-card-h{font-size:clamp(26px,2.8vw,33px);line-height:1.02;margin:0}
+.sc-card-deck{margin:0;font-weight:800;line-height:1.4}
+.sc-card-stat{margin:auto 0 0;padding-top:12px;border-top:3px dashed rgba(0,0,0,.2);border-top-color:color-mix(in srgb,var(--on) 35%,transparent);line-height:1.2}
+.sc-card-stat b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(36px,3.8vw,46px);line-height:1}
+.sc-card-stat.long b{font-size:clamp(28px,2.8vw,34px)}
+.sc-card-stat span{font-weight:800}
+.sc-card-go{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:1em;background:var(--on);color:var(--ac);padding:7px 12px 7px 16px;border-radius:999px}
+.sc-card-go svg{width:18px;height:18px}
+
+/* the cover story: wide, with its big number as the cover art */
+.sc-lead{min-height:340px;padding:26px 28px 24px}
+.sc-lead .sc-card-h{font-size:clamp(38px,5.6vw,66px);line-height:.98;max-width:14ch}
+.sc-lead .sc-card-deck{font-size:clamp(18px,1.9vw,21px);max-width:38ch}
+.sc-lead .sc-card-stat b{font-size:clamp(56px,8.4vw,100px)}
+.sc-lead .sc-card-stat.long b{font-size:clamp(40px,5vw,60px)}
+@media (min-width:760px){
+  /* the number gets the narrow right column, so size it by the card's width and its own length
+     (about 0.54em a character): "21,000+" fills the column without running into the card's edge */
+  .sc-lead{container-type:inline-size;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr);grid-template-rows:1fr auto;column-gap:30px;align-items:start}
+  .sc-lead .sc-card-text{grid-column:1;grid-row:1}
+  .sc-lead .sc-card-go{grid-column:1;grid-row:2;justify-self:start;margin-top:14px}
+  .sc-lead .sc-card-stat{grid-column:2;grid-row:1/3;align-self:stretch;margin:0;padding:10px 0 10px 28px;border-top:0;
+    border-left:3px dashed rgba(0,0,0,.2);border-left-color:color-mix(in srgb,var(--on) 35%,transparent);display:flex;flex-direction:column;justify-content:center;font-size:1.1em}
+  .sc-lead .sc-card-stat b,.sc-lead .sc-card-stat.long b{font-size:clamp(34px,min(8.6cqi,calc(60cqi / var(--len,7))),100px)}
+}
+
+/* ---------------------------------------------------------------- one story: the header */
+.sc-head{--edge:var(--ac);position:relative;color:var(--on);padding:16px 0 38px;
+  background:linear-gradient(rgba(255,255,255,.07) 2px,transparent 2px) 0 0/32px 32px,linear-gradient(90deg,rgba(255,255,255,.07) 2px,transparent 2px) 0 0/32px 32px,var(--ac)}
+.sc-head-in{position:relative}
+/* the usual blue focus ring would vanish on a blue story; the story's text colour always shows on it */
+.sc-head :focus-visible{outline-color:var(--on)}
+.sc-head-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:22px}
+.sc-back{display:inline-flex;align-items:center;gap:6px;min-height:48px;padding:8px 16px 8px 10px;border-radius:12px;font-weight:900;text-decoration:none;
+  background:var(--on);color:var(--ac);box-shadow:inset -3px -4px 0 rgba(0,0,0,.18)}
+.sc-back svg{width:20px;height:20px}
+.sc-count{font-weight:900;font-size:17px;letter-spacing:.08em;text-transform:uppercase}
+.sc-kicker{font-size:19px;rotate:-2deg;box-shadow:3px 3px 0 rgba(0,0,0,.18)}
+.sc-h1{font-size:clamp(42px,7.4vw,84px);line-height:.95;margin:16px 0 14px;max-width:15ch}
+.sc-deck{font-size:clamp(19px,2.2vw,24px);font-weight:800;line-height:1.35;max-width:40ch;margin:0;position:relative}
+.sc-head-pile{--s:44px;position:absolute;right:var(--gutter);bottom:-26px}
+
+/* the numbers strip: one row on wide screens, 2 by 2 for four numbers on iPad portrait (never three
+   and a lonely fourth), two columns on phones */
+.sc-stats{--big:clamp(34px,4.4vw,50px);list-style:none;margin:34px 0 0;padding:0;display:grid;gap:14px;grid-template-columns:repeat(var(--n,3),minmax(0,1fr))}
+.sc-stats[data-n="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (min-width:880px){
+  .sc-stats[data-n="4"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+  /* no 3D scene: the tower beside the story shows these numbers, so the strip steps aside */
+  .sc-towered .sc-stats-wrap{display:none}
+}
+@media (max-width:700px){
+  .sc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sc-stat:last-child:nth-child(odd){grid-column:1/-1}
+}
+/* the biggest text or Spacey letters need the whole phone width for "16 × 16 × 32" or "rollercoaster" */
+@media (max-width:600px){
+  html[data-text="3"] .sc-stats,html[data-spacey] .sc-stats{grid-template-columns:minmax(0,1fr)}
+}
+.sc-stat{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;background:var(--card);border-radius:16px;padding:20px 16px 14px;
+  box-shadow:0 0 0 3px var(--line),4px 5px 0 var(--line)}
+.sc-stat::before{content:'';position:absolute;left:0;right:0;top:0;height:9px;
+  background:linear-gradient(90deg,var(--ac) 0 50%,var(--ac-dk) 50%) 0 0/36px 9px}
+/* every number sits on the same line, long or short, so the words under them line up across the row */
+.sc-stat b{display:flex;align-items:flex-end;min-height:var(--big);font-family:var(--display);font-weight:400;font-size:var(--big);line-height:1;color:var(--deep);text-wrap:balance}
+.sc-stat.long b{font-size:clamp(26px,3vw,34px);line-height:1.05}
+.sc-stat span{font-weight:800;color:var(--ink-2);line-height:1.25}
+/* a last resort for any width we did not plan for: break a long word rather than cut it off */
+.sc-stat b,.sc-stat span,.sc-brick{overflow-wrap:anywhere}
+
+/* ---------------------------------------------------------------- one story: the spread */
+.sc-layout{display:grid;gap:28px;padding-block:30px 6px}
+@media (min-width:880px){
+  .sc-layout{grid-template-columns:minmax(0,1fr) minmax(300px,390px);gap:46px;align-items:start}
+  .sc-main{grid-column:1;grid-row:1}
+  .sc-side{grid-column:2;grid-row:1;position:sticky;top:calc(var(--top) + 20px)}
+}
+/* one column below 880px: kept to a comfortable reading width, and on the same left edge as the
+   header, the numbers and the pager so the page has one clean line down its left side */
+@media (max-width:879px){
+  .sc-layout>*{width:100%;max-width:640px}
+  .sc-side.is-art{display:none}
+}
+/* a story with no scene and no numbers: one comfortable column */
+.sc-layout.sc-solo{grid-template-columns:minmax(0,1fr)}
+.sc-solo .sc-main{width:100%;max-width:680px}
+
+.sc-body{font-size:1.06em}
+.sc-body>p{margin:0 0 1em}
+/* The opening paragraph leads in bigger and bolder, after a small block in the story's colour.
+   (Not a drop cap: a giant first letter splits the first word, "I  n May", which is hard for
+   newer readers.) The block is a pseudo-element, so Read to Me and screen readers skip it. */
+.sc-body>p:first-child:not(.sc-pull){font-size:1.12em;font-weight:700;line-height:1.5;color:var(--ink)}
+.sc-body>p:first-child:not(.sc-pull)::before{content:'';display:inline-block;width:.8em;height:.8em;margin:0 .45em -.06em 0;border-radius:3px;background:var(--ac);
+  box-shadow:inset -.14em -.16em 0 rgba(0,0,0,.2),inset .1em .1em 0 rgba(255,255,255,.25)}
+
+/* the pull line: our own words, big */
+.sc-pull{font-family:var(--display);font-size:clamp(30px,4.2vw,46px);line-height:1.06;letter-spacing:.005em;text-wrap:balance;
+  background:var(--ac);color:var(--on);padding:24px 26px 22px;margin:28px -4px 30px!important;border-radius:20px;rotate:-1deg;
+  box-shadow:inset -6px -7px 0 rgba(0,0,0,.16),5px 6px 0 var(--line)}
+
+/* world record box */
+.sc-record{display:flex;gap:16px;align-items:center;background:var(--ink);color:#fff;border-radius:18px;padding:18px 20px;margin:28px 0;
+  box-shadow:0 0 0 4px var(--gold) inset,5px 6px 0 var(--line)}
+.sc-record-ico{width:64px;height:64px;flex:none;display:grid;place-items:center;background:var(--gold);color:#3a2a00;border-radius:14px;box-shadow:inset -4px -5px 0 rgba(0,0,0,.22)}
+.sc-record-ico svg{width:38px;height:38px}
+.sc-label{font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:0 0 4px}
+.sc-record p{margin:0;font-weight:800;font-size:1.05em;line-height:1.35}
+
+/* try it yourself */
+.sc-try{background:var(--tint);border-radius:22px;padding:22px 22px 10px;margin:32px 0;box-shadow:0 0 0 3px var(--ac) inset,6px 7px 0 var(--ac-dk)}
+.sc-try .sc-try-tag{background:var(--ac);color:var(--on);margin-bottom:10px;rotate:-1.5deg}
+.sc-try h2{font-size:clamp(26px,3.2vw,34px);margin:0 0 16px}
+.sc-try ol.steps>li{font-weight:700}
+.sc-try ol.steps>li::before{background:var(--ac);color:var(--on)}
+
+/* links out (each one asks for a grown-up first) */
+.sc-more{margin:32px 0 6px}
+.sc-more h2{font-size:clamp(22px,2.6vw,28px)}
+.sc-more-links{display:flex;flex-wrap:wrap;gap:10px}
+.sc-out{min-height:52px}
+.sc .sources{font-size:.85em;margin-top:22px}
+/* inline padding makes each link a 44px-tall tap target without pushing the lines apart */
+.sc .sources a{padding-block:12px;white-space:normal;overflow-wrap:anywhere}
+
+/* the side panel when there is no 3D scene yet: the story's numbers as a stack of blocks */
+.sc-art{display:flex;flex-direction:column;border-radius:22px;overflow:hidden;padding:18px 18px 0;
+  background:linear-gradient(rgba(27,33,48,.05) 2px,transparent 2px) 0 0/28px 28px,linear-gradient(90deg,rgba(27,33,48,.05) 2px,transparent 2px) 0 0/28px 28px,linear-gradient(180deg,var(--tint),var(--card) 70%);
+  box-shadow:0 0 0 3px var(--line),5px 6px 0 var(--line)}
+.sc-art-label{font-family:var(--display);font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--deep);text-align:center;margin:0 0 14px}
+.sc-tower{list-style:none;margin:0;display:flex;flex-direction:column-reverse;align-items:center;padding:0 4px}
+.sc-brick{position:relative;left:var(--dx);width:var(--w);padding:12px 14px 13px;text-align:center;background:var(--ac);color:var(--on);border-radius:3px;
+  box-shadow:inset -6px -7px 0 rgba(0,0,0,.18),inset 6px 6px 0 rgba(255,255,255,.22)}
+.sc-brick.alt{background:var(--ac-lt);color:var(--ink)}
+.sc-brick b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(30px,3.2vw,40px);line-height:1}
+.sc-brick.long b{font-size:clamp(22px,2.3vw,27px);line-height:1.05}
+.sc-brick span{display:block;font-weight:800;line-height:1.2;margin-top:4px;text-wrap:balance}
+.sc-ground{height:36px;margin:0 -18px;background:linear-gradient(180deg,#5fae3c 0 10px,#4c9030 10px 14px,transparent 14px),
+  linear-gradient(90deg,#8a5a34 0 25%,#7a4e2c 25% 50%,#94643c 50% 75%,#7a4e2c 75%) 0 14px/64px 22px,#8a5a34}
+
+/* the side panel with a live 3D scene */
+.sc-scene{margin:0}
+.sc-stage-box{position:relative}
+.sc-scene .fig-stage{aspect-ratio:4/3.3;border-radius:22px;box-shadow:0 0 0 3px var(--ac),6px 7px 0 var(--ac-dk)}
+/* the shared canvas hides its own outline; show where keyboard focus is (arrow keys turn the scene) */
+.sc-stage:has(canvas:focus-visible){outline:3px solid var(--blueprint);outline-offset:3px}
+.sc-stage-box .tool{width:44px;height:44px}
+.sc-cap{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px}
+.sc-cap-t{display:inline-flex;align-items:center;gap:6px;font-weight:900;color:var(--muted)}
+.sc-cap-t svg{width:20px;height:20px;color:var(--deep)}
+.sc-cap-tools{display:flex;align-items:center;gap:8px}
+.sc-frames{display:flex;align-items:center;gap:6px}
+.sc-fnum{font-weight:900;min-width:6em;text-align:center}
+.sc-tool{min-width:48px;min-height:48px;padding:0 12px;border:0;border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 0 0 3px var(--line) inset;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:900;cursor:pointer}
+.sc-tool svg{width:22px;height:22px}
+.sc-tool.is-on{background:var(--gold);color:#3a2a00;box-shadow:none}
+.sc-tool[aria-disabled="true"]{opacity:.4;cursor:default}
+
+/* ---------------------------------------------------------------- pager */
+.sc-pager{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-block:30px 46px}
+.sc-pg{display:flex;flex-direction:column;justify-content:center;gap:6px;min-height:100px;padding:16px 20px;border-radius:18px;text-decoration:none;
+  background:var(--ac);color:var(--on);box-shadow:inset -5px -6px 0 rgba(0,0,0,.16),4px 5px 0 var(--line);transition:transform .2s var(--ease-out)}
+.sc-pg:hover,.sc-pg:focus-visible{transform:translateY(-3px)}
+.sc-pg-next{grid-column:2;align-items:flex-end;text-align:right}
+.sc-pg-dir{display:inline-flex;align-items:center;gap:4px;font-weight:900;font-size:17px;letter-spacing:.06em;text-transform:uppercase}
+.sc-pg-dir svg{width:18px;height:18px}
+.sc-pg b{font-family:var(--display);font-weight:400;font-size:clamp(21px,2.4vw,27px);line-height:1.05}
+.sc-pg-home{background:var(--c-showcase);color:#fff}
+
+/* ---------------------------------------------------------------- phones */
+@media (max-width:600px){
+  .sc-mast{padding:24px 0 30px}
+  .sc-mast-pile,.sc-head-pile{display:none}
+  .sc-card{min-height:0}
+  .sc-lead{padding:22px 20px 20px}
+  .sc-head-top{margin-bottom:16px}
+  .sc-stats{gap:10px;margin-top:28px}
+  .sc-stat{padding:18px 12px 12px}
+  .sc-pull{margin-inline:0!important;padding:20px 20px 18px}
+  .sc-record{align-items:flex-start;padding:16px}
+  .sc-record-ico{width:52px;height:52px}
+  .sc-try{padding:18px 16px 8px}
+  .sc-pager{grid-template-columns:1fr}
+  .sc-pg-next{grid-column:auto}
+}
+@media (min-width:601px) and (max-width:879px){
+  .sc-head-pile{--s:34px}
+}
+
+/* ---------------------------------------------------------------- motion (Showcase is allowed some)
+   Never in Calm mode or with reduced motion. Body text never moves; only cards, numbers, the pull
+   line and boxes rise in as they scroll into view, and the block piles drop in once. */
+@media (prefers-reduced-motion:no-preference){
+  html:not([data-calm]) .armed:not(.is-built)>i,html:not([data-calm]) .armed:not(.is-built) .sc-brick{opacity:0}
+  html:not([data-calm]) .armed.is-built>i,html:not([data-calm]) .armed.is-built .sc-brick{animation:sc-drop .55s var(--ease-spring) both;animation-delay:calc(var(--k) * 110ms)}
+  @supports (animation-timeline:view()){
+    html:not([data-calm]) .sc-reveal{animation:sc-rise linear both;animation-timeline:view();animation-range:entry 0% entry 160px}
+  }
+}
+@keyframes sc-drop{from{opacity:0;translate:0 -110px}to{opacity:1;translate:0 0}}
+@keyframes sc-rise{from{opacity:0;translate:0 36px;scale:.97}}

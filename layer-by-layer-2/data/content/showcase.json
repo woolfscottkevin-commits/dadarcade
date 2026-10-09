@@ -1,0 +1,272 @@
+{
+  "intro": "Big builds, world records and real news from the Minecraft world. Every story here was checked in October 2026.",
+  "features": [
+    {
+      "id": "movie-build-challenge",
+      "kicker": "BIG SCREEN",
+      "headline": "Four Builds Are Going to the Movies",
+      "deck": "More than 21,000 builders tried to get into the next Minecraft movie. Four builds made it.",
+      "accent": "#f2c230",
+      "stats": [
+        ["21,000+", "builders entered"],
+        ["16 x 16 x 32", "blocks per plot"],
+        ["4", "builds headed for the big screen"],
+        ["July 23, 2027", "the movie comes out"]
+      ],
+      "body": [
+        "In May 2026, Mojang started the Minecraft Movie Build Challenge. The top prize was a spot in the next film, A Minecraft Movie Squared. You had to be 16 or older to enter. Younger players could still try it for fun on a practice map in Minecraft Education.",
+        "Everyone got the same space: 16 x 16 x 32 blocks. You had to build a house or other building that fits one biome. The choices were plains, taiga, badlands or frozen ocean. Each biome came with its own list of blocks you were allowed to use.",
+        "More than 21,000 builders entered. Mojang called it the biggest community build challenge in Minecraft history. The winner was Lightning Rod Lighthouse by Francisco C.M. It is a frosty lighthouse that stands on a base of ice.",
+        "Two finalists are going too: Copper Badlands Castle by Rosanna C. and Tranquil Taiga Tower by Iola Y. A fan favorite, Tree Village by Ben V., used blocks from more than one biome. That broke a rule, so it could not win. Fans, judges and filmmakers loved it anyway. So Mojang named it an honorable mention and put it in the movie too.",
+        "Where will you spot them? Mojang is keeping that a secret. Each of the four builds will show up in the movie or its end credits. A Minecraft Movie Squared comes to theaters on July 23, 2027."
+      ],
+      "pull": "Same small plot for everyone. The big ideas made the difference.",
+      "try_it": {
+        "title": "Your Own 16 x 16 x 32 Challenge",
+        "steps": [
+          "In a Creative world, mark out a square 16 blocks by 16 blocks. Put a bright block on each corner.",
+          "Stack a pillar 32 blocks tall on one corner. Your build cannot go higher than that.",
+          "Pick one biome: plains, taiga, badlands or frozen ocean. Use only blocks that belong there.",
+          "Build a house or tower inside your lines. Do not dig down under the plot.",
+          "Make the front your best side. In the movie, builds are seen mostly from one side.",
+          "Skip signs, words and banners, just like the real rules. When you finish, take away the pillar and corner blocks."
+        ]
+      },
+      "links": [
+        ["Read about the winners", "https://www.minecraft.net/en-us/article/minecraft-movie-build-challenge-winner-announcement"],
+        ["See the challenge rules", "https://www.minecraft.net/en-us/article/minecraft-movie-build-challenge"]
+      ],
+      "sources": [
+        "https://www.minecraft.net/en-us/article/minecraft-movie-build-challenge-winner-announcement",
+        "https://www.minecraft.net/en-us/article/minecraft-movie-build-challenge",
+        "https://minecraft.wiki/w/Movie:Minecraft_Movie_Build_Challenge"
+      ],
+      "scene": "sc-movie-build-challenge",
+      "scene_idea": "A 16 x 16 plot with a white outline and a bright block on three corners. A striped pillar on the last corner is 32 blocks tall. Inside, a plains tower of stone, oak and spruce goes up in three parts."
+    },
+    {
+      "id": "build-the-earth-new-york",
+      "kicker": "REAL SIZE",
+      "headline": "Five Years of Building New York",
+      "deck": "A team spent five years building a big part of New York City at real size.",
+      "accent": "#3d9be9",
+      "stats": [
+        ["50,000+", "buildings in Lower Manhattan"],
+        ["5 years", "of building"],
+        ["3,720", "people on the New York team (2025)"],
+        ["1 block", "= 1 meter"]
+      ],
+      "body": [
+        "Build the Earth is a giant project. Players are building the whole planet in Minecraft at real size. One block is one meter, about one big step. It started in March 2020.",
+        "Its biggest team works on New York City. In January 2026, the builder MineFact shared a video of five years of work. It shows more than 50,000 buildings across Lower Manhattan.",
+        "The team cares about tiny details. They check photos of the real streets. If a real balcony has a flower pot, the Minecraft balcony gets one too.",
+        "It was not easy. At first they had no data for hills, so Manhattan started out totally flat. Builders shaped the ground by hand, which took hundreds of hours. They also rebuilt early parts many times as they got better.",
+        "It is not finished yet. Some neighborhoods, like the Financial District, still need work. Builders have also started on Brooklyn and Queens."
+      ],
+      "pull": "If a real balcony has a flower pot, so does the Minecraft one.",
+      "record": "Guinness World Records: Biggest Minecraft project (Build the Earth, June 2025)",
+      "links": [
+        ["Watch the New York video", "https://www.youtube.com/watch?v=ZouSJWXFBPk"],
+        ["See the Guinness record", "https://www.guinnessworldrecords.com/world-records/734997-biggest-minecraft-project"]
+      ],
+      "sources": [
+        "https://www.youtube.com/watch?v=ZouSJWXFBPk",
+        "https://dailydot.com/minecraft-team-new-york-city-five-years",
+        "https://www.tomshardware.com/video-games/pc-gaming/new-york-city-recreated-at-1-1-scale-inside-minecraft-project-took-5-whole-years-and-contains-over-50-000-buildings",
+        "https://www.guinnessworldrecords.com/world-records/734997-biggest-minecraft-project"
+      ],
+      "scene": "sc-build-the-earth-new-york",
+      "scene_idea": "One city corner at real size, where 1 block is 1 meter. Three narrow brick buildings have iron-bar balconies. One balcony has a single flower pot. Gray streets run along the front and the side."
+    },
+    {
+      "id": "camp-out-challenge",
+      "kicker": "COMMUNITY",
+      "headline": "The Whole Game Went Camping",
+      "deck": "In one week, Bedrock players placed 200 million cushions and 50 million straw beds.",
+      "accent": "#e8873a",
+      "stats": [
+        ["200 million", "cushions placed"],
+        ["50 million", "straw beds placed"],
+        ["1 week", "to reach the goal"],
+        ["6", "free rewards unlocked"]
+      ],
+      "body": [
+        "Wilderness Bound came out in September 2026. It added two new ways to rest outdoors: cushions and straw beds. Then Mojang turned them into a community challenge.",
+        "From September 26 to October 2, Bedrock players placed as many as they could. The goal was 200 million cushions and 50 million straw beds. Players reached both goals.",
+        "Halfway there, everyone unlocked a Pillow Suit and a Deluxe Shelf Cap for their character. At the finish, a Sleep Mask and a Red Shrub Onesie joined them. There were two free Java skins too.",
+        "At Minecraft LIVE, Mojang even showed cushions used as a monorail, pillars and ladders. Builders always find new jobs for new blocks.",
+        "A cushion is made from 3 wool slabs of the same color. You can place it on any flat surface and sit on it. A straw bed lets you sleep through the night. It does not set your spawn point.",
+        "A straw bed only works once. After one night, it is gone. So pack a few, and keep a regular bed back at base."
+      ],
+      "pull": "Every cushion counted, and together, players made the goal.",
+      "try_it": {
+        "title": "Set Up a Cozy Campsite",
+        "steps": [
+          "Craft 3 hay bales into 4 straw beds.",
+          "Craft a cushion from 3 wool slabs of the same color. Make a few in different colors.",
+          "Pick a flat spot by a river or under some trees.",
+          "Put a campfire in the middle and place cushions around it.",
+          "Lay your straw beds nearby. Each one works for one night only.",
+          "Keep your regular bed at home, so your spawn point stays safe."
+        ]
+      },
+      "links": [
+        ["Read the challenge story", "https://www.minecraft.net/en-us/article/camp-out-community-challenge"]
+      ],
+      "sources": [
+        "https://www.minecraft.net/en-us/article/camp-out-community-challenge",
+        "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+        "https://www.minecraft.net/en-us/article/mclive_sept2026_recap",
+        "https://minecraft.wiki/w/Straw_Bed",
+        "https://minecraft.wiki/w/Cushion"
+      ],
+      "scene": "sc-camp-out-challenge",
+      "scene_idea": "A small campsite by a river. Colored wool cushions ring a campfire. Two straw beds lie beside a red poplar tree, with leaf litter on the grass."
+    },
+    {
+      "id": "minecraft-world-chessington",
+      "kicker": "THEME PARK",
+      "headline": "A Real Minecraft Theme Park Is Coming",
+      "deck": "In 2027, a Minecraft land opens at a theme park in London. It has the first Minecraft rollercoaster.",
+      "accent": "#7b4dd6",
+      "stats": [
+        ["2027", "opening year"],
+        ["1st", "Minecraft rollercoaster"],
+        ["nearly 70", "Minecraft hotel rooms"],
+        ["4", "hotel floors"]
+      ],
+      "body": [
+        "Minecraft is coming to real life. Minecraft World is a new area at Chessington World of Adventures Resort in London, England. It opens in 2027. The exact date has not been shared yet.",
+        "Mojang and Merlin Entertainments announced it in March 2026. They say it is the first Minecraft theme park land in the world.",
+        "The big ride is Escape the Nether, the first Minecraft rollercoaster. You board a minecart and race through dark mines inside a building. Then you burst out through a Nether portal into the Overworld area. By September 2026, the track was already in place.",
+        "There will also be a Minecraft World Hotel, the first of its kind. It has nearly 70 rooms on four floors. The elevators look like Nether portals, and the hallways look like mine tunnels. There is even an underwater-themed restaurant inspired by ocean biomes.",
+        "How tall do you need to be to ride? The park says it will share that closer to opening day."
+      ],
+      "pull": "Ride a minecart out of the Nether and into the daylight.",
+      "links": [
+        ["Minecraft experiences", "https://www.minecraft.net/en-us/minecraft-experiences"],
+        ["Minecraft LIVE recap", "https://www.minecraft.net/en-us/article/mclive_sept2026_recap"]
+      ],
+      "sources": [
+        "https://www.minecraft.net/en-us/article/mclive_sept2026_recap",
+        "https://www.minecraft.net/en-us/minecraft-experiences",
+        "https://www.chessington.com/minecraft/",
+        "https://www.merlinentertainments.biz/newsroom/news-releases/2026/minecraft-chessington/",
+        "https://www.merlinentertainments.biz/newsroom/news-releases/2026/minecraft-hotel-coming-to-chessington/"
+      ],
+      "scene": "sc-minecraft-world-chessington",
+      "scene_idea": "A short minecart track comes out of a dark stone tunnel and through an obsidian archway. Then it turns and climbs a sunny grass hill."
+    },
+    {
+      "id": "700-hour-builder",
+      "kicker": "PRO BUILDER",
+      "headline": "700 Hours on One Build",
+      "deck": "The builder shovel241 keeps going bigger: 200 hours, then 300, then 500, and now 700.",
+      "accent": "#2bb3a3",
+      "stats": [
+        ["700", "hours of building"],
+        ["29 days", "if you never stopped"],
+        ["almost 2 years", "at 1 hour a day"]
+      ],
+      "body": [
+        "shovel241 is a YouTube builder who makes huge builds in Creative mode. In July 2026, the channel posted a video called \"I Built for 700 Hours in Creative Mode.\" It runs for more than an hour.",
+        "The hours keep growing. In January 2024, shovel241 shared a 200-hour build. Two 300-hour builds came in 2024, then two 500-hour builds in 2025. Now it is 700.",
+        "How much is 700 hours? If you built day and night without stopping, it would take 29 days. At one hour a day, it would take almost two years.",
+        "These builds are teamwork. Each of these videos thanks a list of helpers. On one build, a helper made hundreds of room and street decorations.",
+        "It did not start this big. Years earlier, the same channel made how-to videos, like how to build custom trees. Small skills grew into giant builds.",
+        "What can you learn? A giant build is lots of small builds joined together. Split yours into jobs, then do one job at a time."
+      ],
+      "pull": "Every giant build is lots of small builds, one after another.",
+      "try_it": {
+        "title": "Build Like a Pro Team",
+        "steps": [
+          "Pick one big idea, like a village or a castle.",
+          "Split it into jobs: ground, walls, roofs, rooms and little details.",
+          "Write the jobs on a piece of paper.",
+          "Do one job at a time. Tick it off when it is done.",
+          "Building with a friend? Each of you takes different jobs."
+        ]
+      },
+      "links": [
+        ["Watch the 700-hour build", "https://www.youtube.com/watch?v=diUR_nHbaM8"]
+      ],
+      "sources": [
+        "https://www.youtube.com/watch?v=diUR_nHbaM8",
+        "https://www.youtube.com/watch?v=ZaF0pXtHQuo",
+        "https://www.youtube.com/watch?v=Ha65Y7Rn8bo",
+        "https://www.youtube.com/watch?v=UyDDPYQmrNI",
+        "https://www.youtube.com/watch?v=hTvjtmdZpIU",
+        "https://www.youtube.com/watch?v=litH4Z--RQ0",
+        "https://www.youtube.com/watch?v=G41kd3jKWiU",
+        "https://www.youtube.com/@shovel241/videos"
+      ],
+      "scene": "sc-700-hour-builder",
+      "scene_idea": "One corner of a big build, shown three times side by side. First comes a plain stone box. Next, the same box gets a roof and trim. Last, it gets every detail: windows, a door, plants and lanterns."
+    },
+    {
+      "id": "tnt-chain-record",
+      "kicker": "WORLD RECORD",
+      "headline": "100,005 Blocks of TNT in One Chain",
+      "deck": "A builder who started at age 14 made the longest TNT chain in Minecraft. It took four months.",
+      "accent": "#e04848",
+      "stats": [
+        ["100,005", "TNT blocks in one chain"],
+        ["4 months", "to build it"],
+        ["14", "Li's age at the start"]
+      ],
+      "body": [
+        "Guinness World Records keeps a record for the longest TNT chain set off in Minecraft. A chain is a long line of TNT. Light one end, and each block sets off the next one, like dominoes.",
+        "The record is 100,005 blocks. Li Zhuoxi, from China, set it on January 28, 2026. Li was 14 when the work began in October 2025. Li placed the chain one block at a time. It took about four months.",
+        "Here is some fun math. Say you placed one block every second, with no breaks. 100,005 blocks would still take almost 28 hours.",
+        "When an explosion sets off TNT, it goes off within one and a half seconds. That is why a chain ripples along so fast.",
+        "Want to try a tiny chain? Use a Creative test world, far away from your builds. TNT breaks the blocks around it, so keep it away from anything you love."
+      ],
+      "pull": "Patience is a building tool too.",
+      "record": "Guinness World Records: Longest TNT chain built and detonated in Minecraft (January 2026)",
+      "links": [
+        ["See the record", "https://www.guinnessworldrecords.com/world-records/724618-longest-tnt-chain-built-and-detonated-in-minecraft"]
+      ],
+      "sources": [
+        "https://www.guinnessworldrecords.com/world-records/724618-longest-tnt-chain-built-and-detonated-in-minecraft",
+        "https://minecraft.wiki/w/TNT"
+      ],
+      "scene": "sc-tnt-chain-record",
+      "scene_idea": "A long zigzag line of TNT on a flat sand plain. A lever waits at the start. Nothing has been set off."
+    },
+    {
+      "id": "whats-next",
+      "kicker": "WHAT'S NEXT",
+      "headline": "Coming Soon to Minecraft",
+      "deck": "A new dimension, a new movie and Minecraft on Switch 2 are all on the way.",
+      "accent": "#8bc34a",
+      "stats": [
+        ["4th", "dimension on the way"],
+        ["14+", "years since the last new one"],
+        ["October 27, 2026", "Minecraft on Switch 2"],
+        ["July 23, 2027", "A Minecraft Movie Squared"]
+      ],
+      "body": [
+        "A new dimension is coming, and it is called the Sift. Right now there are three: the Overworld, the Nether and the End. The Sift will be the fourth, and the first new one in over 14 years.",
+        "Mojang says the Sift comes to Minecraft Java and Bedrock in 2027. It has not shared an exact date yet.",
+        "You can already visit the Sift in another game, Minecraft Dungeons II. It came out on September 29, 2026. There it is a colorful place, with areas named the Meadows and the Carapace.",
+        "Minecraft comes to Nintendo Switch 2 on October 27, 2026. Vibrant Visuals will be turned on from the start, with richer light and shadows. The first Switch is not on the list of devices that get Vibrant Visuals.",
+        "A Minecraft Movie Squared comes to theaters on July 23, 2027. Watch closely. Look for the four Movie Build Challenge builds in the film or its end credits."
+      ],
+      "pull": "Three dimensions so far. A fourth is on its way.",
+      "links": [
+        ["Minecraft LIVE recap", "https://www.minecraft.net/en-us/article/mclive_sept2026_recap"],
+        ["Minecraft on Switch 2", "https://www.minecraft.net/en-us/article/minecraft-for-nintendo-switch-2-release-date"]
+      ],
+      "sources": [
+        "https://www.minecraft.net/en-us/article/mclive_sept2026_recap",
+        "https://www.minecraft.net/en-us/article/minecraft-dungeons-ii-is-live",
+        "https://news.xbox.com/en-us/2026/09/26/minecraft-new-dimension-sift-dungeons-2/",
+        "https://www.minecraft.net/en-us/article/minecraft-for-nintendo-switch-2-release-date",
+        "https://www.minecraft.net/en-us/vibrant-visuals-update",
+        "https://www.minecraft.net/en-us/article/minecraft-movie-build-challenge-winner-announcement"
+      ],
+      "scene": "sc-whats-next",
+      "scene_idea": "A winding stone path leads to a stone archway. Soft colored light fills the doorway, like a door to somewhere new."
+    }
+  ]
+}

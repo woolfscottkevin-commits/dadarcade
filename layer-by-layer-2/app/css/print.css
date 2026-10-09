@@ -1,0 +1,16 @@
+/* Printing: when a Plan Pack exists, print only it. Otherwise print the page without chrome. */
+@page{margin:12mm}
+.topbar,.tabbar,.foot,.stage-box,.controls,.tier-pick,.pager,.mats-actions,.sheet,.toast,.skip{display:none!important}
+body{background:#fff;padding:0}
+body:has(#print-pack)>*:not(#print-pack){display:none!important}
+#print-pack{font-family:var(--body);color:#000}
+#print-pack .pp-head h1{font-size:28pt;margin:0}
+#print-pack .pp-layer{break-inside:avoid;page-break-inside:avoid;margin:0 0 8mm;display:grid;grid-template-columns:1fr 52mm;gap:6mm;align-items:start}
+#print-pack .pp-layer h2{grid-column:1 / -1;font-size:16pt;margin:0;display:flex;align-items:center;gap:3mm}
+#print-pack .pp-layer h2 em{font-style:normal;font-size:11pt;border:1.5pt solid #000;border-radius:2mm;padding:0 2mm}
+#print-pack .pp-box{display:inline-block;width:5mm;height:5mm;border:1.5pt solid #000;border-radius:1mm}
+#print-pack img{max-width:100%;max-height:150mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#print-pack .pp-legend{list-style:none;margin:0;padding:0;font-size:10pt}
+#print-pack .pp-legend b{display:inline-block;min-width:5mm;padding:0 .6mm;box-sizing:border-box;text-align:center;background:#000;color:#fff;border-radius:1mm;margin-right:1.5mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#print-pack{display:block}
+@media screen{#print-pack{display:none}}
