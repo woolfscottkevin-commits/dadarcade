@@ -1,0 +1,36 @@
+{
+  "id": "copper-bulb-switch",
+  "order": 2,
+  "title": "Copper Bulb Light Switch",
+  "lead": "Press once and the lamp comes on. Press again and it goes off. A Copper Bulb remembers!",
+  "figure": "copper-bulb-switch",
+  "input": "button",
+  "states": [
+    {"label": "Off", "power": false, "text": "The Copper Bulb is dark, and the button is ready."},
+    {"label": "Press: on!", "power": true, "text": "You press the button. Power runs along the dust, and the bulb switches on."},
+    {"label": "Still on", "power": false, "text": "The button pops back out, and the dust goes dark. The bulb stays lit! It does not need power to keep shining."},
+    {"label": "Press: off", "power": true, "text": "Press the button again. This new pulse of power switches the bulb off."}
+  ],
+  "parts": [["Copper Bulb", 1], ["Stone Button", 1], ["Redstone Dust", 3], ["Tuff Bricks", 3], ["Tuff Brick Wall", 1], ["Polished Deepslate", 2], ["Polished Deepslate Slab", 1], ["Copper Trapdoor", 1]],
+  "steps": [
+    "Build a post from 2 Polished Deepslate blocks. Add a Polished Deepslate Slab on top. A dark post makes the button easy to see.",
+    "Place 3 Tuff Bricks in a row on the ground, next to the post.",
+    "Put a Tuff Brick Wall at the end of the row. Put the Copper Bulb on top of it.",
+    "Add a Copper Trapdoor on top of the bulb as a lamp cap.",
+    "Put Redstone Dust on top of each Tuff Brick.",
+    "Put a Stone Button on the front of the post, at the same height as the dust. Press it once, then press it again."
+  ],
+  "how": "A Stone Button sends power for 1 second, then stops. A short burst like this is called a pulse. Each pulse that reaches a Copper Bulb flips it: off to on, or on to off. The bulb keeps shining with no power, so it remembers what the last pulse did.",
+  "tips": [
+    ["warn", "You need a Blaze Rod", "Crafting Copper Bulbs takes 3 Blocks of Copper, 1 Blaze Rod and 1 Redstone Dust. You get 4 bulbs. Blaze Rods come from the Nether. Get a grown-up to help, or build this one in Creative."],
+    ["know", "Watch for the red dot", "While power reaches a Copper Bulb, a small red dot shows in its middle."],
+    ["pro", "Keep it bright", "A new Copper Bulb gives light level 15. As it turns green, that drops to 12, then 8, then 4. Wax it with a Honeycomb to keep it bright."]
+  ],
+  "sources": [
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Blaze_Rod",
+    "https://minecraft.wiki/w/Blaze",
+    "https://minecraft.wiki/w/Button",
+    "https://minecraft.wiki/w/Redstone_Dust"
+  ]
+}

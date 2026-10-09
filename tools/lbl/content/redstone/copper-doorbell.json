@@ -1,0 +1,37 @@
+{
+  "id": "copper-doorbell",
+  "order": 1,
+  "title": "Copper Trumpet Doorbell",
+  "lead": "Press the button by your door, and a Note Block on copper plays a trumpet. As the copper turns green, the tune changes!",
+  "figure": "copper-doorbell",
+  "input": "button",
+  "states": [
+    {"label": "Waiting", "power": false, "text": "The doorbell is ready. The Block of Copper under the Note Block is shiny and new."},
+    {"label": "Toot!", "power": true, "text": "You press the button. Power runs along the dust, and the Note Block plays a trumpet."},
+    {"label": "Copper ages", "power": true, "text": "Time passes, and the copper turns green. Press again. Now it plays the Weathered Trumpet, which sounds like a trombone."},
+    {"label": "All green", "power": true, "text": "Fully green copper plays the Oxidized Trumpet. It sounds like a big, buzzy trombone."}
+  ],
+  "parts": [["Note Block", 1], ["Block of Copper", 1], ["Stone Button", 1], ["Redstone Dust", 3], ["Stone Bricks", 3]],
+  "steps": [
+    "Find the corner of your house next to the door.",
+    "Place 3 Stone Bricks in a row on the ground, right next to that corner.",
+    "Put a Block of Copper at the end of the row.",
+    "Put a Note Block on top of the copper. Keep the space above it empty.",
+    "Put Redstone Dust on top of each Stone Brick.",
+    "Put a Stone Button on the front of the corner block, level with the dust. Press it!"
+  ],
+  "how": "A Stone Button powers the block it is on for 1 second. That block powers the dust beside it. The power runs along the dust into the Note Block, and it plays. The block under a Note Block picks its sound, and copper makes a trumpet.",
+  "tips": [
+    ["warn", "Leave room on top", "A Note Block only plays if the space right above it is empty."],
+    ["pro", "Keep your tune", "Each copper stage plays a different trumpet. Wax the copper with a Honeycomb, and it stays the same forever."],
+    ["pro", "Pick your note", "Use the Note Block to make its note one step higher. There are 25 notes. After the highest one, it goes back to the lowest."],
+    ["know", "New in 2026", "Copper trumpets came to Minecraft in the Tiny Takeover drop in March 2026."]
+  ],
+  "sources": [
+    "https://minecraft.wiki/w/Note_Block",
+    "https://www.minecraft.net/en-us/updates/tiny-takeover-drop",
+    "https://minecraft.wiki/w/Block_of_Copper",
+    "https://minecraft.wiki/w/Button",
+    "https://minecraft.wiki/w/Redstone_Dust"
+  ]
+}

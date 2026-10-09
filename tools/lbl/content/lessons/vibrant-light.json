@@ -1,0 +1,33 @@
+{
+  "id": "vibrant-light",
+  "order": 4,
+  "title": "Light for Vibrant Visuals",
+  "lead": "Vibrant Visuals gives Bedrock real sunshine and shadows. Build so your house looks its best in that light.",
+  "figure": "vibrant-light",
+  "steps": [
+    {"title": "Face the sunrise", "text": "The sun comes up in the east. Put your door, your best windows and your path on the east side. Your front will glow every morning."},
+    {"title": "Push the windows in", "text": "Move the glass one block in, so it sits behind the wall. Now every window has edges that throw shadows. Flat walls look flat, but deep walls look real."},
+    {"title": "Let the roof hang over", "text": "Make the roof stick out one block past the walls. Add log corners and a log beam. The overhang throws shade, so the house looks solid."},
+    {"title": "Add glowing blocks", "text": "Hang lanterns from the edge of the roof. Put more on fence posts by the path. Add candles in the windows and Firefly Bushes in the garden."}
+  ],
+  "body": [
+    "Vibrant Visuals is the new look for Bedrock. It is on by default on many devices. That includes iPhones and iPads with an A12 or M1 chip or newer.",
+    "With it, every block casts a shadow. The shadows move as the sun crosses the sky. Mojang says it makes you want to turn every build to face the sunrise.",
+    "You can try this in the book too. Open any build and tap the sun button to change the time of day. At night, you can see which lights really glow."
+  ],
+  "tips": [
+    ["pro", "Pale walls show shadows", "Shadows are easiest to see on pale blocks like Smooth Quartz Block. In Vibrant Visuals, smooth quartz even reflects sunlight."],
+    ["know", "How bright is it?", "A Lantern gives light level 15, the brightest there is. One candle gives 3, and four candles in one spot give 12."],
+    ["know", "It only changes the look", "Vibrant Visuals changes how the game looks, not how it works. Farms and crops work just the same."]
+  ],
+  "challenge": "Build a porch that faces east. Visit it at sunrise and again at night. Which light do you like best?",
+  "sources": [
+    "https://www.minecraft.net/en-us/vibrant-visuals-update",
+    "https://www.minecraft.net/en-us/article/minecraft-vibrant-visuals",
+    "https://minecraft.wiki/w/Sun",
+    "https://minecraft.wiki/w/Vibrant_Visuals",
+    "https://minecraft.wiki/w/Lantern",
+    "https://minecraft.wiki/w/Candle",
+    "https://minecraft.wiki/w/Firefly_Bush"
+  ]
+}

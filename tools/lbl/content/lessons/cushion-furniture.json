@@ -1,0 +1,32 @@
+{
+  "id": "cushion-furniture",
+  "order": 2,
+  "title": "Real Furniture with Cushions",
+  "lead": "Cushions let you really sit down in Minecraft. Build a cozy sofa nook around them.",
+  "figure": "cushion-furniture",
+  "steps": [
+    {"title": "Start with a seat", "text": "Place three wool blocks in a row. Leave one block of space behind them. This is the seat of your sofa. On its own, it is just a hard bench."},
+    {"title": "Add a back and arms", "text": "Behind the seat, put wool blocks with wool stairs on top. Keep the tall side at the back. Blocks topped with wool slabs make soft arms."},
+    {"title": "Drop on the cushions", "text": "Place one cushion on each seat block. Use a cushion to sit on it. Each one is crafted from 3 wool slabs of the same color."},
+    {"title": "Cushions on the floor", "text": "A cushion fits on any flat surface, even the floor. Make a low table from two trapdoors, and put floor cushions next to it."},
+    {"title": "Make it cozy", "text": "Set a wool rug into the floor. Add shelves, a potted plant and a lantern on a fence post. Now it feels like home."}
+  ],
+  "body": [
+    "A cushion is not a block. It is an entity, like a painting or a boat. That is why it follows its own rules.",
+    "A cushion sits on whatever is under it. That even works on slabs, stairs and thin snow. Only one cushion fits in each spot.",
+    "To pick a cushion up, hit it once. It pops off as an item you can grab."
+  ],
+  "tips": [
+    ["warn", "Keep the block under it", "If you break the block under a cushion, the cushion breaks too. A piston pushing it breaks it as well."],
+    ["pro", "Floating tabletops", "Place a trapdoor on the top half of a block's side. Then break that block. The trapdoor stays put, like a little table."],
+    ["pro", "Change the color", "Craft any cushion with a dye to change its color. All 16 colors work."],
+    ["know", "200 million seats", "Cushions stack to 16. Players placed 200 million cushions in the Camp Out challenge. It took one week, from September 26 to October 2, 2026."]
+  ],
+  "challenge": "Build a campfire circle with four cushions around it. Give each friend their own color.",
+  "sources": [
+    "https://minecraft.wiki/w/Cushion",
+    "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+    "https://minecraft.wiki/w/Trapdoor",
+    "https://www.minecraft.net/en-us/article/camp-out-community-challenge"
+  ]
+}

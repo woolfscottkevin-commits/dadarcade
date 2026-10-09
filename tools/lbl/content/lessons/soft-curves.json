@@ -1,0 +1,31 @@
+{
+  "id": "soft-curves",
+  "order": 1,
+  "title": "Soft Curves with Wool Stairs",
+  "lead": "Wool now comes as stairs and slabs, in all 16 colors. Use them to round off the sharp corners on balloons, sails and tents.",
+  "figure": "soft-curves",
+  "steps": [
+    {"title": "Start blocky", "text": "Build the balloon from full wool blocks, one ring on top of another. Make the middle rings the widest. Right now it looks like a lumpy box."},
+    {"title": "Stairs on the top edges", "text": "Swap each block on the top edge of a ring for a wool stair. Point the tall side toward the middle. The steps turn into a smooth slope."},
+    {"title": "Slabs for the gentle parts", "text": "Some spots are too flat for a stair. Use a wool slab there. The lid on top and the little corners are all slabs."},
+    {"title": "Flip stairs for the bottom", "text": "Under the balloon, use upside-down stairs. To place one, aim at the top half of a block's side. Now the bottom curves in too."},
+    {"title": "Hang the basket", "text": "Build a basket from Spruce Planks, with open Spruce Trapdoors for sides. Iron Chains hold it on. A campfire in the middle is the burner."}
+  ],
+  "body": [
+    "Wool Stairs and Wool Slabs arrived in Wilderness Bound, game version 26.50. Concrete got stairs and slabs in the same update.",
+    "The trick works on anything round. Ship sails, tent roofs, mushroom caps and clouds all look softer this way.",
+    "Think of it like this. Stairs go where the shape steps in by one block. Slabs go where it only needs a little bump."
+  ],
+  "tips": [
+    ["pro", "Corners bend by themselves", "Put two stairs side by side at a corner, and they change shape to meet. That makes round corners easy."],
+    ["warn", "Flipped stairs stay apart", "Upside-down stairs never join right-side-up stairs. Build the top half and the bottom half as two separate jobs."],
+    ["know", "Shears are fastest", "You can break wool stairs with any tool. Shears break them fastest."]
+  ],
+  "challenge": "Build a sail on a mast with wool stairs and slabs. Make it bulge out like it is full of wind.",
+  "sources": [
+    "https://www.minecraft.net/en-us/article/minecraft--bedrock-edition-26-50-changelog",
+    "https://minecraft.wiki/w/Wool_Stairs",
+    "https://minecraft.wiki/w/Wool_Slab",
+    "https://minecraft.wiki/w/Stairs"
+  ]
+}

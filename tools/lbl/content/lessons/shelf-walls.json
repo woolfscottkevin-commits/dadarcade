@@ -1,0 +1,31 @@
+{
+  "id": "shelf-walls",
+  "order": 6,
+  "title": "Shelf Walls and the Quick-Swap Trick",
+  "lead": "Shelves show off your best stuff, 3 items on each one. Give them power, and one tap swaps your whole hotbar.",
+  "figure": "shelf-walls",
+  "steps": [
+    {"title": "Build a frame", "text": "Put a row of Dark Oak Planks along a wall. Leave a gap 2 blocks high above it. Then add a ledge of upside-down Dark Oak Stairs on top."},
+    {"title": "Hang the shelves", "text": "Place 6 Birch Shelves in the gap, in 2 rows of 3. The dark frame around them makes the pale shelves stand out."},
+    {"title": "Fill them up", "text": "Hold an item and use a shelf slot. The item goes on the shelf. Each shelf holds 3 items, so this wall shows 18."},
+    {"title": "Power the bottom row", "text": "Swap the 3 blocks under the bottom row for Blocks of Redstone. Now those shelves have power, and their fronts change. Three powered shelves side by side join up."},
+    {"title": "Swap!", "text": "Use any shelf in the powered row. All 9 items swap with your 9 hotbar slots at once. Use it again to swap back."}
+  ],
+  "body": [
+    "A shelf holds 3 stacks of items and shows them on the front. Use shelves for trophy walls, shops, kitchens and libraries.",
+    "With no power, each slot works on its own. Using a slot swaps the item in your hand with the item on the shelf.",
+    "With power, the shelf swaps with your hotbar instead. One shelf swaps 3 slots. Two joined shelves swap 6. Three swap all 9.",
+    "Want a switch to turn the swap on and off? Build the Shelf Quick-Swap Armory in the Redstone Workshop."
+  ],
+  "tips": [
+    ["pro", "Craft six at once", "Put 6 stripped logs of one wood in a crafting table. Fill the top row and the bottom row. You get 6 shelves."],
+    ["know", "Mix your woods", "In Bedrock, powered shelves join up even when they are made of different woods. Just make them face the same way."],
+    ["know", "No numbers shown", "A shelf shows the item but not how many there are. A full stack looks just like one."],
+    ["warn", "No torches on shelves", "In Bedrock, you cannot put a torch, button or lever on a shelf. Power it from the block underneath instead."]
+  ],
+  "challenge": "Make a powered row of 3 shelves by your front door. Fill it with a building kit, and swap it in whenever you start a build.",
+  "sources": [
+    "https://minecraft.wiki/w/Shelf",
+    "https://minecraft.wiki/w/Block_of_Redstone"
+  ]
+}

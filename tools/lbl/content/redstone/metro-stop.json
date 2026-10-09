@@ -1,0 +1,36 @@
+{
+  "id": "metro-stop",
+  "order": 5,
+  "title": "Metro Station Stop",
+  "lead": "Your minecart rolls in, waits at the platform, and leaves when you press the button.",
+  "figure": "metro-stop",
+  "input": "minecart",
+  "states": [
+    {"label": "Waiting", "power": false, "text": "The station is empty. The Copper Bulb is off, and the Powered Rail at the end has no power."},
+    {"label": "Train coming!", "power": true, "text": "The cart rolls over the Detector Rail. The rail sends out power, and the Copper Bulb turns on."},
+    {"label": "At the platform", "power": false, "text": "The Powered Rail has no power, so it works like a brake. The cart stops by the red buffer. The bulb stays on while it waits."},
+    {"label": "All aboard!", "power": true, "text": "You press the button. The Powered Rail gets power and pushes the cart away from the buffer."},
+    {"label": "Off it goes", "power": true, "text": "The cart rolls back over the Detector Rail. One more pulse, and the bulb turns off."}
+  ],
+  "parts": [["Rail", 3], ["Detector Rail", 1], ["Powered Rail", 1], ["Red Concrete", 1], ["Copper Bulb", 1], ["Smooth Stone", 1], ["Stone Button", 1]],
+  "steps": [
+    "Lay a straight track 5 blocks long: Rail, Rail, Detector Rail, Rail, Powered Rail.",
+    "Put a block of Red Concrete right after the Powered Rail. This is the buffer at the end of the line.",
+    "Put a Copper Bulb beside the Detector Rail, touching its side.",
+    "Put a Smooth Stone block beside the Powered Rail. Put a Stone Button on top of it.",
+    "Build your platform around the bulb and the button.",
+    "Join the open end of the track to your metro line. Then ride a Minecart in!"
+  ],
+  "how": "A Detector Rail sends out power while a minecart is on it. Each time it does, the Copper Bulb flips on or off. A Powered Rail with no power works like a brake. So the cart stops by the buffer. The button powers the block under it. That block powers the Powered Rail, and the rail pushes the cart away from the buffer.",
+  "tips": [
+    ["warn", "Leave a gap", "Keep a plain Rail between the Detector Rail and the Powered Rail. If they touch, the Detector Rail powers the Powered Rail. Then the cart bounces right back out."],
+    ["pro", "A light that remembers", "A Copper Bulb stays the same until the next pulse. So it stays lit for as long as the cart waits."],
+    ["know", "Brake or booster", "A Powered Rail with power speeds a cart up. With no power, it slows the cart down and stops it."]
+  ],
+  "sources": [
+    "https://minecraft.wiki/w/Detector_Rail",
+    "https://minecraft.wiki/w/Powered_Rail",
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Button"
+  ]
+}

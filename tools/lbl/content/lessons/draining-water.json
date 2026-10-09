@@ -1,0 +1,34 @@
+{
+  "id": "draining-water",
+  "order": 5,
+  "title": "Dry Rooms Under the Sea",
+  "lead": "You cannot just dig water away. This trick turns a patch of sea into a dry room.",
+  "figure": "draining-water",
+  "steps": [
+    {"title": "Pick your spot", "text": "Find a patch of shallow sea. Start here while you learn. It is quicker, and you can swim up for air."},
+    {"title": "Build the walls", "text": "Build a ring of walls from the sea floor up. Make them poke one block out of the water. Use glass for some walls so you can see the sea."},
+    {"title": "Fill it with sand", "text": "Drop Sand or Gravel into the water inside the walls. Each block sinks and takes the place of the water. Keep going until the sand reaches the top of the water."},
+    {"title": "Dig it all out", "text": "Now dig out the sand from the top down. The water is gone, so the room stays dry. Check the corners for any water you missed."},
+    {"title": "Soak up the rest", "text": "Place a Sponge next to the last bit of water. It soaks the water up and turns into a Wet Sponge. Break it and take it with you."},
+    {"title": "Finish your room", "text": "Add a floor, a glass roof and Sea Lanterns for light. Put a trapdoor in the roof over a ladder. Then you can climb in and out."}
+  ],
+  "body": [
+    "Why sand? Sand and Gravel fall when nothing holds them up. Dropped into water, they sink and pile up. When you dig them out, only air is left.",
+    "A Sponge only soaks up the water close to it. So use the sand trick for the big job. Then you only need a sponge for the puddles.",
+    "You can make a deep room the same way. Practice in shallow water first, and you will learn the trick fast."
+  ],
+  "tips": [
+    ["start", "Practice in Creative", "Try this in a Creative world first. You get all the Sand and Sponges you need."],
+    ["pro", "Dry your sponge", "Smelt a Wet Sponge in a furnace to dry it. Then you can use it again."],
+    ["know", "Deserts dry sponges", "In Bedrock, a Wet Sponge in a desert dries by itself in a few minutes. In the Nether, it dries at once."],
+    ["warn", "Add stairs when it is dry", "Stairs, slabs and fences can hold water inside them. Place them after the room is dry, so they stay dry too."]
+  ],
+  "challenge": "Build a small glass room on the sea floor. Can you get it dry with only one Sponge?",
+  "sources": [
+    "https://minecraft.wiki/w/Tutorial:Underwater_home",
+    "https://minecraft.wiki/w/Sponge",
+    "https://minecraft.wiki/w/Water",
+    "https://minecraft.wiki/w/Waterlogging",
+    "https://minecraft.wiki/w/Falling_Block"
+  ]
+}

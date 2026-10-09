@@ -1,0 +1,34 @@
+{
+  "id": "copper-palette",
+  "order": 3,
+  "title": "Paint with Copper's Four Colors",
+  "lead": "Copper slowly changes from shiny orange to blue-green. Pick the colors you like, then wax them so they stay.",
+  "figure": "copper-palette",
+  "steps": [
+    {"title": "Meet the four stages", "text": "Copper has four stages. New copper turns Exposed, then Weathered, then Oxidized. These four blocks are waxed, so they will never change."},
+    {"title": "Build in new copper", "text": "Here is a little tower made of new copper. The walls are Cut Copper. The windows are Copper Grates."},
+    {"title": "Wait, and it all turns green", "text": "Leave copper alone and it ages by itself, bit by bit. Rain does not speed it up. Covering it does not stop it."},
+    {"title": "Mix the stages on purpose", "text": "Now use the stages like paint. Keep the walls orange, and make the corners green. Let the roof get greener near the top. Then wax every block."},
+    {"title": "Add copper details", "text": "Finish with a Lightning Rod on top and Copper Lanterns by the door. Copper Lanterns burn with a green flame."}
+  ],
+  "body": [
+    "To wax copper, use a honeycomb on it. Waxed copper looks the same as plain copper. Check the name: it starts with Waxed.",
+    "Changed your mind? Use an axe. The first scrape takes off the wax. Each scrape after that takes away one stage.",
+    "Copper looks extra good in Vibrant Visuals. Metal blocks like copper reflect sunlight and the glow of lights."
+  ],
+  "tips": [
+    ["pro", "Get honeycomb safely", "Shear a full bee nest or beehive to get 3 honeycomb. Put a lit campfire under it first, so the bees stay calm."],
+    ["warn", "Wax keeps it as it is", "Wax stops copper from changing. It does not turn green copper orange again. Scrape first, then wax."],
+    ["know", "Bulbs get dimmer", "A lit Copper Bulb gets dimmer as it ages. Its light level goes 15, 12, 8, then 4. Wax it to keep it bright."],
+    ["know", "Lightning cleans copper", "When lightning hits copper that is not waxed, it wipes away all the green."]
+  ],
+  "challenge": "Build a well with a copper roof. Make it fade from orange at the bottom to green at the top. Wax it when it looks just right.",
+  "sources": [
+    "https://minecraft.wiki/w/Oxidation",
+    "https://minecraft.wiki/w/Honeycomb",
+    "https://minecraft.wiki/w/Waxing",
+    "https://minecraft.wiki/w/Copper_Bulb",
+    "https://minecraft.wiki/w/Copper_Lantern",
+    "https://minecraft.wiki/w/Vibrant_Visuals"
+  ]
+}

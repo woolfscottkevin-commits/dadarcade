@@ -1,0 +1,34 @@
+{
+  "id": "shelf-armory",
+  "order": 4,
+  "title": "Shelf Quick-Swap Armory",
+  "lead": "Flip a lever and tap a shelf. Your whole hotbar swaps from building blocks to adventure gear.",
+  "figure": "shelf-armory",
+  "input": "lever",
+  "states": [
+    {"label": "Gear on the wall", "power": false, "text": "The lever is off. Each shelf holds 3 items and works on its own. Your hotbar is full of building blocks."},
+    {"label": "Power on", "power": true, "text": "You flip the lever. Power runs along the dust and into all 3 shelves. Their fronts change, and they join up like one long shelf. Next, use any shelf."},
+    {"label": "Swap!", "power": true, "text": "You use one shelf. All 9 items swap with your hotbar at once. Your gear is in your hands, and your blocks are on the wall."},
+    {"label": "Swap back", "power": true, "text": "Use any shelf again. Everything swaps back, so you are ready to build. Flip the lever off to use the shelves one slot at a time."}
+  ],
+  "parts": [["Spruce Shelf", 3], ["Stone Bricks", 10], ["Redstone Dust", 5], ["Lever", 1]],
+  "steps": [
+    "Build a wall of Stone Bricks, 5 blocks long and 2 blocks high.",
+    "Stand in front of the wall. Put 3 Spruce Shelves on the front of its top row. Start at the left end.",
+    "Hold an item and use a shelf slot to put it there. Fill all 9 slots with your gear.",
+    "Put a Lever on the front of the wall's top row, at the right end.",
+    "Put Redstone Dust on top of all 5 wall blocks.",
+    "Flip the lever. Then use any shelf to swap all 9 items."
+  ],
+  "how": "The Lever powers the block it is fixed to. That block powers the Redstone Dust on top of it. The dust powers every wall block under it. Each wall block powers the shelf in front of it. Three powered shelves in a row join up. Then one tap swaps all 9 items with your hotbar.",
+  "tips": [
+    ["pro", "One, two or three shelves", "One powered shelf swaps with the 3 slots on the right of your hotbar. Two joined shelves swap 6. Three swap all 9."],
+    ["know", "Any wood works", "In Bedrock, powered shelves join up even when they are made of different woods."],
+    ["warn", "Creative mode is different", "In Creative, using a shelf with no power puts your item on it. You do not get the old item back."]
+  ],
+  "sources": [
+    "https://minecraft.wiki/w/Shelf",
+    "https://minecraft.wiki/w/Redstone_Dust",
+    "https://minecraft.wiki/w/Lever"
+  ]
+}

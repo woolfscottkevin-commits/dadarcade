@@ -1,0 +1,38 @@
+{
+  "id": "piston-door",
+  "order": 3,
+  "title": "Hidden Piston Door",
+  "lead": "Flip a lever, and a wall of bookshelves slides apart. Hide it in a bookcase, and it is hard to spot.",
+  "figure": "piston-door",
+  "input": "lever",
+  "states": [
+    {"label": "Closed", "power": false, "text": "The lever is off. The Redstone Torch is on, so all 4 Sticky Pistons push. The bookshelves fill the doorway."},
+    {"label": "Open", "power": true, "text": "You flip the lever on. The torch goes out, and the pistons pull the bookshelves into the wall. Walk right through!"}
+  ],
+  "parts": [["Sticky Piston", 4], ["Bookshelf", 4], ["Redstone Dust", 8], ["Redstone Torch", 1], ["Lever", 1], ["Tuff Bricks", 9], ["Polished Deepslate", 5]],
+  "steps": [
+    "Stack 2 Sticky Pistons with their sticky faces pointing right. Leave a gap 4 blocks wide. Then stack 2 more facing left.",
+    "Put a Bookshelf against the sticky face of each piston. These 4 bookshelves are your door.",
+    "Behind each piston stack, on the side away from your base, place a block. Put Redstone Dust on top.",
+    "Join the two sides with a bridge of blocks behind the doorway. Step up, go over the top, then step down.",
+    "Put Redstone Dust on top of every bridge block.",
+    "To the right of the right pistons, place a block, and one more behind it. Put dust on both.",
+    "Place one more block to the right, with a Redstone Torch on top. The door slides shut.",
+    "Put a Lever on the front of the torch's block. Flip it to open the door!"
+  ],
+  "how": "A Redstone Torch stays on until the block under it gets power. While the lever is off, the torch powers the dust. The dust powers all 4 Sticky Pistons, and they push the bookshelves together. Flip the lever on, and it powers the torch's block. The torch turns off, so the pistons pull the bookshelves back.",
+  "tips": [
+    ["warn", "Use Sticky Pistons", "A normal Piston can push the door shut, but it cannot pull it open again."],
+    ["know", "Bedrock dust helps", "In Bedrock, Redstone Dust turns to point at a piston's back or side by itself. The dust powers the top piston, and the block under the dust powers the bottom one."],
+    ["warn", "Keep the lever away", "Do not let the lever's block touch a piston. A piston turns on when a block next to it has power."],
+    ["pro", "Hide it", "Build a wall of Bookshelves on the outside, in front of the redstone. Leave the 2 by 2 doorway open."],
+    ["pro", "Make a Sticky Piston", "Put a Slimeball on top of a Piston in the crafting grid."]
+  ],
+  "sources": [
+    "https://minecraft.wiki/w/Piston",
+    "https://minecraft.wiki/w/Sticky_Piston",
+    "https://minecraft.wiki/w/Redstone_Torch",
+    "https://minecraft.wiki/w/Redstone_Dust",
+    "https://minecraft.wiki/w/Lever"
+  ]
+}

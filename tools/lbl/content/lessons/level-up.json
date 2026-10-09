@@ -1,0 +1,29 @@
+{
+  "id": "level-up",
+  "order": 7,
+  "title": "Level Up a Build: Starter to Legend",
+  "lead": "Every big build in this book comes in Starter, Pro and Legend sizes. Watch one little house level up, one move at a time.",
+  "figure": "level-up",
+  "steps": [
+    {"title": "Starter: a box with a roof", "text": "Start simple: four walls, a door, some windows and a roof. It is quick to build, and it already looks like a home."},
+    {"title": "Pro move: add depth", "text": "Flat walls look like cardboard. Put Spruce Logs on the corners and Cobblestone along the bottom. Add Cobblestone Stairs around the outside. Now the walls step in and out."},
+    {"title": "Pro move: a second roof", "text": "Build a small roof over the front door, held up by two fence posts. Pave under it with Stone Bricks. Two roofs give your build a much more interesting shape."},
+    {"title": "Legend move: details", "text": "Open trapdoors make shutters. A closed trapdoor with a Flower Pot on top makes a flower box. Add a chimney and a little window up high."},
+    {"title": "Legend move: lights and a garden", "text": "Hang a lantern under the porch beam. Put lanterns on fence posts by the path. Plant flowers and bushes. Now it is a Legend build!"}
+  ],
+  "body": [
+    "Starter builds are quick, and they look finished. Pro builds add depth and a better shape. Legend builds add details, lights and a garden.",
+    "You can level up any build this way, even one you made last year. Do one move at a time. Then step back and look.",
+    "Most of these moves cost only a few extra blocks. Logs, trapdoors and lanterns make a big difference."
+  ],
+  "tips": [
+    ["start", "Pick your blocks first", "Choose 3 or 4 main blocks before you start. This house uses Birch Planks, Dark Oak Stairs, Spruce Logs and Cobblestone."],
+    ["pro", "Walk all the way around", "Look at your build from far away and from every side. Fix any side that still looks flat."],
+    ["know", "Flower boxes need pots", "Flowers can only be planted on blocks like grass and dirt. In Bedrock, a Flower Pot can sit on a closed trapdoor. Open the trapdoor and the pot breaks."]
+  ],
+  "challenge": "Pick one of your old builds. Give it one move from each step: depth, a second roof, a detail and a light.",
+  "sources": [
+    "https://minecraft.wiki/w/Flower",
+    "https://minecraft.wiki/w/Flower_Pot"
+  ]
+}
