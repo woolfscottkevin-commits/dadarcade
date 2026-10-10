@@ -124,7 +124,7 @@ html[data-theme="paper"] .pbtn.primary{background:linear-gradient(180deg,#c95a4c
 #drawer{position:fixed;z-index:12;top:0;bottom:0;right:0;width:min(420px,100vw);display:flex;flex-direction:column;border-bottom-left-radius:22px;border-bottom:1px solid var(--line);
   padding:calc(var(--safe-t) + 12px) calc(var(--safe-r) + 14px) calc(var(--safe-b) + 12px) 16px;
   background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);
-  box-shadow:-20px 0 60px rgba(0,0,0,.35);transform:translateX(105%);transition:transform .4s cubic-bezier(.2,1,.3,1)}
+  box-shadow:-20px 0 60px rgba(0,0,0,.35);transform:translateX(105%);transition:transform .4s cubic-bezier(.2,1,.3,1),bottom .25s ease}
 #drawer.open{transform:none}
 .drawer-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 .drawer-head h2{font-family:var(--serif);font-weight:600;font-size:1.6rem;flex:1}
@@ -950,15 +950,30 @@ function safeInsets() {
 }
 function computeLayout() {
   const si = safeInsets(), hudB = $('#hud').getBoundingClientRect().bottom;
-  const narrow = VW < 700;
   // An upright phone is too narrow for 14 tiles in a line (they'd be 24px wide), so
   // the rack becomes two rows of seven with a line for your exposures above them.
-  const twoRow = VW < 560 && VH > VW * 1.2;
+  // On a short phone the tiles shrink until the table in the middle keeps at least
+  // 140px; if even 30px tiles won't leave that, it falls back to one row.
+  let lay = null;
+  if (VW < 560 && VH > VW * 1.2) {
+    for (let cap = 64; cap >= 30 && !lay; cap -= 2) {
+      const c = layoutFor(si, hudB, true, cap);
+      if (c.center.y1 - c.center.y0 >= 140) lay = c;
+    }
+  }
+  L = lay || layoutFor(si, hudB, false, 80);
+  document.body.classList.toggle('compact', L.compact);
+  // the prompt sits just above your rack
+  $('#prompt').style.bottom = (VH - L.rackTop + 8 + L.wh * .32) + 'px';
+  placeDrawer();
+  dirty = true;
+}
+function layoutFor(si, hudB, twoRow, cap) {
+  const narrow = VW < 700;
   const compact = VH < 560 || twoRow;
-  document.body.classList.toggle('compact', compact);
   const wh = twoRow
-    ? clamp(Math.min((VW - si.l - si.r - 24) / 7.5, (VH - hudB) * .085), 24, 64)
-    : clamp(Math.min((VW - si.l - si.r - 30) / 15.4, (VH - hudB) * .14), 24, 80);
+    ? clamp(Math.min((VW - si.l - si.r - 24) / 7.5, (VH - hudB) * .085, cap), 24, 64)
+    : clamp(Math.min((VW - si.l - si.r - 30) / 15.4, (VH - hudB) * .14, cap), 24, 80);
   const hh = Math.round(wh * TILE_R);
   const rackBottom = VH - si.b - 10;
   const rowGap = 14, we2 = wh * .6;
@@ -984,11 +999,7 @@ function computeLayout() {
   const S = Math.max(120, Math.min(cw, ch * 1.02));
   const sq = { x: center.x0 + (cw - S) / 2, y: center.y0 + (ch - S) / 2, s: S };
   const pitch = S / 19.6;
-  L = { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact, twoRow, rowsTop, rowGap, expY, we2 };
-  // the prompt sits just above your rack
-  $('#prompt').style.bottom = (VH - rackTop + 8 + wh * .32) + 'px';
-  placeDrawer();
-  dirty = true;
+  return { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact, twoRow, rowsTop, rowGap, expY, we2 };
 }
 
 /* ---------- where every tile should be ---------- */
@@ -1736,7 +1747,7 @@ function showPrompt(html, btns) {
   $('#prompt').classList.add('show');
   placeDrawer();
 }
-function hidePrompt() { $('#prompt').classList.remove('show'); }
+function hidePrompt() { $('#prompt').classList.remove('show'); placeDrawer(); }
 function refreshPrompt() { if (['pass', 'courtesy', 'act'].includes(G.step) && (G.step !== 'act' || G.st.turn === 0)) advanceUI(); }
 function advanceUI() { if (G.step === 'pass') passPrompt(); else if (G.step === 'courtesy') courtesyPrompt(); else if (G.step === 'act' && G.st.turn === 0) turnPrompt(); }
 
@@ -1872,10 +1883,10 @@ function toggleDrawer(open) {
 // the card while you pick tiles to pass or discard.
 function placeDrawer() {
   if (!L) return;
-  const promptBottom = L.rackTop - 8 - L.wh * .32;
-  const promptH = $('#prompt').offsetHeight || 60;
-  const keep = Math.max(0, VH - (promptBottom - promptH) + 8);
-  $('#drawer').style.bottom = keep + 'px';
+  const pr = $('#prompt'), promptBottom = L.rackTop - 8 - L.wh * .32;
+  // only leave room for the prompt while it's actually showing
+  const promptH = pr.classList.contains('show') ? pr.offsetHeight : 0;
+  $('#drawer').style.bottom = Math.max(0, VH - (promptBottom - promptH) + 8) + 'px';
 }
 function miniTiles(ch, haveCounts) {
   const box = document.createElement('div'); box.className = 'minis';
