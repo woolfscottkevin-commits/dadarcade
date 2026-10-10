@@ -121,7 +121,7 @@ html[data-theme="paper"] .pbtn.primary{background:linear-gradient(180deg,#c95a4c
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
 /* ---------- card drawer ---------- */
-#drawer{position:fixed;z-index:12;top:0;bottom:0;right:0;width:min(420px,100vw);display:flex;flex-direction:column;
+#drawer{position:fixed;z-index:12;top:0;bottom:0;right:0;width:min(420px,100vw);display:flex;flex-direction:column;border-bottom-left-radius:22px;border-bottom:1px solid var(--line);
   padding:calc(var(--safe-t) + 12px) calc(var(--safe-r) + 14px) calc(var(--safe-b) + 12px) 16px;
   background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);
   box-shadow:-20px 0 60px rgba(0,0,0,.35);transform:translateX(105%);transition:transform .4s cubic-bezier(.2,1,.3,1)}
@@ -950,19 +950,31 @@ function safeInsets() {
 }
 function computeLayout() {
   const si = safeInsets(), hudB = $('#hud').getBoundingClientRect().bottom;
-  const narrow = VW < 700, compact = VH < 560;
+  const narrow = VW < 700;
+  // An upright phone is too narrow for 14 tiles in a line (they'd be 24px wide), so
+  // the rack becomes two rows of seven with a line for your exposures above them.
+  const twoRow = VW < 560 && VH > VW * 1.2;
+  const compact = VH < 560 || twoRow;
   document.body.classList.toggle('compact', compact);
-  const wh = clamp(Math.min((VW - si.l - si.r - 30) / 15.4, (VH - hudB) * .14), 24, 80);
+  const wh = twoRow
+    ? clamp(Math.min((VW - si.l - si.r - 24) / 7.5, (VH - hudB) * .085), 24, 64)
+    : clamp(Math.min((VW - si.l - si.r - 30) / 15.4, (VH - hudB) * .14), 24, 80);
   const hh = Math.round(wh * TILE_R);
   const rackBottom = VH - si.b - 10;
-  const rackTop = rackBottom - hh - 10;
-  const wb = clamp(Math.min(wh * .5, VH * .034), 12, 28);           // other players' tile backs
+  const rowGap = 14, we2 = wh * .6;
+  const rowsTop = rackBottom - 6 - 2 * hh - rowGap;
+  const expY = rowsTop - we2 * TILE_R - 10;
+  const rackTop = twoRow ? expY - 4 : rackBottom - hh - 10;
+  const wb = twoRow ? clamp(Math.min((VW - 110) / 14, 18), 12, 18)    // narrow phone: smaller racks so the name tags fit
+                    : clamp(Math.min(wh * .5, VH * .034), 12, 28);     // other players' tile backs
   const ws = clamp(wh * .56, 16, 40);                                  // exposed tiles
   const topY = hudB + 6;
   const sideW = wb * TILE_R + 8;                                       // a side rack on its edge
   const leftX = si.l + 10, rightX = VW - si.r - 10;
-  const topExpY = topY + wb * TILE_R + 18;
-  const promptSpace = (compact ? 50 : narrow ? 64 : 70) + wh * .32;
+  const tagH = clamp(wh * .2, 11, 15) * 2;
+  // on a narrow phone Iris's name tag sits under her rack, so her exposures move down
+  const topExpY = topY + wb * TILE_R + (twoRow ? tagH + 12 : 18);
+  const promptSpace = (twoRow ? 100 : compact ? 50 : narrow ? 64 : 70) + wh * .32;
   const center = {
     x0: leftX + sideW + ws * 2.4, x1: rightX - sideW - ws * 2.4,
     y0: topExpY + ws * TILE_R + 8, y1: rackTop - promptSpace,
@@ -972,9 +984,10 @@ function computeLayout() {
   const S = Math.max(120, Math.min(cw, ch * 1.02));
   const sq = { x: center.x0 + (cw - S) / 2, y: center.y0 + (ch - S) / 2, s: S };
   const pitch = S / 19.6;
-  L = { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact };
-  // the prompt and tools sit just above your rack
+  L = { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact, twoRow, rowsTop, rowGap, expY, we2 };
+  // the prompt sits just above your rack
   $('#prompt').style.bottom = (VH - rackTop + 8 + wh * .32) + 'px';
+  placeDrawer();
   dirty = true;
 }
 
@@ -1046,6 +1059,7 @@ function computeTargets() {
       });
     }
   }
+  if (L.twoRow) { twoRowTargets(T, st); return T; }
   // you: exposures on the left of your rack, then your tiles standing up
   const R = humanRow();
   let x = R.x0;
@@ -1059,6 +1073,29 @@ function computeTargets() {
   });
   L.row = R;
   return T;
+}
+function twoRowTargets(T, st) {
+  const hand = st.hands[0], wh = L.wh, gap = wh * .35;
+  // exposures on one line above the rack, after your name tag, shrunk to fit
+  const exps = st.exps[0], count = exps.reduce((n, e) => n + e.tiles.length, 0);
+  const x0 = L.si.l + 12 + tagSize(0).w + 10, avail = VW - L.si.r - 10 - x0;
+  const we = count ? Math.min(L.we2, (avail - (exps.length - 1) * 6) / count) : L.we2;
+  let x = x0;
+  for (const e of exps) { for (const t of e.tiles) { T.set(t.uid, { x, y: L.expY + (L.we2 - we) * TILE_R, w: we * .96, rot: 0, up: true, z: 5, exp: true, mine: true }); x += we; } x += 6; }
+  // your tiles: seven on the top row, the rest below; a fresh draw sits apart at the end
+  const drawnLast = st.drawn && st.turn === 0 && hand[hand.length - 1] === st.drawn;
+  const rows = [hand.slice(0, 7), hand.slice(7)];
+  rows.forEach((row, r) => {
+    const extra = r === 1 && drawnLast ? gap : 0;
+    let rx = (VW - row.length * wh - extra) / 2;
+    const y = L.rowsTop + r * (L.hh + L.rowGap);
+    row.forEach((t, i) => {
+      if (extra && i === row.length - 1) rx += extra;
+      T.set(t.uid, { x: rx, y, w: wh * .97, rot: 0, up: true, z: 6, rack: true });
+      rx += wh;
+    });
+  });
+  L.row = { twoRow: true, y: L.expY, wh, scale: 1, rows: rows.map(r => r.length) };
 }
 function applyTargets(now) {
   const T = computeTargets();
@@ -1141,7 +1178,16 @@ function render(now) {
   c.restore();
   // your rack: a wooden ledge
   const R = L.row;
-  if (R) {
+  const ledge = (rw, ry) => {
+    const rx = (VW - rw) / 2;
+    const wood = c.createLinearGradient(0, ry, 0, ry + 16); wood.addColorStop(0, '#9a6a3c'); wood.addColorStop(1, '#5c3a1c');
+    c.fillStyle = 'rgba(0,0,0,.3)'; rrect(c, rx + 4, ry + 6, rw, 14, 7); c.fill();
+    c.fillStyle = wood; rrect(c, rx, ry, rw, 14, 7); c.fill();
+    c.fillStyle = 'rgba(255,230,190,.25)'; c.fillRect(rx + 8, ry + 2, rw - 16, 1.5);
+  };
+  if (R && R.twoRow) {
+    for (let r = 0; r < 2; r++) ledge(Math.min(VW - 12, 7 * R.wh + 30), L.rowsTop + r * (L.hh + L.rowGap) + L.hh - 4);
+  } else if (R) {
     const rw = Math.max(st.hands[0].length * R.wh + 40, VW * .5), rx = (VW - rw) / 2, ry = R.y + L.hh * R.scale - 4;
     const wood = c.createLinearGradient(0, ry, 0, ry + 16); wood.addColorStop(0, '#9a6a3c'); wood.addColorStop(1, '#5c3a1c');
     c.fillStyle = 'rgba(0,0,0,.3)'; rrect(c, rx + 4, ry + 6, rw, 14, 7); c.fill();
@@ -1165,7 +1211,7 @@ function render(now) {
       if (rec.has(t.uid) && !opt.glow) { opt.glow = tileSet(r.w).glowMatch; opt.glowA = .9; }
       if (dots && dots.has(t.uid)) opt.dot = true;
       if (G.step === 'pass' || G.step === 'courtesy') { const i = G.sel.indexOf(t.uid); if (i >= 0) opt.badge = String(i + 1); }
-      if (drag && drag.uid === t.uid) { r.x = drag.x - r.w / 2; opt.lift = L.wh * .32; }
+      if (drag && drag.uid === t.uid) { r.x = drag.x - r.w / 2; if (L.twoRow) r.y = drag.y - r.w * TILE_R / 2; opt.lift = L.wh * .32; }
     }
     if (g.last && now - lastDiscardAt < 1400 + 99999) { opt.glow = tileSet(r.w).glowSel; opt.glowA = now - lastDiscardAt < 1400 ? .6 + .4 * Math.sin(now / 120) : .55; }
     if (g.exp && G.swapGlow && t.type === T_JOKER && G.swapGlow.has(t.uid)) { opt.glow = tileSet(r.w).glowHint; opt.glowA = .65 + .35 * Math.sin(now / 200); }
@@ -1183,6 +1229,14 @@ function render(now) {
     c.fillText(`${st.wall.length} tiles in the wall`, da.x + da.w / 2, da.y + da.h / 2);
   }
   drawFx(c, now);
+}
+function tagSize(seat) {
+  const c = cx.table, fs = clamp(L.wh * .2, 11, 15);
+  c.save(); c.font = `800 ${fs}px ${LATIN}`;
+  const score = G.scores[seat], sc = (score > 0 ? '+' : '') + score;
+  const w = c.measureText(`${NAMES[seat]} · ${windOf(seat)}`).width + c.measureText(sc).width + fs * 3.4;
+  c.restore();
+  return { w, h: fs * 2 };
 }
 function nameTags(c, now) {
   const st = G.st;
@@ -1207,11 +1261,13 @@ function nameTags(c, now) {
     c.restore();
   };
   const fs2 = clamp(L.wh * .2, 11, 15) * 2;
-  tag(2, VW / 2 + st.hands[2].length * L.wb / 2 + 10, L.topY + (L.wb * TILE_R - fs2) / 2, 'left');
+  if (L.twoRow) tag(2, VW / 2, L.topY + L.wb * TILE_R + 5, 'center');
+  else tag(2, VW / 2 + st.hands[2].length * L.wb / 2 + 10, L.topY + (L.wb * TILE_R - fs2) / 2, 'left');
   const cy = (L.center.y0 + L.center.y1) / 2, sideTop = cy - Math.max(st.hands[3].length, st.hands[1].length, 13) * L.wb / 2;
   tag(3, L.leftX, sideTop - fs2 - 10, 'left');
   tag(1, L.rightX, sideTop - fs2 - 10, 'right');
-  if (L.row) tag(0, L.si.l + 12, L.row.y - fs2 - 8, 'left');
+  if (L.row && L.row.twoRow) tag(0, L.si.l + 12, L.expY + (L.we2 * TILE_R - fs2) / 2, 'left');
+  else if (L.row) tag(0, L.si.l + 12, L.row.y - fs2 - 8, 'left');
 }
 
 /* ---------- effects ---------- */
@@ -1678,6 +1734,7 @@ function showPrompt(html, btns) {
     box.appendChild(el);
   }
   $('#prompt').classList.add('show');
+  placeDrawer();
 }
 function hidePrompt() { $('#prompt').classList.remove('show'); }
 function refreshPrompt() { if (['pass', 'courtesy', 'act'].includes(G.step) && (G.step !== 'act' || G.st.turn === 0)) advanceUI(); }
@@ -1704,14 +1761,14 @@ cv.table.addEventListener('pointerdown', e => {
 });
 cv.table.addEventListener('pointermove', e => {
   if (!press || e.pointerId !== press.id || press.uid < 0) return;
-  if (!drag && Math.abs(e.clientX - press.x) > 10) { drag = { uid: press.uid, x: e.clientX }; }
+  if (!drag && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) { drag = { uid: press.uid, x: e.clientX, y: e.clientY }; }
   if (drag) {
-    drag.x = e.clientX;
+    drag.x = e.clientX; drag.y = e.clientY;
     // move the tile in your hand to where your finger is
     const hand = G.st.hands[0], t = TILES[drag.uid], from = hand.indexOf(t);
     if (from < 0) { press = drag = null; return; }
     const R = L.row; let best = from, bd = Infinity;
-    hand.forEach((h, i) => { const g = h.tg; if (!g) return; const d = Math.abs(g.x + g.w / 2 - drag.x); if (d < bd) { bd = d; best = i; } });
+    hand.forEach((h, i) => { const g = h.tg; if (!g) return; const d = L.twoRow ? Math.hypot(g.x + g.w / 2 - drag.x, g.y + g.w * TILE_R / 2 - drag.y) : Math.abs(g.x + g.w / 2 - drag.x); if (d < bd) { bd = d; best = i; } });
     if (best !== from) { hand.splice(from, 1); hand.splice(best, 0, t); G.manual = true; dirty = true; }
     kick();
   }
@@ -1809,7 +1866,16 @@ $$('.tab').forEach(b => b.addEventListener('click', () => { Sound.ui(); drawerTa
 function toggleDrawer(open) {
   const d = $('#drawer'), on = open ?? !d.classList.contains('open');
   d.classList.toggle('open', on);
-  if (on) renderDrawer();
+  if (on) { placeDrawer(); renderDrawer(); }
+}
+// The card panel never covers your rack or the prompt above it, so you can read
+// the card while you pick tiles to pass or discard.
+function placeDrawer() {
+  if (!L) return;
+  const promptBottom = L.rackTop - 8 - L.wh * .32;
+  const promptH = $('#prompt').offsetHeight || 60;
+  const keep = Math.max(0, VH - (promptBottom - promptH) + 8);
+  $('#drawer').style.bottom = keep + 'px';
 }
 function miniTiles(ch, haveCounts) {
   const box = document.createElement('div'); box.className = 'minis';
