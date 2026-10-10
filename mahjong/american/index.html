@@ -107,6 +107,21 @@ html[data-theme="paper"] .pbtn.primary{background:linear-gradient(180deg,#c95a4c
 @keyframes mjpulse{50%{box-shadow:0 0 0 7px rgba(255,120,100,.15),0 8px 20px rgba(0,0,0,.3)}}
 .pbtn.quiet{background:none;border-color:transparent;color:var(--ink-2)}
 
+/* the closest-hand strip above your rack */
+#strip{position:fixed;z-index:6;display:flex;align-items:center;gap:4px;padding:4px;border-radius:14px;background:var(--panel);border:1px solid var(--line);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.strip-nav{width:30px;align-self:stretch;border-radius:10px;font-size:1.3rem;font-weight:800;color:var(--ink-2);flex:0 0 auto}
+.strip-nav:hover{background:var(--btn-hover);color:var(--ink)}
+.strip-main{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:0 4px;border-radius:10px;overflow:hidden;align-self:stretch}
+.strip-main:hover{background:var(--btn)}
+.strip-main .htext{flex:0 0 auto;white-space:nowrap;font-size:.92rem;padding:3px 8px}
+.strip-away{flex:0 0 auto;font-weight:900;font-size:.8rem;color:var(--gold);white-space:nowrap}
+.strip-needs{flex:1 1 auto;min-width:0;display:flex;gap:2px;overflow:hidden;align-items:center}
+body.strip-hud .hud-center{visibility:hidden}
+.strip-needs canvas{position:static;flex:0 0 auto}
+.strip-needs .more{font-size:.72rem;font-weight:800;color:var(--ink-2);padding-left:3px;white-space:nowrap}
+body.compact .strip-main .htext{font-size:.82rem}
+
 /* small floating tools beside the rack */
 #tools{position:fixed;z-index:6;display:flex;flex-direction:column;gap:8px;right:calc(var(--safe-r) + 12px);bottom:140px}
 .tbtn{width:52px;height:52px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.62rem;font-weight:800;letter-spacing:.04em;
@@ -315,6 +330,12 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   <button class="icon-btn" id="btn-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
 </header>
 
+<!-- your closest hand, always in view just above your rack -->
+<div id="strip" class="hide" aria-label="Your closest hand">
+  <button class="strip-nav" id="strip-prev" aria-label="Previous suggested hand">‹</button>
+  <button class="strip-main" id="strip-main" aria-label="Open the card"><span class="htext" id="strip-hand"></span><span class="strip-away" id="strip-away"></span><span class="strip-needs" id="strip-needs"></span></button>
+  <button class="strip-nav" id="strip-next" aria-label="Next suggested hand">›</button>
+</div>
 <div id="prompt" role="status" aria-live="polite"><div class="msg" id="prompt-msg"></div><div class="btns" id="prompt-btns"></div></div>
 
 
@@ -366,6 +387,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="second"><button data-v="ask">Ask</button><button data-v="skip">Skip</button><button data-v="always">Always</button></div></div>
     <div class="set-row"><div><b>Courtesy pass</b><span>Offer the optional pass across after the Charleston</span></div><button class="switch" role="switch" data-set="courtesy" aria-label="Courtesy pass"></button></div>
     <div class="set-h">Help</div>
+    <div class="set-row"><div><b>Show my closest hand</b><span>A strip above your rack with the hand you’re nearest to and the tiles you still need. Use ‹ › for more suggestions.</span></div><button class="switch" role="switch" data-set="strip" aria-label="Show my closest hand"></button></div>
     <div class="set-row"><div><b>Highlight my closest hand</b><span>Tiles that fit the hand you’re nearest to get a small green dot</span></div><button class="switch" role="switch" data-set="dots" aria-label="Highlight closest hand"></button></div>
     <div class="set-row"><div><b>Sort tiles automatically</b><span>New tiles slide into place; you can still drag tiles to rearrange</span></div><button class="switch" role="switch" data-set="autosort" aria-label="Sort automatically"></button></div>
     <div class="set-row"><div><b>Corner numbers</b><span>Small 1–9 and N E W S on the tiles</span></div><button class="switch" role="switch" data-set="indices" aria-label="Corner numbers"></button></div>
@@ -867,7 +889,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true,
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true,
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 const saveSettings = () => store.set(SET_KEY, settings);
@@ -953,18 +975,21 @@ function computeLayout() {
   // An upright phone is too narrow for 14 tiles in a line (they'd be 24px wide), so
   // the rack becomes two rows of seven with a line for your exposures above them.
   // On a short phone the tiles shrink until the table in the middle keeps at least
-  // 140px; if even 30px tiles won't leave that, it falls back to one row.
+  // 104px; if even 30px tiles won't leave that, it falls back to one row.
   let lay = null;
   if (VW < 560 && VH > VW * 1.2) {
     for (let cap = 64; cap >= 30 && !lay; cap -= 2) {
       const c = layoutFor(si, hudB, true, cap);
-      if (c.center.y1 - c.center.y0 >= 140) lay = c;
+      if (c.center.y1 - c.center.y0 >= 104) lay = c;
     }
   }
   L = lay || layoutFor(si, hudB, false, 80);
   document.body.classList.toggle('compact', L.compact);
-  // the prompt sits just above your rack
-  $('#prompt').style.bottom = (VH - L.rackTop + 8 + L.wh * .32) + 'px';
+  // the strip sits just above your rack (clear of lifted tiles), the prompt above that
+  const stripBottom = L.rackTop - 8 - L.wh * .32;
+  L.promptBottom = stripBottom - (L.stripH ? L.stripH + 6 : 0);
+  $('#prompt').style.bottom = (VH - L.promptBottom) + 'px';
+  placeStrip(stripBottom);
   placeDrawer();
   dirty = true;
 }
@@ -989,7 +1014,10 @@ function layoutFor(si, hudB, twoRow, cap) {
   const tagH = clamp(wh * .2, 11, 15) * 2;
   // on a narrow phone Iris's name tag sits under her rack, so her exposures move down
   const topExpY = topY + wb * TILE_R + (twoRow ? tagH + 12 : 18);
-  const promptSpace = (twoRow ? 100 : compact ? 50 : narrow ? 64 : 70) + wh * .32;
+  // a phone held sideways has no height to spare: there the strip sits in the header instead
+  const stripInHud = settings.strip && compact && !twoRow && VW > VH;
+  const stripH = settings.strip && !stripInHud ? (compact ? 34 : 40) : 0;
+  const promptSpace = (twoRow ? 100 : compact ? 50 : narrow ? 64 : 70) + wh * .32 + (stripH ? stripH + 6 : 0);
   const center = {
     x0: leftX + sideW + ws * 2.4, x1: rightX - sideW - ws * 2.4,
     y0: topExpY + ws * TILE_R + 8, y1: rackTop - promptSpace,
@@ -999,7 +1027,7 @@ function layoutFor(si, hudB, twoRow, cap) {
   const S = Math.max(120, Math.min(cw, ch * 1.02));
   const sq = { x: center.x0 + (cw - S) / 2, y: center.y0 + (ch - S) / 2, s: S };
   const pitch = S / 19.6;
-  return { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact, twoRow, rowsTop, rowGap, expY, we2 };
+  return { si, wh, hh, rackTop, rackBottom, wb, ws, topY, topExpY, sideW, leftX, rightX, center, sq, pitch, narrow, compact, twoRow, rowsTop, rowGap, expY, we2, stripH, stripInHud };
 }
 
 /* ---------- where every tile should be ---------- */
@@ -1132,7 +1160,7 @@ function kick() { if (!rafId) rafId = requestAnimationFrame(frame); }
 function frame(now) {
   rafId = 0;
   const dt = Math.min(.05, (now - lastFrame) / 1000 || .016); lastFrame = now;
-  if (G && G.st) { if (dirty) applyTargets(now); render(now); stepFx(dt); }
+  if (G && G.st) { if (dirty) applyTargets(now); render(now); stepFx(dt); updateStrip(); }
   const busy = TILES.some(t => t.anim) || fx.parts.length || fx.texts.length || fx.rings.length || (G && (G.sel.length || G.hint || G.st.discards.length && now - lastDiscardAt < 1500 || G.received.length || G.swapGlow));
   if (busy) kick();
 }
@@ -1348,6 +1376,93 @@ function fitTiles() {
   fitCache = { key, set };
   return set;
 }
+
+/* ---------- the closest-hand strip ---------- */
+function placeStrip(bottom) {
+  const el = $('#strip');
+  if (L.stripInHud) {
+    // between the menu button and the buttons on the right of the header
+    const left = $('#btn-menu').getBoundingClientRect().right + 8, right = $('#btn-suggest').getBoundingClientRect().left - 8;
+    const hb = $('#btn-menu').getBoundingClientRect();
+    Object.assign(el.style, { left: left + 'px', width: Math.max(0, right - left) + 'px', top: (hb.top + (hb.height - 36) / 2) + 'px', height: '36px' });
+    stripKey = '';
+    return;
+  }
+  if (!L.stripH) { el.classList.add('hide'); return; }
+  // stay clear of your name tag when it sits beside the rack
+  const tagW = G && G.st && !L.twoRow ? tagSize(0).w + 24 : 0;
+  const side = Math.max(L.si.l + 10, L.si.l + 12 + tagW);
+  const w = Math.min(VW - side * 2, 680);
+  Object.assign(el.style, { left: ((VW - w) / 2) + 'px', width: w + 'px', top: (bottom - L.stripH) + 'px', height: L.stripH + 'px' });
+  stripKey = '';
+}
+let stripKey = '', stripList = [];
+function sameHand(a, b) { return a && b && a.def === b.def && a.shift === b.shift && a.perm.join() === b.perm.join(); }
+// the tiles still missing for a hand, after counting your tiles and jokers
+function missingTiles(ch, counts, exps) {
+  const used = [];
+  for (const e of exps) { const i = ch.groups.findIndex((g, k) => !used.includes(k) && g.t === e.t && g.n === e.n); used.push(i); }
+  const reqP = new Int8Array(NT), reqJ = new Int8Array(NT);
+  ch.groups.forEach((g, k) => { if (!used.includes(k)) (g.n >= 3 ? reqJ : reqP)[g.t] += g.n; });
+  const out = [], jok = []; let jokers = counts[T_JOKER];
+  for (let t = 0; t < NT; t++) {
+    if (!reqP[t] && !reqJ[t]) continue;
+    const up = Math.min(counts[t], reqP[t]), uj = Math.min(counts[t] - up, reqJ[t]);
+    for (let k = up; k < reqP[t]; k++) out.push(t);
+    for (let k = uj; k < reqJ[t]; k++) jok.push(t);
+  }
+  return out.concat(jok.slice(Math.min(jokers, jok.length)));
+}
+function updateStrip() {
+  const el = $('#strip');
+  const on = settings.strip && L && (L.stripH || L.stripInHud) && G && G.st && G.st.phase !== 'done' && G.step !== 'dealing';
+  // in the header, the strip takes the title's place only while it's showing
+  document.body.classList.toggle('strip-hud', !!(on && L.stripInHud));
+  if (!on) { el.classList.add('hide'); stripKey = ''; return; }
+  const st = G.st, hand = st.hands[0];
+  const key = hand.map(t => t.uid).join(',') + '|' + st.exps[0].length + '|' + (G.focus ? G.focus.hand + ':' + G.focus.shift + ':' + G.focus.perm : '') + '|' + card.concrete.length + '|' + VW;
+  if (key === stripKey) return;
+  stripKey = key;
+  el.classList.remove('hide');
+  const counts = countsOf(hand), exps = expsOf(st.exps[0]);
+  stripList = rankHands(card, counts, exps, 5);
+  let i = stripList.findIndex(r => sameHand(r.ch, G.focus));
+  if (G.focus && i < 0) { const m = missingFor(G.focus, counts, exps); if (m >= 0) { stripList.unshift({ ch: G.focus, m }); i = 0; } }
+  const cur = stripList[Math.max(0, i)];
+  const multi = stripList.length > 1;
+  $('#strip-prev').style.visibility = $('#strip-next').style.visibility = multi ? 'visible' : 'hidden';
+  if (!cur) { $('#strip-hand').textContent = 'No hand on the card fits your exposures'; $('#strip-away').textContent = ''; $('#strip-needs').innerHTML = ''; return; }
+  $('#strip-hand').innerHTML = handHTML(cur.ch.def.text);
+  $('#strip-away').textContent = cur.m === 0 ? 'Mah Jongg!' : `${cur.m} away`;
+  // pictures of the tiles you still need, as many as fit
+  const box = $('#strip-needs'); box.innerHTML = '';
+  const need = cur.m ? missingTiles(cur.ch, counts, exps) : [];
+  const S = tileSet(18), th = Math.round(18 * TILE_R);
+  const room = Math.max(0, parseFloat(el.style.width) - 80 - $('#strip-hand').offsetWidth - $('#strip-away').offsetWidth);
+  // each picture takes 20px; keep 30px for a "+N" when they don't all fit
+  const shown = need.length * 20 <= room ? need.length : Math.max(0, Math.floor((room - 30) / 20));
+  const fit = shown + (need.length > shown ? 1 : 0);
+  for (const t of need.slice(0, shown)) {
+    const c = document.createElement('canvas'); c.width = 18 * DPR; c.height = th * DPR; c.style.width = '18px'; c.style.height = th + 'px';
+    const x = c.getContext('2d'); x.scale(DPR, DPR); rrect(x, .5, .5, 17, th - 1, 3); x.fillStyle = '#fbf6ea'; x.fill();
+    x.drawImage(S.faces[t === T_FLOWER ? 34 : t], 0, 0, 18, th);
+    box.appendChild(c);
+  }
+  if (need.length > shown && fit > 0) { const m = document.createElement('span'); m.className = 'more'; m.textContent = shown ? `+${need.length - shown}` : `needs ${need.length}`; box.appendChild(m); }
+}
+function stripStep(dir) {
+  if (stripList.length < 2) return;
+  let i = stripList.findIndex(r => sameHand(r.ch, G.focus)); if (i < 0) i = 0;
+  i = (i + dir + stripList.length) % stripList.length;
+  // the first suggestion follows your hand as it changes; any other one stays put
+  G.focus = i === 0 ? null : stripList[i].ch;
+  fitCache.key = ''; stripKey = '';
+  Sound.ui(); updateStrip(); kick();
+  if ($('#drawer').classList.contains('open')) renderDrawer();
+}
+$('#strip-prev').addEventListener('click', () => stripStep(-1));
+$('#strip-next').addEventListener('click', () => stripStep(1));
+$('#strip-main').addEventListener('click', () => { Sound.ui(); drawerTab = 'close'; toggleDrawer(true); });
 
 /* ---------- the game ---------- */
 let G = null, TILES = [];
@@ -1883,7 +1998,7 @@ function toggleDrawer(open) {
 // the card while you pick tiles to pass or discard.
 function placeDrawer() {
   if (!L) return;
-  const pr = $('#prompt'), promptBottom = L.rackTop - 8 - L.wh * .32;
+  const pr = $('#prompt'), promptBottom = L.promptBottom;
   // only leave room for the prompt while it's actually showing
   const promptH = pr.classList.contains('show') ? pr.offsetHeight : 0;
   $('#drawer').style.bottom = Math.max(0, VH - (promptBottom - promptH) + 8) + 'px';
@@ -2163,6 +2278,7 @@ $$('.switch[data-set]').forEach(s => s.addEventListener('click', () => {
   if (k === 'indices') { sets.clear(); }
   if (k === 'calm') { stopAmbient(); startAmbient(); }
   if (k === 'autosort' && settings.autosort && G && G.st) { G.manual = false; settle(); }
+  if (k === 'strip') { computeLayout(); updateStrip(); }
   kick();
 }));
 $$('.seg[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
