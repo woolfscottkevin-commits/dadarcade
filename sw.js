@@ -16,7 +16,9 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      // Only clear our own old caches: games with their own offline worker
+      // (bub-*, mahjong-*) keep separate caches on this same origin.
+      Promise.all(keys.filter(k => k.startsWith('dadarcade-') && k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
