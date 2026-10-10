@@ -37,11 +37,11 @@
   gtag('config', 'G-90KFJNYR94');
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" crossorigin>
 <!-- The tile characters, in a brush (kai) script. Only the 25 glyphs the tiles use are requested. -->
-<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&display=block&text=%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B%E4%BA%94%E5%85%AD%E4%B8%83%E5%85%AB%E4%B9%9D%E8%90%AC%E6%9D%B1%E5%8D%97%E8%A5%BF%E5%8C%97%E4%B8%AD%E7%99%BC%E6%98%A5%E5%A4%8F%E7%A7%8B%E5%86%AC%E6%A2%85%E8%98%AD%E8%8F%8A%E7%AB%B9" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&display=block&text=%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B%E4%BA%94%E5%85%AD%E4%B8%83%E5%85%AB%E4%B9%9D%E8%90%AC%E6%9D%B1%E5%8D%97%E8%A5%BF%E5%8C%97%E4%B8%AD%E7%99%BC%E6%98%A5%E5%A4%8F%E7%A7%8B%E5%86%AC%E6%A2%85%E8%98%AD%E8%8F%8A%E7%AB%B9" rel="stylesheet" crossorigin>
 
 <style>
 :root{
@@ -1175,6 +1175,7 @@ function setupBoard(def, seed, daily) {
     history: [], elapsed: 0, started: false, counted: false, won: false, dealing: false, preview: false, finishing: false,
     hints: 0, shuffles: 0, undos: 0, matches: 0, streak: 0, bestStreak: 0, lastMatch: 0,
     selected: -1, selectedAt: 0, hover: -1, hint: null, hintList: null, hintIdx: 0, blockers: null, assist: [],
+    gen: (game.gen || 0) + 1,
   });
   fx.parts.length = fx.flyers.length = fx.rings.length = fx.texts.length = 0;
   tweens.length = 0;
@@ -1407,7 +1408,7 @@ function doMatch(a, b) {
   const impact = flyPair(a, b);
   Sound.match(game.streak, impact);
   updateFree(); updateHUD(); saveGame(); hideBanner(); closeSheet('stuck');
-  if (remaining() === 0) { setTimeout(onWin, impact * 1000 + 250); return; }
+  if (remaining() === 0) { onWin(impact * 1000 + 250); return; }
   if (movesAvailable() === 0) setTimeout(() => { if (!game.won && remaining() && movesAvailable() === 0) openSheet('stuck'); }, impact * 1000 + 650);
   else if (!game.finishing && remaining() <= 12) setTimeout(offerFinish, impact * 1000 + 250);
   else if (!game.finishing) scheduleDeadCheck();
@@ -1578,9 +1579,13 @@ $('#banner-x').addEventListener('click', hideBanner);
 
 /* ---------- winning ---------- */
 const WIN_TITLES = ['Beautifully done', 'Wonderful', 'A lovely game', 'Serene', 'Well played', 'Graceful'];
-function onWin() {
+// The win is recorded the moment the last pair goes (so an undo or a reload in the
+// next second can't undo or lose it); only the celebration waits for the tiles to land.
+function onWin(delay = 0) {
   if (game.won) return;
   game.won = true; clearTimeout(deadTimer); hideBanner();
+  const gen = game.gen;
+  const later = (ms, fn) => setTimeout(() => { if (game.gen === gen) fn(); }, delay + ms);
   store.del(SAVE_KEY);
   const time = game.elapsed, id = game.layoutId;
   const L = stats.layouts[id] || (stats.layouts[id] = { played: 1, won: 0, best: 0, total: 0 });
@@ -1590,17 +1595,8 @@ function onWin() {
   if (game.daily) { const prev = stats.daily[game.daily]; stats.daily[game.daily] = prev ? Math.min(prev, time) : time; }
   saveStats();
   try { gtag('event', 'mahjong_win', { layout: id, seconds: Math.round(time), daily: !!game.daily, hints: game.hints }); } catch (e) {}
-  // celebration: a few bursts across the garden, then petals drifting down
-  Sound.win();
   const calm = settings.calm || reducedMotion();
-  const bx = M.ox + M.bw / 2, by = M.oy + M.bh / 2;
-  const n = calm ? 1 : 6;
-  for (let i = 0; i < n; i++) setTimeout(() => burst(bx + (Math.random() - .5) * M.bw * .8, by + (Math.random() - .5) * M.bh * .7, { petals: 16, sparks: 18, power: 1.5 }), i * 260);
-  if (!calm) for (let i = 0; i < 70; i++) {
-    const sc = M.W / 64;
-    fx.parts.push({ kind: 'petal', x: Math.random() * VW, y: -20 - Math.random() * VH * .5, vx: 20 + Math.random() * 40, vy: 70 + Math.random() * 90, g: 0, drag: 0, life: 0, max: 4 + Math.random() * 3, sz: (12 + Math.random() * 12) * sc * 1.2, rot: Math.random() * TAU, vr: (Math.random() - .5) * 3, fl: Math.random() * TAU, vf: 2 + Math.random() * 3 });
-  }
-  kick();
+  later(0, () => celebrateWin(calm));
   // fill in the card
   $('#win-kicker').textContent = game.daily ? 'Daily puzzle complete' : 'Garden cleared';
   $('#win-title').textContent = WIN_TITLES[(Math.random() * WIN_TITLES.length) | 0];
@@ -1615,7 +1611,18 @@ function onWin() {
   else if (!game.hints && !game.undos && !game.shuffles) note = note ? note + ' No help needed, either.' : 'Cleared without a single hint or undo.';
   $('#win-note').textContent = note;
   $('#win-again').textContent = game.daily ? 'New game' : 'Play again';
-  setTimeout(() => openSheet('win'), calm ? 500 : 1700);
+  later(calm ? 500 : 1700, () => openSheet('win'));
+}
+function celebrateWin(calm) {
+  Sound.win();
+  const bx = M.ox + M.bw / 2, by = M.oy + M.bh / 2;
+  const n = calm ? 1 : 6;
+  for (let i = 0; i < n; i++) setTimeout(() => burst(bx + (Math.random() - .5) * M.bw * .8, by + (Math.random() - .5) * M.bh * .7, { petals: 16, sparks: 18, power: 1.5 }), i * 260);
+  if (!calm) for (let i = 0; i < 70; i++) {
+    const sc = M.W / 64;
+    fx.parts.push({ kind: 'petal', x: Math.random() * VW, y: -20 - Math.random() * VH * .5, vx: 20 + Math.random() * 40, vy: 70 + Math.random() * 90, g: 0, drag: 0, life: 0, max: 4 + Math.random() * 3, sz: (12 + Math.random() * 12) * sc * 1.2, rot: Math.random() * TAU, vr: (Math.random() - .5) * 3, fl: Math.random() * TAU, vf: 2 + Math.random() * 3 });
+  }
+  kick();
 }
 
 /* ---------- sheets ---------- */
