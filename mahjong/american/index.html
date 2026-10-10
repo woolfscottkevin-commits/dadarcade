@@ -33,10 +33,10 @@
   gtag('config', 'G-90KFJNYR94');
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&display=block&text=%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B%E4%BA%94%E5%85%AD%E4%B8%83%E5%85%AB%E4%B9%9D%E8%90%AC%E6%9D%B1%E5%8D%97%E8%A5%BF%E5%8C%97%E4%B8%AD%E7%99%BC%E6%98%A5%E5%A4%8F%E7%A7%8B%E5%86%AC%E6%A2%85%E8%98%AD%E8%8F%8A%E7%AB%B9" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Nunito+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&display=block&text=%E4%B8%80%E4%BA%8C%E4%B8%89%E5%9B%9B%E4%BA%94%E5%85%AD%E4%B8%83%E5%85%AB%E4%B9%9D%E8%90%AC%E6%9D%B1%E5%8D%97%E8%A5%BF%E5%8C%97%E4%B8%AD%E7%99%BC%E6%98%A5%E5%A4%8F%E7%A7%8B%E5%86%AC%E6%A2%85%E8%98%AD%E8%8F%8A%E7%AB%B9" rel="stylesheet" crossorigin>
 
 <style>
 :root{
@@ -186,7 +186,6 @@ function bulkPreview() {
   const { hands, problems } = parseCardLines($('#bulk-text').value), box = $('#bulk-preview');
   if (!hands.length && !problems.length) { box.innerHTML = '<span class="legend">As you type, each hand is checked here.</span>'; }
   else {
-    const esc = x => String(x).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
     box.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${hands.length} hand${hands.length === 1 ? '' : 's'} ready${problems.length ? ` · <span class="err">${problems.length} line${problems.length === 1 ? '' : 's'} to fix</span>` : ''}</div>` +
       problems.map(p => `<div class="err" style="margin:4px 0">Line ${p.line}: ${esc(p.msg)} <span style="opacity:.75">(${esc(p.raw.trim()).slice(0, 48)})</span></div>`).join('') +
       hands.slice(-3).map(h => `<div class="htext" style="margin-top:6px;font-size:.92rem">${handHTML(h.text)}</div>`).join('');
@@ -884,6 +883,9 @@ const SEAT_COL = ['#e9c56f', '#e4708a', '#9d8fe6', '#f0b84f'];
 const WINDS = ['East', 'South', 'West', 'North'];
 const windOf = seat => WINDS[(seat - G.dealer + 4) % 4];
 const calm = () => settings.calm || reducedMotion();
+
+// anything the player typed (section names) is text, never markup
+const esc = x => String(x).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 /* ---------- which card is in play ---------- */
 let card = null;
@@ -1649,7 +1651,7 @@ function showResult() {
       g.drawImage(S.body, 3 - S.d - S.pad, 1 - S.pad, S.bw, S.bh); g.drawImage(S.faces[faceOf(t)], 3, 1, tw, h);
       el.appendChild(c);
     }
-    $('#result-hand').innerHTML = `<div class="hand"><div class="row1"><div class="htext">${handHTML(r.text)}</div><div class="hval">${r.value}</div></div><div class="hnote"><span>${r.cat}</span><span>${r.jokerless ? 'No jokers — doubled to ' + r.base : ''}</span></div></div>`;
+    $('#result-hand').innerHTML = `<div class="hand"><div class="row1"><div class="htext">${handHTML(r.text)}</div><div class="hval">${r.value}</div></div><div class="hnote"><span>${esc(r.cat)}</span><span>${r.jokerless ? 'No jokers — doubled to ' + r.base : ''}</span></div></div>`;
   }
   $('#result-pay').innerHTML = [0, 1, 2, 3].map(s => `<tr><td>${NAMES[s]}</td><td class="num ${r.pay[s] > 0 ? 'plus' : r.pay[s] < 0 ? 'minus' : ''}">${r.pay[s] > 0 ? '+' : ''}${r.pay[s] || '—'}</td><td class="num">${G.scores[s]}</td></tr>`).join('');
   $('#result-pay').insertAdjacentHTML('afterbegin', '<tr><td></td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">THIS HAND</td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">TOTAL</td></tr>');
@@ -1848,7 +1850,7 @@ function renderDrawer() {
     $('#drawer-title').textContent = name;
     let cat = '';
     card.hands.forEach((h, i) => {
-      if (h.cat !== cat) { cat = h.cat; const c = document.createElement('div'); c.className = 'cat'; c.innerHTML = `<span>${cat}</span>`; body.appendChild(c); }
+      if (h.cat !== cat) { cat = h.cat; const c = document.createElement('div'); c.className = 'cat'; c.innerHTML = `<span>${esc(cat)}</span>`; body.appendChild(c); }
       const best = st ? card.concrete.filter(ch => ch.hand === i).map(ch => ({ ch, m: missingFor(ch, counts, exps) })).filter(x => x.m >= 0).sort((a, b) => a.m - b.m)[0] : null;
       body.appendChild(handRow(h, best ? best.ch : null, best ? best.m : (st ? -1 : null), null));
     });
@@ -1866,7 +1868,7 @@ function renderDrawer() {
     if (!myHands.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = 'No hands yet.'; body.appendChild(e); }
     let cat = null;
     myHands.forEach((h, i) => {
-      if (h.cat !== cat) { cat = h.cat; const c = document.createElement('div'); c.className = 'cat'; c.innerHTML = `<span>${cat || 'Hands'}</span>`; body.appendChild(c); }
+      if (h.cat !== cat) { cat = h.cat; const c = document.createElement('div'); c.className = 'cat'; c.innerHTML = `<span>${esc(cat || 'Hands')}</span>`; body.appendChild(c); }
       const row = document.createElement('div'); row.className = 'myhand';
       const hr = handRow(h, null, null, null); hr.addEventListener('click', () => openEditor(i));
       row.appendChild(hr);
@@ -1915,7 +1917,7 @@ function openEditor(i) {
   $('#ed-cat').value = h.cat || ''; $('#ed-text').value = h.text || ''; $('#ed-mode').value = h.ui || 'exact'; $('#ed-c').checked = !!h.c; $('#ed-v').value = h.v || 25;
   $('#ed-delete').classList.toggle('hide', i < 0);
   const cats = [...new Set(GARDEN_CARD.map(x => x.cat).concat(myHands.map(x => x.cat)))].filter(Boolean);
-  $('#cat-list').innerHTML = cats.map(c => `<option value="${c.replace(/"/g, '')}">`).join('');
+  $('#cat-list').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
   edPreview();
   openSheet('editor');
 }
@@ -1989,7 +1991,6 @@ function bulkPreview() {
   const { hands, problems } = parseCardLines($('#bulk-text').value), box = $('#bulk-preview');
   if (!hands.length && !problems.length) { box.innerHTML = '<span class="legend">As you type, each hand is checked here.</span>'; }
   else {
-    const esc = x => String(x).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
     box.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${hands.length} hand${hands.length === 1 ? '' : 's'} ready${problems.length ? ` · <span class="err">${problems.length} line${problems.length === 1 ? '' : 's'} to fix</span>` : ''}</div>` +
       problems.map(p => `<div class="err" style="margin:4px 0">Line ${p.line}: ${esc(p.msg)} <span style="opacity:.75">(${esc(p.raw.trim()).slice(0, 48)})</span></div>`).join('') +
       hands.slice(-3).map(h => `<div class="htext" style="margin-top:6px;font-size:.92rem">${handHTML(h.text)}</div>`).join('');
@@ -2105,7 +2106,7 @@ function renderBackground() { const c = cx.bg; c.setTransform(DPR, 0, 0, DPR, 0,
 /* ---------- stats ---------- */
 function renderStats() {
   const rate = stats.hands ? Math.round(stats.wins / stats.hands * 100) : 0;
-  const cats = Object.entries(stats.byCat).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<tr><td>${c}</td><td class="num">${n}</td></tr>`).join('');
+  const cats = Object.entries(stats.byCat).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<tr><td>${esc(c)}</td><td class="num">${n}</td></tr>`).join('');
   $('#stats-body').innerHTML = `
     <table class="pay"><tr><td>Hands played</td><td class="num">${stats.hands}</td></tr>
     <tr><td>Mah Jonggs</td><td class="num">${stats.wins} (${rate}%)</td></tr>
