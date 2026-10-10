@@ -2,7 +2,7 @@
   "id": "/mahjong",
   "name": "Mahjong Garden",
   "short_name": "Mahjong",
-  "description": "A calm, beautiful game of Mahjong solitaire. Every deal can be won.",
+  "description": "American Mah Jongg against three friendly computer players, and a calm Mahjong solitaire. Hand-painted tiles, offline.",
   "start_url": "/mahjong",
   "scope": "/mahjong",
   "display": "standalone",
@@ -10,6 +10,10 @@
   "background_color": "#0c2420",
   "theme_color": "#0c2420",
   "categories": ["games", "puzzle"],
+  "shortcuts": [
+    { "name": "American Mah Jongg", "short_name": "American", "url": "/mahjong/american", "icons": [{ "src": "/mahjong/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mahjong Solitaire", "short_name": "Solitaire", "url": "/mahjong", "icons": [{ "src": "/mahjong/icons/icon-192.png", "sizes": "192x192" }] }
+  ],
   "icons": [
     { "src": "/mahjong/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/mahjong/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

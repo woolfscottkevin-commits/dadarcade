@@ -1,5 +1,5 @@
-// Mahjong Garden: offline support, so the game runs as a Home Screen app on an
-// iPad with no Wi-Fi.
+// Mahjong Garden (Solitaire at /mahjong, American Mah Jongg at /mahjong/american):
+// offline support, so both run as a Home Screen app on an iPad with no Wi-Fi.
 //
 // Why this file sits at the site root: production serves the game at /mahjong
 // with NO trailing slash (cleanUrls + trailingSlash:false). A worker inside
@@ -7,8 +7,8 @@
 // itself. From the root it can claim the exact "/mahjong" prefix.
 //
 // Strategy
-//   the page         network first (3 s timeout), cached copy when offline
-//   icons, manifest  cached copy first, refreshed in the background
+//   the pages        network first (3 s timeout), cached copy when offline
+//   tiles.js, icons  cached copy first, refreshed in the background
 //   Google Fonts     cached copy first, refreshed in the background, so the
 //                    brush-script tile characters still render offline
 //   /api/*, analytics, non-GET: not touched, straight to the network
@@ -16,10 +16,12 @@
 // The cache refreshes itself on every online launch, so edits to index.html
 // need nothing here. Bump VERSION only when the CORE list changes.
 
-const VERSION = 'mahjong-v1';
+const VERSION = 'mahjong-v2';
 const PAGE = '/mahjong';
 const CORE = [
   PAGE,
+  PAGE + '/american',
+  PAGE + '/tiles.js',
   PAGE + '/manifest.webmanifest',
   PAGE + '/icons/apple-touch-icon.png',
   PAGE + '/icons/icon-192.png',
@@ -61,13 +63,13 @@ function saveCopy(fetched, key) {
     .catch(() => null);
 }
 
-async function pageResponse(event) {
+async function pageResponse(event, key) {
   const fetched = fetch(event.request);
-  event.waitUntil(saveCopy(fetched, PAGE));
+  event.waitUntil(saveCopy(fetched, key));
   const timeout = new Promise((resolve) => setTimeout(resolve, 3000, null));
   const first = await Promise.race([fetched.catch(() => null), timeout]);
   if (first && (first.ok || first.type === 'opaqueredirect')) return first;
-  const cached = await caches.match(PAGE);
+  const cached = await caches.match(key);
   return cached || first || fetched;
 }
 
@@ -87,7 +89,9 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname !== PAGE && !url.pathname.startsWith(PAGE + '/')) return;
 
   if (req.mode === 'navigate') {
-    if (url.pathname === PAGE || url.pathname === PAGE + '/') event.respondWith(pageResponse(event));
+    // one cache entry per page, with or without a trailing slash
+    const key = url.pathname.replace(/\/+$/, '') || PAGE;
+    if (key === PAGE || key === PAGE + '/american') event.respondWith(pageResponse(event, key));
     return;
   }
   cacheFirst(event, req);
