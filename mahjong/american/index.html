@@ -148,6 +148,73 @@ html[data-theme="paper"] .pbtn.primary{background:linear-gradient(180deg,#c95a4c
 .minis canvas{position:static;width:22px;height:29px}
 .empty{color:var(--ink-2);font-size:.9rem;line-height:1.5;padding:12px 4px}
 
+/* ---------- typing a whole card ----------
+   One hand per line: "Section: tiles X 25 [like|run|odd|even]". Lines without a
+   section keep the one above. Anything after X/C other than the points is a note. */
+function normTiles(t) { return t.replace(/[a-z]+/gi, w => w.replace(/[FNEWSD]/gi, x => x.toUpperCase()).replace(/[GRB]/g, x => x.toLowerCase())); }
+function handToLine(h) {
+  const mode = h.ui === 'like' ? ' like' : h.ui === 'run' ? ' run' : h.ui === 'run2' ? ' odd/even run' : '';
+  return `${h.cat ? h.cat + ': ' : ''}${h.text} ${h.c ? 'C' : 'X'} ${h.v}${mode}`;
+}
+function parseCardLines(text) {
+  const hands = [], problems = []; let cat = '';
+  String(text).split(/\r?\n/).forEach((raw, i) => {
+    let line = raw.trim();
+    if (!line || line.startsWith('#')) return;
+    const colon = line.indexOf(':');
+    if (colon >= 0) { cat = line.slice(0, colon).trim() || cat; line = line.slice(colon + 1).trim(); }
+    let c = null, v = null;
+    const tiles = [];
+    for (const t of line.split(/\s+/)) {
+      if (c === null && /^[xc]$/i.test(t)) { c = t.toUpperCase() === 'C'; continue; }
+      if (c !== null) { if (v === null && /^\d{1,3}$/.test(t)) v = +t; continue; }
+      tiles.push(t);
+    }
+    const notes = line.toLowerCase();
+    const ui = /\blike\b/.test(notes) ? 'like' : /\b(odd|even)\b/.test(notes) ? 'run2' : /\b(run|consec|consecutive)\b/.test(notes) ? 'run' : 'exact';
+    const textN = normTiles(tiles.join(' '));
+    const p = parseHandText(textN);
+    if (!textN) { problems.push({ line: i + 1, msg: 'No tiles on this line', raw }); return; }
+    if (p.errors.length) { problems.push({ line: i + 1, msg: p.errors[0], raw }); return; }
+    const m = MODE_UI[ui];
+    hands.push({ cat: cat || 'My hands', text: textN, ui, mode: m.mode, step: m.step, c: !!c, v: clamp(v || 25, 5, 200) });
+  });
+  return { hands, problems };
+}
+function openBulk(text) { $('#bulk-text').value = text; bulkPreview(); openSheet('bulk'); }
+function bulkPreview() {
+  const { hands, problems } = parseCardLines($('#bulk-text').value), box = $('#bulk-preview');
+  if (!hands.length && !problems.length) { box.innerHTML = '<span class="legend">As you type, each hand is checked here.</span>'; }
+  else {
+    const esc = x => String(x).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+    box.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${hands.length} hand${hands.length === 1 ? '' : 's'} ready${problems.length ? ` · <span class="err">${problems.length} line${problems.length === 1 ? '' : 's'} to fix</span>` : ''}</div>` +
+      problems.map(p => `<div class="err" style="margin:4px 0">Line ${p.line}: ${esc(p.msg)} <span style="opacity:.75">(${esc(p.raw.trim()).slice(0, 48)})</span></div>`).join('') +
+      hands.slice(-3).map(h => `<div class="htext" style="margin-top:6px;font-size:.92rem">${handHTML(h.text)}</div>`).join('');
+  }
+  $('#bulk-add').disabled = !hands.length; $('#bulk-replace').disabled = !hands.length;
+}
+$('#bulk-text').addEventListener('input', bulkPreview);
+async function saveBulk(replace) {
+  const { hands, problems } = parseCardLines($('#bulk-text').value);
+  if (!hands.length) return;
+  if (problems.length && !(await ask('Some lines need fixing', `${problems.length} line${problems.length === 1 ? '' : 's'} will be left out. Save the ${hands.length} good hand${hands.length === 1 ? '' : 's'} anyway?`, [['Save them', true, true], ['Go back', false]]))) { openSheet('bulk'); return; }
+  if (replace && myHands.length && !(await ask('Replace your card?', `Your ${myHands.length} saved hand${myHands.length === 1 ? '' : 's'} will be replaced.`, [['Replace', true, true], ['Keep them', false]]))) { openSheet('bulk'); return; }
+  myHands = replace ? hands : myHands.concat(hands);
+  saveMine(); rebuildCard(); fitCache.key = '';
+  closeSheet('bulk'); drawerTab = 'mine'; renderDrawer();
+  toast(`${hands.length} hand${hands.length === 1 ? '' : 's'} saved`);
+  if (settings.card === 'garden' && validMine().length >= 3) {
+    if (await ask('Play with your card?', 'Rose, Iris and Lily will play from it too.', [['Use my card', true, true], ['Not now', false]])) setCard('mine');
+  }
+}
+$('#bulk-add').addEventListener('click', () => { Sound.ui(); saveBulk(false); });
+$('#bulk-replace').addEventListener('click', () => { Sound.ui(); saveBulk(true); });
+async function copyMyCard() {
+  const text = myHands.map(handToLine).join('\n');
+  try { await navigator.clipboard.writeText(text); toast('Copied. On your other device: Card → My card → Type your card, then paste.', 4200); }
+  catch (e) { openBulk(text); setTimeout(() => { const t = $('#bulk-text'); t.focus(); t.select(); }, 350); toast('Select all and copy, then paste on your other device', 3600); }
+}
+
 /* ---------- sheets ---------- */
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px);
   background:rgba(4,10,9,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .3s,visibility 0s .3s}
@@ -213,6 +280,7 @@ html[data-theme="paper"] .plus{color:#2f7d43} html[data-theme="paper"] .minus{co
 .input{width:100%;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:1.05rem;outline:none;-webkit-user-select:text;user-select:text}
 html[data-theme="paper"] .input{background:rgba(255,255,255,.7)}
 .input:focus{border-color:var(--gold)}
+textarea.input{-webkit-user-select:text;user-select:text}
 .input.mono{font-weight:900;letter-spacing:.08em}
 .preview{margin:8px 0;padding:10px;border-radius:12px;background:var(--panel-2);min-height:44px}
 .preview .err{color:#ff9a8a;font-weight:700;font-size:.88rem}
@@ -365,6 +433,22 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <h2 id="ask-title"></h2>
     <p class="sub" id="ask-text"></p>
     <div class="row" id="ask-btns"></div>
+  </div>
+</section>
+
+<!-- Type a whole card at once -->
+<section class="sheet" id="sheet-bulk" aria-label="Type your card">
+  <div class="panel">
+    <button class="close-x" data-close aria-label="Close">×</button>
+    <h2>Type your card</h2>
+    <p class="sub">One hand per line, the way it’s printed: the section, a colon, the tiles with their colours, then <b>X</b> or <b>C</b> and the points. Add <code>like</code> for “any like number”, <code>run</code> for consecutive numbers that can slide, or <code>odd</code>/<code>even</code> for a run that keeps to odds or evens. Your card stays on this device.</p>
+    <textarea class="input mono" id="bulk-text" rows="9" spellcheck="false" autocapitalize="off" autocomplete="off" style="resize:vertical;font-size:.95rem;line-height:1.5"
+      placeholder="2468: FF 2222g 44r 66r 8888g X 25&#10;Consecutive Runs: 11g 222g 3333g 444g 55g X 25 run&#10;Like Numbers: FF 1111g 1111r 1111b X 25 like&#10;Singles &amp; Pairs: NN EE WW SS 11g 11r 11b C 50 like"></textarea>
+    <div class="preview" id="bulk-preview"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn primary" id="bulk-add">Add these hands</button>
+      <button class="btn" id="bulk-replace">Replace my card</button>
+    </div>
   </div>
 </section>
 
@@ -1200,7 +1284,7 @@ function fitTiles() {
 let G = null, TILES = [];
 let timer = 0;
 // The others wait while a menu is open or the app is in the background.
-const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask'].some(n => sheetEl(n).classList.contains('open'));
+const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask', 'bulk'].some(n => sheetEl(n).classList.contains('open'));
 // Every follow-up in a hand goes through this one timer, tagged with the hand it
 // belongs to, so a new game or a reload can never replay a stale move.
 function later(ms, fn) {
@@ -1771,10 +1855,14 @@ function renderDrawer() {
   } else {
     $('#drawer-title').textContent = 'My card';
     const p = document.createElement('p'); p.className = 'empty'; p.style.padding = '0 2px 10px';
-    p.innerHTML = 'Type in the hands from your own card to practice what your group plays. Then choose <b>Mine</b> (or <b>Both</b>) under Settings → Hands to play.';
+    p.innerHTML = 'Type in the hands from your own card to practice what your group plays, then choose <b>Mine</b> (or <b>Both</b>) below. Your card stays on this device; use <b>Copy my card</b> to move it to another one.';
     body.appendChild(p);
-    const add = document.createElement('button'); add.className = 'btn primary'; add.style.width = '100%'; add.style.marginBottom = '12px'; add.textContent = '+ Add a hand';
-    add.addEventListener('click', () => openEditor(-1)); body.appendChild(add);
+    const tools = document.createElement('div'); tools.className = 'row'; tools.style.marginBottom = '12px';
+    const mk = (label, primary, fn) => { const b = document.createElement('button'); b.className = 'btn' + (primary ? ' primary' : ''); b.style.flex = '1 1 120px'; b.style.minHeight = '46px'; b.style.padding = '8px 12px'; b.textContent = label; b.addEventListener('click', () => { Sound.ui(); fn(); }); tools.appendChild(b); };
+    mk('Type your card', true, () => openBulk(''));
+    mk('+ One hand', false, () => openEditor(-1));
+    if (myHands.length) mk('Copy my card', false, copyMyCard);
+    body.appendChild(tools);
     if (!myHands.length) { const e = document.createElement('p'); e.className = 'empty'; e.textContent = 'No hands yet.'; body.appendChild(e); }
     let cat = null;
     myHands.forEach((h, i) => {
@@ -1863,12 +1951,79 @@ $('#ed-delete').addEventListener('click', async () => {
   rebuildCard(); closeSheet('editor'); renderDrawer();
 });
 
+/* ---------- typing a whole card ----------
+   One hand per line: "Section: tiles X 25 [like|run|odd|even]". Lines without a
+   section keep the one above. Anything after X/C other than the points is a note. */
+function normTiles(t) { return t.replace(/[a-z]+/gi, w => w.replace(/[FNEWSD]/gi, x => x.toUpperCase()).replace(/[GRB]/g, x => x.toLowerCase())); }
+function handToLine(h) {
+  const mode = h.ui === 'like' ? ' like' : h.ui === 'run' ? ' run' : h.ui === 'run2' ? ' odd/even run' : '';
+  return `${h.cat ? h.cat + ': ' : ''}${h.text} ${h.c ? 'C' : 'X'} ${h.v}${mode}`;
+}
+function parseCardLines(text) {
+  const hands = [], problems = []; let cat = '';
+  String(text).split(/\r?\n/).forEach((raw, i) => {
+    let line = raw.trim();
+    if (!line || line.startsWith('#')) return;
+    const colon = line.indexOf(':');
+    if (colon >= 0) { cat = line.slice(0, colon).trim() || cat; line = line.slice(colon + 1).trim(); }
+    let c = null, v = null;
+    const tiles = [];
+    for (const t of line.split(/\s+/)) {
+      if (c === null && /^[xc]$/i.test(t)) { c = t.toUpperCase() === 'C'; continue; }
+      if (c !== null) { if (v === null && /^\d{1,3}$/.test(t)) v = +t; continue; }
+      tiles.push(t);
+    }
+    const notes = line.toLowerCase();
+    const ui = /\blike\b/.test(notes) ? 'like' : /\b(odd|even)\b/.test(notes) ? 'run2' : /\b(run|consec|consecutive)\b/.test(notes) ? 'run' : 'exact';
+    const textN = normTiles(tiles.join(' '));
+    const p = parseHandText(textN);
+    if (!textN) { problems.push({ line: i + 1, msg: 'No tiles on this line', raw }); return; }
+    if (p.errors.length) { problems.push({ line: i + 1, msg: p.errors[0], raw }); return; }
+    const m = MODE_UI[ui];
+    hands.push({ cat: cat || 'My hands', text: textN, ui, mode: m.mode, step: m.step, c: !!c, v: clamp(v || 25, 5, 200) });
+  });
+  return { hands, problems };
+}
+function openBulk(text) { $('#bulk-text').value = text; bulkPreview(); openSheet('bulk'); }
+function bulkPreview() {
+  const { hands, problems } = parseCardLines($('#bulk-text').value), box = $('#bulk-preview');
+  if (!hands.length && !problems.length) { box.innerHTML = '<span class="legend">As you type, each hand is checked here.</span>'; }
+  else {
+    const esc = x => String(x).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+    box.innerHTML = `<div style="font-weight:800;margin-bottom:6px">${hands.length} hand${hands.length === 1 ? '' : 's'} ready${problems.length ? ` · <span class="err">${problems.length} line${problems.length === 1 ? '' : 's'} to fix</span>` : ''}</div>` +
+      problems.map(p => `<div class="err" style="margin:4px 0">Line ${p.line}: ${esc(p.msg)} <span style="opacity:.75">(${esc(p.raw.trim()).slice(0, 48)})</span></div>`).join('') +
+      hands.slice(-3).map(h => `<div class="htext" style="margin-top:6px;font-size:.92rem">${handHTML(h.text)}</div>`).join('');
+  }
+  $('#bulk-add').disabled = !hands.length; $('#bulk-replace').disabled = !hands.length;
+}
+$('#bulk-text').addEventListener('input', bulkPreview);
+async function saveBulk(replace) {
+  const { hands, problems } = parseCardLines($('#bulk-text').value);
+  if (!hands.length) return;
+  if (problems.length && !(await ask('Some lines need fixing', `${problems.length} line${problems.length === 1 ? '' : 's'} will be left out. Save the ${hands.length} good hand${hands.length === 1 ? '' : 's'} anyway?`, [['Save them', true, true], ['Go back', false]]))) { openSheet('bulk'); return; }
+  if (replace && myHands.length && !(await ask('Replace your card?', `Your ${myHands.length} saved hand${myHands.length === 1 ? '' : 's'} will be replaced.`, [['Replace', true, true], ['Keep them', false]]))) { openSheet('bulk'); return; }
+  myHands = replace ? hands : myHands.concat(hands);
+  saveMine(); rebuildCard(); fitCache.key = '';
+  closeSheet('bulk'); drawerTab = 'mine'; renderDrawer();
+  toast(`${hands.length} hand${hands.length === 1 ? '' : 's'} saved`);
+  if (settings.card === 'garden' && validMine().length >= 3) {
+    if (await ask('Play with your card?', 'Rose, Iris and Lily will play from it too.', [['Use my card', true, true], ['Not now', false]])) setCard('mine');
+  }
+}
+$('#bulk-add').addEventListener('click', () => { Sound.ui(); saveBulk(false); });
+$('#bulk-replace').addEventListener('click', () => { Sound.ui(); saveBulk(true); });
+async function copyMyCard() {
+  const text = myHands.map(handToLine).join('\n');
+  try { await navigator.clipboard.writeText(text); toast('Copied. On your other device: Card → My card → Type your card, then paste.', 4200); }
+  catch (e) { openBulk(text); setTimeout(() => { const t = $('#bulk-text'); t.focus(); t.select(); }, 350); toast('Select all and copy, then paste on your other device', 3600); }
+}
+
 /* ---------- sheets ---------- */
-const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor'];
+const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk'];
 const sheetEl = n => $('#sheet-' + n);
 function openSheet(n) { if (n === 'menu') refreshMenu(); if (n === 'settings') renderSettings(); if (n === 'stats') renderStats(); sheetEl(n).classList.add('open'); }
 function closeSheet(n) { sheetEl(n).classList.remove('open'); }
-function topSheet() { for (const n of ['ask', 'editor', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
+function topSheet() { for (const n of ['ask', 'editor', 'bulk', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
 SHEETS.forEach(n => sheetEl(n).addEventListener('click', e => { if (e.target === sheetEl(n) && !['result', 'ask'].includes(n) && !(n === 'menu' && !G)) closeSheet(n); }));
 $$('[data-close]').forEach(b => b.addEventListener('click', () => { Sound.ui(); const n = topSheet(); if (n) closeSheet(n); }));
 $$('[data-open]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); openSheet(b.dataset.open); }));
@@ -1905,7 +2060,7 @@ $('#menu-new').addEventListener('click', async () => {
   }
   closeSheet('menu'); newGame();
 });
-$('#menu-card').addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); if (!G) newGame(); drawerTab = 'mine'; toggleDrawer(true); });
+$('#menu-card').addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); if (!G) newGame(); drawerTab = 'mine'; toggleDrawer(true); if (!myHands.length) openBulk(''); });
 $('#btn-menu').addEventListener('click', () => { Sound.init(); Sound.ui(); openSheet('menu'); });
 $('#btn-settings').addEventListener('click', () => { Sound.init(); Sound.ui(); openSheet('settings'); });
 
