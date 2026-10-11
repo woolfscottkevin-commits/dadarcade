@@ -277,6 +277,7 @@ html[data-theme="paper"] .cal .day.done{background:linear-gradient(160deg,#c95a4
     <div class="hud-title" id="hud-title">Mahjong Garden</div>
     <div class="hud-stats"><span id="hud-time">0:00</span><span class="sep" id="hud-time-sep">·</span><span id="hud-pairs">72 pairs left</span><span class="sep">·</span><span class="moves" id="hud-moves">— matches</span></div>
   </div>
+  <button class="icon-btn" id="btn-full" aria-label="Full screen"></button>
   <button class="icon-btn" id="btn-settings" aria-label="Settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
   </button>
@@ -382,7 +383,7 @@ html[data-theme="paper"] .cal .day.done{background:linear-gradient(160deg,#c95a4
       <div class="step"><canvas id="how-3"></canvas><div><b>Flowers &amp; seasons</b><p>Any flower (rose border) matches any other flower. Any season (blue border) matches any other season.</p></div></div>
       <div class="step"><canvas id="how-4"></canvas><div><b>Never stuck</b><p>Undo as often as you like. Hint shows a pair that keeps the game winnable. Shuffle re-deals the tiles that are left so the board can still be cleared.</p></div></div>
     </div>
-    <p class="sub" style="margin:16px 0 0;font-size:.82rem">On a keyboard: <kbd>H</kbd> hint · <kbd>Z</kbd> undo · <kbd>S</kbd> shuffle · <kbd>N</kbd> new game · <kbd>Esc</kbd> menu</p>
+    <p class="sub" style="margin:16px 0 0;font-size:.82rem">On a keyboard: <kbd>H</kbd> hint · <kbd>Z</kbd> undo · <kbd>S</kbd> shuffle · <kbd>N</kbd> new game · <kbd>F</kbd> full screen · <kbd>Esc</kbd> menu</p>
   </div>
 </section>
 
@@ -1848,6 +1849,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'h') showHint();
   else if (k === 's') shuffleBoard();
   else if (k === 'n') openSheet('layouts');
+  else if (k === 'f' && Fullscreen.supported()) Fullscreen.toggle();
 });
 
 /* ---------- toast ---------- */
@@ -1912,6 +1914,7 @@ function refreshArt() { TS = null; miniSets.clear(); fitBoard(); kick(); drawHom
 
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 (function init() {
+  Fullscreen.bind($('#btn-full'));
   document.documentElement.dataset.theme = settings.theme;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[settings.theme].meta);
   sizeCanvases();

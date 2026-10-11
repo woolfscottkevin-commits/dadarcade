@@ -841,3 +841,31 @@ const Sound = (() => {
     },
   };
 })();
+
+/* ---------- full screen (hides the browser's tabs and address bar) ----------
+   Offered only where the browser allows it, and not when already running as a
+   Home Screen app. Must be started from a tap or key press. */
+const Fullscreen = {
+  supported() {
+    const d = document, standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+    return !!(d.fullscreenEnabled || d.webkitFullscreenEnabled) && !standalone;
+  },
+  active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  toggle() {
+    const d = document, el = d.documentElement;
+    if (this.active()) { const exit = d.exitFullscreen || d.webkitExitFullscreen; if (exit) { const r = exit.call(d); if (r && r.catch) r.catch(() => {}); } return; }
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); }
+  },
+  // wire a button: hidden where unsupported, icon follows the current state
+  bind(btn) {
+    if (!btn) return;
+    if (!this.supported()) { btn.style.display = 'none'; return; }
+    const sync = () => { const on = this.active(); btn.innerHTML = on ? FS_ICON_EXIT : FS_ICON_ENTER; btn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen'); btn.title = on ? 'Leave full screen (Esc)' : 'Full screen (F)'; };
+    btn.addEventListener('click', () => this.toggle());
+    document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync);
+    sync();
+  },
+};
+const FS_ICON_ENTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+const FS_ICON_EXIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';

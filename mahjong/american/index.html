@@ -342,6 +342,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   <button class="icon-btn" id="btn-suggest" aria-label="Hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/></svg></button>
   <button class="icon-btn" id="btn-sort" aria-label="Sort my tiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>
   <button class="card-btn" id="btn-card" aria-label="Show the card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Card</button>
+  <button class="icon-btn" id="btn-full" aria-label="Full screen"></button>
   <button class="icon-btn" id="btn-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
 </header>
 
@@ -2433,10 +2434,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { const n = topSheet(); if (n && !['result', 'ask'].includes(n)) closeSheet(n); else if ($('#drawer').classList.contains('open')) toggleDrawer(false); else openSheet('menu'); }
   if (topSheet()) return;
   if (e.key.toLowerCase() === 'c') toggleDrawer();
+  if (e.key.toLowerCase() === 'f' && Fullscreen.supported()) Fullscreen.toggle();
 });
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 
 (function init() {
+  Fullscreen.bind($('#btn-full'));
   document.documentElement.dataset.theme = settings.theme;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[settings.theme].meta);
   sizeCanvases();
