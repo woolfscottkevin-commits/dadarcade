@@ -368,7 +368,7 @@ function darken(h, t) { const [r, g, b] = hexToRgb(h); return rgbToHex(r * (1 - 
 const SUIT_COL = [PAL.blue, PAL.green, PAL.red];
 function paintFace(c, f, indices) {
   const kind = f < 9 ? 0 : f < 18 ? 1 : f < 27 ? 2 : f < 31 ? 3 : f < 34 ? 4 : f < 38 ? 5 : f < 42 ? 6 : 7;
-  const showIdx = indices && kind <= 3;
+  const showIdx = indices && kind <= 4;
   c.save();
   if (showIdx) { c.translate(56, 70); c.scale(.88, .9); c.translate(-50, -65); }
   if (kind === 0) drawDots(c, f + 1);
@@ -381,9 +381,10 @@ function paintFace(c, f, indices) {
   else drawJoker(c);
   c.restore();
   if (showIdx) {
-    const txt = kind === 3 ? 'ESWN'[f - 27] : String(kind === 0 ? f + 1 : kind === 1 ? f - 8 : f - 17);
+    // dragons get a D in their own colour, the way the card writes them
+    const txt = kind === 4 ? 'D' : kind === 3 ? 'ESWN'[f - 27] : String(kind === 0 ? f + 1 : kind === 1 ? f - 8 : f - 17);
     c.font = `800 19px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = kind === 3 ? PAL.ink : SUIT_COL[kind];
+    c.fillStyle = kind === 4 ? [PAL.red, PAL.green, PAL.blue][f - 31] : kind === 3 ? PAL.ink : SUIT_COL[kind];
     c.fillText(txt, 13, 15);
   }
 }

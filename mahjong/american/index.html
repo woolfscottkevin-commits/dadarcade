@@ -129,6 +129,21 @@ body.compact .strip-main .htext{font-size:.82rem}
 .tbtn svg{width:20px;height:20px}
 .tbtn:hover{background:var(--btn-hover)} .tbtn:active{transform:scale(.94)}
 
+/* ---------- the name of a tile you tap ---------- */
+#tip{position:fixed;z-index:9;transform:translate(-50%,-100%) translateY(6px);opacity:0;pointer-events:none;text-align:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 12px;box-shadow:0 8px 20px rgba(0,0,0,.3);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:opacity .18s,transform .18s;max-width:240px}
+#tip.show{opacity:1;transform:translate(-50%,-100%)}
+#tip b{display:block;font-size:.95rem;font-weight:900}
+#tip span{display:block;font-size:.76rem;color:var(--ink-2);line-height:1.3;margin-top:1px}
+#tip span:empty{display:none}
+/* the tile guide in How to play */
+.tile-guide{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin:8px 0 4px}
+.tile-guide figure{text-align:center}
+.tile-guide canvas{position:static;display:block;margin:0 auto 4px}
+.tile-guide figcaption{font-size:.78rem;font-weight:800;line-height:1.25}
+.tile-guide figcaption span{display:block;font-weight:600;color:var(--ink-2)}
+
 /* ---------- toast ---------- */
 #toast{position:fixed;z-index:30;left:50%;top:calc(var(--safe-t) + 10px);transform:translate(-50%,-10px);opacity:0;pointer-events:none;max-width:calc(100vw - 132px);text-align:center;
   background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:10px 18px;border-radius:999px;font-weight:700;font-size:.92rem;
@@ -340,6 +355,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
 
 
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="tip" role="status" aria-live="polite"><b id="tip-name"></b><span id="tip-help"></span></div>
 
 <!-- The card -->
 <aside id="drawer" aria-label="The card">
@@ -405,6 +421,9 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <button class="close-x" data-close aria-label="Close">×</button>
     <h2>How to play</h2>
     <p class="sub">Be the first to make one of the hands on the card, using exactly 14 tiles.</p>
+    <h3>The tiles</h3>
+    <p>Three suits numbered 1 to 9, four winds, three dragons, flowers and jokers. Tap any tile during a game to see its name.</p>
+    <div class="tile-guide" id="tile-guide"></div>
     <h3>The card</h3>
     <p>Each line is a hand. Colours show suits: groups in the same colour are the same suit, different colours are different suits. <b>F</b> is a flower, <b>D</b> a dragon (the one that goes with that colour’s suit), <b>0</b> is the Soap (white dragon), and <b>N E W S</b> are winds. <b>X</b> hands may be exposed; <b>C</b> hands must stay concealed until Mah Jongg. Tap <b>Card</b> at any time — the <b>Closest</b> tab shows the hands you’re nearest to.</p>
     <h3>The Charleston</h3>
@@ -1907,6 +1926,7 @@ cv.table.addEventListener('pointerup', e => {
   if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 14) return;
   if (p.uid >= 0) rackTap(TILES[p.uid]);
   else if (p.exp) exposedJokerTap(p.exp);
+  else { const t = hitFaceUp(e.clientX, e.clientY); if (t) showTip(t); }
 });
 cv.table.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); press = null; drag = null; dirty = true; kick(); });
 cv.table.addEventListener('lostpointercapture', e => { pointers.delete(e.pointerId); if (drag) { drag = null; press = null; dirty = true; kick(); } });
@@ -1928,6 +1948,7 @@ function hitExposedJoker(x, y) {
 }
 function rackTap(t) {
   const step = G.step;
+  if (!(step === 'act' && G.st.turn === 0 && G.sel[0] === t.uid)) showTip(t);
   if (step === 'pass' || step === 'courtesy') {
     const i = G.sel.indexOf(t.uid);
     if (i >= 0) G.sel.splice(i, 1);
@@ -1955,6 +1976,59 @@ function exposedJokerTap(j) {
     toast(`You swapped your ${tileName(real.type)} for the joker`);
     Sound.match(1); G.sel = []; settle(); turnPrompt(); saveGame();
   });
+}
+
+/* ---------- what's this tile? ---------- */
+function tileHelp(t) {
+  if (t === 31) return 'The 中 character. Goes with Craks.';
+  if (t === 32) return 'The 發 character. Goes with Bams.';
+  if (t === 33) return 'The white dragon, a blue frame. Goes with Dots, and counts as 0 in year hands.';
+  if (t === T_FLOWER) return 'Any flower matches any other flower.';
+  if (t === T_JOKER) return 'Stands in for any tile in a group of 3 or more.';
+  if (t === 9) return 'The bird is the 1 of Bams.';
+  if (t >= 18 && t < 27) return 'Craks are the characters, with 萬 under the number.';
+  if (t >= 27 && t < 31) return 'One of the four winds.';
+  return '';
+}
+let tipT = 0;
+function showTip(t) {
+  const r = t.r || t.tg; if (!r) return;
+  const el = $('#tip');
+  $('#tip-name').textContent = tileName(t.type);
+  $('#tip-help').textContent = tileHelp(t.type);
+  const lift = G.sel.includes(t.uid) ? L.wh * .26 : 0;
+  el.style.left = clamp(r.x + r.w / 2, 90, VW - 90) + 'px';
+  el.style.top = Math.max(60, r.y - lift - 8) + 'px';
+  el.classList.add('show');
+  clearTimeout(tipT); tipT = setTimeout(() => el.classList.remove('show'), 2200);
+}
+// face-up tiles that aren't yours: the discard pool, exposures, hands shown at the end
+function hitFaceUp(x, y) {
+  let best = null;
+  for (const t of TILES) {
+    const r = t.r, g = t.tg;
+    if (!r || !g || g.rack || !r.up || r.rot) continue;
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.w * TILE_R && (!best || g.z >= best.tg.z)) best = t;
+  }
+  return best;
+}
+function renderTileGuide() {
+  const box = $('#tile-guide'); if (box.children.length) return;
+  const items = [[0, '1 Dot', 'Dots: circles'], [9, '1 Bam', 'the bird'], [13, '5 Bam', 'Bams: sticks'], [20, '3 Crak', 'Craks: characters'],
+    [30, 'North', 'winds: N E W S'], [27, 'East', ''], [31, 'Red Dragon', 'goes with Craks'], [32, 'Green Dragon', 'goes with Bams'],
+    [33, 'Soap', 'white dragon; Dots; 0'], [34, 'Flower', 'all flowers match'], [42, 'Joker', 'groups of 3+']];
+  const S = tileSet(38);
+  for (const [face, name, help] of items) {
+    const f = document.createElement('figure');
+    const c = document.createElement('canvas'), w = 38, h = S.H, d = S.d, pad = S.pad;
+    c.width = (w + d + 6) * DPR; c.height = (h + d + 6) * DPR; c.style.width = (w + d + 6) + 'px'; c.style.height = (h + d + 6) + 'px';
+    const g = c.getContext('2d'); g.scale(DPR, DPR);
+    g.drawImage(S.body, d + 3 - d - pad, 3 - pad, S.bw, S.bh); g.drawImage(S.faces[face], d + 3, 3, w, h);
+    f.appendChild(c);
+    const cap = document.createElement('figcaption'); cap.textContent = name;
+    if (help) { const sp = document.createElement('span'); sp.textContent = help; cap.appendChild(sp); }
+    f.appendChild(cap); box.appendChild(f);
+  }
 }
 
 /* ---------- Sort & Hint ---------- */
@@ -2214,7 +2288,7 @@ async function copyMyCard() {
 /* ---------- sheets ---------- */
 const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk'];
 const sheetEl = n => $('#sheet-' + n);
-function openSheet(n) { if (n === 'menu') refreshMenu(); if (n === 'settings') renderSettings(); if (n === 'stats') renderStats(); sheetEl(n).classList.add('open'); }
+function openSheet(n) { if (n === 'howto') renderTileGuide(); if (n === 'menu') refreshMenu(); if (n === 'settings') renderSettings(); if (n === 'stats') renderStats(); sheetEl(n).classList.add('open'); }
 function closeSheet(n) { sheetEl(n).classList.remove('open'); }
 function topSheet() { for (const n of ['ask', 'editor', 'bulk', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
 SHEETS.forEach(n => sheetEl(n).addEventListener('click', e => { if (e.target === sheetEl(n) && !['result', 'ask'].includes(n) && !(n === 'menu' && !G)) closeSheet(n); }));
