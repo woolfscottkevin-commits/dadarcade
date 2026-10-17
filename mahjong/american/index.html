@@ -262,7 +262,7 @@ html[data-theme="paper"] .preview .err{color:#b0453a}
 select.input{appearance:none;-webkit-appearance:none}
 
 .hide{display:none!important}
-body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-size:.88rem} body.compact #prompt .msg small{display:none} body.compact .pbtn{min-height:38px;padding:0 14px}
+body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-size:.88rem} body.compact #prompt .msg small{display:none} body.compact.tworow #prompt .msg small{display:block;font-size:.76rem} body.compact .pbtn{min-height:38px;padding:0 14px}
 @media (prefers-reduced-motion:reduce){ .panel,.sheet,#toast,#prompt,#drawer{transition:none!important} .pbtn.mj{animation:none} }
 </style>
 </head>
@@ -948,6 +948,7 @@ function computeLayout() {
   }
   L = lay || layoutFor(si, hudB, false, 80);
   document.body.classList.toggle('compact', L.compact);
+  document.body.classList.toggle('tworow', L.twoRow);
   // the strip sits just above your rack (clear of lifted tiles), the prompt above that
   const stripBottom = L.rackTop - 8 - L.wh * .32;
   L.promptBottom = stripBottom - (L.stripH ? L.stripH + 6 : 0);
@@ -1610,10 +1611,17 @@ function turnPrompt() {
   const sel = G.sel[0] != null ? TILES[G.sel[0]] : null;
   const btns = [];
   if (w) btns.push({ label: 'Mah Jongg!', mj: true, fn: () => declareWin(0, w, G.lastCallFrom < 0, G.lastCallFrom) });
-  btns.push({ label: sel ? `Discard ${tileName(sel.type)}` : 'Discard', primary: !w, disabled: !sel, fn: () => { if (G.sel[0] != null) humanDiscard(TILES[G.sel[0]]); } });
+  // a button for each joker you could take, so it never depends on spotting the glow
+  const owners = new Set(swaps.map(sw => sw.seat));
+  swaps.slice(0, 2).forEach((sw, i) => {
+    const whose = owners.size < 2 ? 'the' : sw.seat === 0 ? 'your' : NAMES[sw.seat] + '’s';
+    btns.push({ label: `Trade ${tileName(sw.real.type)} for ${whose} joker`, primary: !w && !sel && i === 0, fn: () => humanSwap(sw.seat, sw.ei, sw.real) });
+  });
+  btns.push({ label: sel ? `Discard ${tileName(sel.type)}` : 'Discard', primary: !w && (!swaps.length || !!sel), disabled: !sel, fn: () => { if (G.sel[0] != null) humanDiscard(TILES[G.sel[0]]); } });
   let msg = st.discards.length || G.dealer !== 0 ? 'Your turn — pick a tile to discard' : 'You’re East: pick your first discard';
   if (w) msg = 'Your tiles make a hand on the card!';
-  const sub = swaps.length ? 'A glowing joker can be swapped — tap it to trade your tile for it.' : (st.deadHands[0] ? 'Your hand is dead this round — keep discarding.' : 'Tap a tile, then Discard (or tap it again).');
+  else if (swaps.length) msg = `You can take a joker! Trade your ${tileName(swaps[0].real.type)} for it, then discard`;
+  const sub = swaps.length ? 'Tap Trade, or tap the glowing joker. A joker can stand in for any tile in a group of 3 or more.' : (st.deadHands[0] ? 'Your hand is dead this round — keep discarding.' : 'Tap a tile, then Discard (or tap it again).');
   showPrompt(`${msg}<small>${sub}</small>`, btns);
 }
 function humanDiscard(tile) {
@@ -1929,15 +1937,21 @@ function rackTap(t) {
 }
 function exposedJokerTap(j) {
   const st = G.st;
-  if (G.step !== 'act' || st.turn !== 0) return;
-  for (let seat = 0; seat < 4; seat++) st.exps[seat].forEach((e, ei) => {
-    if (!e.tiles.includes(j)) return;
-    const real = st.hands[0].find(t => t.type === e.t);
-    if (!real) return;
-    swapJoker(st, 0, seat, ei, real);
-    toast(`You swapped your ${tileName(real.type)} for the joker`);
-    Sound.match(1); G.sel = []; settle(); turnPrompt(); saveGame();
-  });
+  for (let seat = 0; seat < 4; seat++) {
+    const ei = st.exps[seat].findIndex(e => e.tiles.includes(j));
+    if (ei < 0) continue;
+    const real = st.hands[0].find(t => t.type === st.exps[seat][ei].t);
+    if (real) humanSwap(seat, ei, real);
+    return;
+  }
+}
+// trade one of your tiles for a joker in an exposure (yours or anyone's), on your turn
+function humanSwap(seat, ei, real) {
+  const st = G.st;
+  if (G.step !== 'act' || st.turn !== 0 || !st.hands[0].includes(real)) return;
+  if (!swapJoker(st, 0, seat, ei, real)) return;
+  toast(`You traded your ${tileName(real.type)} for ${seat === 0 ? 'your' : NAMES[seat] + '’s'} joker`);
+  Sound.match(1); G.sel = []; settle(); turnPrompt(); saveGame();
 }
 
 /* ---------- what's this tile? ---------- */
@@ -2008,6 +2022,8 @@ $('#btn-suggest').addEventListener('click', () => {
   else if (G.step === 'act' && st.turn === 0) {
     const w = winningHand(card, countsOf(st.hands[0]), expsOf(st.exps[0]));
     if (w) { toast('Press Mah Jongg — you have a hand!'); return; }
+    const sw = jokerSwaps(st.hands[0], st.exps);
+    if (sw.length) { toast(`Trade your ${tileName(sw[0].real.type)} for the joker first — tap Trade`); Sound.hint(); return; }
     const t = chooseDiscard(card, st.hands[0], st.exps[0]); uids = [t.uid]; msg = `Maybe discard the ${tileName(t.type)}`;
   } else if (G.step === 'claim' && G.claim.look) { toast('Nothing to call this time — tap Next'); return;
   } else if (G.step === 'claim') {
