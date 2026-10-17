@@ -92,7 +92,7 @@ html[data-theme="paper"] .card-btn{background:linear-gradient(180deg,#c95a4c,#a6
 
 /* ---------- prompt above the rack ---------- */
 #prompt{position:fixed;z-index:6;left:50%;transform:translate(-50%,8px);bottom:120px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
-  max-width:calc(100vw - 24px);padding:9px 10px 9px 18px;border-radius:22px;background:var(--panel);border:1px solid var(--line);
+  width:max-content;max-width:calc(100vw - 24px);padding:9px 10px 9px 18px;border-radius:22px;background:var(--panel);border:1px solid var(--line);
   backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2);box-shadow:0 10px 30px rgba(0,0,0,.3);
   opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
 #prompt.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
