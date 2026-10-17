@@ -449,7 +449,7 @@ html[data-theme="paper"] .cal .day.done{background:linear-gradient(160deg,#c95a4
   </div>
 </section>
 
-<script src="/mahjong/tiles.js?v=2"></script>
+<script src="/mahjong/tiles.js?v=3"></script>
 <script>
 'use strict';
 /* =====================================================================
@@ -1934,7 +1934,10 @@ function refreshArt() { TS = null; miniSets.clear(); fitBoard(); kick(); drawHom
 
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 (function init() {
-  Fullscreen.bind($('#btn-full'));
+  Fullscreen.bind($('#btn-full'), h => {
+    Sound.ui(); $('#confirm-no').style.display = 'none';
+    confirmBox(h.title, h.text, 'Got it').then(() => { $('#confirm-no').style.display = ''; });
+  });
   document.documentElement.dataset.theme = settings.theme;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[settings.theme].meta);
   sizeCanvases();

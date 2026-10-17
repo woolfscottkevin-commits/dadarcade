@@ -1125,9 +1125,15 @@ const Sound = (() => {
    Offered only where the browser allows it, and not when already running as a
    Home Screen app. Must be started from a tap or key press. */
 const Fullscreen = {
+  standalone() { return !!((window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone); },
   supported() {
-    const d = document, standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
-    return !!(d.fullscreenEnabled || d.webkitFullscreenEnabled) && !standalone;
+    const d = document;
+    return !!(d.fullscreenEnabled || d.webkitFullscreenEnabled) && !this.standalone();
+  },
+  // Safari on iPhone can't make a page full screen; opened from the Home Screen it fills the screen
+  needsHomeScreen() {
+    const ios = /iPhone|iPod|iPad/.test(navigator.userAgent || '') || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return ios && !this.supported() && !this.standalone();
   },
   active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
   toggle() {
@@ -1136,15 +1142,24 @@ const Fullscreen = {
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
     if (req) { const r = req.call(el, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); }
   },
-  // wire a button: hidden where unsupported, icon follows the current state
-  bind(btn) {
+  // wire a button: icon follows the current state; on an iPhone it explains the Home Screen
+  // instead (help is the page's own way of showing that); hidden anywhere else it can't work
+  bind(btn, help) {
     if (!btn) return;
-    if (!this.supported()) { btn.style.display = 'none'; return; }
+    if (!this.supported()) {
+      if (help && this.needsHomeScreen()) { btn.innerHTML = FS_ICON_ENTER; btn.setAttribute('aria-label', 'Full screen'); btn.addEventListener('click', () => help(FS_HOME_HELP)); }
+      else btn.style.display = 'none';
+      return;
+    }
     const sync = () => { const on = this.active(); btn.innerHTML = on ? FS_ICON_EXIT : FS_ICON_ENTER; btn.setAttribute('aria-label', on ? 'Leave full screen' : 'Full screen'); btn.title = on ? 'Leave full screen (Esc)' : 'Full screen (F)'; };
     btn.addEventListener('click', () => this.toggle());
     document.addEventListener('fullscreenchange', sync); document.addEventListener('webkitfullscreenchange', sync);
     sync();
   },
+};
+const FS_HOME_HELP = {
+  title: 'Full screen on iPhone',
+  text: 'Safari can’t hide its bars for a game on iPhone, but your Home Screen can. In Safari, tap Share (it’s in the ••• menu), then Add to Home Screen. Open Mahjong from your Home Screen and it fills the whole screen, upright or sideways, with no address bar.',
 };
 const FS_ICON_ENTER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 const FS_ICON_EXIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';

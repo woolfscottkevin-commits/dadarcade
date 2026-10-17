@@ -88,6 +88,7 @@ html[data-theme="sakura"] .icon-btn{color:#3e1a36;background:rgba(255,240,244,.4
 html[data-theme="paper"] .card-btn{background:linear-gradient(180deg,#c95a4c,#a63c31);color:#fff6ee}
 .card-btn:active{transform:scale(.96)}
 @media (max-width:560px){ .hud-stats{display:none} .icon-btn{width:40px;height:40px} .card-btn{padding:0 12px} }
+@media (max-width:430px){ .hud-title{visibility:hidden} }
 
 /* ---------- prompt above the rack ---------- */
 #prompt{position:fixed;z-index:6;left:50%;transform:translate(-50%,8px);bottom:120px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -458,7 +459,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   </div>
 </section>
 
-<script src="/mahjong/tiles.js?v=2"></script>
+<script src="/mahjong/tiles.js?v=3"></script>
 <script>
 /* =====================================================================
    American Mah Jongg — engine: tiles, the card, matching, computer play
@@ -2432,7 +2433,7 @@ document.addEventListener('keydown', e => {
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 
 (function init() {
-  Fullscreen.bind($('#btn-full'));
+  Fullscreen.bind($('#btn-full'), h => { Sound.ui(); ask(h.title, h.text, [['Got it', true, true]]); });
   document.documentElement.dataset.theme = settings.theme;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[settings.theme].meta);
   sizeCanvases();
