@@ -339,6 +339,8 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="skill"><button data-v="gentle">Gentle</button><button data-v="friendly">Friendly</button><button data-v="sharp">Sharp</button></div></div>
     <div class="set-row"><div><b>Pace</b><span>How quickly the others take their turns</span></div>
       <div class="seg" data-seg="pace"><button data-v="relaxed">Relaxed</button><button data-v="normal">Normal</button><button data-v="quick">Quick</button></div></div>
+    <div class="set-row"><div><b>Setting up</b><span>Wall: the tiles are dealt from a wall. Messy: no wall — the tiles are swirled face-down on the table and everyone grabs from the pile, then draws from it.</span></div>
+      <div class="seg" data-seg="setup"><button data-v="wall">Wall</button><button data-v="messy">Messy</button></div></div>
     <div class="set-row"><div><b>Wait for me after each discard</b><span>When Rose, Iris or Lily discards, play stops until you tap Next, so you can look and decide whether to call it</span></div><button class="switch" role="switch" data-set="wait" aria-label="Wait for me after each discard"></button></div>
     <div class="set-row"><div><b>Second Charleston</b><span>Ask each hand, always skip it, or always play it</span></div>
       <div class="seg" data-seg="second"><button data-v="ask">Ask</button><button data-v="skip">Skip</button><button data-v="always">Always</button></div></div>
@@ -381,6 +383,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
+      <li>Prefer <b>Messy</b>? In Settings, choose Setting up → Messy: no wall, the tiles are swirled face-down on the table, and on your turn you tap any tile in the pile to take it.</li>
       <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
     </ul>
@@ -852,7 +855,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true,
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall',
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 settings.tiles = savedTileStyle();
@@ -1010,6 +1013,21 @@ function wallSlotPos(slot) {
   else { rot = -Math.PI / 2; x = sq.x + sq.s - inset - th + (th - tw) / 2; y = sq.y + inset + i * pitch + (th - tw) / 2; }
   return { x: x + lift * .6, y: y - lift, w: tw, rot, up: false, z: top ? 1 : 0 };
 }
+// Messy: no wall. The undealt tiles lie face-down in a loose heap in the middle of the
+// table, each at its own spot and angle (from the hand's seed, so a reload keeps them put).
+// k > 0 is a step of the wash at the start of the hand, when the whole heap swirls.
+function messyArea() {
+  if (L.compact) { const c = L.center; return { x: c.x0 + 4, y: c.y0 + 2, w: c.x1 - c.x0 - 8, h: c.y1 - c.y0 - 4, tw: clamp(L.ws * .7, 12, 20) }; }
+  const { sq, pitch } = L; return { x: sq.x + pitch * .4, y: sq.y + pitch * .4, w: sq.s - pitch * .8, h: sq.s - pitch * .8, tw: pitch * .94 };
+}
+function messyPos(t, k) {
+  const A = messyArea(), rnd = mulberry32(hashStr(G.st.messySeed + ':' + t.uid));
+  const r = Math.pow(rnd(), .7), a0 = rnd() * TAU, spin = rnd() * TAU, wob = rnd();
+  const a = a0 + k * (.85 + wob * .5), rr = k ? r * (.72 + .28 * Math.abs(Math.sin(k * 1.7 + wob * 6))) : r;
+  const th = A.tw * TILE_R, hd = Math.hypot(A.tw, th) / 2;   // keep even a tile on the slant inside the area
+  const cx = A.x + A.w / 2 + Math.cos(a) * rr * (A.w / 2 - hd), cy = A.y + A.h / 2 + Math.sin(a) * rr * (A.h / 2 - hd);
+  return { x: cx - A.tw / 2, y: cy - th / 2, w: A.tw, rot: spin + k * 1.2, up: false, z: 0, heap: true };
+}
 function discardArea() {
   if (L.compact) { const c = L.center, inset = L.ws * 1.1; return { x: c.x0 + inset, y: c.y0, w: c.x1 - c.x0 - inset, h: c.y1 - c.y0 }; }
   const { sq, pitch } = L, pad = pitch * 1.75;
@@ -1026,8 +1044,10 @@ function humanRow() {
 }
 function computeTargets() {
   const st = G.st, T = new Map();
-  // the wall
-  for (const t of st.wall) T.set(t.uid, wallSlotPos(t.slot));
+  // washing a messy deal: every tile is in the heap
+  if (G.washing) { for (const t of TILES) T.set(t.uid, messyPos(t, G.washing)); return T; }
+  // the wall (or the heap)
+  for (const t of st.wall) T.set(t.uid, st.messy ? messyPos(t, 0) : wallSlotPos(t.slot));
   // the discard pool
   const da = discardArea(), n = st.discards.length;
   let dw = Math.min(L.wh * .52, da.w / 12), cols = Math.max(1, Math.floor(da.w / dw));
@@ -1205,7 +1225,7 @@ function render(now) {
   still.sort((a, b) => a.tg.z - b.tg.z || a.tg.y - b.tg.y || a.tg.x - b.tg.x);
   const sel = new Set(G.sel), hint = new Set(G.hint ? G.hint.uids : []), rec = new Set(G.received);
   const dots = settings.dots && st.phase !== 'done' ? fitTiles() : null;
-  const pileTop = L.compact && st.wall.length ? st.wall[0] : null;
+  const pileTop = L.compact && !st.messy && st.wall.length ? st.wall[0] : null;
   for (const t of still.concat(moving)) {
     if (t.tg.pile && !t.anim && t !== pileTop) continue;
     const r = animPose(t, now), g = t.tg, opt = {};
@@ -1227,7 +1247,7 @@ function render(now) {
     c.fillStyle = settings.theme === 'paper' ? 'rgba(44,36,24,.7)' : 'rgba(245,239,226,.75)'; c.fillText(st.wall.length, r.x + r.w / 2, r.y + r.w * TILE_R + 4);
   }
   // wall count in the middle of the pool
-  if (st.phase === 'play' && st.discards.length === 0 && !L.compact) {
+  if (st.phase === 'play' && st.discards.length === 0 && !L.compact && !st.messy) {
     const da = discardArea();
     c.fillStyle = settings.theme === 'paper' ? 'rgba(44,36,24,.55)' : 'rgba(245,239,226,.6)'; c.font = `700 ${clamp(L.wh * .26, 12, 18)}px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(`${st.wall.length} tiles in the wall`, da.x + da.w / 2, da.y + da.h / 2);
@@ -1457,20 +1477,27 @@ function startHand() {
   G.handNo++;
   const rng = mulberry32((Math.random() * 4294967296) >>> 0);
   G.st = newHand(rng, G.dealer);
+  G.st.messy = settings.setup === 'messy'; G.st.messySeed = (rng() * 1e9) >>> 0;
   TILES = [...G.st.wall, ...G.st.hands.flat()].sort((a, b) => a.uid - b.uid);
-  // tiles start in the wall and are dealt out from there
+  // tiles start in the wall (or the heap) and are dealt out from there
   for (const t of TILES) { t.r = null; t.tg = null; t.anim = null; }
-  const dealt = G.st.hands.flat();
+  const dealt = G.st.hands.flat(), messy = G.st.messy, wash = messy && !calm() ? 1500 : 0;
+  G.washing = wash ? 1 : 0;
   computeLayout();
-  for (const t of TILES) { const p = wallSlotPos(t.slot); t.r = { ...p }; }
-  dealt.forEach((t, i) => { t.delay = calm() ? 0 : 200 + (i % 52) * 22; });
+  for (const t of TILES) { const p = messy ? messyPos(t, G.washing) : wallSlotPos(t.slot); t.r = { ...p }; }
+  const deal = () => { dealt.forEach((t, i) => { t.delay = calm() ? 0 : (messy ? 80 : 200) + (i % 52) * 22; }); Sound.deal(30, 1.6); };
+  if (wash) {
+    // swirl the face-down tiles around the table, the way hands wash them, then everyone grabs
+    Sound.shuffle();
+    for (const k of [2, 3]) soon(120 + (k - 2) * 650, () => { G.washing = k; for (const t of TILES) t.slow = 1.6; dirty = true; Sound.shuffle(); kick(); });
+    soon(wash, () => { G.washing = 0; deal(); dirty = true; kick(); });
+  } else deal();
   if (settings.autosort) sortHand(G.st.hands[0]);
   G.sel = []; G.hint = null; G.received = []; G.claim = null; G.focus = null; G.manual = false; G.lastCallFrom = -1;
   G.step = 'dealing'; dirty = true;
-  Sound.deal(30, 1.6);
   stats.hands++; saveStats();
-  try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card }); } catch (e) {}
-  later(calm() ? 100 : 1500 / PACE[settings.pace], () => { G.step = 'pass'; advance(); });
+  try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card, setup: settings.setup }); } catch (e) {}
+  later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], () => { G.step = 'pass'; advance(); });
   hideResult(); kick(); updateHUD();
 }
 function sortHand(hand) { hand.sort((a, b) => SORT_KEY(a.type) - SORT_KEY(b.type) || (a.fv || 0) - (b.fv || 0) || a.uid - b.uid); }
@@ -1489,7 +1516,7 @@ function advance() {
     case 'pass': passPrompt(); break;
     case 'vote': votePrompt(); break;
     case 'courtesy': courtesyPrompt(); break;
-    case 'draw': hidePrompt(); later(st.turn === 0 ? 350 : 650, doDraw); break;
+    case 'draw': if (st.messy && st.turn === 0 && st.wall.length) { pickPrompt(); break; } hidePrompt(); later(st.turn === 0 ? 350 : 650, doDraw); break;
     case 'act': if (st.turn === 0) turnPrompt(); else { hidePrompt(); later(850, botAct); } break;
     case 'claim': claimPrompt(); break;
     case 'done': hidePrompt(); break;
@@ -1603,6 +1630,30 @@ function doDraw() {
     if (w) { G.step = 'selfwin'; dirty = true; return advance(); }
   }
   G.step = 'act'; dirty = true; advance();
+}
+function pickPrompt() {
+  const n = G.st.wall.length;
+  showPrompt(`Your turn — take a tile from the table<small>Tap any face-down tile in the pile. ${n} tile${n === 1 ? '' : 's'} left.</small>`, [{ label: 'Take one for me', fn: () => pickFromPile(null) }]);
+}
+function pickFromPile(t) {
+  const st = G.st;
+  if (G.step !== 'draw' || st.turn !== 0 || !st.wall.length) return;
+  if (t) { const i = st.wall.indexOf(t); if (i < 0) return; st.wall.splice(i, 1); st.wall.unshift(t); }
+  hidePrompt(); doDraw();
+}
+// the face-down tile in the heap under your finger (or the nearest one)
+function hitPile(x, y) {
+  const st = G.st;
+  let best = null, near = null, nd = Infinity;
+  for (const t of st.wall) {
+    const r = t.r, g = t.tg; if (!r || !g) continue;
+    const H = r.w * TILE_R, dx = x - (r.x + r.w / 2), dy = y - (r.y + H / 2), c = Math.cos(-(r.rot || 0)), s = Math.sin(-(r.rot || 0));
+    const lx = dx * c - dy * s, ly = dx * s + dy * c;
+    // tiles further down the screen are drawn on top
+    if (Math.abs(lx) <= r.w / 2 + 3 && Math.abs(ly) <= H / 2 + 3 && (!best || g.y > best.tg.y || g.y === best.tg.y && g.x > best.tg.x)) best = t;
+    const d = Math.hypot(dx, dy); if (d < nd) { nd = d; near = t; }
+  }
+  return best || (nd < Math.max(26, L.ws) ? near : null);
 }
 function turnPrompt() {
   const st = G.st;
@@ -1860,7 +1911,7 @@ function advanceUI() { if (G.step === 'pass') passPrompt(); else if (G.step === 
 function updateHUD() {
   if (!G || !G.st) return;
   const st = G.st;
-  const phase = st.phase === 'charleston' ? 'Charleston' : st.phase === 'play' ? `${st.wall.length} in the wall` : 'Hand over';
+  const phase = st.phase === 'charleston' ? 'Charleston' : st.phase === 'play' ? `${st.wall.length} ${st.messy ? 'on the table' : 'in the wall'}` : 'Hand over';
   $('#hud-stats').textContent = `Hand ${G.handNo} · ${phase} · You ${G.scores[0] > 0 ? '+' : ''}${G.scores[0]}`;
   if ($('#drawer').classList.contains('open')) renderDrawer();
 }
@@ -1895,6 +1946,7 @@ cv.table.addEventListener('pointerup', e => {
   const p = press; press = null;
   if (drag) { drag = null; dirty = true; kick(); saveGame(); return; }
   if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 14) return;
+  if (p.uid < 0 && G.step === 'draw' && G.st.messy && G.st.turn === 0) { const t = hitPile(e.clientX, e.clientY); if (t) { Sound.select(); return pickFromPile(t); } }
   if (p.uid >= 0) rackTap(TILES[p.uid]);
   else if (p.exp) exposedJokerTap(p.exp);
   else { const t = hitFaceUp(e.clientX, e.clientY); if (t) showTip(t); }
@@ -2026,6 +2078,7 @@ $('#btn-suggest').addEventListener('click', () => {
     const sw = jokerSwaps(st.hands[0], st.exps);
     if (sw.length) { toast(`Trade your ${tileName(sw[0].real.type)} for the joker first — tap Trade`); Sound.hint(); return; }
     const t = chooseDiscard(card, st.hands[0], st.exps[0]); uids = [t.uid]; msg = `Maybe discard the ${tileName(t.type)}`;
+  } else if (G.step === 'draw' && st.messy && st.turn === 0) { toast('Tap any face-down tile on the table to take it'); return;
   } else if (G.step === 'claim' && G.claim.look) { toast('Nothing to call this time — tap Next'); return;
   } else if (G.step === 'claim') {
     const cl = G.claim, n = botWantsCall(card, st.hands[0], st.exps[0], TILES[cl.uid].type, { eager: 5 });
@@ -2353,7 +2406,9 @@ $$('.seg[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => 
   Sound.init(); Sound.ui();
   const k = seg.dataset.seg;
   if (k === 'card') return setCard(b.dataset.v);
+  const was = settings[k];
   settings[k] = b.dataset.v; saveSettings(); renderSettings();
+  if (k === 'setup' && was !== settings.setup && G && G.st && G.st.phase !== 'done') toast(settings.setup === 'messy' ? 'Messy starts with the next hand' : 'The wall is back from the next hand');
 })));
 function applyTheme(id) {
   settings.theme = id; saveSettings();
@@ -2387,7 +2442,7 @@ function saveGame() {
     tiles: TILES.map(t => [t.type, t.fv || 0, t.slot]),
     wall: st.wall.map(U), hands: st.hands.map(h => h.map(U)), exps: st.exps.map(l => l.map(e => ({ t: e.t, u: e.tiles.map(U), f: e.from }))),
     discards: st.discards.map(d => [d.tile.uid, d.by]), turn: st.turn, drawn: st.drawn ? st.drawn.uid : -1, phase: st.phase, chStage: st.chStage,
-    dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null,
+    dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null, messy: !!st.messy, mseed: st.messySeed || 0,
   });
 }
 function loadGame() {
@@ -2400,6 +2455,7 @@ function loadGame() {
       wall: s.wall.map(T), hands: s.hands.map(h => h.map(T)), exps: s.exps.map(l => l.map(e => ({ t: e.t, tiles: e.u.map(T), from: e.f }))),
       discards: s.discards.map(([u, by]) => ({ tile: T(u), by })), dealer: s.dealer, turn: s.turn, phase: s.phase, chStage: s.chStage,
       drawn: s.drawn >= 0 ? T(s.drawn) : null, result: s.result, deadHands: s.dead || [false, false, false, false],
+      messy: !!s.messy, messySeed: s.mseed || 0,
     };
     G = { v: 1, gen: 1, scores: s.scores, handNo: s.handNo, dealer: s.dealer, st, step: s.step, sel: [], hint: null, received: [], claim: s.claim, pending: s.pending || null, focus: null, swapGlow: null, thinking: -1, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1 };
     if (G.step === 'claim' && !G.claim) G.step = 'draw';
