@@ -204,6 +204,16 @@ html[data-theme="paper"] .sheet{background:rgba(80,60,30,.22)}
 html[data-theme="paper"] .btn.primary{background:linear-gradient(180deg,#c95a4c,#a63c31);color:#fff6ee}
 .row{display:flex;gap:10px;flex-wrap:wrap} .row > .btn{flex:1 1 150px}
 .grid-btns{display:grid;gap:10px}
+.pick-h{font-size:.72rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+.setup-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.setup-pick button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 8px 9px;border-radius:16px;border:2px solid var(--line);background:var(--panel-2);color:var(--ink-3);transition:border-color .2s,color .2s,transform .12s}
+.setup-pick button svg{width:54px;height:24px;margin-bottom:3px}
+.setup-pick button b{font-size:.98rem;color:var(--ink)}
+.setup-pick button small{font-size:.74rem;font-weight:600;line-height:1.25;color:var(--ink-2)}
+.setup-pick button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.setup-pick button:active{transform:scale(.97)}
+.pick-note{font-size:.8rem;color:var(--ink-2);margin:-4px 0 12px}
+.pick-note:empty{display:none}
 .brand{font-family:var(--serif);font-weight:600;font-size:clamp(2.2rem,7vw,3.1rem);line-height:.95}
 .brand em{font-style:italic;color:var(--gold)}
 .link{padding:10px 14px;border-radius:12px;font-weight:700;font-size:.92rem;color:var(--ink-2);text-decoration:none;display:inline-block}
@@ -313,6 +323,12 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   <div class="panel center">
     <div class="brand">American <em>Mah&nbsp;Jongg</em></div>
     <p class="sub" style="margin-top:10px">You and three friends from the garden: Rose, Iris and Lily.</p>
+    <div class="pick-h">Set up the tiles</div>
+    <div class="setup-pick" role="group" aria-label="Set up the tiles">
+      <button data-v="wall"><svg viewBox="0 0 60 26" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="12" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="21" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="30" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="39" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="48" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="3" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="12" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="21" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="30" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="39" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="48" y="14" width="8" height="10" rx="1.6" opacity="0.6"/></svg><b>Wall</b><small>Dealt from a wall</small></button>
+      <button data-v="messy"><svg viewBox="0 0 60 26" fill="currentColor" aria-hidden="true"><rect x="6" y="12" width="8" height="10" rx="1.6" transform="rotate(-28 10 17)" opacity="0.95"/><rect x="16" y="4" width="8" height="10" rx="1.6" transform="rotate(15 20 9)" opacity="0.95"/><rect x="24" y="13" width="8" height="10" rx="1.6" transform="rotate(-8 28 18)" opacity="0.6"/><rect x="33" y="6" width="8" height="10" rx="1.6" transform="rotate(38 37 11)" opacity="0.95"/><rect x="40" y="14" width="8" height="10" rx="1.6" transform="rotate(-40 44 19)" opacity="0.95"/><rect x="49" y="5" width="8" height="10" rx="1.6" transform="rotate(20 53 10)" opacity="0.6"/><rect x="30" y="17" width="8" height="10" rx="1.6" transform="rotate(62 34 22)" opacity="0.95"/><rect x="12" y="17" width="8" height="10" rx="1.6" transform="rotate(8 16 22)" opacity="0.95"/></svg><b>Messy</b><small>Grab from a pile on the table</small></button>
+    </div>
+    <p class="pick-note" id="menu-setup-note"></p>
     <div class="grid-btns">
       <button class="btn primary" id="menu-continue">Continue<small id="menu-continue-sub"></small></button>
       <button class="btn" id="menu-new">New game<small>Fresh scores, Rose deals first</small></button>
@@ -407,6 +423,11 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="result-tiles" id="result-tiles"></div>
     <div id="result-hand" style="margin:4px auto 0;max-width:460px"></div>
     <table class="pay" id="result-pay"></table>
+    <div class="pick-h" style="margin-top:16px">Next hand</div>
+    <div class="setup-pick" role="group" aria-label="Set up the tiles">
+      <button data-v="wall"><svg viewBox="0 0 60 26" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="12" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="21" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="30" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="39" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="48" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="3" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="12" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="21" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="30" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="39" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="48" y="14" width="8" height="10" rx="1.6" opacity="0.6"/></svg><b>Wall</b><small>Dealt from a wall</small></button>
+      <button data-v="messy"><svg viewBox="0 0 60 26" fill="currentColor" aria-hidden="true"><rect x="6" y="12" width="8" height="10" rx="1.6" transform="rotate(-28 10 17)" opacity="0.95"/><rect x="16" y="4" width="8" height="10" rx="1.6" transform="rotate(15 20 9)" opacity="0.95"/><rect x="24" y="13" width="8" height="10" rx="1.6" transform="rotate(-8 28 18)" opacity="0.6"/><rect x="33" y="6" width="8" height="10" rx="1.6" transform="rotate(38 37 11)" opacity="0.95"/><rect x="40" y="14" width="8" height="10" rx="1.6" transform="rotate(-40 44 19)" opacity="0.95"/><rect x="49" y="5" width="8" height="10" rx="1.6" transform="rotate(20 53 10)" opacity="0.6"/><rect x="30" y="17" width="8" height="10" rx="1.6" transform="rotate(62 34 22)" opacity="0.95"/><rect x="12" y="17" width="8" height="10" rx="1.6" transform="rotate(8 16 22)" opacity="0.95"/></svg><b>Messy</b><small>Grab from a pile on the table</small></button>
+    </div>
     <div class="row">
       <button class="btn primary" id="result-next">Next hand</button>
       <button class="btn" id="result-menu">Menu</button>
@@ -1877,6 +1898,7 @@ function showResult() {
     $('#result-hand').innerHTML = `<div class="hand"><div class="row1"><div class="htext">${handHTML(r.text)}</div><div class="hval">${r.value}</div></div><div class="hnote"><span>${esc(r.cat)}</span><span>${r.jokerless ? 'No jokers — doubled to ' + r.base : ''}</span></div></div>`;
   }
   $('#result-pay').innerHTML = [0, 1, 2, 3].map(s => `<tr><td>${NAMES[s]}</td><td class="num ${r.pay[s] > 0 ? 'plus' : r.pay[s] < 0 ? 'minus' : ''}">${r.pay[s] > 0 ? '+' : ''}${r.pay[s] || '—'}</td><td class="num">${G.scores[s]}</td></tr>`).join('');
+  syncSetupPicks();
   $('#result-pay').insertAdjacentHTML('afterbegin', '<tr><td></td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">THIS HAND</td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">TOTAL</td></tr>');
   openSheet('result');
 }
@@ -2340,7 +2362,20 @@ function ask(title, text, btns) {
     openSheet('ask');
   });
 }
+/* ---------- wall or messy, chosen where a game or a hand starts ---------- */
+function syncSetupPicks() {
+  $$('.setup-pick button').forEach(b => b.setAttribute('aria-pressed', settings.setup === b.dataset.v ? 'true' : 'false'));
+  const live = G && G.st && G.st.phase !== 'done', differs = live && !!G.st.messy !== (settings.setup === 'messy');
+  $('#menu-setup-note').textContent = !differs ? '' : settings.setup === 'messy'
+    ? 'This hand keeps its wall. Messy starts with the next hand, or choose New game.'
+    : 'This hand stays messy. The wall is back from the next hand, or choose New game.';
+}
+$$('.setup-pick button').forEach(b => b.addEventListener('click', () => {
+  Sound.init(); Sound.ui();
+  settings.setup = b.dataset.v; saveSettings(); syncSetupPicks();
+}));
 function refreshMenu() {
+  syncSetupPicks();
   const has = G && G.st && G.st.phase !== 'done';
   $('#menu-continue').firstChild.textContent = has ? 'Continue' : 'Play';
   $('#menu-continue-sub').textContent = has ? `Hand ${G.handNo} · you have ${G.scores[0] > 0 ? '+' : ''}${G.scores[0]}` : 'You, Rose, Iris and Lily';
