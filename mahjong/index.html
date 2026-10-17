@@ -209,6 +209,11 @@ html[data-theme="paper"] .lcard canvas{background:rgba(60,40,10,.06)}
 .switch[aria-checked="true"]{background:var(--gold)}
 html[data-theme="paper"] .switch[aria-checked="true"]{background:#b0453a}
 .switch[aria-checked="true"]::after{transform:translateX(22px)}
+.styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;margin:6px 0 10px}
+.style-sw{display:flex;flex-direction:column;align-items:center;gap:5px;border-radius:16px;border:2px solid transparent;background:var(--panel-2);padding:9px 6px 8px;font-size:.78rem;font-weight:700;color:var(--ink-2);transition:border-color .2s,transform .15s}
+.style-sw canvas{position:static;display:block;max-width:100%;height:auto}
+.style-sw[aria-pressed="true"]{border-color:var(--gold);color:var(--ink)}
+.style-sw:active{transform:scale(.96)}
 .themes{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:6px 0 10px}
 .theme-sw{border-radius:16px;overflow:hidden;border:2px solid transparent;background:var(--panel-2);padding:0 0 8px;font-size:.78rem;font-weight:700;color:var(--ink-2);transition:border-color .2s,transform .15s}
 .theme-sw canvas{position:static;width:100%;aspect-ratio:4/3;height:auto;display:block;margin-bottom:6px}
@@ -343,6 +348,8 @@ html[data-theme="paper"] .cal .day.done{background:linear-gradient(160deg,#c95a4
   <div class="panel">
     <button class="close-x" data-close aria-label="Close">×</button>
     <h2>Settings</h2>
+    <div class="set-h">Tiles</div>
+    <div class="styles" id="style-list"></div>
     <div class="set-h">Scene</div>
     <div class="themes" id="theme-list"></div>
     <div class="set-h">Sound</div>
@@ -442,7 +449,7 @@ html[data-theme="paper"] .cal .day.done{background:linear-gradient(160deg,#c95a4
   </div>
 </section>
 
-<script src="/mahjong/tiles.js"></script>
+<script src="/mahjong/tiles.js?v=2"></script>
 <script>
 'use strict';
 /* =====================================================================
@@ -729,8 +736,8 @@ function fitBoard() {
   Object.assign(M, { W, H, d, hw: W / 2, hh: H / 2, minX: b.minX, minY: b.minY, maxZ: b.maxZ });
   M.bw = b.spanX * W / 2 + layers * d; M.bh = b.spanY * H / 2 + layers * d;
   M.ox = Math.round(a.x + (a.w - M.bw) / 2); M.oy = Math.round(a.y + (a.h - M.bh) / 2);
-  const key = [W, d, DPR, settings.theme, settings.indices, fontsReady].join('|');
-  if (!TS || TS.key !== key) { TS = buildTileSet(W, d, DPR, THEMES[settings.theme], settings.indices); TS.key = key; }
+  const key = [W, d, DPR, settings.theme, settings.tiles, settings.indices, fontsReady].join('|');
+  if (!TS || TS.key !== key) { TS = buildTileSet(W, d, DPR, THEMES[settings.theme], settings.indices, settings.tiles); TS.key = key; }
 }
 function tilePos(t) { return { x: M.ox + (t.x - M.minX) * M.hw + (t.z + 1) * M.d, y: M.oy + (t.y - M.minY) * M.hh + (M.maxZ - t.z) * M.d }; }
 function tileCenter(t) { const p = tilePos(t); return { x: p.x + M.W / 2 - M.d / 2, y: p.y + M.H / 2 + M.d / 2 }; }
@@ -1137,6 +1144,7 @@ LAYOUTS.sort((a, b) => LAYOUT_ORDER.indexOf(a.id) - LAYOUT_ORDER.indexOf(b.id));
    ===================================================================== */
 const SETTINGS_KEY = 'mjg_settings_v1', SAVE_KEY = 'mjg_save_v1', STATS_KEY = 'mjg_stats_v1';
 const settings = Object.assign({ sound: true, music: true, dim: true, indices: true, assist: false, warn: true, timer: true, calm: false, hard: false, theme: 'jade' }, store.get(SETTINGS_KEY, {}));
+settings.tiles = savedTileStyle();
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 const saveSettings = () => store.set(SETTINGS_KEY, settings);
 let stats = Object.assign({ layouts: {}, daily: {}, wins: 0, played: 0, pairs: 0, bestStreak: 0, firstSeen: dateKey() }, store.get(STATS_KEY, {}));
@@ -1763,6 +1771,18 @@ function renderSettings() {
     }
   }
   $$('.theme-sw').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === settings.theme ? 'true' : 'false'));
+  const styles = $('#style-list');
+  if (!styles.children.length) for (const id of Object.keys(TILE_STYLES)) {
+    const b = document.createElement('button'); b.className = 'style-sw'; b.dataset.style = id; b.innerHTML = `<canvas></canvas>${TILE_STYLES[id].name}`; styles.appendChild(b);
+    drawStyleSample(b.querySelector('canvas'), id, THEMES[settings.theme], [0, 9, 31, 34, -1], Math.min(DPR, 2));
+    b.addEventListener('click', () => { Sound.ui(); applyTileStyle(id); renderSettings(); });
+  }
+  $$('.style-sw').forEach(b => b.setAttribute('aria-pressed', b.dataset.style === settings.tiles ? 'true' : 'false'));
+}
+function applyTileStyle(id) {
+  settings.tiles = id; store.set(TILE_STYLE_KEY, id);
+  TS = null; miniSets.clear(); fitBoard(); drawHomeArt(); kick();
+  try { gtag('event', 'mahjong_tile_style', { style: id }); } catch (e) {}
 }
 $$('.switch[data-set]').forEach(s => s.addEventListener('click', () => {
   Sound.init();
@@ -1783,7 +1803,7 @@ function applyTheme(id) {
   settings.theme = id; saveSettings();
   document.documentElement.dataset.theme = id;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[id].meta);
-  TS = null; FXS = makeFxSprites(THEMES[id]);
+  TS = null; FXS = makeFxSprites(THEMES[id]); $('#style-list').innerHTML = '';
   fitBoard(); renderBackground(); setupAmbient(); startAmbient(); drawHomeArt(); kick();
 }
 
@@ -1859,8 +1879,8 @@ function toast(msg, ms = 2600) { const t = $('#toast'); t.textContent = msg; t.c
 /* ---------- decorative tiles: home screen and how-to ---------- */
 const miniSets = new Map();
 function miniSet(W) {
-  const key = [W, settings.theme, settings.indices, fontsReady, DPR].join('|');
-  if (!miniSets.has(key)) { if (miniSets.size > 6) miniSets.clear(); miniSets.set(key, buildTileSet(W, Math.round(W * .11), DPR, THEMES[settings.theme], settings.indices)); }
+  const key = [W, settings.theme, settings.tiles, settings.indices, fontsReady, DPR].join('|');
+  if (!miniSets.has(key)) { if (miniSets.size > 6) miniSets.clear(); miniSets.set(key, buildTileSet(W, Math.round(W * .11), DPR, THEMES[settings.theme], settings.indices, settings.tiles)); }
   return miniSets.get(key);
 }
 function drawMiniTile(c, S, face, x, y, opt = {}) {
@@ -1910,7 +1930,7 @@ document.addEventListener('visibilitychange', () => {
   else { lastTick = performance.now(); startAmbient(); if (settings.sound || settings.music) Sound.resume(); }
 });
 window.addEventListener('pagehide', saveGame);
-function refreshArt() { TS = null; miniSets.clear(); fitBoard(); kick(); drawHomeArt(); if (sheetEl('howto').classList.contains('open')) renderHowTo(); if (sheetEl('settings').classList.contains('open')) { $('#theme-list').innerHTML = ''; renderSettings(); } }
+function refreshArt() { TS = null; miniSets.clear(); fitBoard(); kick(); drawHomeArt(); if (sheetEl('howto').classList.contains('open')) renderHowTo(); if (sheetEl('settings').classList.contains('open')) { $('#theme-list').innerHTML = ''; $('#style-list').innerHTML = ''; renderSettings(); } }
 
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 (function init() {

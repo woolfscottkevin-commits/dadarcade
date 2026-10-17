@@ -8,13 +8,17 @@
 //
 // Strategy
 //   the pages        network first (3 s timeout), cached copy when offline
-//   tiles.js, icons  cached copy first, refreshed in the background
+//   tiles.js         the same as the pages: both pages call into it, so a fresh
+//                    page must never run against a stale cached copy
+//   icons            cached copy first, refreshed in the background
 //   Google Fonts     cached copy first, refreshed in the background, so the
 //                    brush-script tile characters still render offline
 //   /api/*, analytics, non-GET: not touched, straight to the network
 //
 // The cache refreshes itself on every online launch, so edits to index.html
-// need nothing here. Bump VERSION only when the CORE list changes.
+// and tiles.js need nothing here. Bump VERSION only when the CORE list changes.
+// (The pages load tiles.js?v=N: workers from before tiles.js went network-first
+// serve it from cache, so bump N when a page starts using something new in it.)
 
 const VERSION = 'mahjong-v2';
 const PAGE = '/mahjong';
@@ -88,6 +92,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname !== PAGE && !url.pathname.startsWith(PAGE + '/')) return;
 
+  if (url.pathname === PAGE + '/tiles.js') { event.respondWith(pageResponse(event, PAGE + '/tiles.js')); return; }
   if (req.mode === 'navigate') {
     // one cache entry per page, with or without a trailing slash
     const key = url.pathname.replace(/\/+$/, '') || PAGE;

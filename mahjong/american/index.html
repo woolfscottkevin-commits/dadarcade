@@ -222,6 +222,10 @@ html[data-theme="paper"] .btn.primary{background:linear-gradient(180deg,#c95a4c,
 .seg button{padding:8px 11px;border-radius:9px;font-weight:800;font-size:.8rem;color:var(--ink-2)}
 .seg button[aria-pressed="true"]{background:var(--btn-hover);color:var(--ink)}
 .set-h{font-size:.74rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin:18px 2px 2px}
+.styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin:8px 0 4px}
+.style-sw{display:flex;flex-direction:column;align-items:center;gap:5px;border-radius:14px;border:2px solid transparent;background:var(--panel-2);padding:9px 6px 7px;font-size:.74rem;font-weight:800;color:var(--ink-2)}
+.style-sw canvas{position:static;display:block;max-width:100%;height:auto}
+.style-sw[aria-pressed="true"]{border-color:var(--gold);color:var(--ink)}
 .themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
 .theme-sw{border-radius:14px;overflow:hidden;border:2px solid transparent;background:var(--panel-2);padding:0 0 7px;font-size:.74rem;font-weight:800;color:var(--ink-2)}
 .theme-sw canvas{position:static;width:100%;aspect-ratio:4/3;height:auto;display:block;margin-bottom:5px}
@@ -342,6 +346,8 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="set-row"><div><b>Highlight my closest hand</b><span>Tiles that fit the hand you’re nearest to get a small green dot</span></div><button class="switch" role="switch" data-set="dots" aria-label="Highlight closest hand"></button></div>
     <div class="set-row"><div><b>Sort tiles automatically</b><span>New tiles slide into place; you can still drag tiles to rearrange</span></div><button class="switch" role="switch" data-set="autosort" aria-label="Sort automatically"></button></div>
     <div class="set-row"><div><b>Corner numbers</b><span>Small 1–9 and N E W S on the tiles</span></div><button class="switch" role="switch" data-set="indices" aria-label="Corner numbers"></button></div>
+    <div class="set-h">Tiles</div>
+    <div class="styles" id="style-list"></div>
     <div class="set-h">Sound &amp; scene</div>
     <div class="set-row"><div><b>Sound effects</b></div><button class="switch" role="switch" data-set="sound" aria-label="Sound effects"></button></div>
     <div class="set-row"><div><b>Music</b></div><button class="switch" role="switch" data-set="music" aria-label="Music"></button></div>
@@ -450,7 +456,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   </div>
 </section>
 
-<script src="/mahjong/tiles.js"></script>
+<script src="/mahjong/tiles.js?v=2"></script>
 <script>
 /* =====================================================================
    American Mah Jongg — engine: tiles, the card, matching, computer play
@@ -846,6 +852,7 @@ const settings = Object.assign({
   dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true,
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
+settings.tiles = savedTileStyle();
 const saveSettings = () => store.set(SET_KEY, settings);
 let myHands = store.get(MINE_KEY, []);
 const saveMine = () => store.set(MINE_KEY, myHands);
@@ -911,8 +918,8 @@ function sizeCanvases() {
 const sets = new Map();
 function tileSet(w) {
   w = Math.max(10, Math.round(w));
-  const key = [w, DPR, settings.theme, settings.indices, fontsReady].join('|');
-  if (!sets.has(key)) { if (sets.size > 14) sets.clear(); sets.set(key, buildTileSet(w, Math.max(2, Math.round(w * .11)), DPR, THEMES[settings.theme], settings.indices)); }
+  const key = [w, DPR, settings.theme, settings.tiles, settings.indices, fontsReady].join('|');
+  if (!sets.has(key)) { if (sets.size > 14) sets.clear(); sets.set(key, buildTileSet(w, Math.max(2, Math.round(w * .11)), DPR, THEMES[settings.theme], settings.indices, settings.tiles)); }
   return sets.get(key);
 }
 
@@ -2278,13 +2285,27 @@ function renderSettings() {
     b.addEventListener('click', () => { Sound.ui(); applyTheme(id); renderSettings(); });
   }
   $$('.theme-sw').forEach(b => b.setAttribute('aria-pressed', b.dataset.theme === settings.theme ? 'true' : 'false'));
+  const styles = $('#style-list');
+  if (!styles.children.length) for (const id of Object.keys(TILE_STYLES)) {
+    const b = document.createElement('button'); b.className = 'style-sw'; b.dataset.style = id; b.innerHTML = `<canvas></canvas>${TILE_STYLES[id].name}`; styles.appendChild(b);
+    drawStyleSample(b.querySelector('canvas'), id, THEMES[settings.theme], [0, 9, 31, 42, -1], Math.min(DPR, 2));
+    b.addEventListener('click', () => { Sound.ui(); applyTileStyle(id); renderSettings(); });
+  }
+  $$('.style-sw').forEach(b => b.setAttribute('aria-pressed', b.dataset.style === settings.tiles ? 'true' : 'false'));
+}
+function applyTileStyle(id) {
+  settings.tiles = id; store.set(TILE_STYLE_KEY, id);
+  sets.clear(); $('#tile-guide').innerHTML = '';
+  if ($('#drawer').classList.contains('open')) renderDrawer();
+  dirty = true; kick();
+  try { gtag('event', 'mahjong_tile_style', { style: id }); } catch (e) {}
 }
 $$('.switch[data-set]').forEach(s => s.addEventListener('click', () => {
   Sound.init();
   const k = s.dataset.set; settings[k] = !settings[k]; saveSettings(); renderSettings();
   if (k === 'sound') { Sound.setSound(settings.sound); if (settings.sound) Sound.ui(); } else Sound.ui();
   if (k === 'music') Sound.setMusic(settings.music);
-  if (k === 'indices') { sets.clear(); }
+  if (k === 'indices') { sets.clear(); $('#tile-guide').innerHTML = ''; }
   if (k === 'calm') { stopAmbient(); startAmbient(); }
   if (k === 'autosort' && settings.autosort && G && G.st) { G.manual = false; settle(); }
   if (k === 'strip') { computeLayout(); updateStrip(); }
@@ -2300,7 +2321,7 @@ function applyTheme(id) {
   settings.theme = id; saveSettings();
   document.documentElement.dataset.theme = id;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[id].meta);
-  sets.clear(); FXS = makeFxSprites(THEMES[id]);
+  sets.clear(); FXS = makeFxSprites(THEMES[id]); $('#style-list').innerHTML = ''; $('#tile-guide').innerHTML = '';
   renderBackground(); setupAmbient(); startAmbient(); kick();
 }
 function renderBackground() { const c = cx.bg; c.setTransform(DPR, 0, 0, DPR, 0, 0); paintScene(c, VW, VH, settings.theme); }

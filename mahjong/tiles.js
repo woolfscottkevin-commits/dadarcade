@@ -364,14 +364,265 @@ function rgbToHex(r, g, b) { return '#' + ((1 << 24) | (Math.round(r) << 16) | (
 function lighten(h, t) { const [r, g, b] = hexToRgb(h); return rgbToHex(r + (255 - r) * t, g + (255 - g) * t, b + (255 - b) * t); }
 function darken(h, t) { const [r, g, b] = hexToRgb(h); return rgbToHex(r * (1 - t), g * (1 - t), b * (1 - t)); }
 
+/* =====================================================================
+   Tile styles. "Classic" is the hand-painted set above. The others are
+   bright white acrylic with flat, playful faces and a coloured back, in
+   the spirit of today's designer American sets (all our own drawings).
+   ===================================================================== */
+const TILE_STYLES = {
+  classic: { name: 'Classic' },
+  sorbet: { name: 'Sorbet', modern: true, back: ['#c43e2c', '#ef6a50', '#ff9c80'],
+    dots: ['#ef4f7a', '#ff8c42', '#1fa99a', '#8b6cdb'], bams: ['#1fa99a', '#5cc06a', '#ef4f7a'],
+    ink: '#2e2848', crak: '#e23c5a', red: '#e23c5a', green: '#139c74', blue: '#3d7ee0', flower: '#ef4f7a', season: '#1fa99a', gold: '#f4b43a' },
+  lagoon: { name: 'Lagoon', modern: true, back: ['#0b6e68', '#13a89c', '#4fd1c5'],
+    dots: ['#1d6fd0', '#12b5a5', '#f05c9b', '#f6a623'], bams: ['#12b5a5', '#1d6fd0', '#f05c9b'],
+    ink: '#13294b', crak: '#e0336f', red: '#e0336f', green: '#0f9e80', blue: '#1d6fd0', flower: '#f05c9b', season: '#1d6fd0', gold: '#f6b23a' },
+  lilac: { name: 'Lilac', modern: true, back: ['#6a47b0', '#9775dc', '#c3a8f0'],
+    dots: ['#9a63d8', '#f27fb2', '#3fbf9b', '#ffab4c'], bams: ['#3fbf9b', '#9a63d8', '#f27fb2'],
+    ink: '#33264f', crak: '#d94f8c', red: '#e04a6a', green: '#2ea886', blue: '#6a6fe0', flower: '#f27fb2', season: '#9a63d8', gold: '#f5b649' },
+  sage: { name: 'Sage', modern: true, back: ['#46634c', '#6f9a78', '#a3c2a8'],
+    dots: ['#6f9a78', '#6f8fb8', '#c99a4e', '#c47a7f'], bams: ['#6f9a78', '#5d8a8c', '#c99a4e'],
+    ink: '#2f3a35', crak: '#b85c62', red: '#b9545c', green: '#5c8f6a', blue: '#5f7fa8', flower: '#c47a7f', season: '#6f8fb8', gold: '#c99a4e' },
+};
+const tileStyle = id => TILE_STYLES[id] || TILE_STYLES.classic;
+// one choice for both games
+const TILE_STYLE_KEY = 'mj_tile_style_v1';
+const savedTileStyle = () => { const v = store.get(TILE_STYLE_KEY, 'classic'); return TILE_STYLES[v] ? v : 'classic'; };
+
+// a flat flower made of n round petals: the outline of a modern dot
+function scallop(c, x, y, r, n) {
+  c.beginPath();
+  for (let k = 0; k < n; k++) { const a = k * TAU / n - Math.PI / 2, px = x + Math.cos(a) * r * .56, py = y + Math.sin(a) * r * .56; c.moveTo(px + r * .44, py); c.arc(px, py, r * .44, 0, TAU); }
+  c.moveTo(x + r * .62, y); c.arc(x, y, r * .62, 0, TAU);
+}
+function mDot(c, x, y, r, col, ctr) {
+  scallop(c, x, y, r, 8); c.fillStyle = col; c.fill();
+  disc(c, x, y, r * .46, '#ffffff');
+  disc(c, x, y, r * .32, ctr);
+  disc(c, x, y, r * .11, '#ffffff');
+}
+function mDots(c, n, S) {
+  const P = S.dots, d = (x, y, r, i) => mDot(c, x, y, r, P[i], P[(i + 2) % 4]);
+  switch (n) {
+    case 1: {
+      const x = 50, y = 65;
+      scallop(c, x, y, 41, 12); c.fillStyle = P[0]; c.fill();
+      disc(c, x, y, 27, '#ffffff');
+      for (let k = 0; k < 10; k++) { const a = k * TAU / 10; disc(c, x + Math.cos(a) * 20.5, y + Math.sin(a) * 20.5, 4.4, P[1]); }
+      scallop(c, x, y, 14, 6); c.fillStyle = P[2]; c.fill();
+      disc(c, x, y, 4.6, '#ffffff');
+      break;
+    }
+    case 2: d(50, 36, 21, 2); d(50, 94, 21, 0); break;
+    case 3: d(25, 29, 16.5, 0); d(50, 65, 16.5, 1); d(75, 101, 16.5, 2); break;
+    case 4: d(29, 38, 17.5, 0); d(71, 38, 17.5, 2); d(29, 92, 17.5, 2); d(71, 92, 17.5, 0); break;
+    case 5: d(27, 33, 15, 0); d(73, 33, 15, 2); d(50, 65, 15, 1); d(27, 97, 15, 2); d(73, 97, 15, 0); break;
+    case 6: for (let i = 0; i < 3; i++) { d(31, 28 + i * 37.5, 14, i ? 0 : 2); d(69, 28 + i * 37.5, 14, i ? 0 : 2); } break;
+    case 7: d(24, 21, 11.5, 2); d(50, 35, 11.5, 2); d(76, 49, 11.5, 2); d(31, 78, 13, 0); d(69, 78, 13, 0); d(31, 108, 13, 0); d(69, 108, 13, 0); break;
+    case 8: for (let i = 0; i < 4; i++) { d(31, 21 + i * 29.5, 13, i % 2 ? 3 : 1); d(69, 21 + i * 29.5, 13, i % 2 ? 1 : 3); } break;
+    case 9: for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) d(21 + k * 29, 29 + r * 36, 12.5, r); break;
+  }
+}
+// a flat, rounded bamboo bar with a white joint across the middle
+function mBar(c, x, y, len, w, col, ang = 0) {
+  c.save(); c.translate(x, y); c.rotate(ang);
+  const h = len / 2;
+  rrect(c, -w / 2, -h, w, len, w / 2); c.fillStyle = col; c.fill();
+  rrect(c, -w * .28, -h + w * .45, w * .2, len - w * .9, w * .1); c.fillStyle = 'rgba(255,255,255,.42)'; c.fill();
+  rrect(c, -w / 2 - .6, -w * .13, w + 1.2, w * .26, w * .13); c.fillStyle = '#ffffff'; c.fill();
+  c.restore();
+}
+function mBird(c, S) {
+  const [a, b] = S.bams, P = S.dots;
+  c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+  // the branch it sits on
+  c.strokeStyle = darken(S.gold, .35); c.lineWidth = 3.4;
+  c.beginPath(); c.moveTo(12, 106); c.quadraticCurveTo(50, 96, 90, 106); c.stroke();
+  const lf = (x, y, ang) => { c.save(); c.translate(x, y); c.rotate(ang); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(6, -8, 0, -17); c.quadraticCurveTo(-6, -8, 0, 0); c.fillStyle = S.green; c.fill(); c.restore(); };
+  lf(22, 103, -1.1); lf(30, 101, -.3); lf(82, 104, 1.0);
+  // tail feathers, each with an eye
+  for (const [ang, col] of [[-2.05, P[0]], [-2.45, P[3]], [-2.85, P[1]]]) {
+    c.save(); c.translate(42, 72); c.rotate(ang);
+    c.beginPath(); c.ellipse(0, -21, 6.5, 22, 0, 0, TAU); c.fillStyle = col; c.fill();
+    disc(c, 0, -32, 4.4, '#ffffff'); disc(c, 0, -32, 2.6, S.gold);
+    c.restore();
+  }
+  // legs
+  c.strokeStyle = S.gold; c.lineWidth = 2.6;
+  c.beginPath(); c.moveTo(52, 82); c.lineTo(50, 99); c.moveTo(61, 81); c.lineTo(62, 99); c.stroke();
+  // body, belly and wing
+  c.beginPath(); c.ellipse(55, 66, 22, 18, -.35, 0, TAU); c.fillStyle = a; c.fill();
+  c.beginPath(); c.ellipse(60, 74, 13, 8.5, -.35, 0, TAU); c.fillStyle = lighten(a, .6); c.fill();
+  c.beginPath(); c.ellipse(48, 63, 14, 8.5, -.55, 0, TAU); c.fillStyle = b; c.fill();
+  c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1.5;
+  c.beginPath(); c.moveTo(40, 66); c.lineTo(52, 59); c.moveTo(43, 70); c.lineTo(55, 63); c.stroke();
+  // head, crest, cheek, eye and beak
+  for (const [dx, dy] of [[-5, -15], [0, -18], [5, -15]]) { c.strokeStyle = a; c.lineWidth = 1.8; c.beginPath(); c.moveTo(73, 38); c.lineTo(73 + dx, 38 + dy + 6); c.stroke(); disc(c, 73 + dx, 38 + dy + 5, 2.6, P[0]); }
+  disc(c, 73, 46, 13, a);
+  disc(c, 77, 52, 3.4, lighten(P[0], .35));
+  disc(c, 75, 43, 3.4, '#ffffff'); disc(c, 75.8, 43, 1.9, S.ink);
+  c.beginPath(); c.moveTo(84, 43); c.lineTo(95, 47.5); c.lineTo(84, 51); c.closePath(); c.fillStyle = S.gold; c.fill();
+  c.restore();
+}
+function mBamboo(c, n, S) {
+  const [G, B, R] = S.bams;
+  const s = (x, y, len, col, a = 0, w = 10) => mBar(c, x, y, len, w * 1.3, col, a);
+  switch (n) {
+    case 1: mBird(c, S); break;
+    case 2: s(50, 37, 46, B, 0, 12); s(50, 93, 46, G, 0, 12); break;
+    case 3: s(50, 37, 46, B, 0, 11); s(30, 93, 46, G, 0, 11); s(70, 93, 46, G, 0, 11); break;
+    case 4: s(30, 37, 46, G, 0, 11); s(70, 37, 46, B, 0, 11); s(30, 93, 46, B, 0, 11); s(70, 93, 46, G, 0, 11); break;
+    case 5: s(24, 37, 46, G); s(76, 37, 46, B); s(50, 65, 46, R); s(24, 93, 46, B); s(76, 93, 46, G); break;
+    case 6: for (let k = 0; k < 3; k++) { s(24 + k * 26, 37, 46, G); s(24 + k * 26, 93, 46, B); } break;
+    case 7: s(50, 22, 30, R, 0, 9.5); for (let k = 0; k < 3; k++) { s(24 + k * 26, 64, 34, G, 0, 9.5); s(24 + k * 26, 106, 34, B, 0, 9.5); } break;
+    case 8: {
+      const t = .38;
+      s(15, 37, 44, G, 0, 9); s(85, 37, 44, G, 0, 9); s(38, 37, 46, R, t, 9); s(62, 37, 46, R, -t, 9);
+      s(15, 93, 44, B, 0, 9); s(85, 93, 44, B, 0, 9); s(38, 93, 46, R, -t, 9); s(62, 93, 46, R, t, 9);
+      break;
+    }
+    case 9: for (let r = 0; r < 3; r++) for (let k = 0; k < 3; k++) s(23 + k * 27, 25 + r * 40, 33, k === 1 ? R : (r === 1 ? B : G), 0, 9.5); break;
+  }
+}
+function mCharacter(c, n, S) {
+  disc(c, 50, 38, 26, lighten(S.crak, .87));
+  glyph(c, NUMS[n - 1], 50, 39, n === 1 ? 46 : 40, S.ink, false);
+  glyph(c, '萬', 50, 97, 50, S.crak, false);
+}
+function mWind(c, k, S) {
+  const col = S.dots[[0, 2, 3, 1][k]];
+  disc(c, 50, 55, 33, col);
+  c.beginPath(); c.arc(50, 55, 27.5, 0, TAU); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 1.6; c.setLineDash([3, 3.4]); c.stroke(); c.setLineDash([]);
+  c.font = `900 40px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff'; c.fillText('ESWN'[k], 50, 57);
+  glyph(c, '東南西北'[k], 50, 108, 22, S.ink, false);
+}
+function mDragon(c, k, S) {
+  if (k < 2) {
+    const col = k === 0 ? S.red : S.green;
+    rrect(c, 13, 15, 74, 100, 18); c.fillStyle = lighten(col, .87); c.fill();
+    glyph(c, k === 0 ? '中' : '發', 50, 66, k === 0 ? 76 : 68, col, false);
+    return;
+  }
+  // the Soap: an empty frame with a blossom at each corner
+  c.lineJoin = 'round';
+  rrect(c, 16, 17, 68, 96, 14); c.lineWidth = 5.5; c.strokeStyle = S.blue; c.stroke();
+  rrect(c, 25, 26, 50, 78, 8); c.lineWidth = 2; c.setLineDash([4, 3.5]); c.stroke(); c.setLineDash([]);
+  for (const [x, y] of [[16, 17], [84, 17], [16, 113], [84, 113]]) { scallop(c, x, y, 8, 5); c.fillStyle = S.flower; c.fill(); disc(c, x, y, 2.6, '#ffffff'); }
+}
+function mFrame(c, col, n) {
+  rrect(c, 7, 7, 86, 116, 12); c.lineWidth = 2.2; c.strokeStyle = col; c.stroke();
+  disc(c, 21, 22, 10, col);
+  c.font = `900 13px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#ffffff'; c.fillText(String(n + 1), 21, 22.5);
+}
+function mLeaf(c, x, y, len, wid, ang, col) {
+  c.save(); c.translate(x, y); c.rotate(ang);
+  c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(wid, -len * .45, 0, -len); c.quadraticCurveTo(-wid, -len * .45, 0, 0); c.fillStyle = col; c.fill();
+  c.beginPath(); c.moveTo(0, -len * .1); c.lineTo(0, -len * .85); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 1; c.stroke();
+  c.restore();
+}
+function mStem(c, pts, col, w) {
+  c.beginPath(); c.moveTo(pts[0], pts[1]); c.quadraticCurveTo(pts[2], pts[3], pts[4], pts[5]);
+  c.strokeStyle = col; c.lineWidth = w; c.lineCap = 'round'; c.stroke();
+}
+function mFlower(c, k, S) {
+  const P = S.dots, G = S.green;
+  mFrame(c, S.flower, k);
+  if (k === 0) { // daisy
+    mStem(c, [50, 120, 46, 96, 50, 66], G, 3.2); mLeaf(c, 49, 104, 24, 8, -1.05, G); mLeaf(c, 49, 96, 20, 7, 1.1, G);
+    for (let i = 0; i < 12; i++) { c.save(); c.translate(50, 56); c.rotate(i * TAU / 12); c.beginPath(); c.ellipse(0, -15, 5, 13, 0, 0, TAU); c.fillStyle = P[0]; c.fill(); c.restore(); }
+    disc(c, 50, 56, 9.5, S.gold);
+    for (let i = 0; i < 6; i++) { const a = i * TAU / 6; disc(c, 50 + Math.cos(a) * 5, 56 + Math.sin(a) * 5, 1.3, darken(S.gold, .3)); }
+  } else if (k === 1) { // tulip
+    mStem(c, [50, 120, 52, 92, 50, 70], G, 3.2); mLeaf(c, 50, 118, 40, 9, -.45, G); mLeaf(c, 51, 118, 34, 8, .5, G);
+    const col = P[1];
+    c.beginPath(); c.moveTo(34, 46); c.quadraticCurveTo(32, 76, 50, 76); c.quadraticCurveTo(68, 76, 66, 46); c.lineTo(58, 56); c.lineTo(50, 40); c.lineTo(42, 56); c.closePath(); c.fillStyle = col; c.fill();
+    c.beginPath(); c.moveTo(42, 56); c.lineTo(50, 40); c.lineTo(58, 56); c.quadraticCurveTo(56, 72, 50, 74); c.quadraticCurveTo(44, 72, 42, 56); c.fillStyle = darken(col, .15); c.fill();
+    c.beginPath(); c.moveTo(38, 54); c.quadraticCurveTo(38, 68, 44, 72); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 2; c.stroke();
+  } else if (k === 2) { // rose, seen from above
+    mLeaf(c, 40, 82, 22, 8, -2.3, G); mLeaf(c, 62, 84, 22, 8, 2.2, G); mLeaf(c, 50, 92, 18, 7, 3.14, G);
+    const col = P[3];
+    disc(c, 50, 60, 25, col);
+    c.strokeStyle = darken(col, .25); c.lineWidth = 2.4; c.lineCap = 'round';
+    c.beginPath(); for (let t = 0; t < 5.2 * Math.PI; t += .12) { const r = 2 + t * 1.3, x = 50 + Math.cos(t) * r, y = 60 + Math.sin(t) * r * .92; if (t === 0) c.moveTo(x, y); else c.lineTo(x, y); } c.stroke();
+    c.beginPath(); c.arc(50, 60, 25, Math.PI * 1.15, Math.PI * 1.5); c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = 2.4; c.stroke();
+  } else { // hibiscus
+    mStem(c, [50, 120, 44, 100, 48, 82], G, 3); mLeaf(c, 47, 108, 24, 8, -1.2, G);
+    const col = P[2];
+    for (let i = 0; i < 5; i++) { c.save(); c.translate(50, 60); c.rotate(i * TAU / 5); c.beginPath(); c.ellipse(0, -14, 12, 15, 0, 0, TAU); c.fillStyle = col; c.fill(); c.restore(); }
+    disc(c, 50, 60, 8, darken(col, .25));
+    c.strokeStyle = S.gold; c.lineWidth = 2; c.beginPath(); c.moveTo(50, 60); c.quadraticCurveTo(60, 50, 64, 38); c.stroke();
+    for (const [x, y] of [[64, 38], [61, 41], [67, 41]]) disc(c, x, y, 2.2, S.gold);
+  }
+}
+function mSeason(c, k, S) {
+  const P = S.dots, G = S.green;
+  mFrame(c, S.season, k);
+  if (k === 0) { // spring: a sprig of blossom
+    mStem(c, [24, 116, 40, 80, 70, 40], darken(S.gold, .35), 3.4); mStem(c, [42, 82, 58, 84, 72, 76], darken(S.gold, .35), 2.4);
+    mLeaf(c, 52, 64, 14, 5, .9, G); mLeaf(c, 36, 96, 14, 5, -1.2, G);
+    for (const [x, y, r] of [[70, 40, 13], [72, 76, 10.5], [38, 66, 9]]) { scallop(c, x, y, r, 5); c.fillStyle = lighten(P[0], .25); c.fill(); disc(c, x, y, r * .3, S.gold); }
+  } else if (k === 1) { // summer: the sun
+    c.fillStyle = P[1];
+    for (let i = 0; i < 12; i++) { c.save(); c.translate(50, 64); c.rotate(i * TAU / 12); c.beginPath(); c.moveTo(-4.5, -26); c.lineTo(0, -37); c.lineTo(4.5, -26); c.closePath(); c.fill(); c.restore(); }
+    disc(c, 50, 64, 22, S.gold);
+    c.strokeStyle = S.ink; c.lineWidth = 2; c.lineCap = 'round';
+    c.beginPath(); c.arc(42, 61, 3.4, Math.PI * 1.1, Math.PI * 1.9); c.moveTo(61.4, 61); c.arc(58, 61, 3.4, Math.PI * 1.1, Math.PI * 1.9); c.stroke();
+    c.beginPath(); c.arc(50, 67, 7, Math.PI * .15, Math.PI * .85); c.stroke();
+    disc(c, 39, 69, 3, lighten(P[0], .3)); disc(c, 61, 69, 3, lighten(P[0], .3));
+  } else if (k === 2) { // autumn: a maple leaf
+    c.save(); c.translate(50, 62); c.scale(1.75, 1.75);
+    const pts = [[0, -20], [4, -9], [12, -14], [10, -4], [19, -5], [12, 3], [15, 7], [5, 6], [3, 14], [0, 10], [-3, 14], [-5, 6], [-15, 7], [-12, 3], [-19, -5], [-10, -4], [-12, -14], [-4, -9]];
+    c.beginPath(); c.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) c.lineTo(p[0], p[1]); c.closePath(); c.lineJoin = 'round'; c.fillStyle = P[1]; c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.7)'; c.lineWidth = .9; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, 18); c.lineTo(0, -15); c.moveTo(0, 2); c.lineTo(12, -9); c.moveTo(0, 2); c.lineTo(-12, -9); c.moveTo(0, 6); c.lineTo(10, 5); c.moveTo(0, 6); c.lineTo(-10, 5); c.stroke();
+    c.strokeStyle = darken(P[1], .3); c.lineWidth = 1.6; c.beginPath(); c.moveTo(0, 10); c.lineTo(0, 24); c.stroke();
+    c.restore();
+  } else { // winter: a snowflake
+    c.save(); c.translate(50, 64); c.strokeStyle = S.season; c.lineWidth = 3.2; c.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      c.rotate(TAU / 6); c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -32);
+      c.moveTo(0, -18); c.lineTo(8, -26); c.moveTo(0, -18); c.lineTo(-8, -26); c.moveTo(0, -8); c.lineTo(5, -13); c.moveTo(0, -8); c.lineTo(-5, -13); c.stroke();
+      disc(c, 0, -34, 3, P[0]);
+    }
+    disc(c, 0, 0, 5, P[0]); c.restore();
+  }
+}
+// the joker: a jester's cap with bells
+function mJoker(c, S) {
+  const P = S.dots;
+  c.save(); c.lineJoin = 'round';
+  const lobe = (path, col) => { c.beginPath(); path(); c.closePath(); c.fillStyle = col; c.fill(); };
+  lobe(() => { c.moveTo(24, 64); c.quadraticCurveTo(13, 52, 12, 31); c.quadraticCurveTo(34, 40, 44, 64); }, P[0]);
+  lobe(() => { c.moveTo(56, 64); c.quadraticCurveTo(66, 40, 88, 31); c.quadraticCurveTo(87, 52, 76, 64); }, P[2]);
+  lobe(() => { c.moveTo(35, 64); c.quadraticCurveTo(40, 36, 50, 15); c.quadraticCurveTo(60, 36, 65, 64); }, P[1]);
+  for (const [x, y] of [[12, 31], [50, 15], [88, 31]]) { disc(c, x, y, 5.6, S.gold); disc(c, x - 1.6, y - 1.8, 1.7, 'rgba(255,255,255,.8)'); }
+  rrect(c, 21, 60, 58, 11, 5); c.fillStyle = P[3]; c.fill();
+  c.fillStyle = '#ffffff';
+  for (let i = 0; i < 5; i++) { const x = 29 + i * 10.5; c.beginPath(); c.moveTo(x, 62); c.lineTo(x + 3.2, 65.5); c.lineTo(x, 69); c.lineTo(x - 3.2, 65.5); c.closePath(); c.fill(); }
+  c.font = `900 24px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = S.crak; c.fillText('JOKER', 50, 91);
+  const star = (x, y, r, col) => { c.beginPath(); c.moveTo(x, y - r); c.quadraticCurveTo(x, y, x + r, y); c.quadraticCurveTo(x, y, x, y + r); c.quadraticCurveTo(x, y, x - r, y); c.quadraticCurveTo(x, y, x, y - r); c.fillStyle = col; c.fill(); };
+  star(22, 111, 6, S.gold); star(78, 111, 6, S.gold); star(50, 113, 4, P[2]);
+  c.restore();
+}
+
 /* --- one face, with an optional corner index for easy reading --- */
 const SUIT_COL = [PAL.blue, PAL.green, PAL.red];
-function paintFace(c, f, indices) {
+function paintFace(c, f, indices, S = TILE_STYLES.classic) {
   const kind = f < 9 ? 0 : f < 18 ? 1 : f < 27 ? 2 : f < 31 ? 3 : f < 34 ? 4 : f < 38 ? 5 : f < 42 ? 6 : 7;
   const showIdx = indices && kind <= 4;
   c.save();
   if (showIdx) { c.translate(56, 70); c.scale(.88, .9); c.translate(-50, -65); }
-  if (kind === 0) drawDots(c, f + 1);
+  if (S.modern) {
+    if (kind === 0) mDots(c, f + 1, S);
+    else if (kind === 1) mBamboo(c, f - 8, S);
+    else if (kind === 2) mCharacter(c, f - 17, S);
+    else if (kind === 3) mWind(c, f - 27, S);
+    else if (kind === 4) mDragon(c, f - 31, S);
+    else if (kind === 5) mFlower(c, f - 34, S);
+    else if (kind === 6) mSeason(c, f - 38, S);
+    else mJoker(c, S);
+  }
+  else if (kind === 0) drawDots(c, f + 1);
   else if (kind === 1) drawBamboo(c, f - 8);
   else if (kind === 2) drawCharacter(c, f - 17);
   else if (kind === 3) drawWind(c, f - 27);
@@ -384,7 +635,9 @@ function paintFace(c, f, indices) {
     // dragons get a D in their own colour, the way the card writes them
     const txt = kind === 4 ? 'D' : kind === 3 ? 'ESWN'[f - 27] : String(kind === 0 ? f + 1 : kind === 1 ? f - 8 : f - 17);
     c.font = `800 19px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = kind === 4 ? [PAL.red, PAL.green, PAL.blue][f - 31] : kind === 3 ? PAL.ink : SUIT_COL[kind];
+    c.fillStyle = S.modern
+      ? (kind === 4 ? [S.red, S.green, S.blue][f - 31] : kind === 3 ? S.ink : [S.dots[0], S.bams[0], S.crak][kind])
+      : (kind === 4 ? [PAL.red, PAL.green, PAL.blue][f - 31] : kind === 3 ? PAL.ink : SUIT_COL[kind]);
     c.fillText(txt, 13, 15);
   }
 }
@@ -394,12 +647,14 @@ function paintFace(c, f, indices) {
    ===================================================================== */
 function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
 
-function buildTileSet(W, d, dpr, theme, indices) {
+function buildTileSet(W, d, dpr, theme, indices, styleId) {
   const H = Math.round(W * TILE_R);
   const pad = Math.ceil(W * .2);
   const r = W * .12;
   const set = { W, H, d, pad, dpr, faces: [], faceFlat: [], bw: W + d + pad * 2, bh: H + d + pad * 2 };
-  const back = theme.back;
+  // classic tiles take their back colour from the scene; the acrylic styles bring their own
+  const S = tileStyle(styleId), back = S.back || theme.back;
+  const bone = S.modern ? ['#cbc5d3', '#e9e4ee', '#f8f6fa'] : ['#b9a985', '#d9ccad', '#ece2c8'];
 
   // body: stack thin slices from the table up, coloured back first then bone
   const body = makeCanvas(set.bw * dpr, set.bh * dpr), bc = body.getContext('2d');
@@ -408,7 +663,7 @@ function buildTileSet(W, d, dpr, theme, indices) {
   for (let i = 0; i <= steps; i++) {
     const t = i / steps, x = pad + d * t, y = pad + d * (1 - t);
     const onBack = t < .55;
-    const cols = onBack ? back : ['#b9a985', '#d9ccad', '#ece2c8'];
+    const cols = onBack ? back : bone;
     const g = bc.createLinearGradient(x, 0, x + W, 0);
     g.addColorStop(0, cols[0]); g.addColorStop(.12, cols[1]); g.addColorStop(1, cols[2]);
     rrect(bc, x, y, W, H, r); bc.fillStyle = g; bc.fill();
@@ -418,17 +673,19 @@ function buildTileSet(W, d, dpr, theme, indices) {
   // face
   const fx = pad + d, fy = pad;
   const fg = bc.createLinearGradient(fx, fy, fx + W * .6, fy + H);
-  fg.addColorStop(0, '#fffef9'); fg.addColorStop(.55, '#fbf5e7'); fg.addColorStop(1, '#efe5cd');
+  if (S.modern) { fg.addColorStop(0, '#ffffff'); fg.addColorStop(.6, '#fbfafd'); fg.addColorStop(1, '#efecf4'); }
+  else { fg.addColorStop(0, '#fffef9'); fg.addColorStop(.55, '#fbf5e7'); fg.addColorStop(1, '#efe5cd'); }
   rrect(bc, fx, fy, W, H, r); bc.fillStyle = fg; bc.fill();
   // bevel: light on the top-left rim, shade on the bottom-right rim
   bc.save(); rrect(bc, fx, fy, W, H, r); bc.clip();
   const bev = Math.max(1.2, W * .045);
   bc.lineWidth = bev * 2;
   const hl = bc.createLinearGradient(fx, fy, fx + W, fy + H);
-  hl.addColorStop(0, 'rgba(255,255,255,.95)'); hl.addColorStop(.45, 'rgba(255,255,255,0)'); hl.addColorStop(.55, 'rgba(150,120,70,0)'); hl.addColorStop(1, 'rgba(150,120,70,.35)');
+  const shade = S.modern ? '110,100,140' : '150,120,70';
+  hl.addColorStop(0, 'rgba(255,255,255,.95)'); hl.addColorStop(.45, 'rgba(255,255,255,0)'); hl.addColorStop(.55, `rgba(${shade},0)`); hl.addColorStop(1, `rgba(${shade},.35)`);
   rrect(bc, fx, fy, W, H, r); bc.strokeStyle = hl; bc.stroke();
   bc.restore();
-  rrect(bc, fx + .5, fy + .5, W - 1, H - 1, r); bc.strokeStyle = 'rgba(110,85,45,.4)'; bc.lineWidth = 1; bc.stroke();
+  rrect(bc, fx + .5, fy + .5, W - 1, H - 1, r); bc.strokeStyle = S.modern ? 'rgba(80,70,110,.35)' : 'rgba(110,85,45,.4)'; bc.lineWidth = 1; bc.stroke();
   set.body = body;
 
   // faces
@@ -436,7 +693,7 @@ function buildTileSet(W, d, dpr, theme, indices) {
   for (let f = 0; f < 43; f++) {
     const fc = makeCanvas(W * dpr, H * dpr), c = fc.getContext('2d');
     c.scale(dpr * s, dpr * s);
-    paintFace(c, f, indices);
+    paintFace(c, f, indices, S);
     set.faces.push(fc);
   }
 
@@ -465,10 +722,18 @@ function buildTileSet(W, d, dpr, theme, indices) {
     const bf = makeCanvas(W * dpr, H * dpr), b = bf.getContext('2d'); b.scale(dpr, dpr);
     const bg = b.createLinearGradient(0, 0, W * .7, H); bg.addColorStop(0, lighten(back[2], .12)); bg.addColorStop(.6, back[1]); bg.addColorStop(1, back[0]);
     rrect(b, 0, 0, W, H, r); b.fillStyle = bg; b.fill();
-    rrect(b, W * .1, W * .1, W * .8, H - W * .2, r * .6); b.strokeStyle = 'rgba(240,210,140,.45)'; b.lineWidth = Math.max(.8, W * .025); b.stroke();
-    b.save(); b.translate(W / 2, H / 2); b.fillStyle = 'rgba(240,210,140,.55)';
-    for (let k = 0; k < 6; k++) { b.rotate(TAU / 6); b.beginPath(); b.ellipse(0, -W * .1, W * .05, W * .1, 0, 0, TAU); b.fill(); }
-    disc(b, 0, 0, W * .045, 'rgba(255,230,170,.8)'); b.restore();
+    if (S.modern) {
+      // glossy acrylic with a little white blossom
+      const gl = b.createLinearGradient(0, 0, W * .35, H * .55); gl.addColorStop(0, 'rgba(255,255,255,.3)'); gl.addColorStop(1, 'rgba(255,255,255,0)');
+      rrect(b, 0, 0, W, H, r); b.fillStyle = gl; b.fill();
+      scallop(b, W / 2, H / 2, W * .16, 6); b.fillStyle = 'rgba(255,255,255,.6)'; b.fill();
+      disc(b, W / 2, H / 2, W * .05, back[1]);
+    } else {
+      rrect(b, W * .1, W * .1, W * .8, H - W * .2, r * .6); b.strokeStyle = 'rgba(240,210,140,.45)'; b.lineWidth = Math.max(.8, W * .025); b.stroke();
+      b.save(); b.translate(W / 2, H / 2); b.fillStyle = 'rgba(240,210,140,.55)';
+      for (let k = 0; k < 6; k++) { b.rotate(TAU / 6); b.beginPath(); b.ellipse(0, -W * .1, W * .05, W * .1, 0, 0, TAU); b.fill(); }
+      disc(b, 0, 0, W * .045, 'rgba(255,230,170,.8)'); b.restore();
+    }
     rrect(b, .5, .5, W - 1, H - 1, r); b.strokeStyle = 'rgba(0,0,0,.35)'; b.lineWidth = 1; b.stroke();
     set.backFace = bf;
   }
@@ -479,6 +744,20 @@ function buildTileSet(W, d, dpr, theme, indices) {
   set.lite = ov('rgba(255,255,255,1)');
   set.warn = ov('rgba(200,60,50,1)');
   return set;
+}
+
+// a few sample tiles in one style, for the chooser in Settings (face -1 = the back)
+function drawStyleSample(cvs, styleId, theme, faces, dpr) {
+  const W = 26, S = buildTileSet(W, 3, dpr, theme, false, styleId);
+  const gap = 3, w = faces.length * (W + gap) - gap + S.d + 10, h = S.H + S.d + 8;
+  cvs.width = Math.round(w * dpr); cvs.height = Math.round(h * dpr); cvs.style.width = w + 'px';
+  const c = cvs.getContext('2d'); c.scale(dpr, dpr);
+  faces.forEach((f, i) => {
+    const x = 5 + S.d + i * (W + gap), y = 3;
+    c.globalAlpha = .5; c.drawImage(S.shadow, x - S.d - S.pad - S.d * .4, y - S.pad + S.d * .6, S.bw, S.bh); c.globalAlpha = 1;
+    c.drawImage(S.body, x - S.d - S.pad, y - S.pad, S.bw, S.bh);
+    c.drawImage(f < 0 ? S.backFace : S.faces[f], x, y, W, S.H);
+  });
 }
 
 const THEMES = {
