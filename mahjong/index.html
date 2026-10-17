@@ -1541,10 +1541,22 @@ function showHint(quiet) {
     const add = p => { const k = Math.min(p[0], p[1]) + '-' + Math.max(p[0], p[1]); if (!seen.has(k)) { seen.add(k); list.push(p); } };
     if (res.win && res.path.length) add(res.path[0]);
     all.forEach(add);
+    // While the board can be cleared, a hint must keep it that way, so asking again only moves
+    // on to pairs the solver has also checked (the first pair is the solver's own move).
+    list.safeOnly = res.win; list.safe = new Map([[0, true]]);
     game.hintList = list; game.hintIdx = 0;
     if (res.proven && !quiet) setTimeout(showDeadBanner, 400);
   }
-  const p = game.hintList[game.hintIdx % game.hintList.length]; game.hintIdx++;
+  const L = game.hintList;
+  let p = null;
+  if (L.safeOnly) {
+    for (let k = 0; k < L.length && !p; k++) {
+      const i = (game.hintIdx + k) % L.length;
+      if (!L.safe.has(i)) { const al = game.alive.slice(); al[L[i][0]] = 0; al[L[i][1]] = 0; L.safe.set(i, solveBoard(game.tiles, al, 20000, game.zob).win); }
+      if (L.safe.get(i)) { p = L[i]; game.hintIdx = i + 1; }
+    }
+  } else { p = L[game.hintIdx % L.length]; game.hintIdx++; }
+  if (!p) p = L[0];
   if (game.selected >= 0 && !p.includes(game.selected)) { const s = game.tiles[game.selected]; liftTo(s, 0); game.selected = -1; game.assist = []; }
   game.hint = { ids: p, until: performance.now() + 3200 };
   if (!quiet) { game.hints++; Sound.hint(); saveGame(); }

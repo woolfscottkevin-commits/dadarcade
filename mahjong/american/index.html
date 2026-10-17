@@ -899,7 +899,15 @@ const esc = x => String(x).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;
 
 /* ---------- which card is in play ---------- */
 let card = null;
-function validMine() { return myHands.filter(h => !parseHandText(h.text).errors.length); }
+// Why one of her hands can't be played: a typing problem, or a hand that can't be made at all
+// (pairs and singles need real tiles, and the set has only four of each).
+function handProblem(h) {
+  const p = parseHandText(h.text);
+  if (p.errors.length) return p.errors[0];
+  if (!expandHand(h, 0).length) return 'This hand can’t be made: its pairs and singles need more of one tile than the set has, and jokers can’t stand in for those';
+  return '';
+}
+function validMine() { return myHands.filter(h => !handProblem(h)); }
 function activeHands() {
   const mine = validMine();
   if (settings.card === 'mine' && mine.length >= 3) return mine;
@@ -2191,7 +2199,7 @@ function renderDrawer() {
     myHands.forEach((h, i) => {
       if (h.cat !== cat) { cat = h.cat; const c = document.createElement('div'); c.className = 'cat'; c.innerHTML = `<span>${esc(cat || 'Hands')}</span>`; body.appendChild(c); }
       const row = document.createElement('div'); row.className = 'myhand';
-      const hr = handRow(h, null, null, null); hr.addEventListener('click', () => openEditor(i));
+      const hr = handRow(h, null, handProblem(h) ? -1 : null, null); hr.addEventListener('click', () => openEditor(i));
       row.appendChild(hr);
       body.appendChild(row);
     });
@@ -2250,8 +2258,8 @@ function edHand() {
 function edPreview() {
   const h = edHand(), box = $('#ed-preview');
   if (!h.text) { box.innerHTML = '<span class="legend">Your hand will appear here as you type.</span>'; return; }
-  const p = parseHandText(h.text);
-  if (p.errors.length) { box.innerHTML = `<div class="htext" style="margin-bottom:6px">${handHTML(h.text)}</div><div class="err">${p.errors[0]}</div>`; return; }
+  const why = handProblem(h);
+  if (why) { box.innerHTML = `<div class="htext" style="margin-bottom:6px">${handHTML(h.text)}</div><div class="err">${esc(why)}</div>`; return; }
   const ex = expandHand(h, 0);
   box.innerHTML = `<div class="htext">${handHTML(h.text)}</div><div class="hnote" style="margin-top:6px"><span>${handNote(h)}</span><span>${ex.length} way${ex.length === 1 ? '' : 's'} to make it</span></div>`;
   if (ex[0]) box.appendChild(miniTiles(ex[0], null));
@@ -2259,8 +2267,8 @@ function edPreview() {
 ['#ed-text', '#ed-mode', '#ed-c', '#ed-cat', '#ed-v'].forEach(id => $(id).addEventListener('input', edPreview));
 $('#ed-text').addEventListener('blur', () => { $('#ed-text').value = edHand().text; edPreview(); });
 $('#ed-save').addEventListener('click', () => {
-  const h = edHand(), p = parseHandText(h.text);
-  if (!h.text || p.errors.length) { toast(p.errors[0] || 'Type the tiles first'); Sound.blocked(); return; }
+  const h = edHand(), why = h.text ? handProblem(h) : 'Type the tiles first';
+  if (why) { toast(why); Sound.blocked(); return; }
   if (editIdx >= 0) myHands[editIdx] = h; else myHands.push(h);
   saveMine(); rebuildCard(); fitCache.key = '';
   Sound.ui(); closeSheet('editor'); toast('Saved'); drawerTab = 'mine'; renderDrawer();
@@ -2299,11 +2307,12 @@ function parseCardLines(text) {
     const notes = line.toLowerCase();
     const ui = /\blike\b/.test(notes) ? 'like' : /\b(odd|even)\b/.test(notes) ? 'run2' : /\b(run|consec|consecutive)\b/.test(notes) ? 'run' : 'exact';
     const textN = normTiles(tiles.join(' '));
-    const p = parseHandText(textN);
     if (!textN) { problems.push({ line: i + 1, msg: 'No tiles on this line', raw }); return; }
-    if (p.errors.length) { problems.push({ line: i + 1, msg: p.errors[0], raw }); return; }
     const m = MODE_UI[ui];
-    hands.push({ cat: cat || 'My hands', text: textN, ui, mode: m.mode, step: m.step, c: !!c, v: clamp(v || 25, 5, 200) });
+    const hand = { cat: cat || 'My hands', text: textN, ui, mode: m.mode, step: m.step, c: !!c, v: clamp(v || 25, 5, 200) };
+    const why = handProblem(hand);
+    if (why) { problems.push({ line: i + 1, msg: why, raw }); return; }
+    hands.push(hand);
   });
   return { hands, problems };
 }
