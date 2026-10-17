@@ -338,6 +338,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="skill"><button data-v="gentle">Gentle</button><button data-v="friendly">Friendly</button><button data-v="sharp">Sharp</button></div></div>
     <div class="set-row"><div><b>Pace</b><span>How quickly the others take their turns</span></div>
       <div class="seg" data-seg="pace"><button data-v="relaxed">Relaxed</button><button data-v="normal">Normal</button><button data-v="quick">Quick</button></div></div>
+    <div class="set-row"><div><b>Wait for me after each discard</b><span>When Rose, Iris or Lily discards, play stops until you tap Next, so you can look and decide whether to call it</span></div><button class="switch" role="switch" data-set="wait" aria-label="Wait for me after each discard"></button></div>
     <div class="set-row"><div><b>Second Charleston</b><span>Ask each hand, always skip it, or always play it</span></div>
       <div class="seg" data-seg="second"><button data-v="ask">Ask</button><button data-v="skip">Skip</button><button data-v="always">Always</button></div></div>
     <div class="set-row"><div><b>Courtesy pass</b><span>Offer the optional pass across after the Charleston</span></div><button class="switch" role="switch" data-set="courtesy" aria-label="Courtesy pass"></button></div>
@@ -379,6 +380,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
+      <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
     </ul>
   </div>
@@ -849,7 +851,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true,
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true,
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 settings.tiles = savedTileStyle();
@@ -1656,9 +1658,15 @@ function botAct2() {
   const tile = chooseDiscard(card, st.hands[seat], st.exps[seat], SKILLS[settings.skill]);
   discardNow(seat, tile);
 }
+// With "wait for me" on, someone else's discard stays put until you tap Next.
+function lookAt(from, tile) {
+  if (!settings.wait || from === 0) return nextTurn(from);
+  G.claim = { from, uid: tile.uid, mj: false, ns: [], botCall: null, look: true };
+  G.step = 'claim'; advance();
+}
 function afterDiscard(from, tile) {
   const st = G.st;
-  if (tile.type === T_JOKER) return nextTurn(from);
+  if (tile.type === T_JOKER) return lookAt(from, tile);
   const order = claimOrder(from), hPos = order.indexOf(0);
   const human = from !== 0 && !st.deadHands[0];
   let botMJ = -1;
@@ -1681,6 +1689,7 @@ function afterDiscard(from, tile) {
     G.claim = { from, uid: tile.uid, mj: !!hMJ, ns: humanFirst ? hNs : [], botCall };
     G.step = 'claim'; return advance();
   }
+  if (!botCall) return lookAt(from, tile);
   resolveBotCall(botCall, from);
 }
 function resolveBotCall(botCall, from) {
@@ -1705,13 +1714,24 @@ function claimPrompt() {
   if (cl.mj) btns.push({ label: 'Mah Jongg!', mj: true, fn: () => { if (G.step === 'claim') winByDiscard(0, cl.from); } });
   const words = { 3: 'Pung', 4: 'Kong', 5: 'Quint', 6: 'Sextet' };
   for (const n of cl.ns) btns.push({ label: `Call · ${words[n]}`, primary: !cl.mj && n === cl.ns[0], fn: () => humanCall(n) });
-  btns.push({ label: 'Pass', quiet: true, fn: () => {
+  const onlyLook = !cl.mj && !cl.ns.length;
+  btns.push({ label: onlyLook ? 'Next' : 'Pass', primary: onlyLook, quiet: !onlyLook, fn: () => {
     if (G.step !== 'claim') return;
     G.claim = null;
     if (cl.botMJ >= 0) return winByDiscard(cl.botMJ, cl.from);
     resolveBotCall(cl.botCall, cl.from);
   } });
-  const sub = cl.mj ? 'That tile finishes a hand on your card.' : `You hold ${countsOf(st.hands[0])[tile.type]} and ${countsOf(st.hands[0])[T_JOKER]} joker${countsOf(st.hands[0])[T_JOKER] === 1 ? '' : 's'} to go with it.`;
+  const c = countsOf(st.hands[0]), held = c[tile.type], jk = c[T_JOKER];
+  if (onlyLook) {
+    const next = NAMES[(cl.from + 1) % 4], up = next === 'You' ? 'your turn' : `${next}’s turn`;
+    const why = tile.type === T_JOKER ? 'A discarded joker can’t be called.'
+      : st.deadHands[0] ? 'Your hand is dead this round, so you can’t call.'
+      : held + jk < 2 ? `To call it you’d need two more like it (jokers count); you have ${held + jk || 'none'}.`
+      : 'It doesn’t fit a hand you can still make, so it can’t be called.';
+    showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b><small>${why} Tap Next for ${up}.</small>`, btns);
+    return;
+  }
+  const sub = cl.mj ? 'That tile finishes a hand on your card.' : `You hold ${held} and ${jk} joker${jk === 1 ? '' : 's'} to go with it.`;
   showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b>. Call it?<small>${sub}</small>`, btns);
 }
 function humanCall(n) {
@@ -1989,6 +2009,7 @@ $('#btn-suggest').addEventListener('click', () => {
     const w = winningHand(card, countsOf(st.hands[0]), expsOf(st.exps[0]));
     if (w) { toast('Press Mah Jongg — you have a hand!'); return; }
     const t = chooseDiscard(card, st.hands[0], st.exps[0]); uids = [t.uid]; msg = `Maybe discard the ${tileName(t.type)}`;
+  } else if (G.step === 'claim' && G.claim.look) { toast('Nothing to call this time — tap Next'); return;
   } else if (G.step === 'claim') {
     const cl = G.claim, n = botWantsCall(card, st.hands[0], st.exps[0], TILES[cl.uid].type, { eager: 5 });
     toast(cl.mj ? 'Call Mah Jongg!' : n ? 'Calling it gets you closer to a hand' : 'I’d pass on this one'); return;
@@ -2389,6 +2410,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { const n = topSheet(); if (n && !['result', 'ask'].includes(n)) closeSheet(n); else if ($('#drawer').classList.contains('open')) toggleDrawer(false); else openSheet('menu'); }
   if (topSheet()) return;
   if (e.key.toLowerCase() === 'c') toggleDrawer();
+  if ((e.key === 'Enter' || e.key === ' ') && G && G.step === 'claim' && G.claim && G.claim.look && !(e.target.closest && e.target.closest('button,input,textarea,select'))) { e.preventDefault(); const b = $('#prompt-btns .pbtn.primary'); if (b) b.click(); }
   if (e.key.toLowerCase() === 'f' && Fullscreen.supported()) Fullscreen.toggle();
 });
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
