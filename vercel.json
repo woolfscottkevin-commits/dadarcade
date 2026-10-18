@@ -19,6 +19,9 @@
     }
   ],
   "routes": [
+    { "src": "/.well-known/apple-app-site-association", "dest": "/.well-known/apple-app-site-association", "headers": { "Content-Type": "application/json", "Cache-Control": "public, max-age=3600" } },
+    { "src": "/play/balloon-uncle-bop/?", "status": 307, "headers": { "Location": "/balloon-uncle-bop?edition=public" } },
+    { "src": "/play/([A-Za-z0-9_-]+(?:/[A-Za-z0-9_-]+)*)/?", "status": 307, "headers": { "Location": "/$1" } },
     { "src": "/Disney", "status": 308, "headers": { "Location": "/Hollywood%20Studios" } },
     { "src": "/Disney/(.*)", "status": 308, "headers": { "Location": "/Hollywood%20Studios/$1" } },
     { "src": "/pac-man", "status": 308, "headers": { "Location": "/chomp-chase" } },

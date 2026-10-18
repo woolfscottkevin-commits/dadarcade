@@ -1,2 +1,4 @@
 # Build tools for the book generators (Python). Not part of the website.
 /tools
+# The iPhone project is built separately and is never served by the website.
+/mobile

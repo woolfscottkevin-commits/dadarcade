@@ -1,0 +1,7 @@
+artifacts/
+build/
+com.apple.DeveloperTools/
+DadArcade/Resources/Offline/
+DadArcade/Resources/catalog.html
+**/xcuserdata/
+**/.DS_Store
