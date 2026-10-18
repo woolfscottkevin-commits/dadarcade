@@ -7,8 +7,9 @@ The app record and draft listing are saved in [App Store Connect](https://appsto
 - Apple ID: `6824207156`; SKU: `dadarcade-ios`.
 - Created with Full Access after Kevin explicitly approved that setting.
 - Saved the description, keywords, support/marketing links, subtitle, Games category, no-login review setting, and review notes. Added the published privacy-policy URL; the data-collection questionnaire remains to be completed.
-- Uploaded version `1.0`, build `1`, successfully using the signed archive. Apple accepted the upload for processing; TestFlight availability and tester assignment must be verified after processing finishes.
-- No tester invitations have been sent, and no public-review submission has been made.
+- Uploaded version `1.0`, build `1`, successfully using the signed archive. Apple processed it and shows it as Ready to Test for internal testing.
+- Created the internal `Device Testing` group with build `1.0 (1)`. The account holder was invited at their explicit request, and Apple shows the tester as Invited. Automatic distribution is disabled; later builds must be added deliberately.
+- No public-review submission has been made. Physical-device installation and gameplay checks are still pending.
 
 **Name:** Dad Arcade
 **Subtitle:** A little play. A lot of joy.
