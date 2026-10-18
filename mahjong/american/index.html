@@ -355,7 +355,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="skill"><button data-v="gentle">Gentle</button><button data-v="friendly">Friendly</button><button data-v="sharp">Sharp</button></div></div>
     <div class="set-row"><div><b>Pace</b><span>How quickly the others take their turns</span></div>
       <div class="seg" data-seg="pace"><button data-v="relaxed">Relaxed</button><button data-v="normal">Normal</button><button data-v="quick">Quick</button></div></div>
-    <div class="set-row"><div><b>Setting up</b><span>Wall: the tiles are dealt from a wall. Messy: no wall — the tiles are swirled face-down on the table and everyone grabs from the pile, then draws from it.</span></div>
+    <div class="set-row"><div><b>Setting up</b><span>Wall: the tiles are dealt from a wall. Messy: no wall — the tiles are swirled face-down on the table and everyone grabs from the pile and goes straight to play, without a Charleston or courtesy pass.</span></div>
       <div class="seg" data-seg="setup"><button data-v="wall">Wall</button><button data-v="messy">Messy</button></div></div>
     <div class="set-row"><div><b>Wait for me after each discard</b><span>When Rose, Iris or Lily discards, play stops until you tap Next, so you can look and decide whether to call it</span></div><button class="switch" role="switch" data-set="wait" aria-label="Wait for me after each discard"></button></div>
     <div class="set-row"><div><b>Second Charleston</b><span>Ask each hand, always skip it, or always play it</span></div>
@@ -388,7 +388,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <h3>The card</h3>
     <p>Each line is a hand. Colours show suits: groups in the same colour are the same suit, different colours are different suits. <b>F</b> is a flower, <b>D</b> a dragon (the one that goes with that colour’s suit), <b>0</b> is the Soap (white dragon), and <b>N E W S</b> are winds. <b>X</b> hands may be exposed; <b>C</b> hands must stay concealed until Mah Jongg. Tap <b>Card</b> at any time — the <b>Closest</b> tab shows the hands you’re nearest to.</p>
     <h3>The Charleston</h3>
-    <p>Before play, everyone passes 3 tiles: right, across, then left. On that last pass you may pass some tiles “blind” — sending on tiles you’re receiving without looking. Then, if nobody stops it, a second Charleston goes left, across, right. Last comes an optional courtesy pass across of up to 3 tiles. Jokers can never be passed.</p>
+    <p>In Wall mode, before play, everyone passes 3 tiles: right, across, then left. On that last pass you may pass some tiles “blind” — sending on tiles you’re receiving without looking. Then, if nobody stops it, a second Charleston goes left, across, right. Last comes an optional courtesy pass across of up to 3 tiles. Jokers can never be passed.</p>
     <h3>Taking turns</h3>
     <p>East (the dealer) starts with 14 tiles and discards first. Play moves to the right: draw a tile, then discard one. When someone discards a tile you need for a pung, kong or quint, you can <b>call</b> it — you’ll be asked. Show the group, then discard. You can only call for a pair or single when it gives you Mah Jongg.</p>
     <h3>Jokers</h3>
@@ -399,7 +399,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
-      <li>Prefer <b>Messy</b>? In Settings, choose Setting up → Messy: no wall, the tiles are swirled face-down on the table, and on your turn you tap any tile in the pile to take it.</li>
+      <li>Prefer <b>Messy</b>? In Settings, choose Setting up → Messy: no wall, the tiles are swirled face-down on the table, skip the Charleston and courtesy pass, and on your turn tap any tile in the pile to take it.</li>
       <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
     </ul>
@@ -1518,8 +1518,13 @@ function startHand() {
   G.step = 'dealing'; dirty = true;
   stats.hands++; saveStats();
   try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card, setup: settings.setup }); } catch (e) {}
-  later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], () => { G.step = 'pass'; advance(); });
+  later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], finishDeal);
   hideResult(); kick(); updateHUD();
+}
+// Both a fresh deal and a resumed deal use the setup saved with this hand.
+function finishDeal() {
+  if (G.st.messy) return startPlay();
+  G.step = 'pass'; advance();
 }
 function sortHand(hand) { hand.sort((a, b) => SORT_KEY(a.type) - SORT_KEY(b.type) || (a.fv || 0) - (b.fv || 0) || a.uid - b.uid); }
 function settle() { if (settings.autosort && !G.manual) sortHand(G.st.hands[0]); dirty = true; kick(); }
@@ -1528,9 +1533,11 @@ function advance() {
   clearTimeout(timer);
   if (!G || !G.st) return;
   const st = G.st;
+  // Older saved Messy games may still be waiting for a Charleston pass.
+  if (st.messy && st.phase === 'charleston' && ['pass', 'passing', 'vote', 'courtesy'].includes(G.step)) return startPlay();
   G.swapGlow = null;
   switch (G.step) {
-    case 'dealing': hidePrompt(); later(600, () => { G.step = 'pass'; advance(); }); break;
+    case 'dealing': hidePrompt(); later(600, finishDeal); break;
     case 'passing': hidePrompt(); later(calm() ? 150 : 650, nextStage); break;
     case 'claimcheck': hidePrompt(); later(calm() ? 120 : 380, () => afterDiscard(G.pending.seat, TILES[G.pending.uid])); break;
     case 'selfwin': hidePrompt(); later(650, () => { const s = G.st.turn, w = winningHand(card, countsOf(G.st.hands[s]), expsOf(G.st.exps[s])); if (w) declareWin(s, w, true, -1); else { G.step = 'act'; advance(); } }); break;
