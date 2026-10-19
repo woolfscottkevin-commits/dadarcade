@@ -93,6 +93,9 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 .card-mm:hover{border-color:#5ad1ff;box-shadow:0 0 30px rgba(90,209,255,0.3),0 8px 32px rgba(0,0,0,0.4)}
 
 
+.card-pinball h2{color:#e8bd7b}
+.card-pinball:hover{border-color:#81dfd1;box-shadow:0 0 30px rgba(129,223,209,.2),0 8px 32px rgba(0,0,0,.4)}
+
 /* Three-section homepage layout */
 .games-section{width:100%;max-width:1100px;margin-top:2.5rem}
 .games-section.all-games{max-width:700px}
@@ -161,6 +164,12 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section" id="new-this-week-section">
   <h2 class="section-title">New This Week</h2>
   <div class="row-scroll new-row">
+    <a href="/pinball" class="card card-pinball" data-added="2026-10-19">
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="3" width="50" height="74" rx="12" fill="#102735" stroke="#e8bd7b" stroke-width="2"/><circle cx="32" cy="25" r="8" fill="#81dfd1"/><circle cx="51" cy="29" r="8" fill="#ef967d"/><ellipse cx="51" cy="29" rx="12" ry="3" stroke="#f8d7a6" transform="rotate(-25 51 29)"/><circle cx="40" cy="43" r="6" fill="#e8bd7b"/><path d="M25 62 L35 66 M55 62 L45 66" stroke="#f0dec1" stroke-width="6" stroke-linecap="round"/><circle cx="48" cy="53" r="4" fill="#eef7fa"/><path d="M23 39 v8 M19 43 h8" stroke="#81dfd1"/></svg>
+      <h2>Midnight Observatory Pinball</h2>
+      <p>One silver ball. A whole universe. Light constellations, chase meteor showers, and unleash Eclipse Multiball on a beautiful cosmic pinball table. Keyboard and touch controls.</p>
+    </a>
+
     <a href="/mahjong/american" class="card card-mja" data-added="2026-10-09">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- a rack of tiles with a joker on the end -->
@@ -528,6 +537,12 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
 <section class="games-section all-games">
   <h2 class="section-title">All Games</h2>
   <div class="grid">
+    <a href="/pinball" class="card card-pinball" data-added="2026-10-19">
+      <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="3" width="50" height="74" rx="12" fill="#102735" stroke="#e8bd7b" stroke-width="2"/><circle cx="32" cy="25" r="8" fill="#81dfd1"/><circle cx="51" cy="29" r="8" fill="#ef967d"/><ellipse cx="51" cy="29" rx="12" ry="3" stroke="#f8d7a6" transform="rotate(-25 51 29)"/><circle cx="40" cy="43" r="6" fill="#e8bd7b"/><path d="M25 62 L35 66 M55 62 L45 66" stroke="#f0dec1" stroke-width="6" stroke-linecap="round"/><circle cx="48" cy="53" r="4" fill="#eef7fa"/><path d="M23 39 v8 M19 43 h8" stroke="#81dfd1"/></svg>
+      <h2>Midnight Observatory Pinball</h2>
+      <p>One silver ball. A whole universe. Light constellations, chase meteor showers, and unleash Eclipse Multiball on a beautiful cosmic pinball table. Keyboard and touch controls.</p>
+    </a>
+
     <a href="/mahjong/american" class="card card-mja" data-added="2026-10-09">
       <svg class="card-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- a rack of tiles with a joker on the end -->
@@ -956,6 +971,7 @@ body{background:#111;color:#fff;font-family:'Courier New',monospace;min-height:1
     <form onsubmit="submitFeedback(event,'bug')">
       <label for="bug-name">Which game?</label>
       <select id="bug-name" style="width:100%;background:#111;border:2px solid #333;border-radius:8px;padding:0.75rem;color:#fff;font-family:'Courier New',monospace;font-size:1rem;margin-bottom:1rem;appearance:none;-webkit-appearance:none;cursor:pointer">
+        <option value="Midnight Observatory Pinball">Midnight Observatory Pinball</option>
         <option value="Alien Descent">Alien Descent</option>
         <option value="Math Quest RPG">Math Quest RPG</option>
         <option value="Snake">Snake</option>
