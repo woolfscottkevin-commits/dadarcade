@@ -37,9 +37,32 @@ self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(VERSION);
     await cache.addAll(CORE.map((u) => new Request(u, { cache: 'reload' })));
+    await cacheFonts(cache);
     await self.skipWaiting();
   })());
 });
+
+// On a first visit the pages load their fonts before this worker is running, so the fetch
+// handler never sees them and an offline launch right after would have no tile font. So at
+// install, read the font stylesheets out of the pages just cached and keep them, with the
+// font files they point to. Best effort: without them the game falls back to system fonts.
+async function cacheFonts(cache) {
+  try {
+    const sheets = new Set();
+    for (const page of [PAGE, PAGE + '/american']) {
+      const res = await cache.match(page);
+      if (!res) continue;
+      for (const m of (await res.text()).matchAll(/<link[^>]+href="(https:\/\/fonts\.googleapis\.com\/[^"]+)"/g)) sheets.add(m[1].replace(/&amp;/g, '&'));
+    }
+    for (const href of sheets) {
+      const css = await fetch(href, { mode: 'cors' });
+      if (!cacheable(css)) continue;
+      await cache.put(href, css.clone());
+      const files = [...(await css.text()).matchAll(/url\((https:\/\/fonts\.gstatic\.com\/[^)]+)\)/g)].map((m) => m[1]);
+      await Promise.all(files.map(async (u) => { const f = await fetch(u, { mode: 'cors' }); if (cacheable(f)) await cache.put(u, f); }));
+    }
+  } catch (e) { /* offline at install, or Google Fonts unreachable: try again on the next install */ }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
@@ -80,7 +103,8 @@ async function pageResponse(event, key) {
 function cacheFirst(event, req) {
   const fetched = fetch(req);
   event.waitUntil(saveCopy(fetched, req));
-  event.respondWith(caches.match(req).then((hit) => hit || fetched));
+  // ignoreVary: font copies stored at install were fetched by this worker, not by a <link>
+  event.respondWith(caches.match(req, { ignoreVary: true }).then((hit) => hit || fetched));
 }
 
 self.addEventListener('fetch', (event) => {
