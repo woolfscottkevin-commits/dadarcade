@@ -14,19 +14,21 @@ function game() {
     if (!elements.has(id)) elements.set(id, {id,clientWidth:400,width:800,height:1312,style:{},dataset:{},value:'',open:false,textContent:'',innerHTML:'',classList:{add(){},remove(){}},getContext:()=>paint,addEventListener(){},setAttribute(){},querySelector(){return element('child');},showModal(){this.open=true;},close(){this.open=false;},blur(){},replaceChildren(){},append(){}});
     return elements.get(id);
   }
-  const sandbox = {console,Math:Object.create(Math),document:{getElementById:element,createElement:()=>element(Math.random()),querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem:()=>null,setItem(){}},matchMedia:()=>({matches:true}),ResizeObserver:class{observe(){}},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(){},performance:{now:()=>0},gtag(){}};
-  sandbox.window={addEventListener(){}};
+  const sandbox = {console,Math:Object.create(Math),document:{getElementById:element,createElement:()=>element(Math.random()),querySelector:sel=>sel==='dialog[open]'?[...elements.values()].find(e=>e.open)||null:null,querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem:()=>null,setItem(){}},matchMedia:()=>({matches:true}),ResizeObserver:class{observe(){}},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(){},performance:{now:()=>0},gtag(){}};
+  const listeners={};
+  sandbox.window={addEventListener(type,fn){(listeners[type]||=[]).push(fn);}};
   const context=vm.createContext(sandbox);
   vm.runInContext(source.replace('// Read-only state is useful', `window.test = { startGame, step, newBall, prepareBall, beginCharge, launchBall, registerStar, registerBumper, portal, nudge, pauseGame, resumeGame, updateUI, draw,
-    set: options => { if('balls' in options)balls=options.balls;if('time' in options)time=options.time;if('saveUntil' in options)saveUntil=options.saveUntil;if('stage' in options)stage=options.stage;if('score' in options)score=options.score; },
+    set: options => { if('balls' in options)balls=options.balls;if('time' in options)time=options.time;if('saveUntil' in options)saveUntil=options.saveUntil;if('stage' in options)stage=options.stage;if('score' in options)score=options.score;if('skillLane' in options)skillLane=options.skillLane; },
     hold: side => inputs[side].add('test'), release: side=>inputs[side].clear(),
-    get:()=>({state,score,time,balls,ballNumber,stage,stars,meteorHits,meteorUntil,saveUntil,tiltUntil,multiplier,flippers,lanes})
+    get:()=>({state,score,time,balls,ballNumber,stage,stars,meteorHits,meteorUntil,saveUntil,tiltUntil,multiplier,flippers,lanes,labels,skillLane}), aimLane
   };
   // Read-only state is useful`),context);
   const api=sandbox.window.test;
   api.startGame();
   api.advance=seconds=>{for(let i=0;i<Math.round(seconds*240);i++)api.step(1/240);};
   api.elements=elements;
+  api.key=(type,code,target='body')=>{const e={code,repeat:false,prevented:false,target:{matches:sel=>sel.split(',').includes(target)},preventDefault(){this.prevented=true;}};for(const fn of listeners[type]||[])fn(e);return e;};
   return api;
 }
 
@@ -50,3 +52,15 @@ test('right flipper also sends a falling ball upward',()=>{const g=game();g.set(
 test('left orbit has enough clearance for the ball to pass all targets',()=>{const g=game();g.set({balls:[g.newBall(85,310,0,200,false)],saveUntil:0});let exited=false;for(let i=0;i<240*6;i++){g.step(1/240);if(g.get().balls[0].y>540)exited=true;}assert.ok(exited,'Ball must be able to leave the lower orbit');});
 test('a multiball collision separates two approaching balls',()=>{const g=game();g.set({balls:[g.newBall(230,480,100,0,false),g.newBall(245,480,-100,0,false)]});g.step(1/240);const [a,b]=g.get().balls;assert.ok(b.x-a.x>=16);assert.ok(a.vx<0&&b.vx>0);});
 test('each fresh ball labels the launch control correctly',()=>{const g=game();g.set({balls:[g.newBall(240,840,0,300,false)],saveUntil:0});g.advance(.01);assert.equal(g.elements.get('start').textContent,'LAUNCH BALL');});
+// Skill shot: plunger power picks the rollover the lob drops into; only that first lob rollover can pay.
+function plunge(g,power,lit,seconds=2.5){g.set({skillLane:lit});g.beginCharge();g.advance(power/.8);g.launchBall();const seen=new Set(),first=[];let skill=0;for(let i=0;i<240*seconds;i++){const before=new Set(g.get().lanes);g.step(1/240);for(const l of g.get().lanes)if(!before.has(l))first.push(l);for(const l of g.get().labels)if(!seen.has(l)){seen.add(l);if(l.text==='SKILL SHOT')skill++;}}return{first:first[0],skill};}
+for(const [power,lane] of [[.25,2],[.58,1],[.86,0]])test(`a ${Math.round(power*100)}% launch lobs into lane 0${lane+1} and pays the skill shot when it is lit`,()=>{const g=game();assert.equal(g.aimLane(power),lane,'On-screen aim matches the lane');const hit=plunge(g,power,lane);assert.equal(hit.first,lane);assert.equal(hit.skill,1);const g2=game(),miss=plunge(g2,power,(lane+1)%3);assert.equal(miss.first,lane,'The lob still rolls through its lane');assert.equal(miss.skill,0,'Landing in an unlit lane misses the skill shot');});
+test('full power sails over the rollovers and misses the skill shot',()=>{const g=game();assert.equal(g.aimLane(1),3);for(const lit of [0,1,2]){const r=plunge(game(),1,lit,1.6);assert.equal(r.first,undefined);assert.equal(r.skill,0);}});
+test('a later flipper-shot rollover through the lit lane is ordinary, not a skill shot',()=>{const g=game();plunge(g,1,1,3);const b=g.get().balls[0];assert.equal(b.skill,false,'The skill attempt ends with the lob');const lanes=g.get().lanes.size;g.set({balls:[b]});Object.assign(b,{x:201,y:110,vx:0,vy:200});const seen=new Set(g.get().labels);g.advance(.1);assert.equal(g.get().lanes.size,lanes+1,'The rollover still scores');assert.ok(!g.get().labels.some(l=>!seen.has(l)&&l.text==='SKILL SHOT'));});
+test('a ball-save relaunch gets no free skill attempt',()=>{const g=game();g.set({balls:[g.newBall(240,840,0,300,false)],saveUntil:8});g.advance(.02);assert.equal(g.get().balls[0].skill,false);});
+// Each of these spots used to wedge a ball forever: the side pockets beside the lane posts, and the inlane floor beside each flipper pivot.
+for(const [x,y] of [[50,560],[430,560],[80,600],[400,600]])test(`a ball dropped at ${x},${y} rolls to the flippers instead of wedging`,()=>{const g=game();g.set({balls:[g.newBall(x,y,0,0,false)],saveUntil:0});g.advance(6);assert.equal(g.get().ballNumber,2,'With no flipper input the ball must reach the drain');});
+test('a ball that falls back down the shooter lane waits on the plunger without a fresh ball save',()=>{const g=game();g.set({balls:[g.newBall(420,40,300,0,false)],saveUntil:0});g.advance(3);const b=g.get().balls[0];assert.equal(b.waiting,true);assert.equal(g.elements.get('start').textContent,'LAUNCH BALL');g.beginCharge();g.launchBall();assert.equal(b.waiting,false);assert.equal(g.get().saveUntil,0);});
+test('a motionless ball low on the table is nudged free unless a flipper is held',()=>{const pin=(g,b)=>{let kicked=false;for(let i=0;i<240*2.1&&!kicked;i++){b.x=240;b.y=650;b.vx=0;b.vy=0;g.step(1/240);kicked=b.vy<-100;}return kicked;};const g=game();const b=g.newBall(240,650,0,0,false);g.set({balls:[b],saveUntil:0});assert.ok(pin(g,b),'Recovery kicks the ball back into play');const c=g.newBall(240,650,0,0,false);g.set({balls:[c]});g.hold('left');assert.equal(pin(g,c),false,'A cradled ball is left alone');});
+test('Space launches even when a header button kept focus after a dialog',()=>{const g=game();const down=g.key('keydown','Space','button');assert.ok(down.prevented,'The browser must not also click the focused button');g.key('keyup','Space','button');assert.equal(g.get().balls[0].waiting,false);});
+test('Escape is left to the browser so help and leaderboard dialogs close',()=>{const g=game();g.elements.get('help-dialog').open=true;assert.equal(g.key('keydown','Escape').prevented,false);g.elements.get('help-dialog').open=false;g.elements.get('pause-dialog').open=true;g.pauseGame(false);assert.ok(g.key('keydown','Escape').prevented);assert.equal(g.get().state,'playing');});
