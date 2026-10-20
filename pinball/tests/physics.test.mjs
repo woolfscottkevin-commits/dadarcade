@@ -7,14 +7,15 @@ import test from 'node:test';
 // injected only into this VM; the public page exposes read-only diagnostics.
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].at(-1)[1];
-function game() {
+function game({reducedMotion=true}={}) {
   const elements = new Map();
-  const paint = new Proxy({}, { get: (_, name) => name.startsWith('create') ? () => ({addColorStop(){}}) : () => {} });
+  const paintCalls=[];
+  const paint = new Proxy({}, { get: (_, name) => (...args) => {paintCalls.push([name,...args]);if(name.startsWith('create'))return {addColorStop(){}};} });
   function element(id) {
     if (!elements.has(id)) elements.set(id, {id,clientWidth:400,width:800,height:1312,style:{},dataset:{},value:'',open:false,textContent:'',innerHTML:'',classList:{add(){},remove(){}},getContext:()=>paint,addEventListener(){},setAttribute(){},querySelector(){return element('child');},showModal(){this.open=true;},close(){this.open=false;},blur(){},replaceChildren(){},append(){}});
     return elements.get(id);
   }
-  const sandbox = {console,Math:Object.create(Math),document:{getElementById:element,createElement:()=>element(Math.random()),querySelector:sel=>sel==='dialog[open]'?[...elements.values()].find(e=>e.open)||null:null,querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem:()=>null,setItem(){}},matchMedia:()=>({matches:true}),ResizeObserver:class{observe(){}},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(){},performance:{now:()=>0},gtag(){}};
+  const sandbox = {console,Math:Object.create(Math),document:{getElementById:element,createElement:()=>element(Math.random()),querySelector:sel=>sel==='dialog[open]'?[...elements.values()].find(e=>e.open)||null:null,querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem:()=>null,setItem(){}},matchMedia:()=>({matches:reducedMotion}),ResizeObserver:class{observe(){}},devicePixelRatio:1,requestAnimationFrame(){},setTimeout(){},performance:{now:()=>0},gtag(){}};
   const listeners={};
   sandbox.window={addEventListener(type,fn){(listeners[type]||=[]).push(fn);}};
   const context=vm.createContext(sandbox);
@@ -28,6 +29,7 @@ function game() {
   api.startGame();
   api.advance=seconds=>{for(let i=0;i<Math.round(seconds*240);i++)api.step(1/240);};
   api.elements=elements;
+  api.paintCalls=paintCalls;
   api.key=(type,code,target='body')=>{const e={code,repeat:false,prevented:false,target:{matches:sel=>sel.split(',').includes(target)},preventDefault(){this.prevented=true;}};for(const fn of listeners[type]||[])fn(e);return e;};
   return api;
 }
@@ -64,3 +66,15 @@ test('a ball that falls back down the shooter lane waits on the plunger without 
 test('a motionless ball low on the table is nudged free unless a flipper is held',()=>{const pin=(g,b)=>{let kicked=false;for(let i=0;i<240*2.1&&!kicked;i++){b.x=240;b.y=650;b.vx=0;b.vy=0;g.step(1/240);kicked=b.vy<-100;}return kicked;};const g=game();const b=g.newBall(240,650,0,0,false);g.set({balls:[b],saveUntil:0});assert.ok(pin(g,b),'Recovery kicks the ball back into play');const c=g.newBall(240,650,0,0,false);g.set({balls:[c]});g.hold('left');assert.equal(pin(g,c),false,'A cradled ball is left alone');});
 test('Space launches even when a header button kept focus after a dialog',()=>{const g=game();const down=g.key('keydown','Space','button');assert.ok(down.prevented,'The browser must not also click the focused button');g.key('keyup','Space','button');assert.equal(g.get().balls[0].waiting,false);});
 test('Escape is left to the browser so help and leaderboard dialogs close',()=>{const g=game();g.elements.get('help-dialog').open=true;assert.equal(g.key('keydown','Escape').prevented,false);g.elements.get('help-dialog').open=false;g.elements.get('pause-dialog').open=true;g.pauseGame(false);assert.ok(g.key('keydown','Escape').prevented);assert.equal(g.get().state,'playing');});
+// Recorded from play: a fast ball crossing under the raised left flipper used to leave the table past the left cabinet edge (outer wall ends at y=625)
+// while still above the drain, drawn over the frame. The right case mirrors it to keep the guards symmetric.
+for(const [side,x,y,vx,vy] of [['left',282,702.4,-299.3,450.3],['right',198,702.4,299.3,450.3]])test(`a ball slipping under the raised ${side} flipper stays inside the cabinet and drains under the apron`,()=>{const g=game();g.hold(side);g.advance(.1);const b=g.newBall(x,y,vx,vy,false);g.set({balls:[b],saveUntil:0});const floor=x=>x<59?600+(x-31)*64/28:x<99?664+(x-59)*20/40:684+(x-99)*8/41,guard=x=>692+(140-x)/3;for(let i=0;i<240*2&&g.get().ballNumber===1;i++){g.step(1/240);const sx=side==='left'?b.x:480-b.x;assert.ok(!(sx<140&&sx>31&&b.y>floor(sx)&&b.y<guard(sx)),`ball at ${Math.round(b.x)},${Math.round(b.y)} is beneath the ${side} inlane`);assert.ok(!(sx<33&&b.y<786+8),`ball at ${Math.round(b.x)},${Math.round(b.y)} is outside the cabinet above the apron`);}assert.equal(g.get().ballNumber,2,'The ball drains');});
+for(const reducedMotion of [false,true])test(`the drain apron hides lost balls${reducedMotion?' with reduced motion':' and their trails'}`,()=>{
+ const g=game({reducedMotion}),b=g.newBall(64,815,0,250,false);b.trail.push({x:75,y:805});g.set({balls:[b],saveUntil:8});g.paintCalls.length=0;g.draw(1000);
+ const body=g.paintCalls.findIndex(([op,x,y,r])=>op==='arc'&&x===64&&y===815&&r===8);
+ const apron=g.paintCalls.findIndex(([op,x,y,w,h])=>op==='fillRect'&&x<=56&&y<=797&&x+w>=83&&y+h>=820);
+ assert.ok(body>=0&&apron>body,'Opaque apron must cover the lost ball after it is drawn');
+ if(!reducedMotion){const trail=g.paintCalls.findIndex(([op,x,y])=>op==='arc'&&x===75&&y===805);assert.ok(trail>=0&&trail<apron,'Trail must disappear beneath the same apron');}
+ const [,x,,width]=g.paintCalls[apron];assert.ok(x+width<466-8,'Apron must leave the shooter lane visible');
+ assert.equal(g.get().balls[0],b,'Drawing must not consume the ball or change ball-save timing');assert.equal(g.get().ballNumber,1);assert.equal(g.get().saveUntil,8);
+});
