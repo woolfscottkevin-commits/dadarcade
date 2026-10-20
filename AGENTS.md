@@ -28,6 +28,7 @@ Commit message style (match recent history):
 - Games listing: [games/index.html](games/index.html) has JSON-LD entries + visible cards. Keep them in sync.
 - Sitemap: [sitemap.xml](sitemap.xml) — add a `<url>` block for every new game page.
 - Bug-report dropdown in [index.html](index.html) — add new games there too.
+- iPhone/iPad app: native SwiftUI project in `mobile/DadArcade.xcodeproj`. Its live catalog reads the existing JSON-LD ItemList in `games/index.html`. After testing a game on both devices, add `"operatingSystem": "iOS, iPadOS, Web"` and an accurate `"contentRating": "4+"` to that item to publish it in the app. Do not mark keyboard-only or untested games ready. See `mobile/README.md` for offline bundles and submission details.
 
 ## Things that have bitten me before
 

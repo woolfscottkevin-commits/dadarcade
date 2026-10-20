@@ -1,0 +1,17 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "8H27HFXBQA.com.dadarcade.app"
+        ],
+        "components": [
+          {
+            "/": "/play/*",
+            "comment": "Shared game links. The native app accepts only published mobile catalog games."
+          }
+        ]
+      }
+    ]
+  }
+}

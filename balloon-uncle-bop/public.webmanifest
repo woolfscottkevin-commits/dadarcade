@@ -1,0 +1,10 @@
+{
+  "name": "Balloon Uncle Bop",
+  "short_name": "Balloon Bop",
+  "start_url": "/balloon-uncle-bop?edition=public",
+  "scope": "/balloon-uncle-bop",
+  "display": "standalone",
+  "background_color": "#1a0b2e",
+  "theme_color": "#1a0b2e",
+  "icons": [{"src": "/balloon-uncle-bop/assets/public-icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any"}]
+}

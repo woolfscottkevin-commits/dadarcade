@@ -9,14 +9,27 @@
 <base href="/balloon-uncle-bop/">
 <!-- Password gate: if this device already unlocked, mark <html> now (before the
      body renders) so returning players never see a flash of the secret-word screen. -->
-<script>try{if(localStorage.getItem('bub_unlocked')==='1')document.documentElement.classList.add('bub-unlocked');}catch(e){}</script>
+<script>
+const PUBLIC_EDITION = new URLSearchParams(location.search).get('edition') === 'public';
+try{if(PUBLIC_EDITION || localStorage.getItem('bub_unlocked')==='1')document.documentElement.classList.add('bub-unlocked');}catch(e){}
+</script>
 <title>Balloon Uncle Bop — Dad Arcade</title>
 <meta name="description" content="A gentle tap-and-math game for little kids. Puff up the floating family balloons, then solve a quick addition or subtraction problem (numbers to 10) to POP each one! Touch-only tappable answers, confetti, silly faces, and three easy levels — great for a 6-year-old on an iPad.">
 <meta name="theme-color" content="#1a0b2e">
 <!-- Home Screen app (Add to Home Screen on iPad): name, icon, full-screen launch.
      The offline worker is registered at the end of <body>; see /balloon-uncle-bop-sw.js. -->
-<link rel="manifest" href="/balloon-uncle-bop/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/balloon-uncle-bop/icons/apple-touch-icon.png">
+<script>
+if(location.protocol !== 'arcade:'){
+  const manifestLink = document.createElement('link');
+  manifestLink.rel = 'manifest';
+  manifestLink.href = '/balloon-uncle-bop/' + (PUBLIC_EDITION ? 'public.webmanifest' : 'manifest.webmanifest');
+  document.head.appendChild(manifestLink);
+  const touchIcon = document.createElement('link');
+  touchIcon.rel = 'apple-touch-icon';
+  touchIcon.href = '/balloon-uncle-bop/' + (PUBLIC_EDITION ? 'assets/public-icon.png' : 'icons/apple-touch-icon.png');
+  document.head.appendChild(touchIcon);
+}
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -244,7 +257,7 @@ html.bub-unlocked #screen-pass{display:none!important}
 <!-- END -->
 <div class="overlay" id="screen-end">
   <div id="end-crown" style="display:none">👑</div>
-  <img id="end-oliver" src="assets/face-oliver.png" alt="Oliver" style="display:none">
+  <img id="end-oliver" alt="Cheering buddy" style="display:none">
   <div class="game-title" id="end-title" style="font-size:clamp(2.2rem,11vw,4.6rem)">Good Game!</div>
   <div class="score-line">You scored <span id="end-score" style="color:#ffe24a;font-weight:900">0</span>!</div>
   <div class="newbest" id="end-newbest" style="display:none">★ New Best! ★</div>
@@ -302,7 +315,14 @@ html.bub-unlocked #screen-pass{display:none!important}
 // a background and any shape/size (a head-and-shoulders crop reads best). Until
 // a photo is added, that person shows a distinct hand-drawn fallback (palette).
 // To add a 4th person: copy a line, give it a new id/name/img + any palette.
-const FACES = [
+const FACES = PUBLIC_EDITION ? [
+  { id:'sunny', name:'Uncle Sunny', img:'assets/illustrated-sunny.svg',
+    palette:{ body:'#ff5d8f', body2:'#c9356c', skin:'#ffd9a8', hair:'#7a4a2b' } },
+  { id:'pip', name:'Pip', img:'assets/illustrated-pip.svg',
+    palette:{ body:'#5db0ff', body2:'#2f6fc9', skin:'#ffd9a8', hair:'#caa24a' } },
+  { id:'milo', name:'Milo', img:'assets/illustrated-milo.svg',
+    palette:{ body:'#46d39a', body2:'#1f8f6a', skin:'#ffd9a8', hair:'#3a2a1a' } },
+] : [
   { id:'dad',    name:'Dad',    img:'assets/face-dad.png',
     palette:{ body:'#ff5d8f', body2:'#c9356c', skin:'#ffd9a8', hair:'#7a4a2b' } },
   { id:'claire', name:'Claire', img:'assets/face-claire.png',
@@ -400,15 +420,18 @@ function loadImg(src, expected){
   return im;
 }
 // background override (optional)
-const bgImg = loadImg('assets/background.png');
+const bgImg = PUBLIC_EDITION ? null : loadImg('assets/background.png');
 // preload every family face (expected → warns if a photo is missing/HEIC/too big)
 FACES.forEach(f=>loadImg(f.img, true));
 // Oliver = the star (the nephew). His real photo is the cheering buddy at the
 // bottom AND the big hero on the win screen. Kept separate from the family
 // balloons so his face stays a special "that's me!" treat.
-const oliverFace = loadImg('assets/face-oliver.png', true);
-const oliverImg = { idle:loadImg('assets/oliver-idle.png'), cheer:loadImg('assets/oliver-cheer.png'), sad:loadImg('assets/oliver-sad.png') };
-const bombImg = loadImg('assets/bomb.png');
+const buddySource = PUBLIC_EDITION ? 'assets/illustrated-bop.svg' : 'assets/face-oliver.png';
+const oliverFace = loadImg(buddySource, true);
+document.getElementById('end-oliver').src = buddySource;
+document.getElementById('end-oliver').alt = PUBLIC_EDITION ? 'Bop the cheering buddy' : 'Oliver';
+const oliverImg = PUBLIC_EDITION ? {} : { idle:loadImg('assets/oliver-idle.png'), cheer:loadImg('assets/oliver-cheer.png'), sad:loadImg('assets/oliver-sad.png') };
+const bombImg = PUBLIC_EDITION ? null : loadImg('assets/bomb.png');
 
 // ---------- Audio (Web Audio, runtime only, unlocked on first tap) ----------
 let actx=null;
@@ -794,7 +817,7 @@ function endGame(won){    // full-game win (or generic end)
   // OLIVER WINS! — his face is the peak reveal, win only (never on a sad ending)
   document.getElementById('end-crown').style.display = won ? 'block' : 'none';
   document.getElementById('end-oliver').style.display = (won && oliverFace && oliverFace._ok) ? 'block' : 'none';
-  document.getElementById('end-title').textContent = won ? 'Oliver Wins!' : 'Good Game!';
+  document.getElementById('end-title').textContent = won ? (PUBLIC_EDITION ? 'You Did It!' : 'Oliver Wins!') : 'Good Game!';
   document.getElementById('end-score').textContent = score;
   document.getElementById('end-best').textContent = 'Best: '+bestScore;
   document.getElementById('end-newbest').style.display = isBest ? 'block' : 'none';
@@ -1307,7 +1330,8 @@ function lighten(hex,amt){
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function initialsString(){ return initialsChars.map(c=>String.fromCharCode(65+((c%26)+26)%26)).join(''); }
 function loadInitials(){
-  let s=lsGet('bub_initials','OLI'); if(!/^[A-Z]{3}$/.test(s)) s='OLI';
+  const defaultInitials = PUBLIC_EDITION ? 'AAA' : 'OLI';
+  let s=lsGet('bub_initials',defaultInitials); if(!/^[A-Z]{3}$/.test(s)) s=defaultInitials;
   initialsChars=[s.charCodeAt(0)-65, s.charCodeAt(1)-65, s.charCodeAt(2)-65];
 }
 // 3 big tappable letter cells. Tap a cell to cycle its letter (kid-friendly,
@@ -1475,6 +1499,7 @@ function tryPassword(){
   try{ input.focus(); }catch(e){}
 }
 function initPasswordGate(){
+  if(PUBLIC_EDITION){ show('screen-pass', false); return; }
   let unlocked=false;
   try{ unlocked = localStorage.getItem(PASS_KEY)==='1'; }catch(e){}
   if(unlocked){ document.documentElement.classList.add('bub-unlocked'); show('screen-pass', false); return; }
@@ -1510,7 +1535,7 @@ checkPendingSubmission();    // retry any score that failed to save last time
 <script>
 // Offline support for the Home Screen app. The worker lives at the site root so it
 // can control this page's no-trailing-slash URL (see /balloon-uncle-bop-sw.js).
-if('serviceWorker' in navigator){
+if(!PUBLIC_EDITION && 'serviceWorker' in navigator){
   window.addEventListener('load',function(){
     navigator.serviceWorker.register('/balloon-uncle-bop-sw.js',{scope:'/balloon-uncle-bop'}).catch(function(){});
   });
