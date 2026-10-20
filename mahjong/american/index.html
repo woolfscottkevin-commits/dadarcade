@@ -355,8 +355,9 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="skill"><button data-v="gentle">Gentle</button><button data-v="friendly">Friendly</button><button data-v="sharp">Sharp</button></div></div>
     <div class="set-row"><div><b>Pace</b><span>How quickly the others take their turns</span></div>
       <div class="seg" data-seg="pace"><button data-v="relaxed">Relaxed</button><button data-v="normal">Normal</button><button data-v="quick">Quick</button></div></div>
-    <div class="set-row"><div><b>Setting up</b><span>Wall: the tiles are dealt from a wall. Messy: no wall — the tiles are swirled face-down on the table and everyone grabs from the pile and goes straight to play, without a Charleston or courtesy pass.</span></div>
+    <div class="set-row"><div><b>Setting up</b><span>Wall: the tiles are dealt from a wall. Messy: no wall — the tiles are swirled face-down on the table, everyone grabs their tiles from the pile and draws from it.</span></div>
       <div class="seg" data-seg="setup"><button data-v="wall">Wall</button><button data-v="messy">Messy</button></div></div>
+    <div class="set-row"><div><b>Charleston in Messy</b><span>Off: a Messy game goes straight to play with no passing, the way many groups play it. On: pass as usual first (most written Messy rules keep the Charleston).</span></div><button class="switch" role="switch" data-set="messyPass" aria-label="Charleston in Messy"></button></div>
     <div class="set-row"><div><b>Wait for me after each discard</b><span>When Rose, Iris or Lily discards, play stops until you tap Next, so you can look and decide whether to call it</span></div><button class="switch" role="switch" data-set="wait" aria-label="Wait for me after each discard"></button></div>
     <div class="set-row"><div><b>Second Charleston</b><span>Ask each hand, always skip it, or always play it</span></div>
       <div class="seg" data-seg="second"><button data-v="ask">Ask</button><button data-v="skip">Skip</button><button data-v="always">Always</button></div></div>
@@ -388,7 +389,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <h3>The card</h3>
     <p>Each line is a hand. Colours show suits: groups in the same colour are the same suit, different colours are different suits. <b>F</b> is a flower, <b>D</b> a dragon (the one that goes with that colour’s suit), <b>0</b> is the Soap (white dragon), and <b>N E W S</b> are winds. <b>X</b> hands may be exposed; <b>C</b> hands must stay concealed until Mah Jongg. Tap <b>Card</b> at any time — the <b>Closest</b> tab shows the hands you’re nearest to.</p>
     <h3>The Charleston</h3>
-    <p>In Wall mode, before play, everyone passes 3 tiles: right, across, then left. On that last pass you may pass some tiles “blind” — sending on tiles you’re receiving without looking. Then, if nobody stops it, a second Charleston goes left, across, right. Last comes an optional courtesy pass across of up to 3 tiles. Jokers can never be passed.</p>
+    <p>Before play, everyone passes 3 tiles (in a Messy game only if “Charleston in Messy” is on in Settings): right, across, then left. On that last pass you may pass some tiles “blind” — sending on tiles you’re receiving without looking. Then, if nobody stops it, a second Charleston goes left, across, right. Last comes an optional courtesy pass across of up to 3 tiles. Jokers can never be passed.</p>
     <h3>Taking turns</h3>
     <p>East (the dealer) starts with 14 tiles and discards first. Play moves to the right: draw a tile, then discard one. When someone discards a tile you need for a pung, kong or quint, you can <b>call</b> it — you’ll be asked. Show the group, then discard. You can only call for a pair or single when it gives you Mah Jongg.</p>
     <h3>Jokers</h3>
@@ -399,7 +400,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
-      <li>Prefer <b>Messy</b>? In Settings, choose Setting up → Messy: no wall, the tiles are swirled face-down on the table, skip the Charleston and courtesy pass, and on your turn tap any tile in the pile to take it.</li>
+      <li>Prefer <b>Messy</b>? Choose it on the menu or before the next hand: no wall, the tiles are swirled face-down on the table, there’s no passing, and on your turn you tap any tile in the pile to take it. If your group passes in Messy too, turn on “Charleston in Messy” in Settings.</li>
       <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
     </ul>
@@ -876,7 +877,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall',
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall', messyPass: false,
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 settings.tiles = savedTileStyle();
@@ -1507,6 +1508,7 @@ function startHand() {
   const rng = mulberry32((Math.random() * 4294967296) >>> 0);
   G.st = newHand(rng, G.dealer);
   G.st.messy = settings.setup === 'messy'; G.st.messySeed = (rng() * 1e9) >>> 0;
+  G.st.noPass = G.st.messy && !settings.messyPass;
   TILES = [...G.st.wall, ...G.st.hands.flat()].sort((a, b) => a.uid - b.uid);
   // tiles start in the wall (or the heap) and are dealt out from there
   for (const t of TILES) { t.r = null; t.tg = null; t.anim = null; }
@@ -1531,7 +1533,7 @@ function startHand() {
 }
 // Both a fresh deal and a resumed deal use the setup saved with this hand.
 function finishDeal() {
-  if (G.st.messy) return startPlay();
+  if (G.st.noPass) return startPlay();
   G.step = 'pass'; advance();
 }
 function sortHand(hand) { hand.sort((a, b) => SORT_KEY(a.type) - SORT_KEY(b.type) || (a.fv || 0) - (b.fv || 0) || a.uid - b.uid); }
@@ -1541,8 +1543,8 @@ function advance() {
   clearTimeout(timer);
   if (!G || !G.st) return;
   const st = G.st;
-  // Older saved Messy games may still be waiting for a Charleston pass.
-  if (st.messy && st.phase === 'charleston' && ['pass', 'passing', 'vote', 'courtesy'].includes(G.step)) return startPlay();
+  // A no-passing Messy hand saved before passing was skipped may still be waiting for a pass.
+  if (st.noPass && st.phase === 'charleston' && ['pass', 'passing', 'vote', 'courtesy'].includes(G.step)) return startPlay();
   G.swapGlow = null;
   switch (G.step) {
     case 'dealing': hidePrompt(); later(600, finishDeal); break;
@@ -2381,6 +2383,7 @@ function ask(title, text, btns) {
 /* ---------- wall or messy, chosen where a game or a hand starts ---------- */
 function syncSetupPicks() {
   $$('.setup-pick button').forEach(b => b.setAttribute('aria-pressed', settings.setup === b.dataset.v ? 'true' : 'false'));
+  $$('.setup-pick button[data-v="messy"] small').forEach(el => el.textContent = settings.messyPass ? 'Grab from a pile, then pass' : 'Grab from a pile, no passing');
   const live = G && G.st && G.st.phase !== 'done', differs = live && !!G.st.messy !== (settings.setup === 'messy');
   $('#menu-setup-note').textContent = !differs ? '' : settings.setup === 'messy'
     ? 'This hand keeps its wall. Messy starts with the next hand, or choose New game.'
@@ -2451,6 +2454,7 @@ $$('.switch[data-set]').forEach(s => s.addEventListener('click', () => {
   if (k === 'calm') { stopAmbient(); startAmbient(); }
   if (k === 'autosort' && settings.autosort && G && G.st) { G.manual = false; settle(); }
   if (k === 'strip') { computeLayout(); updateStrip(); }
+  if (k === 'messyPass') { syncSetupPicks(); if (G && G.st && G.st.messy && G.st.phase !== 'done') toast('From the next Messy hand'); }
   kick();
 }));
 $$('.seg[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
@@ -2493,7 +2497,7 @@ function saveGame() {
     tiles: TILES.map(t => [t.type, t.fv || 0, t.slot]),
     wall: st.wall.map(U), hands: st.hands.map(h => h.map(U)), exps: st.exps.map(l => l.map(e => ({ t: e.t, u: e.tiles.map(U), f: e.from }))),
     discards: st.discards.map(d => [d.tile.uid, d.by]), turn: st.turn, drawn: st.drawn ? st.drawn.uid : -1, phase: st.phase, chStage: st.chStage,
-    dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null, messy: !!st.messy, mseed: st.messySeed || 0,
+    dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null, messy: !!st.messy, mseed: st.messySeed || 0, noPass: !!st.noPass,
   });
 }
 function loadGame() {
@@ -2506,7 +2510,7 @@ function loadGame() {
       wall: s.wall.map(T), hands: s.hands.map(h => h.map(T)), exps: s.exps.map(l => l.map(e => ({ t: e.t, tiles: e.u.map(T), from: e.f }))),
       discards: s.discards.map(([u, by]) => ({ tile: T(u), by })), dealer: s.dealer, turn: s.turn, phase: s.phase, chStage: s.chStage,
       drawn: s.drawn >= 0 ? T(s.drawn) : null, result: s.result, deadHands: s.dead || [false, false, false, false],
-      messy: !!s.messy, messySeed: s.mseed || 0,
+      messy: !!s.messy, messySeed: s.mseed || 0, noPass: s.noPass ?? !!s.messy,
     };
     G = { v: 1, gen: 1, scores: s.scores, handNo: s.handNo, dealer: s.dealer, st, step: s.step, sel: [], hint: null, received: [], claim: s.claim, pending: s.pending || null, focus: null, swapGlow: null, thinking: -1, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1 };
     if (G.step === 'claim' && !G.claim) G.step = 'draw';
