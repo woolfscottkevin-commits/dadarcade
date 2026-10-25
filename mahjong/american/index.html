@@ -198,6 +198,7 @@ body.compact .strip-main .htext{font-size:.82rem}
 .hand .row1{display:flex;align-items:center;gap:8px}
 .htext{flex:1;font-weight:900;font-size:1.02rem;letter-spacing:.06em;font-variant-numeric:tabular-nums;line-height:1.25;word-spacing:.18em;background:#fbf6ea;color:var(--c-k);padding:4px 8px;border-radius:8px}
 .htext .g{color:var(--c-g)} .htext .r{color:var(--c-r)} .htext .b{color:var(--c-b)}
+html.cb{--c-g:#00806a;--c-r:#d55e00;--c-b:#0060b0}
 .hval{font-weight:900;font-size:.82rem;color:var(--ink-2);white-space:nowrap;text-align:right;min-width:44px}
 .hnote{font-size:.74rem;color:var(--ink-2);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
 .away{font-weight:900;color:var(--gold)}
@@ -404,6 +405,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <div class="seg" data-seg="setup"><button data-v="wall">Wall</button><button data-v="messy">Messy</button></div></div>
     <div class="set-row"><div><b>Charleston in Messy</b><span>Off: a Messy game goes straight to play with no passing, the way many groups play it. On: pass as usual first (most written Messy rules keep the Charleston).</span></div><button class="switch" role="switch" data-set="messyPass" aria-label="Charleston in Messy"></button></div>
     <div class="set-row"><div><b>Wait for me after each discard</b><span>When Rose, Iris or Lily discards, play stops until you tap Next, so you can look and decide whether to call it</span></div><button class="switch" role="switch" data-set="wait" aria-label="Wait for me after each discard"></button></div>
+    <div class="set-row"><div><b>Keep playing after someone else’s Mah Jongg</b><span>Practice: Rose, Iris and Lily don’t go out, so you can finish your own hand. You’ll be told when one of them could have.</span></div><button class="switch" role="switch" data-set="keepPlaying" aria-label="Keep playing after someone else’s Mah Jongg"></button></div>
     <div class="set-row"><div><b>Second Charleston</b><span>Ask each hand, always skip it, or always play it</span></div>
       <div class="seg" data-seg="second"><button data-v="ask">Ask</button><button data-v="skip">Skip</button><button data-v="always">Always</button></div></div>
     <div class="set-row"><div><b>Courtesy pass</b><span>Offer the optional pass across after the Charleston</span></div><button class="switch" role="switch" data-set="courtesy" aria-label="Courtesy pass"></button></div>
@@ -413,11 +415,13 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="set-row"><div><b>Discards</b><span>In the order thrown, sorted by tile, or one of each tile with how many have gone (3/4)</span></div>
       <div class="seg" data-seg="discards"><button data-v="order">In order</button><button data-v="sorted">Sorted</button><button data-v="counted">Counted</button></div></div>
     <div class="set-row"><div><b>Sort tiles automatically</b><span>New tiles slide into place; you can still drag tiles to rearrange</span></div><button class="switch" role="switch" data-set="autosort" aria-label="Sort automatically"></button></div>
+    <div class="set-row"><div><b>Colour-blind friendly card</b><span>Blue, orange and teal for the card’s three suit colours, easier to tell apart than red and green</span></div><button class="switch" role="switch" data-set="cb" aria-label="Colour-blind friendly card"></button></div>
     <div class="set-row"><div><b>Corner numbers</b><span>Small 1–9 and N E W S on the tiles</span></div><button class="switch" role="switch" data-set="indices" aria-label="Corner numbers"></button></div>
     <div class="set-h">Tiles</div>
     <div class="styles" id="style-list"></div>
     <div class="set-h">Sound &amp; scene</div>
     <div class="set-row"><div><b>Sound effects</b></div><button class="switch" role="switch" data-set="sound" aria-label="Sound effects"></button></div>
+    <div class="set-row"><div><b>Call out discards</b><span>Hear each tile named as it’s thrown, and every call, like at a real table</span></div><button class="switch" role="switch" data-set="callout" aria-label="Call out discards"></button></div>
     <div class="set-row"><div><b>Music</b></div><button class="switch" role="switch" data-set="music" aria-label="Music"></button></div>
     <div class="set-row"><div><b>Calmer motion</b><span>Shorter animations, fewer particles</span></div><button class="switch" role="switch" data-set="calm" aria-label="Calmer motion"></button></div>
     <div class="themes" id="theme-list"></div>
@@ -948,7 +952,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall', messyPass: false, discards: 'sorted',
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall', messyPass: false, discards: 'sorted', keepPlaying: false, callout: false, cb: false,
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 settings.tiles = savedTileStyle();
@@ -1648,7 +1652,7 @@ function startHand() {
   } else deal();
   if (settings.autosort) sortHand(G.st.hands[0]);
   G.sel = []; G.hint = null; G.received = []; G.claim = null; G.focus = null; G.manual = false; G.lastCallFrom = -1;
-  G.step = 'dealing'; G.decision = null; G.usedHint = false; G.notes = []; undoStack = []; updateUndo(); dirty = true;
+  G.step = 'dealing'; G.decision = null; G.usedHint = false; G.notes = []; G.playedOn = {}; undoStack = []; updateUndo(); dirty = true;
   stats.hands++; saveStats();
   try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card, setup: settings.setup }); } catch (e) {}
   later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], finishDeal);
@@ -1822,7 +1826,7 @@ function doDraw() {
   Sound.ui();
   if (st.turn !== 0) {
     const w = winningHand(card, countsOf(st.hands[st.turn]), expsOf(st.exps[st.turn]));
-    if (w) { G.step = 'selfwin'; dirty = true; return advance(); }
+    if (w && !botsPlayOn(st.turn, w)) { G.step = 'selfwin'; dirty = true; return advance(); }
   }
   G.step = 'act'; dirty = true; advance();
 }
@@ -1913,10 +1917,16 @@ function humanDiscard(tile) {
   G.sel = []; G.hint = null;
   discardNow(0, tile);
 }
+// Say it out loud, the way players call their discards at a real table.
+function callOut(text) {
+  if (!settings.callout || !window.speechSynthesis) return;
+  try { const u = new SpeechSynthesisUtterance(text); u.rate = 1.05; u.lang = 'en-US'; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
 function discardNow(seat, tile) {
   const st = G.st;
   if (!st.hands[seat].includes(tile)) return;
   discardTile(st, seat, tile);
+  callOut(tileName(tile.type));
   lastDiscardAt = performance.now();
   tile.slow = .9;
   Sound.select();
@@ -1943,10 +1953,17 @@ function botAct() {
   }
   botAct2();
 }
+// With "keep playing" on, a computer player that could go out plays on instead (she's told once).
+function botsPlayOn(seat, w) {
+  if (!settings.keepPlaying) return false;
+  G.playedOn = G.playedOn || {};
+  if (!G.playedOn[seat]) { G.playedOn[seat] = true; toast(`${NAMES[seat]} could have gone Mah Jongg with ${w.def.text.replace(/([0-9FNEWSD]+)[grb]/g, '$1')}. Playing on so you can finish yours.`, 4200); }
+  return true;
+}
 function botAct2() {
   const st = G.st, seat = st.turn;
   const w = winningHand(card, countsOf(st.hands[seat]), expsOf(st.exps[seat]));
-  if (w) return declareWin(seat, w, G.lastCallFrom < 0, G.lastCallFrom);
+  if (w && !botsPlayOn(seat, w)) return declareWin(seat, w, G.lastCallFrom < 0, G.lastCallFrom);
   const tile = chooseDiscard(card, st.hands[seat], st.exps[seat], SKILLS[settings.skill]);
   discardNow(seat, tile);
 }
@@ -1962,7 +1979,7 @@ function afterDiscard(from, tile) {
   const order = claimOrder(from), hPos = order.indexOf(0);
   const human = from !== 0 && !st.deadHands[0];
   let botMJ = -1;
-  for (const s of order) if (s !== 0 && canMahjongWith(card, st.hands[s], st.exps[s], tile)) { botMJ = s; break; }
+  for (const s of order) if (s !== 0) { const w = canMahjongWith(card, st.hands[s], st.exps[s], tile); if (w && !botsPlayOn(s, w)) { botMJ = s; break; } }
   const hMJ = human ? canMahjongWith(card, st.hands[0], st.exps[0], tile) : null;
   if (botMJ >= 0 && (!hMJ || order.indexOf(botMJ) < hPos)) return winByDiscard(botMJ, from);
   // you have Mah Jongg first in line, but someone after you does too: only Mah Jongg or Pass
@@ -1991,7 +2008,7 @@ function resolveBotCall(botCall, from) {
     const tile = st.discards[st.discards.length - 1].tile;
     exposeCall(st, botCall.seat, botCall.n);
     G.lastCallFrom = from;
-    const word = ['', '', '', 'Pung', 'Kong', 'Quint', 'Sextet'][botCall.n];
+    const word = ['', '', '', 'Pung', 'Kong', 'Quint', 'Sextet'][botCall.n]; callOut(word);
     const p = seatPoint(botCall.seat); floatText(`${word}!`, p.x, p.y);
     toast(`${NAMES[botCall.seat]} called the ${tileName(tile.type)} for a ${word.toLowerCase()}`);
     Sound.match(2);
@@ -2032,7 +2049,7 @@ function humanCall(n) {
   G.sel = [];
   exposeCall(st, 0, n);
   G.lastCallFrom = cl.from; G.claim = null;
-  const word = ['', '', '', 'Pung', 'Kong', 'Quint', 'Sextet'][n];
+  const word = ['', '', '', 'Pung', 'Kong', 'Quint', 'Sextet'][n]; callOut(word);
   floatText(`${word}!`, VW / 2, L.rackTop - 30);
   Sound.match(2);
   if (bestMissing(card, countsOf(st.hands[0]), expsOf(st.exps[0])) >= 99) { st.deadHands[0] = true; toast('That exposure doesn’t fit any hand on the card — your hand is dead this round'); }
@@ -2069,7 +2086,7 @@ function declareWin(seat, ch, selfDraw, from) {
   st.hands[seat] = order.concat(pool);
   G.step = 'done'; dirty = true;
   const p = seatPoint(seat);
-  floatText('Mah Jongg!', p.x, p.y - 20, true);
+  floatText('Mah Jongg!', p.x, p.y - 20, true); callOut('Mah Jongg!');
   if (seat === 0) {
     Sound.win(); for (let i = 0; i < (calm() ? 1 : 5); i++) setTimeout(() => burst(VW / 2 + (Math.random() - .5) * VW * .5, L.rackTop - 60 - Math.random() * 120, 1.4), i * 240);
     if (G.notes.length) soon(1000, () => { floatText(G.notes[0].startsWith('✨') ? 'New hand!' : 'Trophy!', p.x, p.y + 30, true); Sound.match(4); });
@@ -2788,6 +2805,8 @@ $$('.switch[data-set]').forEach(s => s.addEventListener('click', () => {
   if (k === 'calm') { stopAmbient(); startAmbient(); }
   if (k === 'autosort' && settings.autosort && G && G.st) { G.manual = false; settle(); }
   if (k === 'strip') { computeLayout(); updateStrip(); }
+  if (k === 'cb') document.documentElement.classList.toggle('cb', settings.cb);
+  if (k === 'callout' && settings.callout) callOut('Five Bam');
   if (k === 'messyPass') { syncSetupPicks(); if (G && G.st && G.st.messy && G.st.phase !== 'done') toast('From the next Messy hand'); }
   kick();
 }));
@@ -3113,6 +3132,7 @@ document.addEventListener('keydown', e => {
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
 
 (function init() {
+  document.documentElement.classList.toggle('cb', !!settings.cb);
   Fullscreen.bind($('#btn-full'), h => { Sound.ui(); ask(h.title, h.text, [['Got it', true, true]]); });
   document.documentElement.dataset.theme = settings.theme;
   document.querySelector('meta[name="theme-color"]').setAttribute('content', THEMES[settings.theme].meta);
