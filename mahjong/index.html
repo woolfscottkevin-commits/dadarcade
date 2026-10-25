@@ -1135,7 +1135,47 @@ defLayout({ id: 'spider', name: 'Spider', blurb: 'Eight long legs', group: 'quic
 ..............
 ......>.......
 ......>.......`] });
-const LAYOUT_ORDER = ['turtle', 'butterfly', 'lotus', 'fortress', 'pyramid', 'little-turtle', 'heart', 'spider', 'lantern'];
+// Big tiles: small boards, at most seven tiles across, so the tiles are large on a phone.
+defLayout({ id: 'teacup', name: 'Teacup', blurb: 'A little warm-up', group: 'big', diff: 1, layers: [`
+######
+######
+######
+.####.`, `
+......
+..##..`] });
+defLayout({ id: 'blossom', name: 'Blossom', blurb: 'One flower, three layers', group: 'big', diff: 1, layers: [`
+.####.
+######
+######
+######
+.####.`, `
+......
+.####.
+.####.`, `
+......
+......
+..##..`] });
+defLayout({ id: 'garden-gate', name: 'Garden Gate', blurb: 'Two posts and a lintel', group: 'big', diff: 2, layers: [`
+##.##.##
+##.##.##
+##.##.##
+##.##.##`, `
+........
+.#....#.
+.#....#.`, `
+........
+...##...`] });
+defLayout({ id: 'pagoda', name: 'Pagoda', blurb: 'Steps to the top', group: 'big', diff: 2, layers: [`
+#######
+#######
+#######
+#######`, `
+.......
+.#####.
+.#####.`, `
+.......
+...##..`] });
+const LAYOUT_ORDER = ['turtle', 'butterfly', 'lotus', 'fortress', 'pyramid', 'little-turtle', 'heart', 'spider', 'lantern', 'teacup', 'blossom', 'garden-gate', 'pagoda'];
 LAYOUTS.sort((a, b) => LAYOUT_ORDER.indexOf(a.id) - LAYOUT_ORDER.indexOf(b.id));
 </script>
 <script>
@@ -1747,7 +1787,7 @@ function drawThumb(canvas, def) {
 }
 function renderLayoutList() {
   const box = $('#layout-list'); box.innerHTML = '';
-  const groups = [['classic', 'Full boards'], ['quick', 'Quick games']];
+  const groups = [['classic', 'Full boards'], ['quick', 'Quick games'], ['big', 'Big tiles · easy on a phone']];
   for (const [g, label] of groups) {
     const defs = LAYOUTS.filter(l => l.group === g); if (!defs.length) continue;
     const h = document.createElement('div'); h.className = 'lgroup'; h.textContent = label; box.appendChild(h);
