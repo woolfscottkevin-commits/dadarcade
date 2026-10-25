@@ -92,7 +92,12 @@ html[data-theme="paper"] .card-btn{background:linear-gradient(180deg,#c95a4c,#a6
 .icon-btn:disabled{opacity:.35;pointer-events:none}
 /* on a wide screen the tools say what they are */
 @media (min-width:980px){ #btn-undo,#btn-suggest,#btn-sort{width:auto;border-radius:22px;padding:0 14px 0 11px;display:flex;gap:7px;align-items:center} .icon-btn .lbl{display:inline;font-weight:800;font-size:.86rem;letter-spacing:.02em} }
-@media (max-width:430px){ .hud-title{visibility:hidden} }
+@media (max-width:430px){ .hud-title{visibility:hidden}
+  #hud{gap:4px;padding-left:calc(var(--safe-l) + 8px);padding-right:calc(var(--safe-r) + 8px)}
+  .icon-btn{width:36px;height:36px} .icon-btn svg{width:19px;height:19px}
+  .card-btn{height:38px;padding:0 10px 0 8px;gap:5px;font-size:.84rem} .card-btn svg{width:17px;height:17px} }
+/* the smallest phones: sorting is automatic anyway */
+@media (max-width:350px){ #btn-sort{display:none} }
 
 /* ---------- prompt above the rack ---------- */
 #prompt{position:fixed;z-index:6;left:50%;transform:translate(-50%,8px);bottom:120px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
@@ -2092,13 +2097,14 @@ function declareWin(seat, ch, selfDraw, from) {
     if (G.notes.length) soon(1000, () => { floatText(G.notes[0].startsWith('✨') ? 'New hand!' : 'Trophy!', p.x, p.y + 30, true); Sound.match(4); });
   }
   else { Sound.match(5); burst(p.x, p.y, 1); }
+  G.decision = null; updateUndo();   // her winning move has been played, so Undo goes back to just before it
   hidePrompt(); saveGame(); updateHUD(); kick();
   soon(calm() ? 600 : 1900, showResult);
 }
 function wallGame() {
   const st = G.st;
   if (st.phase === 'done') return;
-  st.phase = 'done'; st.result = { wall: true, pay: [0, 0, 0, 0] };
+  st.phase = 'done'; st.result = { wall: true, pay: [0, 0, 0, 0] }; G.decision = null; updateUndo();
   if (st.daily === dateKey() && !(stats.daily.date === st.daily && stats.daily.won)) stats.daily = { date: st.daily, won: false };
   stats.walls++; saveStats();
   G.step = 'done'; dirty = true;
@@ -2284,7 +2290,9 @@ function humanSwap(seat, ei, real) {
   if (G.step !== 'act' || st.turn !== 0 || !st.hands[0].includes(real)) return;
   if (!swapJoker(st, 0, seat, ei, real)) return;
   toast(`You traded your ${tileName(real.type)} for ${seat === 0 ? 'your' : NAMES[seat] + '’s'} joker`);
-  Sound.match(1); G.sel = []; settle(); turnPrompt(); saveGame();
+  Sound.match(1); G.sel = []; settle();
+  G.decision = null; noteDecision(); updateUndo();   // the trade is a move of its own: Undo takes it back
+  turnPrompt(); saveGame();
 }
 
 /* ---------- what's this tile? ---------- */
@@ -2998,6 +3006,8 @@ function learnHelper() {
 
 /* ---------- progress: the card checklist, a daily streak, trophies ---------- */
 const handKey = def => def.cat + '|' + def.text;
+// the calendar day before today (not 24 hours ago, which can skip a day when the clocks change)
+function yesterday() { const d = new Date(); d.setDate(d.getDate() - 1); return dateKey(d); }
 const TROPHIES = [
   { id: 'first', icon: '🀄', name: 'First Mah Jongg', desc: 'Win a hand' },
   { id: 'w10', icon: '🥉', name: 'Ten wins', desc: 'Win 10 hands' },
@@ -3022,7 +3032,7 @@ function recordWin(ch, sc, selfDraw) {
   const notes = [], key = handKey(ch.def), first = !stats.byHand[key];
   stats.byHand[key] = (stats.byHand[key] || 0) + 1;
   if (first) notes.push('✨ New hand on your checklist!');
-  const today = dateKey(), yest = dateKey(new Date(Date.now() - 864e5)), sk = stats.streak;
+  const today = dateKey(), yest = yesterday(), sk = stats.streak;
   if (sk.last !== today) { sk.cur = sk.last === yest ? sk.cur + 1 : 1; sk.last = today; sk.best = Math.max(sk.best, sk.cur); }
   if (G.st.daily === today) stats.daily = { date: today, won: true };
   const earn = id => { if (!stats.trophies[id]) { stats.trophies[id] = today; const t = TROPHIES.find(x => x.id === id); notes.push(`${t.icon} Trophy: ${t.name}`); } };
@@ -3042,7 +3052,7 @@ function recordWin(ch, sc, selfDraw) {
   return notes;
 }
 function streakText() {
-  const sk = stats.streak, today = dateKey(), yest = dateKey(new Date(Date.now() - 864e5));
+  const sk = stats.streak, today = dateKey(), yest = yesterday();
   if (!sk.cur || (sk.last !== today && sk.last !== yest)) return '';
   return sk.last === today ? `🔥 ${sk.cur}-day winning streak` : `🔥 ${sk.cur}-day streak — win today to keep it going`;
 }
