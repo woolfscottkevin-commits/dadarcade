@@ -197,6 +197,8 @@ body.compact .strip-main .htext{font-size:.82rem}
 .palette button{padding:0;background:none;border:0} .palette button:disabled{opacity:.3}
 .helper-rack{display:flex;flex-wrap:wrap;gap:2px;min-height:52px;padding:8px;border-radius:14px;background:var(--panel-2);align-items:center;margin:8px 0}
 .helper-rack button{padding:0;background:none;border:0}
+.helper-rack.on{outline:2px solid var(--gold)}
+.helper-lbl{font-size:.7rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-right:6px;cursor:pointer}
 .use-row{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 6px}
 .use-row figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:900}
 .use-row canvas{position:static;display:block}
@@ -2452,10 +2454,11 @@ function showWhy() {
    tiles those hands need, so she can think twice before throwing one. */
 function showCollecting(seat) {
   const st = G.st, exps = expsOf(st.exps[seat]), body = $('#check-body'), zero = new Int8Array(NT), gone = goneCounts();
+  for (const e of st.exps[0]) for (const t of e.tiles) gone[t.type]++;
   $('#check-title').textContent = `What is ${NAMES[seat]} collecting?`;
   body.innerHTML = '';
   body.appendChild(rackPicture(st.exps[seat].flatMap(e => e.tiles), null));
-  const fits = card.concrete.filter(ch => !ch.c && missingFor(ch, zero, exps) >= 0);
+  const fits = card.concrete.filter(ch => !ch.c && missingFor(ch, zero, exps) >= 0 && !isDead(ch, gone));
   const hands = [...new Map(fits.map(ch => [ch.hand, ch])).values()].sort((a, b) => b.v - a.v);
   if (!hands.length) { body.insertAdjacentHTML('beforeend', '<p class="sub">Nothing on the card fits these exposures, so her hand looks dead.</p>'); }
   else {
@@ -2977,37 +2980,58 @@ function quizNext() {
   body.appendChild(wrap);
 }
 // --- Hand helper: her real rack, tapped in, against the card in play
-let helperTiles = [];
+// Her concealed tiles and her exposed ones are entered apart: exposures are fixed groups, so
+// only exposed (X) hands that contain exactly those groups can still be made.
+let helperTiles = [], helperExp = [], helperMode = 'rack';
 function learnHelper() {
   const body = $('#learn-body');
-  body.innerHTML = '<h2>Hand helper</h2><p class="sub">At a real game? Tap in the tiles on your rack (exposed ones too) and see the hands you’re closest to on this card. Tap a tile in your rack to take it out.</p>';
+  body.innerHTML = '<h2>Hand helper</h2><p class="sub">At a real game? Tap in the tiles on your rack, and switch to <b>Exposed</b> for any groups you’ve shown on the table. You’ll see the hands you’re closest to on this card. Tap a tile to take it out.</p>';
   const w = VW < 520 ? Math.max(18, Math.floor((Math.min(760, VW - 32) - 52 - 8 * 3) / 9) - 5) : 30;
-  const rack = document.createElement('div'); rack.className = 'helper-rack';
-  helperTiles.forEach((t, k) => { const b = document.createElement('button'); b.appendChild(tileCanvas(faceOfType(t), w)); b.addEventListener('click', () => { helperTiles.splice(k, 1); Sound.deselect(); learnHelper(); }); rack.appendChild(b); });
-  if (!helperTiles.length) rack.insertAdjacentHTML('beforeend', '<span class="sub" style="margin:0 6px">Your tiles will show here</span>');
-  body.appendChild(rack);
-  const counts = new Int8Array(NT); for (const t of helperTiles) counts[t]++;
+  const area = (list, label, mode) => {
+    const box = document.createElement('div'); box.className = 'helper-rack' + (helperMode === mode ? ' on' : '');
+    box.insertAdjacentHTML('beforeend', `<span class="helper-lbl">${label}</span>`);
+    list.forEach((t, k) => { const b = document.createElement('button'); b.appendChild(tileCanvas(faceOfType(t), w)); b.addEventListener('click', () => { list.splice(k, 1); Sound.deselect(); learnHelper(); }); box.appendChild(b); });
+    box.addEventListener('click', e => { if (e.target === box || e.target.classList.contains('helper-lbl')) { helperMode = mode; Sound.ui(); learnHelper(); } });
+    return box;
+  };
+  const seg = document.createElement('div'); seg.className = 'seg'; seg.style.margin = '6px 0 2px';
+  for (const [v, lab] of [['rack', 'Adding to my rack'], ['exp', 'Adding exposed']]) {
+    const b = document.createElement('button'); b.textContent = lab; b.setAttribute('aria-pressed', helperMode === v ? 'true' : 'false');
+    b.addEventListener('click', () => { helperMode = v; Sound.ui(); learnHelper(); }); seg.appendChild(b);
+  }
+  body.appendChild(seg);
+  body.appendChild(area(helperTiles, 'Rack', 'rack'));
+  body.appendChild(area(helperExp, 'Exposed', 'exp'));
+  const counts = new Int8Array(NT), all = new Int8Array(NT);
+  for (const t of helperTiles) { counts[t]++; all[t]++; }
+  for (const t of helperExp) all[t]++;
+  const total = helperTiles.length + helperExp.length;
   const pal = document.createElement('div'); pal.className = 'palette';
   for (let t = 0; t < NT; t++) {
     const b = document.createElement('button'); b.appendChild(tileCanvas(faceOfType(t), w));
-    b.disabled = helperTiles.length >= 14 || counts[t] >= (t >= 34 ? 8 : 4);
+    // a joker in an exposure stands for a tile: tap that tile instead
+    b.disabled = total >= 14 || all[t] >= (t >= 34 ? 8 : 4) || (helperMode === 'exp' && t === T_JOKER);
     b.setAttribute('aria-label', tileName(t)); b.title = tileName(t);
-    b.addEventListener('click', () => { helperTiles.push(t); helperTiles.sort((a, b2) => SORT_KEY(a) - SORT_KEY(b2)); Sound.select(); learnHelper(); });
+    b.addEventListener('click', () => { const list = helperMode === 'exp' ? helperExp : helperTiles; list.push(t); list.sort((a, b2) => SORT_KEY(a) - SORT_KEY(b2)); Sound.select(); learnHelper(); });
     pal.appendChild(b);
   }
   body.appendChild(pal);
+  // exposed tiles of one kind make one group
+  const groups = new Map(); for (const t of helperExp) groups.set(t, (groups.get(t) || 0) + 1);
+  const exps = [...groups].map(([t, n]) => ({ t, n }));
   const res = document.createElement('div');
-  if (helperTiles.length >= 6) {
-    const top = rankHands(card, counts, [], 5);
-    res.innerHTML = `<h3>Closest hands (${helperTiles.length} tiles)</h3>`;
-    if (!top.length) res.insertAdjacentHTML('beforeend', '<p>No hand on this card fits these tiles.</p>');
-    for (const r of top) res.appendChild(handRow(r.ch.def, null, r.m, null)), res.lastChild.appendChild(miniTiles(r.ch, counts));
+  if (exps.some(e => e.n < 3)) res.innerHTML = '<p class="sub">An exposed group needs at least 3 matching tiles (for a joker, tap the tile it stands for).</p>';
+  else if (total >= 6) {
+    const top = rankHands(card, counts, exps, 5);
+    res.innerHTML = `<h3>Closest hands (${total} tiles)</h3>`;
+    if (!top.length) res.insertAdjacentHTML('beforeend', `<p>No hand on this card fits these tiles${exps.length ? ' and exposures' : ''}.</p>`);
+    for (const r of top) res.appendChild(handRow(r.ch.def, null, r.m, null)), res.lastChild.appendChild(miniTiles(r.ch, all));
   } else res.innerHTML = '<p class="sub">Add at least 6 tiles to see suggestions.</p>';
   body.appendChild(res);
   const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '10px';
   row.innerHTML = '<button class="btn">Back</button><button class="btn">Clear</button>';
   row.children[0].addEventListener('click', () => { Sound.ui(); learnHome(); });
-  row.children[1].addEventListener('click', () => { Sound.ui(); helperTiles = []; learnHelper(); });
+  row.children[1].addEventListener('click', () => { Sound.ui(); helperTiles = []; helperExp = []; helperMode = 'rack'; learnHelper(); });
   body.appendChild(row);
 }
 
