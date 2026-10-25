@@ -175,6 +175,23 @@ body.compact .strip-main .htext{font-size:.82rem}
 .hand:hover{background:var(--btn)}
 .hand.focus{border-color:var(--gold);background:var(--btn-hover)}
 .hand.dead{opacity:.42}
+.learn-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;margin:10px 0}
+.learn-item{text-align:left;padding:12px 14px;border-radius:16px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);display:flex;gap:10px;align-items:flex-start}
+.learn-item b{display:block;font-size:.98rem} .learn-item span{font-size:.8rem;color:var(--ink-2);font-weight:600;line-height:1.35}
+.learn-item .num{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.86rem;background:var(--btn);color:var(--ink-2)}
+.learn-item.done .num{background:#3f9c63;color:#fff}
+.learn-item.feature{border-color:var(--gold)}
+.lesson-page{min-height:150px} .lesson-page p{margin:8px 0}
+.tile-line{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:12px 0}
+.tile-line .grp{display:flex;gap:1px}
+.tile-line canvas,.palette canvas,.helper-rack canvas{position:static;display:block}
+.dots-nav{display:flex;gap:6px;justify-content:center;margin:10px 0 2px} .dots-nav i{width:7px;height:7px;border-radius:50%;background:var(--btn)} .dots-nav i.on{background:var(--gold)}
+.quiz-choice{display:block;width:100%;text-align:left;margin:6px 0;padding:8px 10px;border-radius:14px;background:var(--panel-2);border:2px solid transparent;color:var(--ink)}
+.quiz-choice .hnote{margin-top:3px} .quiz-choice.right{border-color:#4fc27c} .quiz-choice.wrong{border-color:#e0675b;opacity:.85}
+.palette{display:grid;grid-template-columns:repeat(9,auto);gap:3px;justify-content:center;margin:8px 0}
+.palette button{padding:0;background:none;border:0} .palette button:disabled{opacity:.3}
+.helper-rack{display:flex;flex-wrap:wrap;gap:2px;min-height:52px;padding:8px;border-radius:14px;background:var(--panel-2);align-items:center;margin:8px 0}
+.helper-rack button{padding:0;background:none;border:0}
 .use-row{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 6px}
 .use-row figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:900}
 .use-row canvas{position:static;display:block}
@@ -359,6 +376,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <button class="btn primary" id="menu-continue">Continue<small id="menu-continue-sub"></small></button>
       <button class="btn" id="menu-new">New game<small>Fresh scores, Rose deals first</small></button>
       <button class="btn" id="menu-daily">Today’s deal<small id="menu-daily-sub">The same tiles all day</small></button>
+      <button class="btn" id="menu-learn">Learn &amp; practice<small>Short lessons, a quiz, and a helper for your real games</small></button>
       <button class="btn" id="menu-card">Type in my own card<small>Practice the hands your group plays</small></button>
     </div>
     <div style="margin-top:14px">
@@ -469,6 +487,14 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <button class="btn hide" id="result-undo">Undo my last move</button>
       <button class="btn" id="result-menu">Menu</button>
     </div>
+  </div>
+</section>
+
+<!-- Learn & practice -->
+<section class="sheet" id="sheet-learn" aria-label="Learn and practice">
+  <div class="panel wide">
+    <button class="close-x" data-close aria-label="Close">×</button>
+    <div id="learn-body"></div>
   </div>
 </section>
 
@@ -1578,7 +1604,7 @@ $('#strip-main').addEventListener('click', () => { Sound.ui(); drawerTab = 'clos
 let G = null, TILES = [];
 let timer = 0;
 // The others wait while a menu is open or the app is in the background.
-const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask', 'bulk', 'check'].some(n => sheetEl(n).classList.contains('open'));
+const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask', 'bulk', 'check', 'learn'].some(n => sheetEl(n).classList.contains('open'));
 // Every follow-up in a hand goes through this one timer, tagged with the hand it
 // belongs to, so a new game or a reload can never replay a stale move.
 function later(ms, fn) {
@@ -2653,13 +2679,13 @@ async function copyMyCard() {
 }
 
 /* ---------- sheets ---------- */
-const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk', 'check'];
+const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk', 'check', 'learn'];
 const sheetEl = n => $('#sheet-' + n);
 function openSheet(n) { if (n === 'howto') renderTileGuide(); if (n === 'menu') refreshMenu(); if (n === 'settings') renderSettings(); if (n === 'stats') renderStats(); sheetEl(n).classList.add('open'); }
 function closeSheet(n) { sheetEl(n).classList.remove('open'); }
-function topSheet() { for (const n of ['ask', 'check', 'editor', 'bulk', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
+function topSheet() { for (const n of ['ask', 'check', 'editor', 'bulk', 'learn', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
 SHEETS.forEach(n => sheetEl(n).addEventListener('click', e => { if (e.target === sheetEl(n) && !['result', 'ask'].includes(n) && !(n === 'menu' && !G)) closeSheet(n); }));
-$$('[data-close]').forEach(b => b.addEventListener('click', () => { Sound.ui(); const n = topSheet(); if (n) closeSheet(n); }));
+$$('[data-close]').forEach(b => b.addEventListener('click', () => { Sound.ui(); const n = topSheet(); if (n) closeSheet(n); if (!G && !topSheet()) openSheet('menu'); }));
 $$('[data-open]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); openSheet(b.dataset.open); }));
 let askResolve = null;
 function ask(title, text, btns) {
@@ -2711,6 +2737,7 @@ $('#menu-new').addEventListener('click', async () => {
   }
   closeSheet('menu'); newGame();
 });
+$('#menu-learn').addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); learnHome(); openSheet('learn'); });
 $('#menu-daily').addEventListener('click', async () => {
   Sound.init(); Sound.ui();
   if (G && G.st && G.st.phase !== 'done' && G.handNo > 0) {
@@ -2781,6 +2808,174 @@ function applyTheme(id) {
   renderBackground(); setupAmbient(); startAmbient(); kick();
 }
 function renderBackground() { const c = cx.bg; c.setTransform(DPR, 0, 0, DPR, 0, 0); paintScene(c, VW, VH, settings.theme); }
+
+/* ---------- learn & practice: lessons, "Which hand is this?", a hand helper ---------- */
+const LEARN_KEY = 'mja_learned_v1';
+let learned = Object.assign({ lessons: {}, quizBest: 0 }, store.get(LEARN_KEY, {}));
+const saveLearned = () => store.set(LEARN_KEY, learned);
+// a tile picture for these pages, from a face number (0–41 tiles and flowers, 42 joker)
+function tileCanvas(face, w) {
+  const S = tileSet(w), c = document.createElement('canvas'), W = w + S.d + 2, H = S.H + S.d + 2;
+  c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); c.style.width = W + 'px'; c.style.height = H + 'px';
+  const g = c.getContext('2d'); g.scale(DPR, DPR); g.drawImage(S.body, 1 - S.pad, 1 - S.pad, S.bw, S.bh); g.drawImage(S.faces[face], S.d + 1, 1, w, S.H);
+  return c;
+}
+const faceOfType = t => t === T_JOKER ? 42 : t === T_FLOWER ? 34 : t;
+// a row of tile groups, with a little space between groups
+function groupLine(groups, w) {
+  const box = document.createElement('div'); box.className = 'tile-line';
+  for (const g of groups) { const gr = document.createElement('div'); gr.className = 'grp'; for (const f of g) gr.appendChild(tileCanvas(f, w)); box.appendChild(gr); }
+  return box;
+}
+const learnW = () => VW < 520 ? 24 : 32;
+// an example hand: the card line, and one way to make it in tiles
+function exampleHand(text, mode = 'exact') {
+  const box = document.createElement('div');
+  box.innerHTML = `<div class="hand" style="pointer-events:none"><div class="row1"><div class="htext">${handHTML(text)}</div></div></div>`;
+  const ch = expandHand({ text, mode }, 0)[0];
+  if (ch) box.appendChild(groupLine(ch.groups.map(g => Array(g.n).fill(faceOfType(g.t))), VW < 520 ? 20 : 26));
+  return box;
+}
+const LESSONS = [
+  { title: 'The tiles', blurb: 'Suits, winds, dragons, flowers and jokers', pages: [
+    { html: '<p>A set has <b>152 tiles</b>. Three suits run from 1 to 9, with four of each tile:</p><p><b>Dots</b> are circles, <b>Bams</b> are bamboo sticks (the 1 Bam is a bird), and <b>Craks</b> are characters, with 萬 under the number.</p>', tiles: [[0, 4, 8], [9, 13, 17], [18, 22, 26]] },
+    { html: '<p>Four <b>winds</b>: North, East, West and South.</p><p>Three <b>dragons</b>, each belonging to a suit: the <b>Red</b> goes with Craks, the <b>Green</b> with Bams, and the white <b>Soap</b> with Dots. The Soap also counts as a zero in year hands like 2026.</p>', tiles: [[30, 27, 29, 28], [31, 32, 33]] },
+    { html: '<p>Eight <b>flowers</b>: any flower matches any other.</p><p>Eight <b>jokers</b>: a joker can stand in for a tile in any group of three or more.</p>', tiles: [[34, 35, 38, 39], [42, 42]] },
+  ] },
+  { title: 'Reading the card', blurb: 'What the colours, letters and numbers mean', pages: [
+    { html: '<p>Each line on the card is a hand of exactly <b>14 tiles</b>. Colours mean suits: groups in the same colour use one suit, different colours use different suits. Which suit is which is up to you.</p>', hand: '222g 4444g 666r 8888r' },
+    { html: '<p><b>F</b> is a flower, <b>D</b> a dragon (the one for that colour’s suit), <b>0</b> the Soap, and <b>N E W S</b> are winds.</p><p><b>X</b> hands may be exposed, so you can call tiles for them. <b>C</b> hands stay concealed: every tile comes from the wall or the Charleston, except the last one for Mah Jongg.</p>', hand: 'FFFF 2026g DDDr DDDb' },
+    { html: '<p>Some lines say <b>Any like number</b> (all the same number, like all 5s) or <b>Any consecutive numbers</b>, where the run can slide: 123, 234, and so on.</p><p>On this table the strip above your rack and <b>Card → Closest</b> show the hands you’re nearest to.</p>', hand: 'FF 1111g 1111r 1111b', mode: 'shift' },
+  ] },
+  { title: 'The Charleston', blurb: 'Passing tiles before play', pages: [
+    { html: '<p>Before play, everyone passes three tiles they don’t want: first to the <b>right</b>, then <b>across</b>, then to the <b>left</b>. Jokers can never be passed.</p>' },
+    { html: '<p>On the last pass of each round you may pass <b>blind</b>: send on one, two or three of the tiles coming to you without looking at them.</p>' },
+    { html: '<p>Then a <b>second Charleston</b> (left, across, right), unless someone stops it, and last an optional <b>courtesy pass</b> of up to three tiles with the player across.</p><p>Tip: pass the tiles that fit none of your closest hands. Hint shows them.</p>' },
+  ] },
+  { title: 'Taking turns & calling', blurb: 'Drawing, discarding and exposing', pages: [
+    { html: '<p>East starts with 14 tiles and discards one. Then, in turn to the right, each player draws a tile and discards one.</p>' },
+    { html: '<p>When someone discards a tile you need to finish a <b>pung</b> (3), <b>kong</b> (4) or <b>quint</b> (5), you can <b>call</b> it: show the group face up (an exposure), then discard.</p><p>You can’t call a tile for a pair or a single, except for the last tile you need for Mah Jongg.</p>', tiles: [[4, 4, 4], [27, 27, 27, 27]] },
+    { html: '<p>An exposure can’t change, so call only for a hand you’re sure about. If it fits no hand on the card, your hand is dead.</p><p>On this table play waits after every discard so you have time to decide.</p>' },
+  ] },
+  { title: 'Jokers', blurb: 'Where they can go, and how to take one', pages: [
+    { html: '<p>A joker stands in for any tile in a group of <b>3 or more</b>. Never in a single or a pair, so never in a Singles &amp; Pairs hand.</p>', tiles: [[13, 13, 42], [22, 42, 42, 42]] },
+    { html: '<p>On your turn, if someone has an exposed group with a joker in it and you hold the real tile, you can <b>swap</b>: your tile goes in, the joker comes to you. A <b>Trade</b> button appears when you can.</p>' },
+    { html: '<p>A discarded joker can’t be called. And a hand won with <b>no jokers</b> (other than Singles &amp; Pairs) is worth double.</p>' },
+  ] },
+  { title: 'Choosing your hand', blurb: 'Which hand to play, and when to switch', pages: [
+    { html: '<p>After the deal, look for two or three hands that use the most of your tiles. The strip above your rack and Card → Closest show them.</p><p>Keep jokers, flowers, and tiles that fit several hands.</p>' },
+    { html: '<p>By the end of the Charleston, settle on one hand, with a backup. Watch the discards: when the tiles a hand needs for a pair are gone, it’s dead, and the card marks it.</p>' },
+    { html: '<p>Don’t call too early. Each exposure narrows you down to the hands that have that group.</p>' },
+  ] },
+  { title: 'Playing defense', blurb: 'Not handing someone else Mah Jongg', pages: [
+    { html: '<p>Watch what the others expose. On this table, tap their exposed tiles to see the hands they could be making and the tiles they want.</p>' },
+    { html: '<p>Late in the hand, think twice before throwing a tile someone needs, especially to a player with three exposures. Throwing the tile that gives someone Mah Jongg costs you double.</p>' },
+    { html: '<p>Tiles that are mostly out already (Settings → Discards → Counted shows 3/4) are less likely to be wanted, though with jokers nothing is ever completely safe.</p>' },
+  ] },
+];
+function learnHome() {
+  const body = $('#learn-body');
+  const done = LESSONS.filter((l, i) => learned.lessons[i]).length;
+  body.innerHTML = `<h2>Learn &amp; practice</h2><p class="sub">Seven short lessons (${done} done), a quiz, and a helper for your real games.</p>`;
+  const list = document.createElement('div'); list.className = 'learn-list';
+  const item = (num, title, blurb, cls, fn) => {
+    const b = document.createElement('button'); b.className = 'learn-item' + (cls ? ' ' + cls : '');
+    b.innerHTML = `<i class="num">${num}</i><div><b>${title}</b><span>${blurb}</span></div>`;
+    b.addEventListener('click', () => { Sound.ui(); fn(); }); list.appendChild(b);
+  };
+  LESSONS.forEach((l, i) => item(learned.lessons[i] ? '✓' : i + 1, esc(l.title), esc(l.blurb), learned.lessons[i] ? 'done' : '', () => learnLesson(i, 0)));
+  item('?', 'Which hand is this?', `Ten tiles-to-card questions${learned.quizBest ? ` · best ${learned.quizBest}/10` : ''}`, 'feature', quizStart);
+  item('✋', 'Hand helper', 'Tap in the tiles from your real rack and see your closest hands', 'feature', learnHelper);
+  body.appendChild(list);
+}
+function learnLesson(i, page) {
+  const l = LESSONS[i], pg = l.pages[page], body = $('#learn-body'), last = page === l.pages.length - 1;
+  body.innerHTML = `<h2>${esc(l.title)}</h2>`;
+  const box = document.createElement('div'); box.className = 'lesson-page'; box.innerHTML = pg.html;
+  if (pg.tiles) box.appendChild(groupLine(pg.tiles, learnW() + 6));
+  if (pg.hand) box.appendChild(exampleHand(pg.hand, pg.mode));
+  body.appendChild(box);
+  body.insertAdjacentHTML('beforeend', `<div class="dots-nav">${l.pages.map((_, k) => `<i class="${k === page ? 'on' : ''}"></i>`).join('')}</div>`);
+  const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '12px';
+  row.innerHTML = `<button class="btn">${page ? 'Back' : 'All lessons'}</button><button class="btn primary">${last ? 'Done ✓' : 'Next'}</button>`;
+  row.children[0].addEventListener('click', () => { Sound.ui(); page ? learnLesson(i, page - 1) : learnHome(); });
+  row.children[1].addEventListener('click', () => {
+    Sound.ui();
+    if (!last) return learnLesson(i, page + 1);
+    learned.lessons[i] = true; saveLearned(); toast(`Lesson done: ${l.title}`); learnHome();
+  });
+  body.appendChild(row);
+}
+// --- "Which hand is this?": fourteen tiles, four lines from the card
+let quiz = null;
+function quizStart() { quiz = { n: 0, score: 0 }; quizNext(); }
+function quizNext() {
+  const body = $('#learn-body');
+  if (quiz.n >= 10) {
+    const best = learned.quizBest = Math.max(learned.quizBest, quiz.score); saveLearned();
+    body.innerHTML = `<h2>${quiz.score}/10</h2><p class="sub">${quiz.score >= 9 ? 'You know this card!' : quiz.score >= 6 ? 'Nicely done.' : 'Every round helps.'} Your best is ${best}/10.</p>`;
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = '<button class="btn primary">Play again</button><button class="btn">Back</button>';
+    row.children[0].addEventListener('click', () => { Sound.ui(); quizStart(); }); row.children[1].addEventListener('click', () => { Sound.ui(); learnHome(); });
+    body.appendChild(row); return;
+  }
+  const hands = card.hands.map((h, i) => ({ h, i, ex: expandHand(h, i) })).filter(x => x.ex.length);
+  const pick = hands[Math.floor(Math.random() * hands.length)], ch = pick.ex[Math.floor(Math.random() * pick.ex.length)];
+  const others = shuffleArr(hands.filter(x => x.h.text !== pick.h.text), Math.random).slice(0, 3);
+  const choices = shuffleArr([pick, ...others], Math.random);
+  body.innerHTML = `<h2>Which hand is this?</h2><p class="sub">Question ${quiz.n + 1} of 10 · ${quiz.score} right so far</p>`;
+  body.appendChild(groupLine(ch.groups.map(g => Array(g.n).fill(faceOfType(g.t))), VW < 520 ? 20 : 28));
+  const wrap = document.createElement('div');
+  for (const c of choices) {
+    const b = document.createElement('button'); b.className = 'quiz-choice';
+    b.innerHTML = `<div class="htext">${handHTML(c.h.text)}</div><div class="hnote"><span>${esc(c.h.cat)}</span><span>${handNote(c.h)}</span></div>`;
+    b.addEventListener('click', () => {
+      if (wrap.dataset.done) return; wrap.dataset.done = '1';
+      const right = c === pick; if (right) { quiz.score++; Sound.match(2); } else Sound.blocked();
+      b.classList.add(right ? 'right' : 'wrong'); [...wrap.children].forEach((x, k) => { if (choices[k] === pick) x.classList.add('right'); });
+      quiz.n++;
+      const nx = document.createElement('div'); nx.className = 'row'; nx.style.marginTop = '8px';
+      nx.innerHTML = `<button class="btn primary">${quiz.n >= 10 ? 'See my score' : 'Next'}</button>`;
+      nx.firstChild.addEventListener('click', () => { Sound.ui(); quizNext(); }); body.appendChild(nx);
+    });
+    wrap.appendChild(b);
+  }
+  body.appendChild(wrap);
+}
+// --- Hand helper: her real rack, tapped in, against the card in play
+let helperTiles = [];
+function learnHelper() {
+  const body = $('#learn-body');
+  body.innerHTML = '<h2>Hand helper</h2><p class="sub">At a real game? Tap in the tiles on your rack (exposed ones too) and see the hands you’re closest to on this card. Tap a tile in your rack to take it out.</p>';
+  const w = VW < 520 ? Math.max(18, Math.floor((Math.min(760, VW - 32) - 52 - 8 * 3) / 9) - 5) : 30;
+  const rack = document.createElement('div'); rack.className = 'helper-rack';
+  helperTiles.forEach((t, k) => { const b = document.createElement('button'); b.appendChild(tileCanvas(faceOfType(t), w)); b.addEventListener('click', () => { helperTiles.splice(k, 1); Sound.deselect(); learnHelper(); }); rack.appendChild(b); });
+  if (!helperTiles.length) rack.insertAdjacentHTML('beforeend', '<span class="sub" style="margin:0 6px">Your tiles will show here</span>');
+  body.appendChild(rack);
+  const counts = new Int8Array(NT); for (const t of helperTiles) counts[t]++;
+  const pal = document.createElement('div'); pal.className = 'palette';
+  for (let t = 0; t < NT; t++) {
+    const b = document.createElement('button'); b.appendChild(tileCanvas(faceOfType(t), w));
+    b.disabled = helperTiles.length >= 14 || counts[t] >= (t >= 34 ? 8 : 4);
+    b.setAttribute('aria-label', tileName(t)); b.title = tileName(t);
+    b.addEventListener('click', () => { helperTiles.push(t); helperTiles.sort((a, b2) => SORT_KEY(a) - SORT_KEY(b2)); Sound.select(); learnHelper(); });
+    pal.appendChild(b);
+  }
+  body.appendChild(pal);
+  const res = document.createElement('div');
+  if (helperTiles.length >= 6) {
+    const top = rankHands(card, counts, [], 5);
+    res.innerHTML = `<h3>Closest hands (${helperTiles.length} tiles)</h3>`;
+    if (!top.length) res.insertAdjacentHTML('beforeend', '<p>No hand on this card fits these tiles.</p>');
+    for (const r of top) res.appendChild(handRow(r.ch.def, null, r.m, null)), res.lastChild.appendChild(miniTiles(r.ch, counts));
+  } else res.innerHTML = '<p class="sub">Add at least 6 tiles to see suggestions.</p>';
+  body.appendChild(res);
+  const row = document.createElement('div'); row.className = 'row'; row.style.marginTop = '10px';
+  row.innerHTML = '<button class="btn">Back</button><button class="btn">Clear</button>';
+  row.children[0].addEventListener('click', () => { Sound.ui(); learnHome(); });
+  row.children[1].addEventListener('click', () => { Sound.ui(); helperTiles = []; learnHelper(); });
+  body.appendChild(row);
+}
 
 /* ---------- progress: the card checklist, a daily streak, trophies ---------- */
 const handKey = def => def.cat + '|' + def.text;
