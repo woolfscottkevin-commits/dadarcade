@@ -223,6 +223,21 @@ html[data-theme="paper"] .btn.primary{background:linear-gradient(180deg,#c95a4c,
 .setup-pick button:active{transform:scale(.97)}
 .pick-note{font-size:.8rem;color:var(--ink-2);margin:-4px 0 12px}
 .pick-note:empty{display:none}
+.streak-line{margin:-8px 0 12px;font-weight:800;font-size:.86rem;color:var(--gold)} .streak-line:empty{display:none}
+#result-extra{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 0} #result-extra:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-weight:800;font-size:.84rem}
+.stat-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:12px 0 4px}
+.stat-tiles div{background:var(--panel-2);border-radius:14px;padding:10px 12px}
+.stat-tiles b{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums} .stat-tiles span{font-size:.76rem;color:var(--ink-2);font-weight:700}
+.trophies{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin:8px 0}
+.trophy{display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;padding:10px 6px;border-radius:14px;background:var(--panel-2);font-size:.72rem;font-weight:800;line-height:1.2}
+.trophy i{font-style:normal;font-size:1.7rem;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold) 60%,var(--gold-lo))}
+.trophy.locked{opacity:.38} .trophy.locked i{filter:grayscale(1);background:var(--btn)}
+.trophy small{font-weight:600;color:var(--ink-2);font-size:.68rem}
+.check-cat{display:flex;justify-content:space-between;font-weight:900;margin:12px 0 4px;font-size:.86rem;color:var(--gold)}
+.check-hand{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:.9rem}
+.check-hand .tick{width:22px;text-align:center;font-weight:900;color:var(--ink-3)} .check-hand.won .tick{color:#5fd38a}
+.check-hand .htext{flex:1;font-size:.86rem} .check-hand .n{font-weight:900;font-size:.8rem;color:var(--ink-2);min-width:24px;text-align:right}
 .brand{font-family:var(--serif);font-weight:600;font-size:clamp(2.2rem,7vw,3.1rem);line-height:.95}
 .brand em{font-style:italic;color:var(--gold)}
 .link{padding:10px 14px;border-radius:12px;font-weight:700;font-size:.92rem;color:var(--ink-2);text-decoration:none;display:inline-block}
@@ -333,6 +348,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   <div class="panel center">
     <div class="brand">American <em>Mah&nbsp;Jongg</em></div>
     <p class="sub" style="margin-top:10px">You and three friends from the garden: Rose, Iris and Lily.</p>
+    <p class="streak-line" id="menu-streak"></p>
     <div class="pick-h">Set up the tiles</div>
     <div class="setup-pick" role="group" aria-label="Set up the tiles">
       <button data-v="wall"><svg viewBox="0 0 60 26" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="12" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="21" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="30" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="39" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="48" y="3" width="8" height="10" rx="1.6" opacity="0.95"/><rect x="3" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="12" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="21" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="30" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="39" y="14" width="8" height="10" rx="1.6" opacity="0.6"/><rect x="48" y="14" width="8" height="10" rx="1.6" opacity="0.6"/></svg><b>Wall</b><small>Dealt from a wall</small></button>
@@ -342,6 +358,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="grid-btns">
       <button class="btn primary" id="menu-continue">Continue<small id="menu-continue-sub"></small></button>
       <button class="btn" id="menu-new">New game<small>Fresh scores, Rose deals first</small></button>
+      <button class="btn" id="menu-daily">Today’s deal<small id="menu-daily-sub">The same tiles all day</small></button>
       <button class="btn" id="menu-card">Type in my own card<small>Practice the hands your group plays</small></button>
     </div>
     <div style="margin-top:14px">
@@ -415,6 +432,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
       <li>Tap <b>Hint</b> again while it’s showing to see why: each of your tiles gets a score for how much it helps your closest hands. Tap someone’s exposed tiles to see what they might be collecting.</li>
       <li><b>Undo</b> takes back your last move, whatever happened after it. Think you have a hand? <b>Mah Jongg?</b> on your turn shows the closest hand and what’s still missing.</li>
       <li>Keys: <b>Space</b> moves on after a discard, <b>H</b> hint, <b>Z</b> undo, <b>M</b> Mah Jongg, <b>C</b> the card, <b>F</b> full screen.</li>
+      <li>Every hand you win gets ticked off the card in <b>Stats</b>. Win on days in a row for a streak, collect trophies, and try <b>Today’s deal</b> from the menu: the same tiles all day.</li>
       <li>Prefer <b>Messy</b>? Choose it on the menu or before the next hand: no wall, the tiles are swirled face-down on the table, there’s no passing, and on your turn you tap any tile in the pile to take it. If your group passes in Messy too, turn on “Charleston in Messy” in Settings.</li>
       <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
@@ -438,6 +456,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <h2 id="result-title">Rose wins</h2>
     <div class="result-tiles" id="result-tiles"></div>
     <div id="result-hand" style="margin:4px auto 0;max-width:460px"></div>
+    <div id="result-extra"></div>
     <table class="pay" id="result-pay"></table>
     <div class="pick-h" style="margin-top:16px">Next hand</div>
     <div class="setup-pick" role="group" aria-label="Set up the tiles">
@@ -446,6 +465,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     </div>
     <div class="row">
       <button class="btn primary" id="result-next">Next hand</button>
+      <button class="btn hide" id="result-share">Share my win</button>
       <button class="btn hide" id="result-undo">Undo my last move</button>
       <button class="btn" id="result-menu">Menu</button>
     </div>
@@ -909,7 +929,7 @@ settings.tiles = savedTileStyle();
 const saveSettings = () => store.set(SET_KEY, settings);
 let myHands = store.get(MINE_KEY, []);
 const saveMine = () => store.set(MINE_KEY, myHands);
-let stats = Object.assign({ hands: 0, wins: 0, walls: 0, games: 0, points: 0, best: null, byCat: {}, selfDraws: 0 }, store.get(STATS_KEY, {}));
+let stats = Object.assign({ hands: 0, wins: 0, walls: 0, games: 0, points: 0, best: null, byCat: {}, selfDraws: 0, byHand: {}, streak: { last: '', cur: 0, best: 0 }, trophies: {}, daily: { date: '', won: false } }, store.get(STATS_KEY, {}));
 const saveStats = () => store.set(STATS_KEY, stats);
 
 const SKILLS = { gentle: { loose: true, eager: 1, callRate: .5, k: .8 }, friendly: { loose: true, eager: 2 }, sharp: { loose: false, eager: 4 } };
@@ -1569,9 +1589,9 @@ function later(ms, fn) {
 }
 // cosmetic follow-ups (highlights, the result card) that must not leak into the next hand
 function soon(ms, fn) { const gen = G.gen; setTimeout(() => { if (G && G.gen === gen) fn(); }, ms); }
-function newGame() {
+function newGame(opts = {}) {
   clearTimeout(timer);
-  G = { v: 1, gen: (G && G.gen || 0) + 1, scores: [0, 0, 0, 0], handNo: 0, dealer: 1, st: null, step: '', sel: [], hint: null, received: [], claim: null, pending: null, focus: null, swapGlow: null, thinking: -1, manual: false, lastCallFrom: -1 };
+  G = { v: 1, gen: (G && G.gen || 0) + 1, scores: [0, 0, 0, 0], handNo: 0, dealer: 1, st: null, step: '', sel: [], hint: null, received: [], claim: null, pending: null, focus: null, swapGlow: null, thinking: -1, manual: false, lastCallFrom: -1, daily: opts.daily || '' };
   stats.games++; saveStats();
   startHand();
 }
@@ -1580,8 +1600,10 @@ function startHand() {
   G.gen = (G.gen || 0) + 1;
   rebuildCard();
   G.handNo++;
-  const rng = mulberry32((Math.random() * 4294967296) >>> 0);
+  const daily = G.daily && G.handNo === 1 ? G.daily : '';
+  const rng = mulberry32(daily ? hashStr('mja-daily-' + daily) : (Math.random() * 4294967296) >>> 0);
   G.st = newHand(rng, G.dealer);
+  G.st.daily = daily;
   G.st.messy = settings.setup === 'messy'; G.st.messySeed = (rng() * 1e9) >>> 0;
   G.st.noPass = G.st.messy && !settings.messyPass;
   TILES = [...G.st.wall, ...G.st.hands.flat()].sort((a, b) => a.uid - b.uid);
@@ -1600,7 +1622,7 @@ function startHand() {
   } else deal();
   if (settings.autosort) sortHand(G.st.hands[0]);
   G.sel = []; G.hint = null; G.received = []; G.claim = null; G.focus = null; G.manual = false; G.lastCallFrom = -1;
-  G.step = 'dealing'; G.decision = null; undoStack = []; updateUndo(); dirty = true;
+  G.step = 'dealing'; G.decision = null; G.usedHint = false; G.notes = []; undoStack = []; updateUndo(); dirty = true;
   stats.hands++; saveStats();
   try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card, setup: settings.setup }); } catch (e) {}
   later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], finishDeal);
@@ -2009,7 +2031,9 @@ function declareWin(seat, ch, selfDraw, from) {
   const sc = scoreHand(ch, allTiles, selfDraw, seat, from);
   for (let s = 0; s < 4; s++) G.scores[s] += sc.pay[s];
   st.result = { winner: seat, hand: ch.hand, text: ch.def.text, cat: ch.def.cat, value: ch.v, selfDraw, from, pay: sc.pay, jokerless: sc.jokerless, base: sc.base };
-  if (seat === 0) { stats.wins++; stats.points += sc.pay[0]; stats.byCat[ch.def.cat] = (stats.byCat[ch.def.cat] || 0) + 1; if (selfDraw) stats.selfDraws++; if (!stats.best || sc.base > stats.best.base) stats.best = { base: sc.base, text: ch.def.text }; }
+  G.notes = [];
+  if (seat === 0) { stats.wins++; stats.points += sc.pay[0]; stats.byCat[ch.def.cat] = (stats.byCat[ch.def.cat] || 0) + 1; if (selfDraw) stats.selfDraws++; if (!stats.best || sc.base > stats.best.base) stats.best = { base: sc.base, text: ch.def.text }; G.notes = recordWin(ch, sc, selfDraw); }
+  else if (G.st.daily === dateKey()) stats.daily = { date: G.st.daily, won: stats.daily.date === G.st.daily && stats.daily.won };
   saveStats();
   try { gtag('event', 'mahjong_american_win', { winner: seat === 0 ? 'you' : 'bot', cat: ch.def.cat, value: sc.base }); } catch (e) {}
   // lay the winner's hand out in card order
@@ -2020,7 +2044,10 @@ function declareWin(seat, ch, selfDraw, from) {
   G.step = 'done'; dirty = true;
   const p = seatPoint(seat);
   floatText('Mah Jongg!', p.x, p.y - 20, true);
-  if (seat === 0) { Sound.win(); for (let i = 0; i < (calm() ? 1 : 5); i++) setTimeout(() => burst(VW / 2 + (Math.random() - .5) * VW * .5, L.rackTop - 60 - Math.random() * 120, 1.4), i * 240); }
+  if (seat === 0) {
+    Sound.win(); for (let i = 0; i < (calm() ? 1 : 5); i++) setTimeout(() => burst(VW / 2 + (Math.random() - .5) * VW * .5, L.rackTop - 60 - Math.random() * 120, 1.4), i * 240);
+    if (G.notes.length) soon(1000, () => { floatText(G.notes[0].startsWith('✨') ? 'New hand!' : 'Trophy!', p.x, p.y + 30, true); Sound.match(4); });
+  }
   else { Sound.match(5); burst(p.x, p.y, 1); }
   hidePrompt(); saveGame(); updateHUD(); kick();
   soon(calm() ? 600 : 1900, showResult);
@@ -2029,6 +2056,7 @@ function wallGame() {
   const st = G.st;
   if (st.phase === 'done') return;
   st.phase = 'done'; st.result = { wall: true, pay: [0, 0, 0, 0] };
+  if (st.daily === dateKey() && !(stats.daily.date === st.daily && stats.daily.won)) stats.daily = { date: st.daily, won: false };
   stats.walls++; saveStats();
   G.step = 'done'; dirty = true;
   floatText('Wall game', VW / 2, (L.center.y0 + L.center.y1) / 2, true);
@@ -2041,6 +2069,8 @@ function wallGame() {
 function showResult() {
   const st = G.st, r = st.result; if (!r) return;
   const el = $('#result-tiles'); el.innerHTML = '';
+  $('#result-extra').innerHTML = (r.winner === 0 && G.notes ? G.notes : []).map(n => `<span class="chip">${esc(n)}</span>`).join('');
+  $('#result-share').classList.toggle('hide', !(r.winner === 0 && !r.wall));
   if (r.wall) {
     $('#result-kicker').textContent = 'Wall game';
     $('#result-title').textContent = 'Nobody wins this one';
@@ -2070,6 +2100,12 @@ function hideResult() { closeSheet('result'); }
 $('#result-next').addEventListener('click', () => { if (!G || G.st.phase !== 'done') return; Sound.ui(); closeSheet('result'); G.dealer = (G.dealer + 1) % 4; startHand(); });
 $('#result-menu').addEventListener('click', () => { Sound.ui(); closeSheet('result'); openSheet('menu'); });
 $('#result-undo').addEventListener('click', () => { Sound.init(); undo(); });
+$('#result-share').addEventListener('click', async () => {
+  const r = G.st.result; if (!r || r.winner !== 0) return;
+  const text = `I just won Mah Jongg with ${r.text} (${r.cat}) for ${r.base} points!`, url = 'https://dadarcade.com/mahjong/american';
+  try { if (navigator.share) await navigator.share({ title: 'Mah Jongg!', text, url }); else { await navigator.clipboard.writeText(`${text} ${url}`); toast('Copied, ready to paste'); } }
+  catch (e) { /* closed the share sheet */ }
+});
 $('#btn-undo').addEventListener('click', () => { Sound.init(); undo(); });
 
 /* ---------- prompt ---------- */
@@ -2273,6 +2309,7 @@ $('#btn-suggest').addEventListener('click', () => {
   const st = G.st;
   // asking again while the hint is showing opens the reasons behind it
   if (G.hint && G.hint.why && performance.now() < G.hint.until) { Sound.ui(); showWhy(); return; }
+  if (['pass', 'courtesy', 'act', 'claim'].includes(G.step)) G.usedHint = true;
   let uids = [], msg = '';
   if (G.step === 'pass' || G.step === 'courtesy') { uids = lowestUse(choosePass(card, st.hands[0], 3), 3).map(t => t.uid); msg = 'Pass the glowing tiles: they help your closest hands least'; }
   else if (G.step === 'act' && st.turn === 0) {
@@ -2652,6 +2689,9 @@ $$('.setup-pick button').forEach(b => b.addEventListener('click', () => {
 }));
 function refreshMenu() {
   syncSetupPicks();
+  $('#menu-streak').textContent = streakText();
+  const d = stats.daily && stats.daily.date === dateKey() ? stats.daily : null;
+  $('#menu-daily-sub').textContent = d ? (d.won ? 'You won today’s deal ✓ Play it again?' : 'Played today. Try it again?') : 'The same tiles all day. A new deal tomorrow';
   const has = G && G.st && G.st.phase !== 'done';
   $('#menu-continue').firstChild.textContent = has ? 'Continue' : 'Play';
   $('#menu-continue-sub').textContent = has ? `Hand ${G.handNo} · you have ${G.scores[0] > 0 ? '+' : ''}${G.scores[0]}` : 'You, Rose, Iris and Lily';
@@ -2670,6 +2710,16 @@ $('#menu-new').addEventListener('click', async () => {
     if (!ok) return advance();
   }
   closeSheet('menu'); newGame();
+});
+$('#menu-daily').addEventListener('click', async () => {
+  Sound.init(); Sound.ui();
+  if (G && G.st && G.st.phase !== 'done' && G.handNo > 0) {
+    closeSheet('menu');
+    const ok = await ask('Play today’s deal?', 'This starts a new game, so scores go back to zero.', [['Play it', true, true], ['Keep playing', false]]);
+    if (!ok) return advance();
+  }
+  closeSheet('menu'); newGame({ daily: dateKey() });
+  toast('Today’s deal: the same tiles all day');
 });
 $('#menu-card').addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); if (!G) newGame(); drawerTab = 'mine'; toggleDrawer(true); if (!myHands.length) openBulk(''); });
 $('#btn-menu').addEventListener('click', () => { Sound.init(); Sound.ui(); openSheet('menu'); });
@@ -2732,18 +2782,75 @@ function applyTheme(id) {
 }
 function renderBackground() { const c = cx.bg; c.setTransform(DPR, 0, 0, DPR, 0, 0); paintScene(c, VW, VH, settings.theme); }
 
+/* ---------- progress: the card checklist, a daily streak, trophies ---------- */
+const handKey = def => def.cat + '|' + def.text;
+const TROPHIES = [
+  { id: 'first', icon: '🀄', name: 'First Mah Jongg', desc: 'Win a hand' },
+  { id: 'w10', icon: '🥉', name: 'Ten wins', desc: 'Win 10 hands' },
+  { id: 'w50', icon: '🥈', name: 'Fifty wins', desc: 'Win 50 hands' },
+  { id: 'w100', icon: '🥇', name: 'A hundred wins', desc: 'Win 100 hands' },
+  { id: 'jokerless', icon: '🃏', name: 'No jokers', desc: 'Win without a joker' },
+  { id: 'wall', icon: '🧱', name: 'From the wall', desc: 'Win on a tile you drew' },
+  { id: 'concealed', icon: '🤫', name: 'Kept it quiet', desc: 'Win with a C hand' },
+  { id: 'sp', icon: '👯', name: 'Singles & Pairs', desc: 'Win a Singles & Pairs hand' },
+  { id: 'messy', icon: '🌀', name: 'Messy winner', desc: 'Win a Messy hand' },
+  { id: 'sharp', icon: '🎯', name: 'Sharp shooter', desc: 'Win against Sharp players' },
+  { id: 'nohint', icon: '🌟', name: 'All by myself', desc: 'Win a hand without a hint' },
+  { id: 'daily', icon: '📅', name: 'Today’s deal', desc: 'Win today’s deal' },
+  { id: 'streak3', icon: '🔥', name: 'Three days running', desc: 'Win on 3 days in a row' },
+  { id: 'streak7', icon: '☀️', name: 'A week of wins', desc: 'Win on 7 days in a row' },
+  { id: 'section', icon: '📗', name: 'Section complete', desc: 'Win every hand in one section of the card' },
+  { id: 'card', icon: '🏆', name: 'Card complete', desc: 'Win every hand on the card' },
+];
+const sectionDone = cat => card.hands.filter(h => h.cat === cat).every(h => stats.byHand[handKey(h)]);
+// After she wins: tick the hand, keep the streak, award trophies. Returns what to celebrate.
+function recordWin(ch, sc, selfDraw) {
+  const notes = [], key = handKey(ch.def), first = !stats.byHand[key];
+  stats.byHand[key] = (stats.byHand[key] || 0) + 1;
+  if (first) notes.push('✨ New hand on your checklist!');
+  const today = dateKey(), yest = dateKey(new Date(Date.now() - 864e5)), sk = stats.streak;
+  if (sk.last !== today) { sk.cur = sk.last === yest ? sk.cur + 1 : 1; sk.last = today; sk.best = Math.max(sk.best, sk.cur); }
+  if (G.st.daily === today) stats.daily = { date: today, won: true };
+  const earn = id => { if (!stats.trophies[id]) { stats.trophies[id] = today; const t = TROPHIES.find(x => x.id === id); notes.push(`${t.icon} Trophy: ${t.name}`); } };
+  earn('first');
+  if (stats.wins >= 10) earn('w10'); if (stats.wins >= 50) earn('w50'); if (stats.wins >= 100) earn('w100');
+  if (sc.jokerless) earn('jokerless');
+  if (selfDraw) earn('wall');
+  if (ch.c) earn('concealed');
+  if (ch.singlesPairs) earn('sp');
+  if (G.st.messy) earn('messy');
+  if (settings.skill === 'sharp') earn('sharp');
+  if (!G.usedHint) earn('nohint');
+  if (G.st.daily === today) earn('daily');
+  if (sk.cur >= 3) earn('streak3'); if (sk.cur >= 7) earn('streak7');
+  if (first && sectionDone(ch.def.cat)) { notes.push(`📗 Section complete: ${ch.def.cat}`); earn('section'); }
+  if (first && card.hands.every(h => stats.byHand[handKey(h)])) { notes.push('🏆 You’ve won every hand on the card!'); earn('card'); }
+  return notes;
+}
+function streakText() {
+  const sk = stats.streak, today = dateKey(), yest = dateKey(new Date(Date.now() - 864e5));
+  if (!sk.cur || (sk.last !== today && sk.last !== yest)) return '';
+  return sk.last === today ? `🔥 ${sk.cur}-day winning streak` : `🔥 ${sk.cur}-day streak — win today to keep it going`;
+}
+
 /* ---------- stats ---------- */
 function renderStats() {
-  const rate = stats.hands ? Math.round(stats.wins / stats.hands * 100) : 0;
-  const cats = Object.entries(stats.byCat).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<tr><td>${esc(c)}</td><td class="num">${n}</td></tr>`).join('');
-  $('#stats-body').innerHTML = `
-    <table class="pay"><tr><td>Hands played</td><td class="num">${stats.hands}</td></tr>
-    <tr><td>Mah Jonggs</td><td class="num">${stats.wins} (${rate}%)</td></tr>
-    <tr><td>From the wall</td><td class="num">${stats.selfDraws}</td></tr>
-    <tr><td>Wall games</td><td class="num">${stats.walls}</td></tr>
-    <tr><td>Points won</td><td class="num">${stats.points}</td></tr>
-    ${stats.best ? `<tr><td>Best hand</td><td class="num">${stats.best.base}</td></tr>` : ''}</table>
-    ${cats ? `<h3>Your winning hands</h3><table class="pay">${cats}</table>` : '<p>Win a hand and it’ll show up here.</p>'}`;
+  const rate = stats.hands ? Math.round(stats.wins / stats.hands * 100) : 0, sk = stats.streak;
+  const done = card.hands.filter(h => stats.byHand[handKey(h)]).length;
+  let html = `<div class="stat-tiles">
+    <div><b>${stats.wins}</b><span>Mah Jonggs · ${rate}% of ${stats.hands} hands</span></div>
+    <div><b>${sk.cur || 0}</b><span>Day streak · best ${sk.best || 0}</span></div>
+    <div><b>${done}/${card.hands.length}</b><span>Hands on the card won</span></div>
+    <div><b>${stats.points}</b><span>Points won${stats.best ? ` · best hand ${stats.best.base}` : ''}</span></div></div>`;
+  html += `<h3>Trophies</h3><div class="trophies">${TROPHIES.map(t => `<div class="trophy${stats.trophies[t.id] ? '' : ' locked'}" title="${esc(t.desc)}"><i>${t.icon}</i>${esc(t.name)}<small>${esc(t.desc)}</small></div>`).join('')}</div>`;
+  html += '<h3>The card</h3><p style="margin:0 0 4px">Every hand you’ve won gets a tick. Win them all!</p>';
+  let cat = null;
+  for (const h of card.hands) {
+    if (h.cat !== cat) { cat = h.cat; const inCat = card.hands.filter(x => x.cat === cat), won = inCat.filter(x => stats.byHand[handKey(x)]).length; html += `<div class="check-cat"><span>${esc(cat)}</span><span>${won}/${inCat.length}</span></div>`; }
+    const n = stats.byHand[handKey(h)] || 0;
+    html += `<div class="check-hand${n ? ' won' : ''}"><span class="tick">${n ? '✓' : '·'}</span><span class="htext">${handHTML(h.text)}</span><span class="n">${n ? '×' + n : ''}</span></div>`;
+  }
+  $('#stats-body').innerHTML = html;
 }
 
 /* ---------- saving ---------- */
@@ -2755,6 +2862,7 @@ function serializeGame() {
     wall: st.wall.map(U), hands: st.hands.map(h => h.map(U)), exps: st.exps.map(l => l.map(e => ({ t: e.t, u: e.tiles.map(U), f: e.from }))),
     discards: st.discards.map(d => [d.tile.uid, d.by]), turn: st.turn, drawn: st.drawn ? st.drawn.uid : -1, phase: st.phase, chStage: st.chStage,
     dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null, messy: !!st.messy, mseed: st.messySeed || 0, noPass: !!st.noPass,
+    daily: st.daily || '', hinted: !!G.usedHint,
   };
 }
 function saveGame() { if (G && G.st) store.set(SAVE_KEY, serializeGame()); }
@@ -2763,7 +2871,7 @@ function stateFrom(s, T) {
     wall: s.wall.map(T), hands: s.hands.map(h => h.map(T)), exps: s.exps.map(l => l.map(e => ({ t: e.t, tiles: e.u.map(T), from: e.f }))),
     discards: s.discards.map(([u, by]) => ({ tile: T(u), by })), dealer: s.dealer, turn: s.turn, phase: s.phase, chStage: s.chStage,
     drawn: s.drawn >= 0 ? T(s.drawn) : null, result: s.result, deadHands: s.dead || [false, false, false, false],
-    messy: !!s.messy, messySeed: s.mseed || 0, noPass: s.noPass ?? !!s.messy,
+    messy: !!s.messy, messySeed: s.mseed || 0, noPass: s.noPass ?? !!s.messy, daily: s.daily || '',
   };
 }
 function loadGame() {
@@ -2773,7 +2881,7 @@ function loadGame() {
     TILES = s.tiles.map(([type, fv, slot], uid) => ({ uid, type, fv: fv || undefined, slot }));
     const st = stateFrom(s, u => TILES[u]);
     undoStack = [];
-    G = { v: 1, gen: 1, scores: s.scores, handNo: s.handNo, dealer: s.dealer, st, step: s.step, sel: [], hint: null, received: [], claim: s.claim, pending: s.pending || null, focus: null, swapGlow: null, thinking: -1, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1 };
+    G = { v: 1, gen: 1, usedHint: !!s.hinted, scores: s.scores, handNo: s.handNo, dealer: s.dealer, st, step: s.step, sel: [], hint: null, received: [], claim: s.claim, pending: s.pending || null, focus: null, swapGlow: null, thinking: -1, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1 };
     if (G.step === 'claim' && !G.claim) G.step = 'draw';
     if (G.step === 'claimcheck' && !G.pending) G.step = 'draw';
     rebuildCard();
