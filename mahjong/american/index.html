@@ -175,6 +175,9 @@ body.compact .strip-main .htext{font-size:.82rem}
 .hand:hover{background:var(--btn)}
 .hand.focus{border-color:var(--gold);background:var(--btn-hover)}
 .hand.dead{opacity:.42}
+.use-row{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 6px}
+.use-row figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.72rem;font-weight:900}
+.use-row canvas{position:static;display:block}
 .hand .row1{display:flex;align-items:center;gap:8px}
 .htext{flex:1;font-weight:900;font-size:1.02rem;letter-spacing:.06em;font-variant-numeric:tabular-nums;line-height:1.25;word-spacing:.18em;background:#fbf6ea;color:var(--c-k);padding:4px 8px;border-radius:8px}
 .htext .g{color:var(--c-g)} .htext .r{color:var(--c-r)} .htext .b{color:var(--c-b)}
@@ -409,6 +412,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
+      <li>Tap <b>Hint</b> again while it’s showing to see why: each of your tiles gets a score for how much it helps your closest hands. Tap someone’s exposed tiles to see what they might be collecting.</li>
       <li><b>Undo</b> takes back your last move, whatever happened after it. Think you have a hand? <b>Mah Jongg?</b> on your turn shows the closest hand and what’s still missing.</li>
       <li>Keys: <b>Space</b> moves on after a discard, <b>H</b> hint, <b>Z</b> undo, <b>M</b> Mah Jongg, <b>C</b> the card, <b>F</b> full screen.</li>
       <li>Prefer <b>Messy</b>? Choose it on the menu or before the next hand: no wall, the tiles are swirled face-down on the table, there’s no passing, and on your turn you tap any tile in the pile to take it. If your group passes in Messy too, turn on “Charleston in Messy” in Settings.</li>
@@ -452,7 +456,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
 <section class="sheet" id="sheet-check" aria-label="Not Mah Jongg yet">
   <div class="panel">
     <button class="close-x" data-close aria-label="Close">×</button>
-    <h2>Not Mah Jongg yet</h2>
+    <h2 id="check-title">Not Mah Jongg yet</h2>
     <div id="check-body"></div>
   </div>
 </section>
@@ -1424,11 +1428,11 @@ function seatPoint(seat) {
 let fitCache = { key: '', set: null };
 function fitTiles() {
   const st = G.st, hand = st.hands[0];
-  const key = hand.map(t => t.uid).join(',') + '|' + st.exps[0].length + '|' + (G.focus ? G.focus.hand + ':' + G.focus.shift + ':' + G.focus.perm : '') + '|' + card.concrete.length;
+  const key = hand.map(t => t.uid).join(',') + '|' + st.exps.map(l => l.length).join('') + '|' + st.discards.length + '|' + (G.focus ? G.focus.hand + ':' + G.focus.shift + ':' + G.focus.perm : '') + '|' + card.concrete.length;
   if (fitCache.key === key) return fitCache.set;
   const counts = countsOf(hand), exps = expsOf(st.exps[0]);
   let ch = G.focus && missingFor(G.focus, counts, exps) >= 0 ? G.focus : null;
-  if (!ch) { const r = rankHands(card, counts, exps, 1)[0]; ch = r && r.ch; }
+  if (!ch) { const r = closestHands(1)[0]; ch = r && r.ch; }
   const set = new Set();
   if (ch) {
     const need = new Int8Array(NT); let jokerable = 0;
@@ -1444,12 +1448,31 @@ function fitTiles() {
   return set;
 }
 
+/* ---------- dead hands ----------
+   A hand is dead for her once a pair or single in it needs more real tiles than are left:
+   jokers can't stand in there, and discards and other players' exposures are gone for good. */
+function goneCounts() {
+  const st = G.st, gone = new Int8Array(NT);
+  for (const d of st.discards) gone[d.tile.type]++;
+  for (let s = 1; s < 4; s++) for (const e of st.exps[s]) for (const t of e.tiles) gone[t.type]++;
+  return gone;
+}
+function isDead(ch, gone) { for (const t of ch.types) if (ch.reqP[t] > (t === T_FLOWER ? 8 : 4) - gone[t]) return true; return false; }
+// her closest hands, live ones first, the hand she's focused on (★) at the top
+function closestHands(limit) {
+  const st = G.st, counts = countsOf(st.hands[0]), exps = expsOf(st.exps[0]), gone = goneCounts();
+  const list = rankHands(card, counts, exps, limit + 4).map(r => ({ ...r, dead: isDead(r.ch, gone) }));
+  if (G.focus && !list.some(r => sameHand(r.ch, G.focus))) { const m = missingFor(G.focus, counts, exps); if (m >= 0) list.push({ ch: G.focus, m, dead: isDead(G.focus, gone) }); }
+  list.sort((a, b) => (sameHand(b.ch, G.focus) - sameHand(a.ch, G.focus)) || (a.dead - b.dead) || a.m - b.m || b.ch.v - a.ch.v);
+  return list.slice(0, limit);
+}
+
 /* ---------- the closest-hand strip ---------- */
 function placeStrip(bottom) {
   const el = $('#strip');
   if (L.stripInHud) {
     // between the menu button and the buttons on the right of the header
-    const left = $('#btn-menu').getBoundingClientRect().right + 8, right = $('#btn-suggest').getBoundingClientRect().left - 8;
+    const left = $('#btn-menu').getBoundingClientRect().right + 8, right = $('#btn-undo').getBoundingClientRect().left - 8;
     const hb = $('#btn-menu').getBoundingClientRect();
     Object.assign(el.style, { left: left + 'px', width: Math.max(0, right - left) + 'px', top: (hb.top + (hb.height - 36) / 2) + 'px', height: '36px' });
     stripKey = '';
@@ -1487,14 +1510,14 @@ function updateStrip() {
   document.body.classList.toggle('strip-hud', !!(on && L.stripInHud));
   if (!on) { el.classList.add('hide'); stripKey = ''; return; }
   const st = G.st, hand = st.hands[0];
-  const key = hand.map(t => t.uid).join(',') + '|' + st.exps[0].length + '|' + (G.focus ? G.focus.hand + ':' + G.focus.shift + ':' + G.focus.perm : '') + '|' + card.concrete.length + '|' + VW;
+  const key = hand.map(t => t.uid).join(',') + '|' + st.exps.map(l => l.length).join('') + '|' + st.discards.length + '|' + (G.focus ? G.focus.hand + ':' + G.focus.shift + ':' + G.focus.perm : '') + '|' + card.concrete.length + '|' + VW;
   if (key === stripKey) return;
   stripKey = key;
   el.classList.remove('hide');
   const counts = countsOf(hand), exps = expsOf(st.exps[0]);
-  stripList = rankHands(card, counts, exps, 5);
-  let i = stripList.findIndex(r => sameHand(r.ch, G.focus));
-  if (G.focus && i < 0) { const m = missingFor(G.focus, counts, exps); if (m >= 0) { stripList.unshift({ ch: G.focus, m }); i = 0; } }
+  // dead hands drop out of the strip unless she's chosen one
+  stripList = closestHands(5).filter(r => !r.dead || sameHand(r.ch, G.focus));
+  const i = stripList.findIndex(r => sameHand(r.ch, G.focus));
   const cur = stripList[Math.max(0, i)];
   const multi = stripList.length > 1;
   $('#strip-prev').style.visibility = $('#strip-next').style.visibility = multi ? 'visible' : 'hidden';
@@ -1807,7 +1830,7 @@ function explainNotMahjong() {
   const st = G.st, hand = st.hands[0], counts = countsOf(hand), exps = expsOf(st.exps[0]);
   const all = countsOf(hand.concat(st.exps[0].flatMap(e => e.tiles)));
   const top = rankHands(card, counts, exps, 1)[0];
-  const body = $('#check-body'); body.innerHTML = '';
+  const body = $('#check-body'); body.innerHTML = ''; $('#check-title').textContent = 'Not Mah Jongg yet';
   const add = (html, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.innerHTML = html; body.appendChild(d); return d; };
   if (!top) {
     add('<p class="sub">No hand on this card fits the tiles you’ve exposed, so this hand can’t win. Keep discarding until the next deal.</p>');
@@ -2123,7 +2146,11 @@ cv.table.addEventListener('pointerup', e => {
   if (p.uid < 0 && G.step === 'draw' && G.st.messy && G.st.turn === 0) { const t = hitPile(e.clientX, e.clientY); if (t) { Sound.select(); return pickFromPile(t); } }
   if (p.uid >= 0) rackTap(TILES[p.uid]);
   else if (p.exp) exposedJokerTap(p.exp);
-  else { const t = hitFaceUp(e.clientX, e.clientY); if (t) showTip(t); }
+  else {
+    const t = hitFaceUp(e.clientX, e.clientY);
+    const owner = t ? [1, 2, 3].find(s => G.st.exps[s].some(x => x.tiles.includes(t))) : undefined;
+    if (owner) showCollecting(owner); else if (t) showTip(t);
+  }
 });
 cv.table.addEventListener('pointercancel', e => { pointers.delete(e.pointerId); press = null; drag = null; dirty = true; kick(); });
 cv.table.addEventListener('lostpointercapture', e => { pointers.delete(e.pointerId); if (drag) { drag = null; press = null; dirty = true; kick(); } });
@@ -2244,26 +2271,120 @@ $('#btn-sort').addEventListener('click', () => {
 $('#btn-suggest').addEventListener('click', () => {
   Sound.init(); if (!G || !G.st) return;
   const st = G.st;
+  // asking again while the hint is showing opens the reasons behind it
+  if (G.hint && G.hint.why && performance.now() < G.hint.until) { Sound.ui(); showWhy(); return; }
   let uids = [], msg = '';
-  if (G.step === 'pass' || G.step === 'courtesy') { uids = choosePass(card, st.hands[0], 3).map(t => t.uid); msg = 'These look least useful to pass'; }
+  if (G.step === 'pass' || G.step === 'courtesy') { uids = lowestUse(choosePass(card, st.hands[0], 3), 3).map(t => t.uid); msg = 'Pass the glowing tiles: they help your closest hands least'; }
   else if (G.step === 'act' && st.turn === 0) {
     const w = winningHand(card, countsOf(st.hands[0]), expsOf(st.exps[0]));
     if (w) { toast('Press Mah Jongg — you have a hand!'); return; }
     const sw = jokerSwaps(st.hands[0], st.exps);
     if (sw.length) { toast(`Trade your ${tileName(sw[0].real.type)} for the joker first — tap Trade`); Sound.hint(); return; }
-    const t = chooseDiscard(card, st.hands[0], st.exps[0]); uids = [t.uid]; msg = `Maybe discard the ${tileName(t.type)}`;
+    const t = lowestUse([chooseDiscard(card, st.hands[0], st.exps[0])], 1)[0], u = tileUse().use.get(t.uid) || 0; uids = [t.uid];
+    msg = `Maybe discard the ${tileName(t.type)}: ${u === 0 ? 'none of your closest hands use it' : 'it helps your closest hands least'}`;
   } else if (G.step === 'draw' && st.messy && st.turn === 0) { toast('Tap any face-down tile on the table to take it'); return;
   } else if (G.step === 'claim' && G.claim.look) { toast('Nothing to call this time — tap Next'); return;
   } else if (G.step === 'claim') {
     const cl = G.claim, n = botWantsCall(card, st.hands[0], st.exps[0], TILES[cl.uid].type, { eager: 5 });
     toast(cl.mj ? 'Call Mah Jongg!' : n ? 'Calling it gets you closer to a hand' : 'I’d pass on this one'); return;
   } else { toast('Hints help when it’s your move'); return; }
-  const top = rankHands(card, countsOf(st.hands[0]), expsOf(st.exps[0]), 1)[0];
-  G.hint = { uids, until: performance.now() + 3500 };
-  setTimeout(() => { if (G.hint && performance.now() >= G.hint.until - 50) { G.hint = null; kick(); } }, 3600);
-  toast(msg + (top ? ` · closest hand: ${top.m} away` : ''));
+  G.hint = { uids, until: performance.now() + 5000, why: true };
+  setTimeout(() => { if (G.hint && performance.now() >= G.hint.until - 50) { G.hint = null; kick(); } }, 5100);
+  toast(msg + '. Tap Hint again to see why.', 4600);
   Sound.hint(); kick();
 });
+
+/* ---------- why a hint says what it says ----------
+   Each tile in her rack scores the share of her closest live hands (closer ones count more)
+   that would keep it. The hint picks from the lowest; "Why?" shows the scores. */
+function tileUse() {
+  const st = G.st, hand = st.hands[0], counts = countsOf(hand), exps = expsOf(st.exps[0]);
+  const top = closestHands(6).filter(r => !r.dead);
+  const use = new Map(hand.map(t => [t.uid, 0])); let total = 0;
+  for (const r of top) {
+    const w = 1 / (1 + r.m), used = [], reqP = new Int8Array(NT), reqJ = new Int8Array(NT);
+    total += w;
+    for (const e of exps) { const i = r.ch.groups.findIndex((g, k) => !used.includes(k) && g.t === e.t && g.n === e.n); used.push(i); }
+    r.ch.groups.forEach((g, k) => { if (!used.includes(k)) (g.n >= 3 ? reqJ : reqP)[g.t] += g.n; });
+    let jokerRoom = 0; for (let t = 0; t < NT; t++) jokerRoom += Math.max(0, reqJ[t] - Math.max(0, counts[t] - reqP[t]));
+    const seen = new Int8Array(NT);
+    for (const t of hand) {
+      const k = seen[t.type]++;
+      if (t.type === T_JOKER ? k < jokerRoom : k < reqP[t.type] + reqJ[t.type]) use.set(t.uid, use.get(t.uid) + w);
+    }
+  }
+  if (total) for (const [u, v] of use) use.set(u, v / total);
+  return { use, top };
+}
+// her tiles in rack order, each with a score underneath, red (no use) to green (in every hand)
+function rackPicture(tiles, score) {
+  const box = document.createElement('div'); box.className = 'use-row';
+  const w = VW < 500 ? 26 : 32, S = tileSet(w);
+  for (const t of tiles) {
+    const f = document.createElement('figure'), c = document.createElement('canvas');
+    const W = w + S.d + 2, H = S.H + S.d + 2;
+    c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); c.style.width = W + 'px'; c.style.height = H + 'px';
+    const g = c.getContext('2d'); g.scale(DPR, DPR); g.drawImage(S.body, 1 - S.pad, 1 - S.pad, S.bw, S.bh); g.drawImage(S.faces[faceOf(t)], S.d + 1, 1, w, S.H);
+    f.appendChild(c);
+    if (score) { const v = score.get(t.uid) || 0, cap = document.createElement('figcaption'); cap.textContent = Math.round(v * 100) + '%'; cap.style.color = `hsl(${Math.round(120 * v)},70%,${settings.theme === 'paper' ? 35 : 58}%)`; f.appendChild(cap); }
+    box.appendChild(f);
+  }
+  return box;
+}
+// The n least useful tiles by those scores, so the hint and "Why?" always agree; among equal
+// scores, the computer players' own choice (prefer) goes first.
+function lowestUse(prefer, n) {
+  const { use } = tileUse(), pool = G.st.hands[0].filter(t => t.type !== T_JOKER);
+  return pool.slice().sort((a, b) => use.get(a.uid) - use.get(b.uid) || (prefer.includes(b) - prefer.includes(a))).slice(0, n);
+}
+function showWhy() {
+  const st = G.st, { use, top } = tileUse(), body = $('#check-body');
+  $('#check-title').textContent = 'Why this hint';
+  body.innerHTML = '<p class="sub">How much each of your tiles helps your closest hands. Low scores are the safest to let go; the hint picks from those.</p>';
+  body.appendChild(rackPicture(st.hands[0], use));
+  if (top.length) {
+    const h = document.createElement('h3'); h.textContent = 'Your closest hands'; body.appendChild(h);
+    for (const r of top) body.appendChild(handRow(r.ch.def, r.ch, r.m, null));
+  }
+  const b = document.createElement('div'); b.className = 'row'; b.style.marginTop = '12px';
+  b.innerHTML = '<button class="btn primary">Got it</button>'; b.firstChild.addEventListener('click', () => { Sound.ui(); closeSheet('check'); });
+  body.appendChild(b);
+  openSheet('check');
+}
+
+/* ---------- what is Rose collecting? ----------
+   Tap another player's exposures: the hands on the card they could still be making, and the
+   tiles those hands need, so she can think twice before throwing one. */
+function showCollecting(seat) {
+  const st = G.st, exps = expsOf(st.exps[seat]), body = $('#check-body'), zero = new Int8Array(NT), gone = goneCounts();
+  $('#check-title').textContent = `What is ${NAMES[seat]} collecting?`;
+  body.innerHTML = '';
+  body.appendChild(rackPicture(st.exps[seat].flatMap(e => e.tiles), null));
+  const fits = card.concrete.filter(ch => !ch.c && missingFor(ch, zero, exps) >= 0);
+  const hands = [...new Map(fits.map(ch => [ch.hand, ch])).values()].sort((a, b) => b.v - a.v);
+  if (!hands.length) { body.insertAdjacentHTML('beforeend', '<p class="sub">Nothing on the card fits these exposures, so her hand looks dead.</p>'); }
+  else {
+    // weight each tile by how many of her possible hands still want it
+    const per = new Map(); for (const ch of fits) per.set(ch.hand, (per.get(ch.hand) || 0) + 1);
+    const want = new Float64Array(NT);
+    for (const ch of fits) {
+      const used = [];
+      for (const e of exps) { const i = ch.groups.findIndex((g, k) => !used.includes(k) && g.t === e.t && g.n === e.n); used.push(i); }
+      const types = new Set(ch.groups.filter((g, k) => !used.includes(k)).map(g => g.t));
+      for (const t of types) want[t] += 1 / per.get(ch.hand);
+    }
+    const risky = [...want.keys()].filter(t => want[t] > 0 && t !== T_JOKER && gone[t] < (t === T_FLOWER ? 8 : 4)).sort((a, b) => want[b] - want[a]).slice(0, 8);
+    body.insertAdjacentHTML('beforeend', `<p class="sub">Her exposures fit <b>${hands.length} hand${hands.length === 1 ? '' : 's'}</b> on the card. The likeliest tiles she still wants:</p>`);
+    body.appendChild(rackPicture(risky.map(t => ({ uid: -1, type: t, fv: t === T_FLOWER ? 34 : undefined })), null));
+    const h = document.createElement('h3'); h.textContent = 'Hands she could be making'; body.appendChild(h);
+    for (const ch of hands.slice(0, 5)) body.appendChild(handRow(ch.def, null, null, null));
+    if (hands.length > 5) body.insertAdjacentHTML('beforeend', `<p class="sub" style="margin-top:6px">…and ${hands.length - 5} more.</p>`);
+  }
+  const b = document.createElement('div'); b.className = 'row'; b.style.marginTop = '12px';
+  b.innerHTML = '<button class="btn primary">Got it</button>'; b.firstChild.addEventListener('click', () => { Sound.ui(); closeSheet('check'); });
+  body.appendChild(b);
+  Sound.ui(); openSheet('check');
+}
 
 /* ---------- the card drawer ---------- */
 let drawerTab = 'close';
@@ -2312,12 +2433,12 @@ function renderDrawer() {
   if (drawerTab === 'close') {
     $('#drawer-title').textContent = 'Closest hands';
     if (!st) { body.innerHTML = '<p class="empty">Start a game to see the hands you’re nearest to.</p>'; return; }
-    const top = rankHands(card, counts, exps, 6);
+    const top = closestHands(6);
     if (!top.length) { body.innerHTML = '<p class="empty">No hand on the card fits your exposures any more — your hand is dead this round.</p>'; return; }
     const intro = document.createElement('p'); intro.className = 'empty'; intro.style.padding = '0 2px 8px';
-    intro.textContent = 'Faded tiles are the ones you still need. Tap a hand to mark its tiles on your rack with green dots.';
+    intro.textContent = 'Faded tiles are the ones you still need. Tap a hand to keep it on top (★) and mark its tiles on your rack with green dots. A dead hand needs tiles that are already gone.';
     body.appendChild(intro);
-    for (const r of top) body.appendChild(handRow(r.ch.def, r.ch, r.m, counts));
+    for (const r of top) body.appendChild(handRow(r.ch.def, r.ch, r.m, counts, r.dead));
   } else if (drawerTab === 'card') {
     const name = settings.card === 'mine' && validMine().length >= 3 ? 'My card' : settings.card === 'both' && validMine().length ? 'Garden Card + mine' : 'The Garden Card';
     $('#drawer-title').textContent = name;
@@ -2357,12 +2478,13 @@ function renderDrawer() {
     use.appendChild(seg); body.appendChild(use);
   }
 }
-function handRow(h, ch, m, counts) {
+function handRow(h, ch, m, counts, dead) {
   const el = document.createElement('button'); el.className = 'hand';
-  if (m === -1) el.classList.add('dead');
-  if (ch && G && G.focus && G.focus.hand === ch.hand && G.focus.def === ch.def) el.classList.add('focus');
-  const away = m == null || m < 0 ? '' : m === 0 ? '<span class="away">Mah Jongg!</span>' : `<span class="away">${m} away</span>`;
-  el.innerHTML = `<div class="row1"><div class="htext">${handHTML(h.text)}</div><div class="hval">${h.c ? 'C' : 'X'} ${h.v}</div></div><div class="hnote"><span>${handNote(h)}</span>${away}</div>`;
+  if (m === -1 || dead) el.classList.add('dead');
+  const star = ch && G && G.focus && sameHand(ch, G.focus);
+  if (star) el.classList.add('focus');
+  const away = dead ? '<span class="away">Dead — tiles gone</span>' : m == null || m < 0 ? '' : m === 0 ? '<span class="away">Mah Jongg!</span>' : `<span class="away">${m} away</span>`;
+  el.innerHTML = `<div class="row1"><div class="htext">${handHTML(h.text)}</div><div class="hval">${star ? '★ ' : ''}${h.c ? 'C' : 'X'} ${h.v}</div></div><div class="hnote"><span>${handNote(h)}</span>${away}</div>`;
   if (counts && ch) el.appendChild(miniTiles(ch, counts));
   if (ch && G && G.st) el.addEventListener('click', () => {
     Sound.ui();
