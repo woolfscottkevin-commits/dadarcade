@@ -88,6 +88,10 @@ html[data-theme="sakura"] .icon-btn{color:#3e1a36;background:rgba(255,240,244,.4
 html[data-theme="paper"] .card-btn{background:linear-gradient(180deg,#c95a4c,#a63c31);color:#fff6ee}
 .card-btn:active{transform:scale(.96)}
 @media (max-width:560px){ .hud-stats{display:none} .icon-btn{width:40px;height:40px} .card-btn{padding:0 12px} }
+.icon-btn .lbl{display:none}
+.icon-btn:disabled{opacity:.35;pointer-events:none}
+/* on a wide screen the tools say what they are */
+@media (min-width:980px){ #btn-undo,#btn-suggest,#btn-sort{width:auto;border-radius:22px;padding:0 14px 0 11px;display:flex;gap:7px;align-items:center} .icon-btn .lbl{display:inline;font-weight:800;font-size:.86rem;letter-spacing:.02em} }
 @media (max-width:430px){ .hud-title{visibility:hidden} }
 
 /* ---------- prompt above the rack ---------- */
@@ -97,6 +101,8 @@ html[data-theme="paper"] .card-btn{background:linear-gradient(180deg,#c95a4c,#a6
   opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
 #prompt.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #prompt .msg{font-weight:700;font-size:.98rem;line-height:1.3;max-width:520px}
+#prompt-tile{position:static;display:none;flex:0 0 auto;margin:-2px -2px -2px -6px}
+#prompt.has-tile #prompt-tile{display:block}
 #prompt .msg small{display:block;font-weight:600;font-size:.8rem;color:var(--ink-2);margin-top:1px}
 #prompt .btns{display:flex;gap:8px;flex-wrap:wrap}
 .pbtn{min-height:44px;padding:0 18px;border-radius:14px;font-weight:800;font-size:.95rem;background:var(--btn);border:1px solid var(--line);transition:background .2s,transform .12s,opacity .2s;white-space:nowrap}
@@ -288,8 +294,9 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="hud-title" id="hud-title">American Mah Jongg</div>
     <div class="hud-stats" id="hud-stats"></div>
   </div>
-  <button class="icon-btn" id="btn-suggest" aria-label="Hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/></svg></button>
-  <button class="icon-btn" id="btn-sort" aria-label="Sort my tiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg></button>
+  <button class="icon-btn" id="btn-undo" aria-label="Undo my last move" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span class="lbl">Undo</span></button>
+  <button class="icon-btn" id="btn-suggest" aria-label="Hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1.1 2V16h5v-.2c.1-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/></svg><span class="lbl">Hint</span></button>
+  <button class="icon-btn" id="btn-sort" aria-label="Sort my tiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/></svg><span class="lbl">Sort</span></button>
   <button class="card-btn" id="btn-card" aria-label="Show the card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Card</button>
   <button class="icon-btn" id="btn-full" aria-label="Full screen"></button>
   <button class="icon-btn" id="btn-settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button>
@@ -301,7 +308,7 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
   <button class="strip-main" id="strip-main" aria-label="Open the card"><span class="htext" id="strip-hand"></span><span class="strip-away" id="strip-away"></span><span class="strip-needs" id="strip-needs"></span></button>
   <button class="strip-nav" id="strip-next" aria-label="Next suggested hand">›</button>
 </div>
-<div id="prompt" role="status" aria-live="polite"><div class="msg" id="prompt-msg"></div><div class="btns" id="prompt-btns"></div></div>
+<div id="prompt" role="status" aria-live="polite"><canvas id="prompt-tile" aria-hidden="true"></canvas><div class="msg" id="prompt-msg"></div><div class="btns" id="prompt-btns"></div></div>
 
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -365,6 +372,8 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <div class="set-h">Help</div>
     <div class="set-row"><div><b>Show my closest hand</b><span>A strip above your rack with the hand you’re nearest to and the tiles you still need. Use ‹ › for more suggestions.</span></div><button class="switch" role="switch" data-set="strip" aria-label="Show my closest hand"></button></div>
     <div class="set-row"><div><b>Highlight my closest hand</b><span>Tiles that fit the hand you’re nearest to get a small green dot</span></div><button class="switch" role="switch" data-set="dots" aria-label="Highlight closest hand"></button></div>
+    <div class="set-row"><div><b>Discards</b><span>In the order thrown, sorted by tile, or one of each tile with how many have gone (3/4)</span></div>
+      <div class="seg" data-seg="discards"><button data-v="order">In order</button><button data-v="sorted">Sorted</button><button data-v="counted">Counted</button></div></div>
     <div class="set-row"><div><b>Sort tiles automatically</b><span>New tiles slide into place; you can still drag tiles to rearrange</span></div><button class="switch" role="switch" data-set="autosort" aria-label="Sort automatically"></button></div>
     <div class="set-row"><div><b>Corner numbers</b><span>Small 1–9 and N E W S on the tiles</span></div><button class="switch" role="switch" data-set="indices" aria-label="Corner numbers"></button></div>
     <div class="set-h">Tiles</div>
@@ -400,6 +409,8 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     <ul>
       <li>Tap a tile to pick it, tap again (or press Discard) to throw it. Drag tiles left and right to arrange them.</li>
       <li>Hint suggests which tiles to pass or discard. Green dots mark tiles that fit your closest hand.</li>
+      <li><b>Undo</b> takes back your last move, whatever happened after it. Think you have a hand? <b>Mah Jongg?</b> on your turn shows the closest hand and what’s still missing.</li>
+      <li>Keys: <b>Space</b> moves on after a discard, <b>H</b> hint, <b>Z</b> undo, <b>M</b> Mah Jongg, <b>C</b> the card, <b>F</b> full screen.</li>
       <li>Prefer <b>Messy</b>? Choose it on the menu or before the next hand: no wall, the tiles are swirled face-down on the table, there’s no passing, and on your turn you tap any tile in the pile to take it. If your group passes in Messy too, turn on “Charleston in Messy” in Settings.</li>
       <li>After each discard by Rose, Iris or Lily, play waits for you: call the tile if you can, or tap <b>Next</b>. (Turn this off in Settings for a faster game.)</li>
       <li>Want to practice for your group? Type the hands from your card in <b>Card → My card</b>, then choose “Mine” in Settings.</li>
@@ -431,8 +442,18 @@ body.compact #prompt{padding:6px 8px 6px 14px} body.compact #prompt .msg{font-si
     </div>
     <div class="row">
       <button class="btn primary" id="result-next">Next hand</button>
+      <button class="btn hide" id="result-undo">Undo my last move</button>
       <button class="btn" id="result-menu">Menu</button>
     </div>
+  </div>
+</section>
+
+<!-- Why isn't this Mah Jongg? -->
+<section class="sheet" id="sheet-check" aria-label="Not Mah Jongg yet">
+  <div class="panel">
+    <button class="close-x" data-close aria-label="Close">×</button>
+    <h2>Not Mah Jongg yet</h2>
+    <div id="check-body"></div>
   </div>
 </section>
 
@@ -877,7 +898,7 @@ function scoreHand(ch, winnerTiles, selfDraw, winner, from) {
 const SET_KEY = 'mja_settings_v1', SAVE_KEY = 'mja_save_v1', STATS_KEY = 'mja_stats_v1', MINE_KEY = 'mja_mycard_v1';
 const settings = Object.assign({
   theme: (store.get('mjg_settings_v1', {}) || {}).theme || 'jade', sound: true, music: true, calm: false, indices: true,
-  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall', messyPass: false,
+  dots: true, strip: true, autosort: true, card: 'garden', skill: 'friendly', pace: 'normal', second: 'ask', courtesy: true, wait: true, setup: 'wall', messyPass: false, discards: 'sorted',
 }, store.get(SET_KEY, {}));
 if (!THEMES[settings.theme]) settings.theme = 'jade';
 settings.tiles = savedTileStyle();
@@ -1032,7 +1053,7 @@ function layoutFor(si, hudB, twoRow, cap) {
 let dirty = true;
 function wallSidesFor(dealer) { return [dealer, (dealer + 3) % 4, (dealer + 2) % 4, (dealer + 1) % 4]; }
 function wallSlotPos(slot) {
-  if (L.compact) { const w = L.ws * .8; return { x: L.center.x0 + 4, y: L.center.y0 + 2, w, rot: 0, up: false, z: 0, pile: true }; }
+  if (L.compact) { const w = L.ws * .8; return { x: L.center.x0 + 4, y: compactTop() + 2, w, rot: 0, up: false, z: 0, pile: true }; }
   const { sq, pitch } = L, k = slot >> 1, top = (slot & 1) === 0;
   const side = wallSidesFor(G.dealer)[Math.floor(k / 19) % 4], i = k % 19;
   const tw = pitch * .94, th = pitch * 1.22, lift = top ? pitch * .22 : 0, inset = pitch * .3;
@@ -1058,8 +1079,11 @@ function messyPos(t, k) {
   const cx = A.x + A.w / 2 + Math.cos(a) * rr * (A.w / 2 - hd), cy = A.y + A.h / 2 + Math.sin(a) * rr * (A.h / 2 - hd);
   return { x: cx - A.tw / 2, y: cy - th / 2, w: A.tw, rot: spin + k * 1.2, up: false, z: 0, heap: true };
 }
+// On an upright phone, Lily's and Rose's name tags sit just above their racks, inside the
+// table area; the wall pile and the discards start below them.
+function compactTop() { const c = L.center; return L.twoRow ? Math.max(c.y0, (c.y0 + c.y1) / 2 - 13 * L.wb / 2 - 4) : c.y0; }
 function discardArea() {
-  if (L.compact) { const c = L.center, inset = L.ws * 1.1; return { x: c.x0 + inset, y: c.y0, w: c.x1 - c.x0 - inset, h: c.y1 - c.y0 }; }
+  if (L.compact) { const c = L.center, inset = L.ws * 1.1, y = compactTop(); return { x: c.x0 + inset, y, w: c.x1 - c.x0 - inset, h: c.y1 - y }; }
   const { sq, pitch } = L, pad = pitch * 1.75;
   return { x: sq.x + pad, y: sq.y + pad, w: sq.s - pad * 2, h: sq.s - pad * 2 };
 }
@@ -1078,13 +1102,27 @@ function computeTargets() {
   if (G.washing) { for (const t of TILES) T.set(t.uid, messyPos(t, G.washing)); return T; }
   // the wall (or the heap)
   for (const t of st.wall) T.set(t.uid, st.messy ? messyPos(t, 0) : wallSlotPos(t.slot));
-  // the discard pool
-  const da = discardArea(), n = st.discards.length;
-  let dw = Math.min(L.wh * .52, da.w / 12), cols = Math.max(1, Math.floor(da.w / dw));
-  while (Math.ceil(n / cols) * dw * TILE_R > da.h && dw > 10) { dw *= .92; cols = Math.floor(da.w / dw); }
+  // the discard pool: in the order thrown, sorted by tile, or one of each tile with a count
+  const da = discardArea(), n = st.discards.length, mode = settings.discards;
+  const order = st.discards.map((d, i) => i);
+  if (mode !== 'order') order.sort((a, b) => SORT_KEY(st.discards[a].tile.type) - SORT_KEY(st.discards[b].tile.type) || a - b);
+  const slotOf = [], depth = [], groupSize = new Map();
+  let slots = 0, prev = -1;
+  for (const i of order) {
+    const k = SORT_KEY(st.discards[i].tile.type);
+    if (mode === 'counted' && k === prev) { slotOf[i] = slots - 1; depth[i] = groupSize.get(k); }
+    else { slotOf[i] = slots++; depth[i] = 0; prev = k; }
+    groupSize.set(k, (groupSize.get(k) || 0) + 1);
+  }
+  const rowH = mode === 'counted' ? 1.3 : 1;   // room for the count under each tile
+  // as big as the pool allows, shrinking only as it fills
+  let dw = Math.min(L.wh * .66, da.w / 9), cols = Math.max(1, Math.floor(da.w / dw));
+  while (Math.ceil(slots / cols) * dw * TILE_R * rowH > da.h && dw > 10) { dw *= .92; cols = Math.floor(da.w / dw); }
   const offX = (da.w - cols * dw) / 2;
   st.discards.forEach((d, i) => {
-    T.set(d.tile.uid, { x: da.x + offX + (i % cols) * dw, y: da.y + Math.floor(i / cols) * dw * TILE_R, w: dw * .96, rot: 0, up: true, z: 2, last: i === n - 1 });
+    const sl = slotOf[i], k = SORT_KEY(d.tile.type), top = mode === 'counted' && depth[i] === groupSize.get(k) - 1;
+    T.set(d.tile.uid, { x: da.x + offX + (sl % cols) * dw, y: da.y + Math.floor(sl / cols) * dw * TILE_R * rowH - depth[i] * 1.5, w: dw * .96, rot: 0, up: true, z: 2 + depth[i] * .01, last: i === n - 1,
+      tally: top ? `${groupSize.get(k)}/${d.tile.type === T_FLOWER || d.tile.type === T_JOKER ? 8 : 4}` : '' });
   });
   // other players: racks of tile backs, exposures face-up in front of them
   for (const seat of [1, 2, 3]) {
@@ -1210,6 +1248,18 @@ function paintTile(c, t, r, opt = {}) {
   c.drawImage(r.up ? S.faces[faceOf(t)] : S.backFace, 0, 0, W, H);
   if (opt.dim) { c.globalAlpha = opt.dim; c.drawImage(S.dim, 0, 0, W, H); c.globalAlpha = 1; }
   if (opt.dot) { disc(c, W / 2, -Math.max(3, W * .09), Math.max(2.5, W * .07), '#46d17a'); }
+  if (opt.tally) {
+    const fs = Math.max(9, W * .3);
+    c.font = `900 ${fs}px ${LATIN}`; const pw = c.measureText(opt.tally).width + fs * .8, ph = fs * 1.25, py = H + 2;
+    rrect(c, W / 2 - pw / 2, py, pw, ph, ph / 2); c.fillStyle = 'rgba(10,20,18,.72)'; c.fill();
+    c.fillStyle = '#f5efe2'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(opt.tally, W / 2, py + ph / 2 + .5);
+  }
+  if (opt.fresh) {
+    const fs = Math.max(8, W * .2); c.font = `900 ${fs}px ${LATIN}`;
+    const pw = c.measureText('NEW').width + fs * .9, ph = fs * 1.35;
+    rrect(c, W / 2 - pw / 2, -ph - 3, pw, ph, ph / 2); c.fillStyle = '#e9c56f'; c.fill();
+    c.fillStyle = '#2a1d05'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('NEW', W / 2, -ph / 2 - 3 + .5);
+  }
   if (opt.badge) {
     const R2 = Math.max(8, W * .2); disc(c, W - R2 * .4, -R2 * .2, R2, '#e9c56f');
     c.fillStyle = '#2a1d05'; c.font = `900 ${R2 * 1.2}px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(opt.badge, W - R2 * .4, -R2 * .14);
@@ -1265,8 +1315,10 @@ function render(now) {
       if (rec.has(t.uid) && !opt.glow) { opt.glow = tileSet(r.w).glowMatch; opt.glowA = .9; }
       if (dots && dots.has(t.uid)) opt.dot = true;
       if (G.step === 'pass' || G.step === 'courtesy') { const i = G.sel.indexOf(t.uid); if (i >= 0) opt.badge = String(i + 1); }
+      if (t === st.drawn && st.turn === 0 && st.phase === 'play' && !opt.lift) opt.fresh = true;
       if (drag && drag.uid === t.uid) { r.x = drag.x - r.w / 2; if (L.twoRow) r.y = drag.y - r.w * TILE_R / 2; opt.lift = L.wh * .32; }
     }
+    if (g.tally) opt.tally = g.tally;
     if (g.last && now - lastDiscardAt < 1400 + 99999) { opt.glow = tileSet(r.w).glowSel; opt.glowA = now - lastDiscardAt < 1400 ? .6 + .4 * Math.sin(now / 120) : .55; }
     if (g.exp && G.swapGlow && t.type === T_JOKER && G.swapGlow.has(t.uid)) { opt.glow = tileSet(r.w).glowHint; opt.glowA = .65 + .35 * Math.sin(now / 200); }
     if (g.z <= 1) opt.shadow = g.z === 0;
@@ -1483,7 +1535,7 @@ $('#strip-main').addEventListener('click', () => { Sound.ui(); drawerTab = 'clos
 let G = null, TILES = [];
 let timer = 0;
 // The others wait while a menu is open or the app is in the background.
-const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask', 'bulk'].some(n => sheetEl(n).classList.contains('open'));
+const paused = () => document.hidden || ['menu', 'settings', 'howto', 'stats', 'editor', 'ask', 'bulk', 'check'].some(n => sheetEl(n).classList.contains('open'));
 // Every follow-up in a hand goes through this one timer, tagged with the hand it
 // belongs to, so a new game or a reload can never replay a stale move.
 function later(ms, fn) {
@@ -1525,7 +1577,7 @@ function startHand() {
   } else deal();
   if (settings.autosort) sortHand(G.st.hands[0]);
   G.sel = []; G.hint = null; G.received = []; G.claim = null; G.focus = null; G.manual = false; G.lastCallFrom = -1;
-  G.step = 'dealing'; dirty = true;
+  G.step = 'dealing'; G.decision = null; undoStack = []; updateUndo(); dirty = true;
   stats.hands++; saveStats();
   try { gtag('event', 'mahjong_american_hand', { hand: G.handNo, card: settings.card, setup: settings.setup }); } catch (e) {}
   later(calm() ? 100 : (1500 + wash) / PACE[settings.pace], finishDeal);
@@ -1539,6 +1591,39 @@ function finishDeal() {
 function sortHand(hand) { hand.sort((a, b) => SORT_KEY(a.type) - SORT_KEY(b.type) || (a.fv || 0) - (b.fv || 0) || a.uid - b.uid); }
 function settle() { if (settings.autosort && !G.manual) sortHand(G.st.hands[0]); dirty = true; kick(); }
 
+/* --- undo: back to the last decision she made ---
+   Play stops for her at a Charleston pass, the vote, the courtesy pass, her turn, a claim and
+   a pick from the pile. Each stop is remembered; Undo puts the whole table back to the last one
+   she acted on (scores and stats too) and the tiles slide back where they were. */
+let undoStack = [];
+function atDecision() {
+  const st = G.st;
+  return ['pass', 'vote', 'courtesy', 'claim'].includes(G.step) || (st.turn === 0 && (G.step === 'act' || (G.step === 'draw' && st.messy && st.wall.length > 0)));
+}
+function noteDecision() {
+  if (!atDecision()) { G.decision = null; return; }
+  if (G.decision === G.step) return;                  // already remembered this stop
+  G.decision = G.step;
+  undoStack.push({ game: JSON.stringify(serializeGame()), stats: JSON.stringify(stats) });
+  if (undoStack.length > 60) undoStack.shift();
+}
+// the stop she's sitting at hasn't been played yet, so Undo goes to the one before it
+const canUndo = () => !!(G && G.st) && undoStack.length > (G.decision ? 1 : 0);
+function updateUndo() { const ok = canUndo(); $('#btn-undo').disabled = !ok; $('#result-undo').classList.toggle('hide', !ok); }
+function undo() {
+  if (!canUndo()) { toast('Nothing to undo yet'); return; }
+  if (G.decision) undoStack.pop();
+  const snap = undoStack[undoStack.length - 1], s = JSON.parse(snap.game);
+  clearTimeout(timer);
+  G.st = stateFrom(s, u => TILES[u]);
+  Object.assign(G, { gen: G.gen + 1, scores: s.scores, handNo: s.handNo, dealer: s.dealer, step: s.step, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1,
+    claim: s.claim, pending: s.pending || null, sel: [], hint: null, received: [], swapGlow: null, washing: 0, decision: s.step });
+  stats = JSON.parse(snap.stats); saveStats();
+  closeSheet('result'); closeSheet('check');
+  Sound.deselect(); toast('Back to your last move');
+  try { gtag('event', 'mahjong_american_undo'); } catch (e) {}
+  dirty = true; advance();
+}
 function advance() {
   clearTimeout(timer);
   if (!G || !G.st) return;
@@ -1559,6 +1644,7 @@ function advance() {
     case 'claim': claimPrompt(); break;
     case 'done': hidePrompt(); break;
   }
+  noteDecision(); updateUndo();
   saveGame(); updateHUD(); dirty = true; kick();
 }
 
@@ -1708,11 +1794,48 @@ function turnPrompt() {
     btns.push({ label: `Trade ${tileName(sw.real.type)} for ${whose} joker`, primary: !w && !sel && i === 0, fn: () => humanSwap(sw.seat, sw.ei, sw.real) });
   });
   btns.push({ label: sel ? `Discard ${tileName(sel.type)}` : 'Discard', primary: !w && (!swaps.length || !!sel), disabled: !sel, fn: () => { if (G.sel[0] != null) humanDiscard(TILES[G.sel[0]]); } });
+  if (!w) btns.push({ label: 'Mah Jongg?', quiet: true, keep: true, fn: explainNotMahjong });
   let msg = st.discards.length || G.dealer !== 0 ? 'Your turn — pick a tile to discard' : 'You’re East: pick your first discard';
   if (w) msg = 'Your tiles make a hand on the card!';
   else if (swaps.length) msg = `You can take a joker! Trade your ${tileName(swaps[0].real.type)} for it, then discard`;
   const sub = swaps.length ? 'Tap Trade, or tap the glowing joker. A joker can stand in for any tile in a group of 3 or more.' : (st.deadHands[0] ? 'Your hand is dead this round — keep discarding.' : 'Tap a tile, then Discard (or tap it again).');
   showPrompt(`${msg}<small>${sub}</small>`, btns);
+}
+// She thinks she has it, but the tiles don't make a hand: show the closest one, what's missing,
+// and the usual reasons a hand that looks right isn't.
+function explainNotMahjong() {
+  const st = G.st, hand = st.hands[0], counts = countsOf(hand), exps = expsOf(st.exps[0]);
+  const all = countsOf(hand.concat(st.exps[0].flatMap(e => e.tiles)));
+  const top = rankHands(card, counts, exps, 1)[0];
+  const body = $('#check-body'); body.innerHTML = '';
+  const add = (html, cls) => { const d = document.createElement('div'); if (cls) d.className = cls; d.innerHTML = html; body.appendChild(d); return d; };
+  if (!top) {
+    add('<p class="sub">No hand on this card fits the tiles you’ve exposed, so this hand can’t win. Keep discarding until the next deal.</p>');
+  } else {
+    const need = missingTiles(top.ch, counts, exps), byType = new Map();
+    for (const t of need) byType.set(t, (byType.get(t) || 0) + 1);
+    const list = [...byType].map(([t, k]) => `${k > 1 ? k + ' × ' : ''}${tileName(t, k > 1)}`).join(', ');
+    add(`<p class="sub">Your tiles are <b>${top.m} away</b> from the closest hand on the card. Faded tiles are the ones you still need.</p>`);
+    const row = add(`<div class="row1"><div class="htext">${handHTML(top.ch.def.text)}</div><div class="hval">${top.ch.c ? 'C' : 'X'} ${top.ch.v}</div></div><div class="hnote"><span>${esc(top.ch.def.cat)}</span><span>${handNote(top.ch.def)}</span></div>`, 'hand');
+    row.appendChild(miniTiles(top.ch, all));
+    if (list) add(`<p style="margin-top:10px"><b>Still needed:</b> ${list}</p>`);
+  }
+  const tips = [];
+  if (st.deadHands[0]) tips.push('Your hand is dead this round: an exposure didn’t fit any hand on the card.');
+  if (counts[T_JOKER] && top && (top.ch.singlesPairs || counts[T_JOKER] > top.ch.groups.filter(g => g.n >= 3).reduce((n, g) => n + g.n, 0)))
+    tips.push('Jokers only stand in for groups of 3 or more, never for a single or a pair.');
+  if (counts[9] && top && top.ch.types.includes(T_FLOWER) && missingTiles(top.ch, counts, exps).includes(T_FLOWER)) tips.push('Remember: the bird is the 1 Bam, not a flower.');
+  if (st.exps[0].length) {
+    const open = rankHands(card, all, [], 1)[0];
+    if (open && open.ch.c && (!top || open.m < top.m)) tips.push('Hands marked C must stay concealed, so once you’ve exposed tiles they’re out of reach.');
+  }
+  if (tips.length) add('<h3>Worth checking</h3><ul>' + tips.map(t => `<li>${t}</li>`).join('') + '</ul>');
+  const btn = document.createElement('div'); btn.className = 'row'; btn.style.marginTop = '14px';
+  btn.innerHTML = '<button class="btn primary" id="check-ok">Keep playing</button><button class="btn" id="check-card">Show the card</button>';
+  body.appendChild(btn);
+  $('#check-ok').addEventListener('click', () => { Sound.ui(); closeSheet('check'); });
+  $('#check-card').addEventListener('click', () => { Sound.ui(); closeSheet('check'); drawerTab = 'close'; toggleDrawer(true); });
+  Sound.blocked(); openSheet('check');
 }
 function humanDiscard(tile) {
   if (G.step !== 'act' || G.st.turn !== 0 || !G.st.hands[0].includes(tile)) return;
@@ -1813,7 +1936,7 @@ function claimPrompt() {
   const words = { 3: 'Pung', 4: 'Kong', 5: 'Quint', 6: 'Sextet' };
   for (const n of cl.ns) btns.push({ label: `Call · ${words[n]}`, primary: !cl.mj && n === cl.ns[0], fn: () => humanCall(n) });
   const onlyLook = !cl.mj && !cl.ns.length;
-  btns.push({ label: onlyLook ? 'Next' : 'Pass', primary: onlyLook, quiet: !onlyLook, fn: () => {
+  btns.push({ label: onlyLook ? 'Next' : 'Pass', primary: onlyLook, quiet: !onlyLook, proceed: true, fn: () => {
     if (G.step !== 'claim') return;
     G.claim = null;
     if (cl.botMJ >= 0) return winByDiscard(cl.botMJ, cl.from);
@@ -1826,11 +1949,11 @@ function claimPrompt() {
       : st.deadHands[0] ? 'Your hand is dead this round, so you can’t call.'
       : held + jk < 2 ? `To call it you’d need two more like it (jokers count); you have ${held + jk || 'none'}.`
       : 'It doesn’t fit a hand you can still make, so it can’t be called.';
-    showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b><small>${why} Tap Next for ${up}.</small>`, btns);
+    showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b><small>${why} Tap Next for ${up}.</small>`, btns, { tile });
     return;
   }
   const sub = cl.mj ? 'That tile finishes a hand on your card.' : `You hold ${held} and ${jk} joker${jk === 1 ? '' : 's'} to go with it.`;
-  showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b>. Call it?<small>${sub}</small>`, btns);
+  showPrompt(`${NAMES[cl.from]} discarded the <b>${tileName(tile.type)}</b>. Call it?<small>${sub}</small>`, btns, { tile });
 }
 function humanCall(n) {
   const st = G.st, cl = G.claim;
@@ -1916,21 +2039,33 @@ function showResult() {
   }
   $('#result-pay').innerHTML = [0, 1, 2, 3].map(s => `<tr><td>${NAMES[s]}</td><td class="num ${r.pay[s] > 0 ? 'plus' : r.pay[s] < 0 ? 'minus' : ''}">${r.pay[s] > 0 ? '+' : ''}${r.pay[s] || '—'}</td><td class="num">${G.scores[s]}</td></tr>`).join('');
   syncSetupPicks();
+  updateUndo();
   $('#result-pay').insertAdjacentHTML('afterbegin', '<tr><td></td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">THIS HAND</td><td class="num" style="font-size:.72rem;letter-spacing:.1em;color:var(--ink-3)">TOTAL</td></tr>');
   openSheet('result');
 }
 function hideResult() { closeSheet('result'); }
 $('#result-next').addEventListener('click', () => { if (!G || G.st.phase !== 'done') return; Sound.ui(); closeSheet('result'); G.dealer = (G.dealer + 1) % 4; startHand(); });
 $('#result-menu').addEventListener('click', () => { Sound.ui(); closeSheet('result'); openSheet('menu'); });
+$('#result-undo').addEventListener('click', () => { Sound.init(); undo(); });
+$('#btn-undo').addEventListener('click', () => { Sound.init(); undo(); });
 
 /* ---------- prompt ---------- */
-function showPrompt(html, btns) {
+function showPrompt(html, btns, opts = {}) {
   $('#prompt-msg').innerHTML = html;
+  // the tile someone just threw, shown big beside the question about it
+  $('#prompt').classList.toggle('has-tile', !!opts.tile);
+  if (opts.tile) {
+    const cv = $('#prompt-tile'), w = L && L.compact ? 30 : 40, S = tileSet(w), W = w + S.d + 4, H = S.H + S.d + 4;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cv.style.width = W + 'px'; cv.style.height = H + 'px';
+    const g = cv.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.drawImage(S.body, S.d + 2 - S.d - S.pad, 2 - S.pad, S.bw, S.bh); g.drawImage(S.faces[faceOf(opts.tile)], S.d + 2, 2, w, S.H);
+  }
   const box = $('#prompt-btns'); box.innerHTML = ''; box.dataset.used = '';
   for (const b of btns) {
     const el = document.createElement('button');
     el.className = 'pbtn' + (b.primary ? ' primary' : '') + (b.mj ? ' mj' : '') + (b.quiet ? ' quiet' : '');
     el.textContent = b.label; el.disabled = !!b.disabled;
+    if (b.proceed) el.dataset.proceed = '1';
     // one tap per prompt: a quick double-tap must not pass, call or discard twice
     el.addEventListener('click', () => {
       if (box.dataset.used === '1') return;
@@ -2160,7 +2295,7 @@ function miniTiles(ch, haveCounts) {
     const th = Math.round(22 * TILE_R);
     // ivory tile with its face; tiles you still need are faded with a dashed edge
     x.globalAlpha = have ? 1 : .38;
-    rrect(x, .5, .5, 21, th - 1, 3); x.fillStyle = '#fbf6ea'; x.fill();
+    rrect(x, .5, .5, 21, th - 1, 3); x.fillStyle = tileStyle(settings.tiles).modern ? '#ffffff' : '#fbf6ea'; x.fill();
     x.drawImage(S.faces[g.t === T_FLOWER ? 34 : g.t], 0, 0, 22, th);
     x.globalAlpha = 1;
     if (!have) x.setLineDash([2, 2]);
@@ -2359,11 +2494,11 @@ async function copyMyCard() {
 }
 
 /* ---------- sheets ---------- */
-const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk'];
+const SHEETS = ['menu', 'settings', 'howto', 'stats', 'result', 'ask', 'editor', 'bulk', 'check'];
 const sheetEl = n => $('#sheet-' + n);
 function openSheet(n) { if (n === 'howto') renderTileGuide(); if (n === 'menu') refreshMenu(); if (n === 'settings') renderSettings(); if (n === 'stats') renderStats(); sheetEl(n).classList.add('open'); }
 function closeSheet(n) { sheetEl(n).classList.remove('open'); }
-function topSheet() { for (const n of ['ask', 'editor', 'bulk', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
+function topSheet() { for (const n of ['ask', 'check', 'editor', 'bulk', 'settings', 'howto', 'stats', 'menu', 'result']) if (sheetEl(n).classList.contains('open')) return n; return null; }
 SHEETS.forEach(n => sheetEl(n).addEventListener('click', e => { if (e.target === sheetEl(n) && !['result', 'ask'].includes(n) && !(n === 'menu' && !G)) closeSheet(n); }));
 $$('[data-close]').forEach(b => b.addEventListener('click', () => { Sound.ui(); const n = topSheet(); if (n) closeSheet(n); }));
 $$('[data-open]').forEach(b => b.addEventListener('click', () => { Sound.init(); Sound.ui(); closeSheet('menu'); openSheet(b.dataset.open); }));
@@ -2463,6 +2598,7 @@ $$('.seg[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b => 
   if (k === 'card') return setCard(b.dataset.v);
   const was = settings[k];
   settings[k] = b.dataset.v; saveSettings(); renderSettings();
+  if (k === 'discards') { dirty = true; kick(); }
   if (k === 'setup' && was !== settings.setup && G && G.st && G.st.phase !== 'done') toast(settings.setup === 'messy' ? 'Messy starts with the next hand' : 'The wall is back from the next hand');
 })));
 function applyTheme(id) {
@@ -2489,29 +2625,32 @@ function renderStats() {
 }
 
 /* ---------- saving ---------- */
-function saveGame() {
-  if (!G || !G.st) return;
+function serializeGame() {
   const st = G.st, U = t => t.uid;
-  store.set(SAVE_KEY, {
+  return {
     v: 1, scores: G.scores, handNo: G.handNo, dealer: G.dealer, step: G.step, manual: G.manual, lastCallFrom: G.lastCallFrom,
     tiles: TILES.map(t => [t.type, t.fv || 0, t.slot]),
     wall: st.wall.map(U), hands: st.hands.map(h => h.map(U)), exps: st.exps.map(l => l.map(e => ({ t: e.t, u: e.tiles.map(U), f: e.from }))),
     discards: st.discards.map(d => [d.tile.uid, d.by]), turn: st.turn, drawn: st.drawn ? st.drawn.uid : -1, phase: st.phase, chStage: st.chStage,
     dead: st.deadHands, result: st.result, claim: G.claim, pending: G.pending || null, messy: !!st.messy, mseed: st.messySeed || 0, noPass: !!st.noPass,
-  });
+  };
+}
+function saveGame() { if (G && G.st) store.set(SAVE_KEY, serializeGame()); }
+function stateFrom(s, T) {
+  return {
+    wall: s.wall.map(T), hands: s.hands.map(h => h.map(T)), exps: s.exps.map(l => l.map(e => ({ t: e.t, tiles: e.u.map(T), from: e.f }))),
+    discards: s.discards.map(([u, by]) => ({ tile: T(u), by })), dealer: s.dealer, turn: s.turn, phase: s.phase, chStage: s.chStage,
+    drawn: s.drawn >= 0 ? T(s.drawn) : null, result: s.result, deadHands: s.dead || [false, false, false, false],
+    messy: !!s.messy, messySeed: s.mseed || 0, noPass: s.noPass ?? !!s.messy,
+  };
 }
 function loadGame() {
   const s = store.get(SAVE_KEY, null);
   if (!s || s.v !== 1 || !Array.isArray(s.tiles) || s.tiles.length !== 152) return false;
   try {
     TILES = s.tiles.map(([type, fv, slot], uid) => ({ uid, type, fv: fv || undefined, slot }));
-    const T = u => TILES[u];
-    const st = {
-      wall: s.wall.map(T), hands: s.hands.map(h => h.map(T)), exps: s.exps.map(l => l.map(e => ({ t: e.t, tiles: e.u.map(T), from: e.f }))),
-      discards: s.discards.map(([u, by]) => ({ tile: T(u), by })), dealer: s.dealer, turn: s.turn, phase: s.phase, chStage: s.chStage,
-      drawn: s.drawn >= 0 ? T(s.drawn) : null, result: s.result, deadHands: s.dead || [false, false, false, false],
-      messy: !!s.messy, messySeed: s.mseed || 0, noPass: s.noPass ?? !!s.messy,
-    };
+    const st = stateFrom(s, u => TILES[u]);
+    undoStack = [];
     G = { v: 1, gen: 1, scores: s.scores, handNo: s.handNo, dealer: s.dealer, st, step: s.step, sel: [], hint: null, received: [], claim: s.claim, pending: s.pending || null, focus: null, swapGlow: null, thinking: -1, manual: !!s.manual, lastCallFrom: s.lastCallFrom ?? -1 };
     if (G.step === 'claim' && !G.claim) G.step = 'draw';
     if (G.step === 'claimcheck' && !G.pending) G.step = 'draw';
@@ -2538,7 +2677,12 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { const n = topSheet(); if (n && !['result', 'ask'].includes(n)) closeSheet(n); else if ($('#drawer').classList.contains('open')) toggleDrawer(false); else openSheet('menu'); }
   if (topSheet()) return;
   if (e.key.toLowerCase() === 'c') toggleDrawer();
-  if ((e.key === 'Enter' || e.key === ' ') && G && G.step === 'claim' && G.claim && G.claim.look && !(e.target.closest && e.target.closest('button,input,textarea,select'))) { e.preventDefault(); const b = $('#prompt-btns .pbtn.primary'); if (b) b.click(); }
+  const onControl = e.target.closest && e.target.closest('button,input,textarea,select');
+  if ((e.key === 'Enter' || e.key === ' ') && G && G.step === 'claim' && !onControl) { e.preventDefault(); const b = $('#prompt-btns [data-proceed]'); if (b) b.click(); }
+  const k = e.key.toLowerCase();
+  if (k === 'z' && !e.altKey) { e.preventDefault(); undo(); }
+  if (k === 'h' && !e.metaKey && !e.ctrlKey) $('#btn-suggest').click();
+  if (k === 'm' && !e.metaKey && !e.ctrlKey) { const b = $('#prompt-btns .pbtn.mj'); if (b) b.click(); }
   if (e.key.toLowerCase() === 'f' && Fullscreen.supported()) Fullscreen.toggle();
 });
 ['pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Sound.init(), { passive: true }));
