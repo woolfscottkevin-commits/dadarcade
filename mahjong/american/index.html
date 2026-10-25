@@ -1516,8 +1516,15 @@ function isDead(ch, gone) { for (const t of ch.types) if (ch.reqP[t] > (t === T_
 // her closest hands, live ones first, the hand she's focused on (★) at the top
 function closestHands(limit) {
   const st = G.st, counts = countsOf(st.hands[0]), exps = expsOf(st.exps[0]), gone = goneCounts();
-  const list = rankHands(card, counts, exps, limit + 4).map(r => ({ ...r, dead: isDead(r.ch, gone) }));
-  if (G.focus && !list.some(r => sameHand(r.ch, G.focus))) { const m = missingFor(G.focus, counts, exps); if (m >= 0) list.push({ ch: G.focus, m, dead: isDead(G.focus, gone) }); }
+  // every version of every hand, closest first: a hand that's dead in one suit but alive in
+  // another is shown as its closest live version
+  const best = new Map();
+  for (const r of rankHands(card, counts, exps, 0)) {
+    const dead = isDead(r.ch, gone), cur = best.get(r.ch.hand);
+    if (!cur || (cur.dead && !dead)) best.set(r.ch.hand, { ...r, dead });
+  }
+  if (G.focus) { const m = missingFor(G.focus, counts, exps); if (m >= 0) best.set(G.focus.hand, { ch: G.focus, m, dead: isDead(G.focus, gone) }); }
+  const list = [...best.values()];
   list.sort((a, b) => (sameHand(b.ch, G.focus) - sameHand(a.ch, G.focus)) || (a.dead - b.dead) || a.m - b.m || b.ch.v - a.ch.v);
   return list.slice(0, limit);
 }
@@ -3060,10 +3067,11 @@ function streakText() {
 /* ---------- stats ---------- */
 function renderStats() {
   const rate = stats.hands ? Math.round(stats.wins / stats.hands * 100) : 0, sk = stats.streak;
+  const streak = sk.last === dateKey() || sk.last === yesterday() ? sk.cur : 0;   // a missed day ends it
   const done = card.hands.filter(h => stats.byHand[handKey(h)]).length;
   let html = `<div class="stat-tiles">
     <div><b>${stats.wins}</b><span>Mah Jonggs · ${rate}% of ${stats.hands} hands</span></div>
-    <div><b>${sk.cur || 0}</b><span>Day streak · best ${sk.best || 0}</span></div>
+    <div><b>${streak || 0}</b><span>Day streak · best ${sk.best || 0}</span></div>
     <div><b>${done}/${card.hands.length}</b><span>Hands on the card won</span></div>
     <div><b>${stats.points}</b><span>Points won${stats.best ? ` · best hand ${stats.best.base}` : ''}</span></div></div>`;
   html += `<h3>Trophies</h3><div class="trophies">${TROPHIES.map(t => `<div class="trophy${stats.trophies[t.id] ? '' : ' locked'}" title="${esc(t.desc)}"><i>${t.icon}</i>${esc(t.name)}<small>${esc(t.desc)}</small></div>`).join('')}</div>`;
